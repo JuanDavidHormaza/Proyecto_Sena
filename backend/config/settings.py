@@ -57,9 +57,6 @@ INSTALLED_APPS = [
     'storages',                  # Conexión con MinIO/S3
 ]
 
-
-
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -160,12 +157,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #==========================================================================
 
 from decouple import config
-
-
-MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    # ...
-]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",

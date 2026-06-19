@@ -1,7 +1,10 @@
 git branch
 git switch Andres
+git checkout Andres
 git remote -v
 git fetch origin
 git add .
 git commit -m "Cambios en los contenedores"
 git pull origin Andres
+git status
+git log --oneline --decorate -5
