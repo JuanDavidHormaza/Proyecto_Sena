@@ -1,0 +1,38 @@
+services:
+  worklex_media:
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+    container_name: Worklex_media
+
+    command: server /data --console-address ":9001"
+
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+
+      MINIO_BROWSER_REDIRECT_URL: https://minio.worklex.com
+
+    restart: unless-stopped
+
+    volumes:
+      - media_data:/data
+
+    expose:
+      - "9000"
+      - "9001"
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+    networks:
+      - worklex_net
+
+volumes:
+  media_data:
+
+networks:
+  worklex_net:
+    external: true

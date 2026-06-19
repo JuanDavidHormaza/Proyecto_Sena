@@ -54,7 +54,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'users',
+    'storages',                  # Conexión con MinIO/S3
 ]
+
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -150,3 +154,30 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+#==========================================================================
+#  Configuración para que Django use almacenamiento externo (MinIO/S3)
+#==========================================================================
+
+from decouple import config
+
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    # ...
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+AWS_ACCESS_KEY_ID = config("MINIO_ACCESS_KEY")
+AWS_SECRET_ACCESS_KEY = config("MINIO_SECRET_KEY")
+AWS_STORAGE_BUCKET_NAME = config("MINIO_BUCKET")
+AWS_S3_ENDPOINT_URL = f"http://{config('MINIO_ENDPOINT')}"
+AWS_S3_ADDRESSING_STYLE = "path"
+AWS_S3_REGION_NAME = "us-east-1"
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = True
+AWS_S3_FILE_OVERWRITE = False

@@ -1,0 +1,33 @@
+services:
+
+  worklex_media_init:
+    image: minio/mc:latest
+    container_name: Worklex_media_init
+
+    restart: "no"
+
+    networks:
+      - worklex_network
+
+    entrypoint: >
+      /bin/sh -c "
+      sleep 20;
+
+      mc alias set worklex http://worklex_media:9000
+      ${MINIO_ROOT_USER}
+      ${MINIO_ROOT_PASSWORD};
+
+      mc mb worklex/worklex-audios --ignore-existing;
+      mc mb worklex/worklex-videos --ignore-existing;
+      mc mb worklex/worklex-images --ignore-existing;
+
+      mc anonymous set none worklex/worklex-audios;
+      mc anonymous set none worklex/worklex-videos;
+      mc anonymous set none worklex/worklex-images;
+
+      echo 'WorkLex: Buckets creados correctamente';
+      "
+
+networks:
+  worklex_network:
+    external: true
