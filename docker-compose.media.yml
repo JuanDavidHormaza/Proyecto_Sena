@@ -1,1 +1,21 @@
 services:
+  # MinIO Service
+  minio:
+    image: minio/minio:latest
+    container_name: minio_sena
+    ports:
+      - "9000:9000" # S3 API
+      - "9090:9090" # Console UI
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    command: server /data --console-address ":9090"
+    volumes:
+      - ./media:/data
+    restart: unless-stopped
+    networks:
+      - worklex_network
+
+networks:
+  worklex_network:
+    external: true

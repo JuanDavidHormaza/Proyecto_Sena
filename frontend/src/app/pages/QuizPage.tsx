@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Star, Clock, Trophy, Zap, X, GraduationCap } from "lucide-react";
-import { questions, getDifficultyLevel } from "../data/questions";
+import { questions, getDifficultyLevel } from "../data/questionsA1";
 import * as api from "../services/api";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";

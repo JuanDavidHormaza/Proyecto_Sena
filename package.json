@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "dev": "npm run dev --prefix frontend"
+  },
   "dependencies": {
     "@vitejs/plugin-react": "^6.0.1",
     "lucide-react": "^1.14.0",

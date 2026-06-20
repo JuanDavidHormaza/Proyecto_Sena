@@ -18,6 +18,7 @@ services:
 
     volumes:
       - ./backend:/app
+      - ./media:/app/media
 
     working_dir: /app
 

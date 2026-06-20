@@ -103,9 +103,7 @@ export function MediaPage() {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-sena-green rounded-xl flex items-center justify-center shadow-lg shadow-sena-green/25">
-                <GraduationCap className="w-6 h-6 text-white" />
-              </div>
+              <img src="/SENAIMG.png" alt="SENA Logo" className="w-12 h-12 object-contain" />
               <div>
                 <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Plataforma SENA</p>
@@ -394,9 +392,7 @@ export function MediaPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-sena-green rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-white" />
-              </div>
+              <img src="/SENAIMG.png" alt="SENA Logo" className="w-10 h-10 object-contain" />
               <div>
                 <p className="font-semibold text-foreground">English Level Test</p>
                 <p className="text-sm text-muted-foreground">SENA - 2026</p>

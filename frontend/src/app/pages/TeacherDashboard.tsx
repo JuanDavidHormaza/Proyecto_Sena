@@ -139,9 +139,7 @@ export function TeacherDashboard() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-sena-blue rounded-xl flex items-center justify-center shadow-lg shadow-sena-blue/25">
-                <GraduationCap className="w-6 h-6 text-white" />
-              </div>
+              <img src="/SENAIMG.png" alt="SENA Logo" className="w-11 h-11 object-contain" />
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-foreground">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Panel de Docente</p>

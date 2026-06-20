@@ -62,9 +62,7 @@ export function LoginPage() {
 
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-sena-green rounded-xl flex items-center justify-center shadow-lg shadow-sena-green/25">
-              <GraduationCap className="w-7 h-7 text-white" />
-            </div>
+            <img src="/SENAIMG.png" alt="SENA Logo" className="w-12 h-12 object-contain" />
             <div>
               <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
               <p className="text-sm text-muted-foreground">Plataforma SENA</p>
@@ -184,9 +182,7 @@ export function LoginPage() {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-center max-w-md"
           >
-            <div className="w-24 h-24 bg-white/10 backdrop-blur-lg rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-              <GraduationCap className="w-12 h-12" />
-            </div>
+            <img src="/SENAIMG.png" alt="SENA Logo" className="w-24 h-24 object-contain mx-auto mb-8" />
             <h3 className="text-3xl font-bold mb-4 text-balance">
               Evalua tu nivel de ingles con el SENA
             </h3>
