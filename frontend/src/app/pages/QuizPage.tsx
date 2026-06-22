@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Star, Clock, Trophy, Zap, X, GraduationCap } from "lucide-react";
-import { questions, getDifficultyLevel } from "../data/questionsA1";
+import { questions, getDifficultyLevel, getLevelFromScore } from "../data/questionsA1";
 import * as api from "../services/api";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
@@ -280,7 +280,18 @@ export function QuizPage() {
         process,
         duration: "00:10:00",
       });
+      const levelResult = getLevelFromScore(finalScore);
+      localStorage.setItem("quizScore", finalScore.toString());
+      localStorage.setItem("correctAnswers", score.toString());
 
+      localStorage.setItem(
+        "levelResult",
+        JSON.stringify(levelResult)
+      );
+
+      if (levelResult.canAdvance) {
+        localStorage.setItem("A2Unlocked", "true");
+      }
       navigate("/results");
     }
   };
