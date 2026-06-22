@@ -1,7 +1,7 @@
 services:
-  keycloak:
+  worklex_auth_keycloak:
     image: quay.io/keycloak/keycloak:latest
-    container_name: worklex_auth
+    container_name: worklex_auth_keycloak
 
     environment:
       KEYCLOAK_USER: ${KEYCLOAK_USER}
@@ -9,12 +9,12 @@ services:
 
     command: start-dev
 
-    ports:
+    expose:
       - "8080:8080"
 
     networks:
-      - worklex_network
+      - worklex_private_network
 
 networks:
-  worklex_network:
-    external: true
+  worklex_private_network:
+    internal: true

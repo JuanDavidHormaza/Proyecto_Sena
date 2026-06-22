@@ -7,7 +7,7 @@ services:
     restart: "no"
 
     networks:
-      - worklex_network
+      - worklex_private_network
 
     entrypoint: >
       /bin/sh -c "
@@ -29,5 +29,5 @@ services:
       "
 
 networks:
-  worklex_network:
-    external: true
+  worklex_private_network:
+    internal: true

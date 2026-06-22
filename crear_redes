@@ -1,0 +1,3 @@
+docker network create worklex_edge_network
+docker network create worklex_app_network
+docker network create worklex_data_network

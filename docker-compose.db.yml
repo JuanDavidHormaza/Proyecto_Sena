@@ -16,13 +16,14 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    expose:
+      #- "${POSTGRES_PORT:-5432}:5432"
+      - "5432"
 
     volumes:
 
       # Persistencia de datos
-      - worklex_data:/var/lib/postgresql/data
+      - worklex_data:/var/lib/postgresql/data:rw
 
       # Scripts automáticos de inicialización. :ro=Read Only, PostgreSQL puede LEER scripts, pero el contenedor NO puede modificarlos
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -32,20 +33,21 @@ services:
       - ./postgres/conf/custom.conf:/etc/postgresql/custom.conf:ro
 
     command: >
-      postgres
-      
-      -c config_file=/etc/postgresql/postgresql.conf
+      postgres -c config_file=/etc/postgresql/postgresql.conf
   
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-
       interval: 10s
       timeout: 5s
       retries: 5
 
     networks:
-      - worklex_network
+      - worklex_data_network
+
+    security_opt:
+      - no-new-privileges:true
+
+    read_only: false
 
     deploy:
       resources:
@@ -57,5 +59,6 @@ volumes:
   worklex_data:
 
 networks:
-  worklex_network:
+  worklex_data_network:
     external: true
+    name: worklex_data_network

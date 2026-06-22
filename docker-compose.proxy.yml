@@ -1,10 +1,10 @@
 services:
 
-  worklex_proxy:
+  worklex_proxy_nginx:
 
     image: owasp/modsecurity-crs:nginx
 
-    container_name: worklex_proxy
+    container_name: worklex_proxy_nginx
 
     restart: unless-stopped
 
@@ -15,27 +15,25 @@ services:
     volumes:
 
       - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
-
       - ./proxy/conf.d:/etc/nginx/conf.d:ro
-
       - ./proxy/modsecurity:/etc/modsecurity.d:ro
-
-      - ./proxy/logs:/var/log/nginx
-
-      - ./certbot/conf:/etc/letsencrypt
-
-      - ./certbot/www:/var/www/certbot
+      - ./proxy/logs:/var/log/nginx:rw
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
 
     networks:
-      - worklex_network
+      - worklex_edge_network
+      - worklex_app_network
+      - worklex_data_network
 
     security_opt:
       - no-new-privileges:true
 
     cap_drop:
-      - NET_RAW
+      #- NET_RAW
+      - ALL
 
-    read_only: false
+    read_only: true
 
     tmpfs:
       - /tmp
@@ -43,19 +41,14 @@ services:
       - /var/run
 
     healthcheck:
-
-      test: ["CMD-SHELL", "nginx -t || exit 1"]
-
+      #test: ["CMD-SHELL", "nginx -t || exit 1"]
+      test: ["CMD-SHELL", "nginx -t && nginx -s reload >/dev/null 2>&1 || exit 1"]
       interval: 30s
-
       timeout: 10s
-
       retries: 3
 
     logging:
-
       driver: json-file
-
       options:
         max-size: "50m"
         max-file: "5"
@@ -75,23 +68,27 @@ services:
     restart: unless-stopped
 
     volumes:
-
       - ./certbot/conf:/etc/letsencrypt
-
       - ./certbot/www:/var/www/certbot
 
     depends_on:
-      - worklex_proxy
+      - worklex_proxy_nginx
 
     networks:
-      - worklex_network
-
-#volumes:
+      - worklex_app_network
 
 # Preparado para futuras expansiones
 #    worklex_logs:
 
 networks:
-
-  worklex_network:
+  worklex_edge_network:
     external: true
+    name: worklex_edge_network
+
+  worklex_app_network:
+    external: true
+    name: worklex_app_network
+
+  worklex_data_network:
+    external: true
+    name: worklex_data_network

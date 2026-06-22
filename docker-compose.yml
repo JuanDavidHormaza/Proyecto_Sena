@@ -1,12 +1,12 @@
 services:
 
-  worklex_backend:
+  worklex_app_backend:
 
     build:
       context: ./backend
       dockerfile: Dockerfile
 
-    container_name: worklex_backend
+    container_name: worklex_app_backend
 
     restart: unless-stopped
 
@@ -17,52 +17,43 @@ services:
       - "8000"
 
     volumes:
-      - ./backend:/app
+      - ./backend:/app:rw
+      - backend_static:/app/staticfiles
+      - backend_media:/app/media
 
     working_dir: /app
-
-    #-------------------------------------------------------------------------
-    # Ajuste para evitar error por permisos con chmod
-    #-------------------------------------------------------------------------
-    #       python manage.py runserver 0.0.0.0:8000 &&
 
     command: >
       sh -c "
       python manage.py migrate --fake-initial &&
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
       "
-
-
-    #command: >
-    #  sh -c "
-    #  ./wait-for-db.sh &&
-    #  python manage.py migrate &&
-    #  gunicorn config.wsgi:application --bind 0.0.0.0:8000
-    #  "
-
-    #depends_on:
-    #  - frontend
-
-    # Permite que otros contenedores esperen a que PostgreSQL esté listo.
-    healthcheck:
-      #test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
-      test: ["CMD","curl","-f","http://localhost:5173"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    depends_on:
+      worklex_persistencia:
+        condition: service_healthy
+      worklex_media_MinIO:
+        condition: service_healthy
 
     networks:
-      - worklex_network
+      # El Back-End no necesita conectarse a la red pública, enlaza a los demás
+      # contenedores por la red privada mediante Bridge.
+      #- worklex_private_network
+      - worklex_app_network
+      - worklex_data_network
 
+    security_opt:
+      - no-new-privileges:true
 
+    tmpfs:
+      - /tmp
 
-  worklex_frontend:
+  worklex_app_frontend:
 
     build:
       context: ./frontend
       dockerfile: Dockerfile
 
-    container_name: worklex_frontend
+    container_name: worklex_app_frontend
 
     restart: unless-stopped
 
@@ -70,42 +61,54 @@ services:
       - "5173"
 
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app:rw
       - frontend_node_modules:/app/node_modules
 
     working_dir: /app
 
     command: npm run dev -- --host 0.0.0.0
 
+    depends_on:
+      worklex_app_backend:
+        condition: service_started
+
     # Permite que otros contenedores esperen a que PostgreSQL esté listo.
     healthcheck:
-      #test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      #test: ["CMD-SHELL", "curl -fsS http://localhost:5173 || exit 1"]
       test: ["CMD","curl","-f","http://localhost:8000/api/health/"]
       interval: 30s
       timeout: 10s
       retries: 5
 
     networks:
-      - worklex_network
+      # Red para exponer NGINX al exterior y conectarlo con el frontend
+      # El Front-End necesita conectarse a la red pública
+      #- worklex_public_network
+      - worklex_app_network
 
-  worklex_proxy:
+    security_opt:
+      - no-new-privileges:true
 
-    image: owasp/modsecurity-crs:nginx
-
-    container_name: worklex_proxy
-
-    depends_on:
-      - worklex_backend
-      - worklex_frontend
-
-    networks:
-      - worklex_network
-
+    tmpfs:
+      - /tmp
 
 networks:
-  worklex_network:
-    external: true
-    #driver: bridge
+  worklex_edge_network:
+    driver: bridge
+    name: worklex_edge_network
+
+  worklex_app_network:
+    driver: bridge
+    name: worklex_app_network
+    internal: true
+
+  worklex_data_network:
+    driver: bridge
+    name: worklex_data_network
+    internal: true
+
 
 volumes:
   frontend_node_modules:
+  backend_static:
+  backend_media:

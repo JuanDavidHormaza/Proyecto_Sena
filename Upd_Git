@@ -4,7 +4,7 @@ git checkout Andres
 git remote -v
 git fetch origin
 git add .
-git commit -m "Cambios en los contenedores"
+git commit -m "Cambios en los contenedores. Segundo intento para subir Buckets"
 git pull origin Andres
 git status
 git log --oneline --decorate -5

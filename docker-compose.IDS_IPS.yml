@@ -1,0 +1,15 @@
+services:
+  worklex_IDS_IPS_crowdsec:
+    image: crowdsecurity/crowdsec
+
+    container_name: worklex_IDS_IPS_crowdsec
+
+    volumes:
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml
+
+    networks:
+      - worklex_private_network
+
+networks:
+  worklex_private_network:
+    internal: true

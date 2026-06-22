@@ -1,2 +1,4 @@
 docker network ls
-docker network inspect worklex_network
+docker network inspect worklex_edge_network
+docker network inspect worklex_app_network
+docker network inspect worklex_data_network

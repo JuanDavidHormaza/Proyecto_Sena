@@ -1,7 +1,9 @@
 services:
-  worklex_media:
+  worklex_media_MinIO:
     image: minio/minio:latest
-    container_name: Worklex_media
+    container_name: worklex_media_MinIO
+
+    restart: unless-stopped
 
     command: server /data --console-address ":9001"
 
@@ -17,13 +19,8 @@ services:
       # MINIO_SERVER_URL: https://minio-api.tudominio.com
 
     volumes:
-      - media_data:/data
+      - media_data:/data:rw
     
-    restart: unless-stopped
-    
-    networks:
-      - worklex_network
-
     # En producción, idealmente NO publiques estos puertos al host.
     # Si administras con reverse proxy, deja solo la red interna.
     expose:
@@ -31,15 +28,25 @@ services:
       - "9001"
 
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      #test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/minio/health/live || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
 
+    networks:
+      - worklex_data_network
+
+    security_opt:
+      - no-new-privileges:true
+
+    read_only: false
+
 volumes:
   media_data:
 
 networks:
-  worklex_network:
-    internal: true
+  worklex_data_network:
+    external: true
+    name: worklex_data_network

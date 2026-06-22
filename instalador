@@ -1,8 +1,23 @@
 docker compose down -v --remove-orphans
 docker builder prune -a -f
 docker system prune -a -f
+
+docker --version
+docker compose version
+
 docker network create worklex_network
-docker compose -f docker-compose.yml -f docker-compose.proxy.yml -f docker-compose.db.yml -f  docker-compose.vault.yml  -f  docker-compose.firewall.yml -f docker-compose.auth.yml -f docker-compose.media.yml -f docker-compose.media-init.ymlup -d --build
+docker network create worklex_network_public --driver bridge
+docker network create worklex_network_private --driver bridge
+docker compose \
+-f docker-compose.yml \
+-f docker-compose.db.yml \
+-f docker-compose.media.yml \
+-f docker-compose.auth.yml \
+-f docker-compose.vault.yml \
+-f docker-compose.proxy.yml \
+-f docker-compose.IDS_IPS.yml \
+-f docker-compose.media-init.yml \
+up -d --build
 docker ps
 docker logs Worklex_media
 docker logs Worklex_media_init

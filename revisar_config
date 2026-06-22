@@ -3,5 +3,13 @@ echo "REVISION YAML BACKEND"
 docker compose config
 
 pause
-
-docker compose -f docker-compose.proxy.yml config
+docker compose \
+-f docker-compose.yml \
+-f docker-compose.db.yml \
+-f docker-compose.media.yml \
+-f docker-compose.auth.yml \
+-f docker-compose.vault.yml \
+-f docker-compose.proxy.yml \
+-f docker-compose.IDS_IPS.yml \
+-f docker-compose.media-init.yml \
+config
