@@ -231,7 +231,7 @@ class TestResultViewSet(viewsets.ViewSet):
         ))
 
     def create(self, request):
-        result, error = TestResultController.create(request.data)
+        result, error = TestResultController.create(request.data, request.user)
         if error:
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(TestResultSerializer(result).data, status=status.HTTP_201_CREATED)

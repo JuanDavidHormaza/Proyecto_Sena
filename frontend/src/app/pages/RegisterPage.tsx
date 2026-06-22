@@ -57,20 +57,9 @@ export function RegisterPage() {
       });
       
       navigate("/dashboard");
-    } catch (err) {
-      console.log("[v0] API register failed, using fallback...", err);
-      
-      // Fallback a registro local
-      const fullName = `${formData.firstName} ${formData.lastName}`;
-      localStorage.setItem("userName", fullName);
-      localStorage.setItem("userRole", "student");
-      localStorage.setItem("userId", Date.now().toString());
-      localStorage.setItem("userProgram", formData.program);
-      localStorage.setItem("userDocType", formData.docType);
-      localStorage.setItem("userDocNum", formData.docNum);
-      localStorage.setItem("userPhone", formData.phoneNum);
-      
-      navigate("/dashboard");
+    } catch (err: any) {
+      console.log("API register failed:", err);
+      setError(err?.message || "No se pudo crear la cuenta en la base de datos.");
     }
     
     setIsLoading(false);
@@ -189,6 +178,17 @@ export function RegisterPage() {
 
           <h2 className="text-3xl font-bold text-foreground mb-2">Crear cuenta</h2>
           <p className="text-muted-foreground mb-4">Registrate para comenzar tu evaluacion</p>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{error}</p>
+            </motion.div>
+          )}
 
           {/* Step Indicator */}
           <div className="flex items-center gap-2 mb-6">

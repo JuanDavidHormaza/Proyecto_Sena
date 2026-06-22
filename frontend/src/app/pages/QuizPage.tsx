@@ -218,6 +218,68 @@ export function QuizPage() {
   const isSpeakingQuestion =
     question.type === "speaking";
 
+  const getCompletedQuestionCount = (completedLevels: Level[]) =>
+    completedLevels.reduce((total, level) => total + questionsByLevel[level].length, 0);
+
+  const getSerializableAnswers = (answers: UserAnswer[]) =>
+    answers.map(({ audioBlob, ...answer }) => ({
+      ...answer,
+      audioBlob: undefined,
+    }));
+
+  const saveQuizResult = async (completedLevels: Level[]) => {
+    const completedAnswers = userAnswersRef.current;
+    const correctAnswerCount = scoreRef.current;
+    const completedQuestionCount = getCompletedQuestionCount(completedLevels);
+    const finalScore = Math.round((correctAnswerCount / completedQuestionCount) * 100);
+    const duration = formatDuration(Date.now() - quizStartedAtRef.current);
+    const userId = Number(localStorage.getItem("userId"));
+    const serializableAnswers = getSerializableAnswers(completedAnswers);
+
+    localStorage.setItem("quizScore", String(finalScore));
+    localStorage.setItem("correctAnswers", String(correctAnswerCount));
+    localStorage.setItem("totalQuestions", String(completedQuestionCount));
+    localStorage.setItem("quizDuration", duration);
+
+    try {
+      const resultPayload: Record<string, unknown> = {
+        score: finalScore,
+        level: completedLevels[completedLevels.length - 1],
+        correct_answers: correctAnswerCount,
+        total_questions: completedQuestionCount,
+        answers: serializableAnswers.map((answer) => ({
+          questionId: answer.questionId,
+          difficulty: answer.difficulty,
+          is_correct: answer.isCorrect,
+        })),
+        process: { userAnswers: serializableAnswers },
+        speaking_score: completedAnswers.filter((item) => item.audioUrl).length,
+        writing_score: completedAnswers.filter((item) => item.writingAnswer).length,
+        duration,
+      };
+
+      if (Number.isFinite(userId) && userId > 0) {
+        resultPayload.user_id = userId;
+      }
+
+      const savedResult = await api.createTestResult(resultPayload);
+
+      localStorage.setItem("lastTestResult", JSON.stringify(savedResult));
+    } catch (error) {
+      console.error("No se pudo guardar el resultado del quiz.", error);
+    }
+
+    return {
+      score: finalScore,
+      correctAnswers: correctAnswerCount,
+      totalQuestions: completedQuestionCount,
+      answers: completedAnswers,
+      levelReached: completedLevels[completedLevels.length - 1],
+      completedLevels,
+      duration,
+    };
+  };
+
   const handleAnswerClick = (answerIndex: number) => {
     if (answerState !== "idle" || !isMultipleQuestion) return;
 
@@ -321,46 +383,17 @@ export function QuizPage() {
       return;
     }
 
-    const completedAnswers = userAnswersRef.current;
-    const correctAnswerCount = scoreRef.current;
-    const finalScore = Math.round((correctAnswerCount / totalQuestions) * 100);
-    const completedLevels = levelOrder;
-    const duration = formatDuration(Date.now() - quizStartedAtRef.current);
-
-    localStorage.setItem("quizScore", String(finalScore));
-    localStorage.setItem("correctAnswers", String(correctAnswerCount));
-    localStorage.setItem("totalQuestions", String(totalQuestions));
-    localStorage.setItem("quizDuration", duration);
-
-    try {
-      await api.createTestResult({
-        user_id: Number(localStorage.getItem("userId")),
-        correct_answers: correctAnswerCount,
-        total_questions: totalQuestions,
-        answers: completedAnswers.map((answer) => ({
-          questionId: answer.questionId,
-          difficulty: answer.difficulty,
-          is_correct: answer.isCorrect,
-        })),
-        process: { userAnswers: completedAnswers },
-        speaking_score: completedAnswers.filter((item) => item.audioUrl).length,
-        writing_score: completedAnswers.filter((item) => item.writingAnswer).length,
-        duration,
-      });
-    } catch (error) {
-      console.error("No se pudo guardar el resultado del quiz.", error);
-    }
-
+    const resultState = await saveQuizResult(levelOrder);
     navigate("/results", {
-      state: {
-        score: finalScore,
-        correctAnswers: correctAnswerCount,
-        totalQuestions,
-        answers: completedAnswers,
-        levelReached: currentLevel,
-        completedLevels,
-        duration,
-      },
+      state: resultState,
+    });
+  };
+
+  const finishCurrentQuiz = async () => {
+    const completedLevels = levelOrder.slice(0, levelOrder.indexOf(currentLevel) + 1);
+    const resultState = await saveQuizResult(completedLevels);
+    navigate("/results", {
+      state: resultState,
     });
   };
 
@@ -755,17 +788,7 @@ export function QuizPage() {
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => navigate("/results", {
-                    state: {
-                      score: Math.round((scoreRef.current / totalQuestions) * 100),
-                      correctAnswers: scoreRef.current,
-                      totalQuestions,
-                      answers: userAnswersRef.current,
-                      levelReached: currentLevel,
-                      completedLevels: levelOrder.slice(0, levelOrder.indexOf(currentLevel) + 1),
-                      duration: formatDuration(Date.now() - quizStartedAtRef.current),
-                    },
-                  })}
+                  onClick={finishCurrentQuiz}
                   className="flex-1 bg-gray-200 py-3 rounded-xl font-medium hover:bg-gray-300 transition-colors"
                 >
                   Finalizar

@@ -105,3 +105,5 @@ class Migration(migrations.Migration):
             options={'ordering': ['-best_score', '-updated_at']},
         ),
     ]
+
+

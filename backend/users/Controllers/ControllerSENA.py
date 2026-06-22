@@ -485,9 +485,12 @@ class TestResultController:
         return results
 
     @staticmethod
-    def create(data):
+    def create(data, authenticated_user=None):
         # El frontend envía user_id; aceptamos también 'user' por compatibilidad.
         user_id = data.get('user_id', data.get('user'))
+        if user_id is None and authenticated_user is not None:
+            user_id = getattr(authenticated_user, 'user_id', None)
+
         if user_id is None:
             return None, 'Usuario no encontrado'
 
