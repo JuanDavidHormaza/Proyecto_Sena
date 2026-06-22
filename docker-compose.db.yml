@@ -1,0 +1,61 @@
+services:
+
+  worklex_persistencia:
+
+    image: postgres:16
+
+    container_name: worklex_persistencia
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+
+      # Persistencia de datos
+      - worklex_data:/var/lib/postgresql/data
+
+      # Scripts automáticos de inicialización. :ro=Read Only, PostgreSQL puede LEER scripts, pero el contenedor NO puede modificarlos
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+
+      # Configuración personalizada
+      - ./postgres/conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/conf/custom.conf:/etc/postgresql/custom.conf:ro
+
+    command: >
+      postgres
+      
+      -c config_file=/etc/postgresql/postgresql.conf
+  
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - worklex_network
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+volumes:
+  worklex_data:
+
+networks:
+  worklex_network:
+    external: true

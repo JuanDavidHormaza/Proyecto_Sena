@@ -1,0 +1,15 @@
+services:
+  crowdsec:
+    image: crowdsecurity/crowdsec
+
+    container_name: worklex_firewall
+
+    volumes:
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml
+
+    networks:
+      - worklex_network
+
+networks:
+  worklex_network:
+    external: true

@@ -1,0 +1,91 @@
+services:
+
+  backend:
+
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: worklex_backend
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    ports:
+      - "${DJANGO_PORT}:8000"
+
+    volumes:
+      - ./backend:/app
+      - ./media:/app/media
+
+    working_dir: /app
+
+    #-------------------------------------------------------------------------
+    # Ajuste para evitar error por permisos con chmod
+    #-------------------------------------------------------------------------
+    command: >
+      sh -c "
+      python manage.py migrate --fake-initial &&
+      python manage.py runserver 0.0.0.0:8000 &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000
+      "
+
+
+    #command: >
+    #  sh -c "
+    #  ./wait-for-db.sh &&
+    #  python manage.py migrate &&
+    #  gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    #  "
+
+    depends_on:
+      - frontend
+
+    # Permite que otros contenedores esperen a que PostgreSQL esté listo.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+    networks:
+      - worklex_network
+
+
+
+  frontend:
+
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: worklex_frontend
+
+    restart: unless-stopped
+
+    ports:
+      - "${VITE_PORT}:5173"
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+    working_dir: /app
+
+    command: npm run dev -- --host 0.0.0.0
+
+    # Permite que otros contenedores esperen a que PostgreSQL esté listo.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+    networks:
+      - worklex_network
+
+networks:
+  worklex_network:
+    external: true

@@ -1,0 +1,24 @@
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: worklex_vault
+
+    ports:
+      - "8200:8200"
+
+    cap_add:
+      - IPC_LOCK
+
+    volumes:
+      - ./config:/vault/config
+      - ./data:/vault/data
+      - ./logs:/vault/logs
+
+    command: vault server -config=/vault/config/vault.hcl
+
+    networks:
+      - worklex_network
+
+networks:
+  worklex_network:
+    external: true
