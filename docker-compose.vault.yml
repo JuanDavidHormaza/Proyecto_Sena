@@ -1,10 +1,10 @@
 services:
-  vault:
+  worklex_vault:
     image: hashicorp/vault:latest
     container_name: worklex_vault
 
-    ports:
-      - "8200:8200"
+    expose:
+      - "8200"
 
     cap_add:
       - IPC_LOCK
@@ -17,8 +17,9 @@ services:
     command: vault server -config=/vault/config/vault.hcl
 
     networks:
-      - worklex_private_network
+      - worklex_app_network
 
 networks:
-  worklex_private_network:
-    internal: true
+  worklex_data_network:
+    driver: bridge
+    name: worklex_app_network

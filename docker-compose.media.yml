@@ -1,7 +1,7 @@
 services:
-  worklex_media_MinIO:
+  worklex_media_minio:
     image: minio/minio:latest
-    container_name: worklex_media_MinIO
+    container_name: worklex_media_minio
 
     restart: unless-stopped
 
@@ -48,5 +48,5 @@ volumes:
 
 networks:
   worklex_data_network:
-    external: true
+    driver: bridge
     name: worklex_data_network

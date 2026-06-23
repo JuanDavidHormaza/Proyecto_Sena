@@ -4,17 +4,17 @@ services:
     container_name: worklex_auth_keycloak
 
     environment:
-      KEYCLOAK_USER: ${KEYCLOAK_USER}
-      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_USER}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD}
 
     command: start-dev
 
     expose:
-      - "8080:8080"
+      - "8080"
 
     networks:
-      - worklex_private_network
+      - worklex_app_network
 
 networks:
-  worklex_private_network:
-    internal: true
+  worklex_app_network:
+

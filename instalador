@@ -1,13 +1,32 @@
 docker compose down -v --remove-orphans
 docker builder prune -a -f
 docker system prune -a -f
+docker compose down --remove-orphans
+docker network prune
 
 docker --version
 docker compose version
 
-docker network create worklex_network
-docker network create worklex_network_public --driver bridge
-docker network create worklex_network_private --driver bridge
+docker network create worklex_edge_network
+docker network create worklex_app_network --driver bridge
+docker network create worklex_data_network --driver bridge
+
+echo Revisar Servicios antes de ejecutar
+docker compose \
+-f docker-compose.yml \
+-f docker-compose.db.yml \
+-f docker-compose.media.yml \
+-f docker-compose.auth.yml \
+-f docker-compose.vault.yml \
+-f docker-compose.proxy.yml \
+-f docker-compose.IDS_IPS.yml \
+-f docker-compose.media-init.yml \
+config --services
+
+echo Validar quay IO Keycloak
+docker pull quay.io/keycloak/keycloak:latest
+
+
 docker compose \
 -f docker-compose.yml \
 -f docker-compose.db.yml \
@@ -21,3 +40,5 @@ up -d --build
 docker ps
 docker logs Worklex_media
 docker logs Worklex_media_init
+
+docker compose -f docker-compose.yml -f docker-compose.db.yml -f docker-compose.media.yml up -d --build

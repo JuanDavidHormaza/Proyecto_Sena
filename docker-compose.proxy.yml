@@ -82,13 +82,5 @@ services:
 
 networks:
   worklex_edge_network:
-    external: true
-    name: worklex_edge_network
-
   worklex_app_network:
-    external: true
-    name: worklex_app_network
-
   worklex_data_network:
-    external: true
-    name: worklex_data_network

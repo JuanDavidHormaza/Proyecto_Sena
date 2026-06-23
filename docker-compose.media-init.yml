@@ -7,7 +7,7 @@ services:
     restart: "no"
 
     networks:
-      - worklex_private_network
+      - worklex_data_network
 
     entrypoint: >
       /bin/sh -c "
@@ -29,5 +29,6 @@ services:
       "
 
 networks:
-  worklex_private_network:
-    internal: true
+  worklex_data_network:
+    driver: bridge
+    name: worklex_data_network

@@ -60,5 +60,5 @@ volumes:
 
 networks:
   worklex_data_network:
-    external: true
+    driver: bridge
     name: worklex_data_network
