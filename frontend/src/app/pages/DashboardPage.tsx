@@ -1,36 +1,50 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
+
 import { 
-  LogOut, User, Settings, Trophy, Target, Flame, BarChart3, 
-  GraduationCap, Clock, ChevronRight, Play, History, MessageSquare,
-  TrendingUp, Award, Calendar
+  LogOut, User, Settings, Target, Flame, BarChart3, 
+  Clock, ChevronRight, Play, History, MessageSquare,
+  Award, Calendar
 } from "lucide-react";
+import { getLevelFromScore } from "../data/questionsA1";
+import senaLogo from "../../asset/logo.png";
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const userName = localStorage.getItem("userName") || "Usuario";
   const userProgram = localStorage.getItem("userProgram") || "Desarrollo de Software";
+  const lastScore = Number(localStorage.getItem("quizScore") || "0");
+  const lastCorrectAnswers = Number(localStorage.getItem("correctAnswers") || "0");
+  const lastTotalQuestions = Number(localStorage.getItem("totalQuestions") || "0");
+  const lastDuration = localStorage.getItem("quizDuration") || "00:00";
+  const hasQuizResult = lastTotalQuestions > 0;
+  const currentLevel = hasQuizResult ? getLevelFromScore(lastScore).level : "Sin nivel";
 
-  // Mock data
   const stats = {
-    testsCompleted: 3,
-    averageScore: 72,
-    currentLevel: "B2",
-    currentStreak: 5,
-    improvement: 12,
+    testsCompleted: hasQuizResult ? 1 : 0,
+    averageScore: hasQuizResult ? lastScore : 0,
+    currentLevel,
+    currentStreak: 0,
+    quizDuration: lastDuration,
   };
 
-  const recentTests = [
-    { id: 1, date: "15 Abr 2026", score: 85, level: "B2", duration: "8:45", correctAnswers: 17, totalQuestions: 20 },
-    { id: 2, date: "10 Abr 2026", score: 70, level: "B1", duration: "9:12", correctAnswers: 14, totalQuestions: 20 },
-    { id: 3, date: "05 Abr 2026", score: 65, level: "B1", duration: "10:30", correctAnswers: 13, totalQuestions: 20 },
-  ];
+  const recentTests = hasQuizResult
+    ? [
+        {
+          id: 1,
+          date: "Ultima prueba",
+          score: lastScore,
+          level: currentLevel,
+          duration: lastDuration,
+          correctAnswers: lastCorrectAnswers,
+          totalQuestions: lastTotalQuestions,
+        },
+      ]
+    : [];
 
-  const feedbacks = [
-    { id: 1, teacher: "Carlos Martinez", date: "10 Abr 2026", message: "Buen progreso en gramatica. Te recomiendo practicar mas los condicionales." },
-  ];
+  const feedbacks: Array<{ id: number; teacher: string; date: string; message: string }> = [];
 
   const handleLogout = () => {
     localStorage.clear();
@@ -44,8 +58,8 @@ export function DashboardPage() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-sena-green rounded-xl flex items-center justify-center shadow-lg shadow-sena-green/25">
-                <GraduationCap className="w-6 h-6 text-white" />
+              <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-sena-green/25 overflow-hidden border border-border">
+                <img src={senaLogo} alt="SENA" className="h-9 w-9 object-contain" />
               </div>
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-foreground">English Level Test</h1>
@@ -131,8 +145,8 @@ export function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Pruebas Realizadas", value: stats.testsCompleted, icon: BarChart3, color: "sena-blue" },
-            { label: "Promedio", value: `${stats.averageScore}%`, icon: Target, color: "sena-green", trend: `+${stats.improvement}%` },
-            { label: "Nivel Actual", value: stats.currentLevel, icon: Trophy, color: "warning" },
+            { label: "Promedio", value: `${stats.averageScore}%`, icon: Target, color: "sena-green" },
+            { label: "Tiempo Quiz", value: stats.quizDuration, icon: Clock, color: "sena-blue" },
             { label: "Racha", value: `${stats.currentStreak} dias`, icon: Flame, color: "destructive" },
           ].map((stat, index) => (
             <motion.div
@@ -146,12 +160,6 @@ export function DashboardPage() {
                 <div className={`w-11 h-11 bg-${stat.color}/10 rounded-xl flex items-center justify-center`}>
                   <stat.icon className={`w-5 h-5 text-${stat.color}`} />
                 </div>
-                {stat.trend && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-sena-green bg-sena-green/10 px-2 py-1 rounded-lg">
-                    <TrendingUp className="w-3 h-3" />
-                    {stat.trend}
-                  </span>
-                )}
               </div>
               <p className="text-2xl font-bold text-foreground">{stat.value}</p>
               <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -174,10 +182,10 @@ export function DashboardPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-                      20 preguntas
+                      Por niveles
                     </span>
                     <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-                      ~10 min
+                      Tiempo real
                     </span>
                   </div>
                   <h3 className="text-2xl font-bold mb-2">Iniciar Nueva Prueba</h3>
@@ -221,7 +229,7 @@ export function DashboardPage() {
               </div>
               
               <div className="divide-y divide-border">
-                {recentTests.map((test, index) => (
+                {recentTests.length > 0 ? recentTests.map((test, index) => (
                   <motion.div
                     key={test.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -261,7 +269,11 @@ export function DashboardPage() {
                       <ChevronRight className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </motion.div>
-                ))}
+                )) : (
+                  <div className="p-6 text-sm text-muted-foreground">
+                    Aun no hay pruebas registradas.
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
@@ -277,7 +289,7 @@ export function DashboardPage() {
             >
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
-                  <Award className="w-5 h-5 text-warning" />
+                  <img src={senaLogo} alt="SENA" className="h-8 w-8 object-contain" />
                 </div>
                 <h3 className="font-semibold text-foreground">Tu Nivel Actual</h3>
               </div>
@@ -286,20 +298,20 @@ export function DashboardPage() {
                 <div className="w-24 h-24 mx-auto bg-gradient-to-br from-sena-green to-sena-green-dark rounded-2xl flex items-center justify-center text-white text-4xl font-bold shadow-lg shadow-sena-green/30 mb-4">
                   {stats.currentLevel}
                 </div>
-                <p className="text-foreground font-medium">Intermedio-Alto</p>
-                <p className="text-sm text-muted-foreground">Competente en situaciones cotidianas</p>
+                <p className="text-foreground font-medium">{hasQuizResult ? "Resultado de la ultima prueba" : "Sin prueba registrada"}</p>
+                <p className="text-sm text-muted-foreground">{hasQuizResult ? `${lastCorrectAnswers}/${lastTotalQuestions} correctas` : "Completa un quiz para ver tu nivel"}</p>
               </div>
               
               <div className="space-y-3 pt-4 border-t border-border">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Progreso a C1</span>
-                  <span className="font-medium text-foreground">72%</span>
+                  <span className="text-muted-foreground">Puntuacion</span>
+                  <span className="font-medium text-foreground">{stats.averageScore}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-sena-green rounded-full" style={{ width: '72%' }} />
+                  <div className="h-full bg-sena-green rounded-full" style={{ width: `${stats.averageScore}%` }} />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Necesitas +8% para alcanzar el nivel C1
+                  Tiempo del quiz: {stats.quizDuration}
                 </p>
               </div>
             </motion.div>

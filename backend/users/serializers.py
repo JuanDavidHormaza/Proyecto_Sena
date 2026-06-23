@@ -135,6 +135,14 @@ class RegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=50)
     last_name = serializers.CharField(max_length=50)
     phone_num = serializers.IntegerField(required=False, allow_null=True)
+    role_id = serializers.ChoiceField(          # ← AGREGAR ESTO
+        choices=['SUPERADMIN', 'ADMIN', 'APRENDIZ', 'MONITOR', 'INSTRUCTOR'],
+        default='APRENDIZ',
+        required=False
+    )
+ 
+
+
     
     def validate_email(self, value):
         if Person.objects.filter(email=value).exists():

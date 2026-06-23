@@ -1,7 +1,6 @@
 services:
 
   worklex_app_backend:
-
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -13,8 +12,8 @@ services:
     env_file:
       - .env
 
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
 
     volumes:
       - ./backend:/app:rw
@@ -33,6 +32,23 @@ services:
         condition: service_healthy
       worklex_media_MinIO:
         condition: service_healthy
+
+
+    #command: >
+    #  sh -c "
+    #  ./wait-for-db.sh &&
+    #  python manage.py migrate &&
+    #  gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    #  "
+
+
+    # Permite que otros contenedores esperen a que PostgreSQL esté listo.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
+      #test: ["CMD","curl","-f","http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
     networks:
       # El Back-End no necesita conectarse a la red pública, enlaza a los demás
@@ -57,8 +73,8 @@ services:
 
     restart: unless-stopped
 
-    expose:
-      - "5173"
+    ports:
+      - "5173:5173"
 
     volumes:
       - ./frontend:/app:rw
@@ -74,8 +90,8 @@ services:
 
     # Permite que otros contenedores esperen a que PostgreSQL esté listo.
     healthcheck:
-      #test: ["CMD-SHELL", "curl -fsS http://localhost:5173 || exit 1"]
-      test: ["CMD","curl","-f","http://localhost:8000/api/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      #test: ["CMD","curl","-f","http://localhost:8000/api/health/"]
       interval: 30s
       timeout: 10s
       retries: 5

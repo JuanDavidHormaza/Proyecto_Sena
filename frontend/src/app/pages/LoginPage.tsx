@@ -25,7 +25,7 @@ export function LoginPage() {
 
       const userRole = localStorage.getItem("userRole");
 
-      if (userRole === "admin") {
+      if (userRole === "admin" || userRole === "superadmin") {
         navigate("/admin");
       } else if (userRole === "teacher") {
         navigate("/teacher");

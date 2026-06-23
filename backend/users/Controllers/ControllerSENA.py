@@ -7,6 +7,7 @@ from ..Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestRe
 # ─── Mapas de roles y estados ────────────────────────────────────────────────
 
 ROLE_MAP = {
+    'SUPERADMIN': 'superadmin',
     'ADMIN': 'admin',
     'INSTRUCTOR': 'teacher',
     'MONITOR': 'teacher',
@@ -14,6 +15,7 @@ ROLE_MAP = {
 }
 
 ROLE_MAP_REVERSE = {
+    'superadmin': 'SUPERADMIN',
     'admin': 'ADMIN',
     'teacher': 'INSTRUCTOR',
     'student': 'APRENDIZ',
@@ -35,6 +37,16 @@ SUBJECT_COLORS = ['#39A900', '#1F4E78', '#D89E00', '#E21B3C', '#9B59B6', '#3498D
 
 def get_permissions_by_role(role):
     role_permissions = {
+        'superadmin': {          
+            'canManageUsers': True,
+            'canManageDocuments': True,
+            'canViewStatistics': True,
+            'canGiveFeedback': True,
+            'canTakeQuiz': True,
+            'canViewResults': True,
+            'canManageSubjects': True,
+            'canConfigureLevels': True,
+        },
         'admin': {
             'canManageUsers': True,
             'canManageDocuments': True,
@@ -284,6 +296,17 @@ class UserController:
         user.role_id = backend_role
         user.save()
         return new_frontend_role, None
+    
+    # Agrega dentro de UserController:
+
+    @staticmethod
+    def delete(user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            user.delete()
+            return True, None
+        except User.DoesNotExist:
+            return False, 'Usuario no encontrado'
 
 
 # ─── Subjects ─────────────────────────────────────────────────────────────────

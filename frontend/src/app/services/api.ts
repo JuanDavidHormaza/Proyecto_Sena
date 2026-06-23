@@ -14,7 +14,7 @@ export interface ApiUser {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'teacher' | 'student';
+  role: 'superadmin' | 'admin' | 'teacher' | 'student';
   status: 'active' | 'inactive';
   permissions: UserPermissions;
   docType?: string;

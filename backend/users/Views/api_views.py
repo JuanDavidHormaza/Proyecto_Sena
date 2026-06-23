@@ -4,21 +4,15 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from ..Controllers.ControllerSENA import (
-    AuthController,
-    PersonController,
-    UserController,
-    SubjectController,
-    DictionaryController,
-    TestResultController,
+    AuthController, PersonController, UserController,
+    SubjectController, DictionaryController, TestResultController,
     _build_user_response,
 )
 from ..serializers import (
-    LoginSerializer,
-    RegisterSerializer,
-    PersonSerializer,
-    DigitalDictionarySerializer,
-    TestResultSerializer,
+    LoginSerializer, RegisterSerializer, PersonSerializer,
+    DigitalDictionarySerializer, TestResultSerializer, UserSerializer,
 )
+from ..permissions import IsSuperAdmin, IsAdminOrSuperAdmin
 
 
 class LoginAPIView(APIView):
@@ -89,8 +83,48 @@ class PersonViewSet(viewsets.ViewSet):
 class UserViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
+
+    def partial_update(self, request, pk=None):
+        """
+        Actualiza parcialmente los datos del usuario (nombre, email, teléfono, etc.)
+        Se asume que los datos se envían en request.data con los campos:
+        - name (opcional) → se divide en first_name y last_name
+        - email (opcional)
+        - phone_num (opcional)
+        """
+        # Obtener el usuario y su persona asociada
+        user, error = UserController.get_by_id(pk)
+        if error:
+            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
+
+        person = user.person  # Asumiendo que la relación existe
+
+        # Preparar datos para actualizar la persona
+        person_data = {}
+        if 'name' in request.data:
+            # Divide el nombre completo en first_name y last_name (puedes ajustar la lógica)
+            full_name = request.data['name'].strip()
+            parts = full_name.split(' ', 1)
+            person_data['first_name'] = parts[0]
+            person_data['last_name'] = parts[1] if len(parts) > 1 else ''
+        if 'email' in request.data:
+            person_data['email'] = request.data['email']
+        if 'phone_num' in request.data:
+            person_data['phone_num'] = request.data['phone_num']
+
+        # Llamar al controlador de Persona para actualizar
+        updated_person, error = PersonController.update(person.person_id, person_data)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Devolver los datos actualizados del usuario (puedes usar el mismo builder que en retrieve)
+        return Response(_build_user_response(user, updated_person))
+    
+    
     def list(self, request):
-        return Response(UserController.list_all(role_filter=request.query_params.get('role')))
+        return Response(UserController.list_all(
+            role_filter=request.query_params.get('role')
+        ))
 
     def retrieve(self, request, pk=None):
         user, error = UserController.get_by_id(pk)
@@ -107,6 +141,12 @@ class UserViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['patch'])
     def change_role(self, request, pk=None):
+        user_obj = request.user
+        if not user_obj or getattr(user_obj, 'role_id', None) != 'SUPERADMIN':
+            return Response(
+                {'error': 'Solo el SuperAdmin puede cambiar roles'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         new_role = request.data.get('role')
         if not new_role:
             return Response({'error': 'Role not provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -114,6 +154,20 @@ class UserViewSet(viewsets.ViewSet):
         if error:
             return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
         return Response({'role': role})
+
+    def destroy(self, request, pk=None):
+        target_user, error = UserController.get_by_id(pk)
+        if error:
+            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
+        if target_user.role_id == 'SUPERADMIN':
+            return Response(
+                {'error': 'No se puede eliminar al SuperAdmin'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        ok, error = UserController.delete(pk)
+        if error:
+            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SubjectViewSet(viewsets.ViewSet):
@@ -145,7 +199,9 @@ class DigitalDictionaryViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def list(self, request):
-        return Response(DictionaryController.list_all(subject_id=request.query_params.get('subject')))
+        return Response(DictionaryController.list_all(
+            subject_id=request.query_params.get('subject')
+        ))
 
     def retrieve(self, request, pk=None):
         doc, error = DictionaryController.get_by_id(pk)
@@ -170,7 +226,9 @@ class TestResultViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def list(self, request):
-        return Response(TestResultController.list_all(user_id=request.query_params.get('user_id')))
+        return Response(TestResultController.list_all(
+            user_id=request.query_params.get('user_id')
+        ))
 
     def create(self, request):
         result, error = TestResultController.create(request.data)

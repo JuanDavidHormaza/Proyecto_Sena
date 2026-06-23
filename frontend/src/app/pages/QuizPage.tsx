@@ -1,13 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
-import { Star, Clock, Trophy, Zap, X, GraduationCap } from "lucide-react";
-import { questions } from "../data/questions";
+import { Check, Clock, Mic, Square, Star, Trophy, Zap, X } from "lucide-react";
 import * as api from "../services/api";
+import { questionsA1 } from "../data/questionsA1";
+import { questionsA2 } from "../data/questionsA2";
+import { questionsB1 } from "../data/questionsB1";
+import { questionsB2 } from "../data/questionsB2";
+import senaLogo from "../../asset/logo.png";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
 
 type QuestionType = "multiple" | "writing" | "speaking";
+type Level = "A1" | "A2" | "B1" | "B2";
+type QuizQuestion = {
+  id: number;
+  type: QuestionType | "listening";
+  question: string;
+  prompt?: string;
+  options?: string[];
+  correctAnswer?: number;
+  difficulty?: number;
+  category: string;
+};
 
 interface UserAnswer {
   questionId: number;
@@ -31,6 +46,8 @@ export function QuizPage() {
   const [answerState, setAnswerState] = useState<AnswerState>("idle");
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showLevelModal, setShowLevelModal] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState<Level>("A1");
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
@@ -38,12 +55,10 @@ export function QuizPage() {
   const [mediaError, setMediaError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const scoreRef = useRef(score);
+  const userAnswersRef = useRef(userAnswers);
+  const quizStartedAtRef = useRef(Date.now());
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
-  const question = questions[currentQuestion];
-  const isSpeakingQuestion = question.type === "speaking";
-  const isWritingQuestion = question.type === "writing";
-  const isMultipleQuestion = question.type === "multiple";
 
   const cleanupRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -67,8 +82,62 @@ export function QuizPage() {
   }, []);
 
   useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+
+  useEffect(() => {
+    userAnswersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
     cleanupRecording();
   }, [currentQuestion]);
+
+  const buildLevelQuestions = (level: Level): QuizQuestion[] => {
+    if (level === "A1") return questionsA1 as QuizQuestion[];
+    if (level === "A2") return questionsA2.slice(0, 5) as QuizQuestion[];
+    if (level === "B1") {
+      return [
+        ...(questionsB1.slice(0, 18) as QuizQuestion[]),
+        questionsB1[20] as QuizQuestion,
+        {
+          id: 102,
+          type: "speaking",
+          question: "Explain how you solved a technical problem recently.",
+          prompt: "Record a short spoken answer about a real or possible technical problem.",
+          difficulty: 6,
+          category: "Speaking",
+        },
+      ];
+    }
+
+    return [
+      ...(questionsB2.slice(0, 18) as QuizQuestion[]),
+      {
+        id: 41,
+        type: "writing",
+        question: "Write a short incident report for a software issue.",
+        prompt: "Describe the problem, its impact, and one possible solution.",
+        difficulty: 8,
+        category: "Writing",
+      },
+      {
+        id: 42,
+        type: "speaking",
+        question: "Present a short recommendation for improving cybersecurity.",
+        prompt: "Record a concise spoken recommendation for a work team.",
+        difficulty: 8,
+        category: "Speaking",
+      },
+    ];
+  };
+
+  const formatDuration = (milliseconds: number) => {
+    const totalSeconds = Math.max(Math.round(milliseconds / 1000), 0);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
 
   const handleStartRecording = async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -123,6 +192,32 @@ export function QuizPage() {
     }
   }, [timeLeft, answerState]);
 
+  const levelOrder: Level[] = ["A1", "A2", "B1", "B2"];
+  const questionsByLevel: Record<Level, QuizQuestion[]> = {
+    A1: buildLevelQuestions("A1"),
+    A2: buildLevelQuestions("A2"),
+    B1: buildLevelQuestions("B1"),
+    B2: buildLevelQuestions("B2"),
+  };
+  const currentQuestions = questionsByLevel[currentLevel];
+  const question = currentQuestions[currentQuestion];
+  const totalQuestions = levelOrder.reduce(
+    (total, level) => total + questionsByLevel[level].length,
+    0
+  );
+
+  const progress =
+    ((currentQuestion + 1) / currentQuestions.length) * 100;
+
+  const isMultipleQuestion =
+    question.type === "multiple";
+
+  const isWritingQuestion =
+    question.type === "writing";
+
+  const isSpeakingQuestion =
+    question.type === "speaking";
+
   const handleAnswerClick = (answerIndex: number) => {
     if (answerState !== "idle" || !isMultipleQuestion) return;
 
@@ -132,17 +227,21 @@ export function QuizPage() {
     const answer: UserAnswer = {
       questionId: question.id,
       question: question.question,
-      difficulty: question.difficulty,
+      difficulty: getDifficultyLabelFromNumber(question.difficulty ?? 1),
       userAnswer: answerIndex,
       correctAnswer: question.correctAnswer ?? -1,
       isCorrect,
       category: question.category,
     };
-    setUserAnswers([...userAnswers, answer]);
+    const nextUserAnswers = [...userAnswersRef.current, answer];
+    userAnswersRef.current = nextUserAnswers;
+    setUserAnswers(nextUserAnswers);
 
     if (isCorrect) {
       setAnswerState("correct");
-      setScore(score + 1);
+      const nextScore = scoreRef.current + 1;
+      scoreRef.current = nextScore;
+      setScore(nextScore);
     } else {
       setAnswerState("incorrect");
     }
@@ -162,14 +261,16 @@ export function QuizPage() {
     const answer: UserAnswer = {
       questionId: question.id,
       question: question.question,
-      difficulty: question.difficulty,
+      difficulty: getDifficultyLabelFromNumber(question.difficulty ?? 1),
       userAnswer: -1,
       correctAnswer: -1,
       isCorrect: false,
       category: question.category,
       writingAnswer: writingAnswer.trim(),
     };
-    setUserAnswers([...userAnswers, answer]);
+    const nextUserAnswers = [...userAnswersRef.current, answer];
+    userAnswersRef.current = nextUserAnswers;
+    setUserAnswers(nextUserAnswers);
     setAnswerState("submitted");
 
     setTimeout(() => {
@@ -187,7 +288,7 @@ export function QuizPage() {
     const answer: UserAnswer = {
       questionId: question.id,
       question: question.question,
-      difficulty: question.difficulty,
+      difficulty: getDifficultyLabelFromNumber(question.difficulty ?? 1),
       userAnswer: -1,
       correctAnswer: -1,
       isCorrect: false,
@@ -195,7 +296,9 @@ export function QuizPage() {
       audioUrl: recordedAudioUrl,
       audioBlob: recordedAudioBlob ?? undefined,
     };
-    setUserAnswers([...userAnswers, answer]);
+    const nextUserAnswers = [...userAnswersRef.current, answer];
+    userAnswersRef.current = nextUserAnswers;
+    setUserAnswers(nextUserAnswers);
     setAnswerState("submitted");
 
     setTimeout(() => {
@@ -204,85 +307,74 @@ export function QuizPage() {
   };
 
   const handleNextQuestion = async () => {
-    if (currentQuestion + 1 < questions.length) {
+    if (currentQuestion + 1 < currentQuestions.length) {
       cleanupRecording();
-      setCurrentQuestion(currentQuestion + 1);
+      setCurrentQuestion((prev) => prev + 1);
       setTimeLeft(30);
       setSelectedAnswer(null);
       setAnswerState("idle");
-    } else {
-      const finalScore = Math.round((score / questions.length) * 100);
-      let level = "A1";
-      let character = "Beginner";
+      return;
+    }
 
-      if (finalScore >= 90) {
-        level = "C2";
-        character = "Master";
-      } else if (finalScore >= 80) {
-        level = "C1";
-        character = "Expert";
-      } else if (finalScore >= 70) {
-        level = "B2";
-        character = "Advanced";
-      } else if (finalScore >= 60) {
-        level = "B1";
-        character = "Intermediate";
-      } else if (finalScore >= 40) {
-        level = "A2";
-        character = "Explorer";
-      }
+    if (currentLevel !== "B2") {
+      setShowLevelModal(true);
+      return;
+    }
 
-      const process = {
-        answers: userAnswers
-          .filter((item) => item.userAnswer !== -1)
-          .map(({ questionId, question, userAnswer, correctAnswer, isCorrect, category }) => ({
-            questionId,
-            question,
-            userAnswer,
-            correctAnswer,
-            isCorrect,
-            category,
-          })),
-        writingAnswers: userAnswers
-          .filter((item) => item.writingAnswer)
-          .map(({ questionId, question, writingAnswer, category }) => ({
-            questionId,
-            question,
-            writingAnswer,
-            category,
-          })),
-        speakingAnswers: userAnswers
-          .filter((item) => item.audioUrl)
-          .map(({ questionId, question, audioUrl, category }) => ({
-            questionId,
-            question,
-            audioUrl,
-            category,
-          })),
-      };
+    const completedAnswers = userAnswersRef.current;
+    const correctAnswerCount = scoreRef.current;
+    const finalScore = Math.round((correctAnswerCount / totalQuestions) * 100);
+    const completedLevels = levelOrder;
+    const duration = formatDuration(Date.now() - quizStartedAtRef.current);
 
-      const answersPayload = userAnswers.map((answer) => ({
-        questionId: answer.questionId,
-        difficulty: answer.difficulty,
-        is_correct: answer.isCorrect,
-      }));
+    localStorage.setItem("quizScore", String(finalScore));
+    localStorage.setItem("correctAnswers", String(correctAnswerCount));
+    localStorage.setItem("totalQuestions", String(totalQuestions));
+    localStorage.setItem("quizDuration", duration);
 
-      const speakingScore = userAnswers.filter((item) => item.audioUrl).length;
-      const writingScore = userAnswers.filter((item) => item.writingAnswer).length;
-
+    try {
       await api.createTestResult({
         user_id: Number(localStorage.getItem("userId")),
-        answers: answersPayload,
-        speaking_score: speakingScore,
-        writing_score: writingScore,
-        correct_answers: score,
-        total_questions: questions.length,
-        process,
-        duration: "00:10:00",
+        correct_answers: correctAnswerCount,
+        total_questions: totalQuestions,
+        answers: completedAnswers.map((answer) => ({
+          questionId: answer.questionId,
+          difficulty: answer.difficulty,
+          is_correct: answer.isCorrect,
+        })),
+        process: { userAnswers: completedAnswers },
+        speaking_score: completedAnswers.filter((item) => item.audioUrl).length,
+        writing_score: completedAnswers.filter((item) => item.writingAnswer).length,
+        duration,
       });
-
-      navigate("/results");
+    } catch (error) {
+      console.error("No se pudo guardar el resultado del quiz.", error);
     }
+
+    navigate("/results", {
+      state: {
+        score: finalScore,
+        correctAnswers: correctAnswerCount,
+        totalQuestions,
+        answers: completedAnswers,
+        levelReached: currentLevel,
+        completedLevels,
+        duration,
+      },
+    });
+  };
+
+  const continueNextLevel = () => {
+    const nextLevel = levelOrder[levelOrder.indexOf(currentLevel) + 1];
+    if (nextLevel) {
+      setCurrentLevel(nextLevel);
+    }
+
+    setCurrentQuestion(0);
+    setTimeLeft(30);
+    setSelectedAnswer(null);
+    setAnswerState("idle");
+    setShowLevelModal(false);
   };
 
   const answerColors = [
@@ -306,16 +398,31 @@ export function QuizPage() {
   };
 
   const getDifficultyStars = () => {
-    const count = question.difficulty === "Easy" ? 1 : question.difficulty === "Medium" ? 2 : 3;
-    return Array(count).fill(0);
-  };
+
+  const difficulty =
+    question.difficulty ?? 1;
+
+  let stars = 1;
+
+  if (difficulty >= 5) stars = 2;
+
+  if (difficulty >= 8) stars = 3;
+
+  return Array(stars).fill(0);
+
+};
 
   const getDifficultyLabel = () => {
-    switch (question.difficulty) {
-      case "Easy": return "Basico";
-      case "Medium": return "Intermedio";
-      case "Hard": return "Avanzado";
-    }
+    const difficulty = question.difficulty ?? 1;
+    if (difficulty <= 4) return "Basico";
+    if (difficulty <= 7) return "Intermedio";
+    return "Avanzado";
+  };
+
+  const getDifficultyLabelFromNumber = (difficulty: number): 'Easy' | 'Medium' | 'Hard' => {
+    if (difficulty <= 4) return 'Easy';
+    if (difficulty <= 7) return 'Medium';
+    return 'Hard';
   };
 
   return (
@@ -331,10 +438,10 @@ export function QuizPage() {
           className="flex items-center justify-between mb-6"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/10 backdrop-blur-lg rounded-xl flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-white" />
+            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+              <img src={senaLogo} alt="SENA" className="h-9 w-9 object-contain" />
             </div>
-            <span className="text-white font-medium hidden sm:block">English Level Test</span>
+            <span className="text-white font-medium hidden sm:block">English Level Test SENA</span>
           </div>
           <button
             onClick={() => setShowExitConfirm(true)}
@@ -351,7 +458,7 @@ export function QuizPage() {
           className="mb-6"
         >
           <div className="flex items-center justify-between text-white/80 text-sm mb-2">
-            <span>Pregunta {currentQuestion + 1} de {questions.length}</span>
+            <span>Nivel {currentLevel}: pregunta {currentQuestion + 1} de {currentQuestions.length}</span>
             <span>{Math.round(progress)}% completado</span>
           </div>
           <div className="h-2 bg-white/20 rounded-full overflow-hidden backdrop-blur-lg">
@@ -390,7 +497,7 @@ export function QuizPage() {
         {/* Question Card */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={currentQuestion}
+            key={`${currentLevel}-${currentQuestion}`}
             initial={{ opacity: 0, x: 50, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: -50, scale: 0.95 }}
@@ -414,11 +521,11 @@ export function QuizPage() {
               </div>
               
               <h2 className="text-xl lg:text-2xl font-bold text-foreground leading-relaxed mb-6">
-                {question.prompt ?? question.question}
+                {question.question}
               </h2>
-              {isSpeakingQuestion && (
+              {(isSpeakingQuestion || isWritingQuestion) && question.prompt && (
                 <p className="text-sm text-muted-foreground mb-6">
-                  Speak for 30 seconds out loud, then mark this task complete.
+                  {question.prompt}
                 </p>
               )}
             </div>
@@ -426,15 +533,42 @@ export function QuizPage() {
             {/* Answer Options or Speaking/Writing Task */}
             {isSpeakingQuestion ? (
               <div className="px-6 lg:px-8 pb-6 lg:pb-8">
-                <p className="mb-6 text-base text-foreground/80">
-                  This prompt is a speaking task. Grant microphone access to record your response, then press the button below to continue.
-                </p>
                 {mediaError && (
                   <div className="mb-4 rounded-2xl bg-destructive/10 border border-destructive text-destructive px-4 py-3 text-sm">
                     {mediaError}
                   </div>
                 )}
-                <div className="grid gap-3 mb-4 sm:grid-cols-2">
+                <div className="flex flex-col items-center gap-5 rounded-3xl border border-sena-blue/15 bg-slate-50 px-5 py-7 mb-5">
+                  <motion.button
+                    type="button"
+                    onClick={isRecording ? handleStopRecording : handleStartRecording}
+                    disabled={answerState !== "idle"}
+                    className={`relative h-20 w-20 rounded-full flex items-center justify-center text-white shadow-xl transition disabled:cursor-not-allowed disabled:bg-muted ${
+                      isRecording ? "bg-destructive" : "bg-sena-blue hover:bg-sena-blue/90"
+                    }`}
+                    animate={isRecording ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+                    transition={isRecording ? { duration: 0.9, repeat: Infinity } : undefined}
+                    aria-label={isRecording ? "Detener grabacion" : "Grabar audio"}
+                  >
+                    {isRecording && (
+                      <motion.span
+                        className="absolute inset-0 rounded-full border-4 border-destructive/30"
+                        animate={{ scale: [1, 1.45], opacity: [0.6, 0] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      />
+                    )}
+                    {isRecording ? <Square className="w-7 h-7 fill-current" /> : <Mic className="w-8 h-8" />}
+                  </motion.button>
+                  <div className="text-center">
+                    <p className="font-semibold text-foreground">
+                      {isRecording ? "Grabando respuesta" : recordedAudioUrl ? "Audio listo para enviar" : "Pulsa para grabar"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      No se requiere audio externo; se guarda la respuesta del estudiante.
+                    </p>
+                  </div>
+                </div>
+                <div className="hidden">
                   <button
                     onClick={handleStartRecording}
                     disabled={isRecording || answerState !== "idle"}
@@ -452,7 +586,7 @@ export function QuizPage() {
                 </div>
                 {recordedAudioUrl && (
                   <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-sm font-medium text-slate-700 mb-2">Recorded audio preview:</p>
+                    <p className="text-sm font-medium text-slate-700 mb-2">Vista previa del audio:</p>
                     <audio controls src={recordedAudioUrl} className="w-full" />
                   </div>
                 )}
@@ -461,32 +595,43 @@ export function QuizPage() {
                   disabled={answerState !== "idle" || !recordedAudioUrl}
                   className="w-full bg-sena-blue text-white p-5 rounded-2xl text-base font-medium transition hover:bg-sena-blue/90 disabled:cursor-not-allowed disabled:bg-muted"
                 >
-                  Complete speaking task
+                  Enviar respuesta oral
                 </button>
               </div>
             ) : isWritingQuestion ? (
               <div className="px-6 lg:px-8 pb-6 lg:pb-8">
-                <p className="mb-6 text-base text-foreground/80">
-                  This prompt is a writing task. Write your answer below, then press continue when finished.
-                </p>
                 {mediaError && (
                   <div className="mb-4 rounded-2xl bg-destructive/10 border border-destructive text-destructive px-4 py-3 text-sm">
                     {mediaError}
                   </div>
                 )}
-                <textarea
-                  value={writingAnswer}
-                  onChange={(event) => setWritingAnswer(event.target.value)}
-                  rows={6}
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-slate-900 placeholder:text-slate-400 focus:border-sena-blue focus:ring-2 focus:ring-sena-blue/20"
-                  placeholder="Write your response here..."
-                />
+                <div className="rounded-3xl border border-sena-blue/15 bg-slate-50 p-4">
+                  <textarea
+                    value={writingAnswer}
+                    onChange={(event) => {
+                      setWritingAnswer(event.target.value);
+                      setMediaError(null);
+                    }}
+                    rows={7}
+                    className="w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 placeholder:text-slate-400 focus:border-sena-blue focus:outline-none focus:ring-2 focus:ring-sena-blue/20"
+                    placeholder="Escribe tu respuesta aqui..."
+                  />
+                  <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{writingAnswer.trim().split(/\s+/).filter(Boolean).length} palabras</span>
+                    {writingAnswer.trim() && (
+                      <span className="inline-flex items-center gap-1 text-sena-green font-medium">
+                        <Check className="w-4 h-4" />
+                        Respuesta capturada
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <button
                   onClick={handleWritingComplete}
-                  disabled={answerState !== "idle"}
+                  disabled={answerState !== "idle" || !writingAnswer.trim()}
                   className="mt-4 w-full bg-sena-blue text-white p-5 rounded-2xl text-base font-medium transition hover:bg-sena-blue/90 disabled:cursor-not-allowed disabled:bg-muted"
                 >
-                  Complete writing task
+                  Enviar respuesta escrita
                 </button>
               </div>
             ) : (
@@ -537,7 +682,7 @@ export function QuizPage() {
                   ) : answerState === "submitted" ? (
                     <div className="flex items-center justify-center gap-3">
                       <Trophy className="w-6 h-6" />
-                      <span className="text-lg font-bold">Speaking task recorded. Continuando...</span>
+                      <span className="text-lg font-bold">Respuesta guardada. Continuando...</span>
                     </div>
                   ) : (
                     <div>
@@ -583,6 +728,54 @@ export function QuizPage() {
                   className="flex-1 py-3 bg-destructive text-white rounded-xl font-medium hover:bg-destructive/90 transition-colors"
                 >
                   Salir
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Level Completion Modal */}
+      <AnimatePresence>
+        {showLevelModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4 text-center"
+            >
+              <h2 className="text-2xl font-bold mb-4">
+                Nivel {currentLevel} completado
+              </h2>
+
+              <p className="text-gray-600 mb-6">
+                Deseas continuar con el siguiente nivel?
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => navigate("/results", {
+                    state: {
+                      score: Math.round((scoreRef.current / totalQuestions) * 100),
+                      correctAnswers: scoreRef.current,
+                      totalQuestions,
+                      answers: userAnswersRef.current,
+                      levelReached: currentLevel,
+                      completedLevels: levelOrder.slice(0, levelOrder.indexOf(currentLevel) + 1),
+                      duration: formatDuration(Date.now() - quizStartedAtRef.current),
+                    },
+                  })}
+                  className="flex-1 bg-gray-200 py-3 rounded-xl font-medium hover:bg-gray-300 transition-colors"
+                >
+                  Finalizar
+                </button>
+
+                <button
+                  onClick={continueNextLevel}
+                  className="flex-1 bg-sena-blue text-white py-3 rounded-xl font-medium hover:bg-sena-blue/90 transition-colors"
+                >
+                  Continuar
                 </button>
               </div>
             </motion.div>

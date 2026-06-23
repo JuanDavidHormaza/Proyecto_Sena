@@ -1,16 +1,59 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { useNavigate } from "react-router";
-import { Trophy, Download, RotateCcw, Home, Clock, Target, MessageSquare, Award, CheckCircle, XCircle, Sparkles } from "lucide-react";
+import { useLocation, useNavigate } from "react-router";
+import {
+  Trophy,
+  Download,
+  RotateCcw,
+  Home,
+  Clock,
+  Target,
+  MessageSquare,
+  Award,
+  CheckCircle,
+  XCircle,
+  Sparkles
+} from "lucide-react";
+
 import confetti from "canvas-confetti";
-import { getLevelFromScore, questions } from "../data/questions";
+
+import { getLevelFromScore } from "../data/questionsA1";
+import senaLogo from "../../asset/logo.png";
+
+type ResultAnswer = {
+  questionId: number;
+  question: string;
+  userAnswer: number;
+  correctAnswer: number;
+  isCorrect: boolean;
+  category: string;
+  audioUrl?: string;
+  writingAnswer?: string;
+};
 
 export function ResultsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [animatedScore, setAnimatedScore] = useState(0);
-  
-  const finalScore = parseInt(localStorage.getItem("quizScore") || "0");
-  const correctAnswers = parseInt(localStorage.getItem("correctAnswers") || "0");
+
+  const resultsState = location.state as
+    | {
+        score?: number;
+        correctAnswers?: number;
+        totalQuestions?: number;
+        levelReached?: string;
+        answers?: ResultAnswer[];
+        duration?: string;
+      }
+    | null;
+
+  const finalScore = resultsState?.score ?? parseInt(localStorage.getItem("quizScore") || "0");
+  const correctAnswers =
+    resultsState?.correctAnswers ?? parseInt(localStorage.getItem("correctAnswers") || "0");
+  const totalQuestions =
+    resultsState?.totalQuestions ?? parseInt(localStorage.getItem("totalQuestions") || "0");
+  const answers = resultsState?.answers ?? [];
+  const duration = resultsState?.duration ?? localStorage.getItem("quizDuration") ?? "00:00";
   const levelInfo = getLevelFromScore(finalScore);
   
   const lastTestResultStr = localStorage.getItem("lastTestResult");
@@ -64,7 +107,7 @@ export function ResultsPage() {
   }, [finalScore]);
 
   const handleDownloadCertificate = () => {
-    alert("Funcionalidad de descarga de certificado - En desarrollo");
+    return;
   };
 
   const getScoreColor = () => {
@@ -79,13 +122,29 @@ export function ResultsPage() {
     return "from-destructive to-red-700";
   };
 
-  // Mock category performance
-  const categoryPerformance = [
-    { name: "Gramatica", score: 85, total: 6, correct: 5 },
-    { name: "Vocabulario", score: 70, total: 8, correct: 5 },
-    { name: "Lectura", score: 75, total: 4, correct: 3 },
-    { name: "Pronunciacion", score: 50, total: 2, correct: 1 },
-  ];
+  const categoryPerformance = Object.values(
+    answers.reduce<Record<string, { name: string; total: number; correct: number; score: number }>>(
+      (categories, answer) => {
+        const categoryName = answer.category || "General";
+        const current = categories[categoryName] ?? {
+          name: categoryName,
+          total: 0,
+          correct: 0,
+          score: 0,
+        };
+
+        current.total += 1;
+        current.correct += answer.isCorrect ? 1 : 0;
+        current.score = Math.round((current.correct / current.total) * 100);
+        categories[categoryName] = current;
+        return categories;
+      },
+      {}
+    )
+  );
+
+  const writingAnswers = answers.filter((answer) => answer.writingAnswer).length;
+  const speakingAnswers = answers.filter((answer) => answer.audioUrl).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,7 +165,7 @@ export function ResultsPage() {
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-lg rounded-full text-sm font-medium mb-6"
             >
-              <Sparkles className="w-4 h-4" />
+              <img src={senaLogo} alt="SENA" className="h-5 w-5 rounded bg-white object-contain" />
               Prueba Completada
             </motion.div>
 
@@ -141,9 +200,9 @@ export function ResultsPage() {
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
           {[
-            { label: "Correctas", value: `${correctAnswers}/${questions.length}`, icon: CheckCircle, color: "sena-green" },
-            { label: "Incorrectas", value: `${questions.length - correctAnswers}/${questions.length}`, icon: XCircle, color: "destructive" },
-            { label: "Tiempo Total", value: "~8:30", icon: Clock, color: "sena-blue" },
+            { label: "Correctas", value: `${correctAnswers}/${totalQuestions}`, icon: CheckCircle, color: "sena-green" },
+            { label: "Incorrectas", value: `${Math.max(totalQuestions - correctAnswers, 0)}/${totalQuestions}`, icon: XCircle, color: "destructive" },
+            { label: "Tiempo Total", value: duration, icon: Clock, color: "sena-blue" },
             { label: "Puntuacion", value: `${finalScore}%`, icon: Target, color: "warning" },
           ].map((stat, index) => (
             <motion.div
@@ -170,8 +229,9 @@ export function ResultsPage() {
           className="bg-white rounded-2xl p-6 border border-border shadow-lg mb-8"
         >
           <h3 className="font-semibold text-foreground mb-6">Desempeno por Categoria</h3>
-          <div className="space-y-4">
-            {categoryPerformance.map((category, index) => (
+          {categoryPerformance.length > 0 ? (
+            <div className="space-y-4">
+              {categoryPerformance.map((category, index) => (
               <div key={index}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium text-foreground">{category.name}</span>
@@ -197,8 +257,27 @@ export function ResultsPage() {
                   />
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No hay respuestas registradas para calcular categorias.</p>
+          )}
+          {(writingAnswers > 0 || speakingAnswers > 0) && (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {writingAnswers > 0 && (
+                <div className="rounded-xl border border-sena-blue/20 bg-sena-blue/5 p-4">
+                  <p className="text-sm text-muted-foreground">Respuestas escritas</p>
+                  <p className="text-2xl font-bold text-sena-blue">{writingAnswers}</p>
+                </div>
+              )}
+              {speakingAnswers > 0 && (
+                <div className="rounded-xl border border-sena-green/20 bg-sena-green/5 p-4">
+                  <p className="text-sm text-muted-foreground">Audios grabados</p>
+                  <p className="text-2xl font-bold text-sena-green">{speakingAnswers}</p>
+                </div>
+              )}
+            </div>
+          )}
         </motion.div>
 
         {/* Teacher Feedback */}
@@ -240,10 +319,10 @@ export function ResultsPage() {
                 className={`relative p-4 rounded-xl text-center transition-all ${
                   item.active ? 'ring-2 ring-offset-2' : 'opacity-60'
                 }`}
-                style={{ 
-                  backgroundColor: `${item.color}10`,
-                   ringColor: item.active ? item.color : 'transparent'
-                }}
+                style={{
+  backgroundColor: `${item.color}10`,
+  borderColor: item.active ? item.color : 'transparent'
+}}
               >
                 <span 
                   className="text-xs font-semibold px-2 py-1 rounded-full"
@@ -277,12 +356,13 @@ export function ResultsPage() {
         >
           <motion.button
             onClick={handleDownloadCertificate}
-            className="flex items-center justify-center gap-2 bg-sena-blue text-white px-6 py-4 rounded-xl font-medium hover:bg-sena-blue-light transition-all shadow-lg"
+            disabled
+            className="flex items-center justify-center gap-2 bg-muted text-muted-foreground px-6 py-4 rounded-xl font-medium cursor-not-allowed"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             <Download className="w-5 h-5" />
-            Descargar Certificado
+            Certificado no disponible
           </motion.button>
           <motion.button
             onClick={() => navigate("/quiz")}

@@ -32,13 +32,13 @@ from datetime import timedelta
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'users.authentication.CustomJWTAuthentication',  # ← tu clase custom
     ),
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'USER_ID_FIELD': 'user_id',
+    'USER_ID_FIELD': 'user_id',   # ← campo en TU modelo User
     'USER_ID_CLAIM': 'user_id',
 }
 

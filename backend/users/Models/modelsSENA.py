@@ -38,6 +38,7 @@ class User(models.Model):
     person = models.ForeignKey(Person, on_delete=models.CASCADE)
 
     ROLE_CHOICES = [
+         ('SUPERADMIN', 'Super Administrador'),
         ('ADMIN', 'Admin'),
         ('APRENDIZ', 'Aprendiz'),
         ('MONITOR', 'Monitor'),

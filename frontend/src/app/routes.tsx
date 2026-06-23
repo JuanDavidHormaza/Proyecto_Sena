@@ -1,4 +1,5 @@
-import { createBrowserRouter } from "react-router-dom";
+// frontend/src/router.tsx
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
@@ -8,42 +9,69 @@ import { ResultsPage } from "./pages/ResultsPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
 import { MediaPage } from "./pages/MediaPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
-  {
-    path: "/",
-    Component: LandingPage,
-  },
-  {
-    path: "/login",
-    Component: LoginPage,
-  },
-  {
-    path: "/register",
-    Component: RegisterPage,
-  },
+  { path: "/", Component: LandingPage },
+  { path: "/login", Component: LoginPage },
+  { path: "/register", Component: RegisterPage },
+
+  // Estudiante
   {
     path: "/dashboard",
-    Component: DashboardPage,
+    element: (
+      <ProtectedRoute allowedRoles={["student"]}>
+        <DashboardPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/quiz",
-    Component: QuizPage,
+    element: (
+      <ProtectedRoute allowedRoles={["student"]}>
+        <QuizPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/results",
-    Component: ResultsPage,
+    element: (
+      <ProtectedRoute allowedRoles={["student"]}>
+        <ResultsPage />
+      </ProtectedRoute>
+    ),
   },
-  {
-    path: "/admin",
-    Component: AdminDashboard,
-  },
+
+  // Profesor
   {
     path: "/teacher",
-    Component: TeacherDashboard,
+    element: (
+      <ProtectedRoute allowedRoles={["teacher"]}>
+        <TeacherDashboard />
+      </ProtectedRoute>
+    ),
   },
+
+  // Admin y SuperAdmin
+  {
+    path: "/admin",
+    element: (
+      <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+        <AdminDashboard />
+      </ProtectedRoute>
+    ),
+  },
+
+  // Compartida autenticados
   {
     path: "/media",
-    Component: MediaPage
-  }
+    element: (
+      <ProtectedRoute allowedRoles={["student", "teacher", "admin", "superadmin"]}>
+        <MediaPage />
+      </ProtectedRoute>
+    ),
+  },
+
+  // Ruta catch-all
+  { path: "*", element: <Navigate to="/login" replace /> },
 ]);
