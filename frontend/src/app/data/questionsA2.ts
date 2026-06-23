@@ -17,7 +17,7 @@ export const questions: Question[] = [
     question: 'A static visual design of a user interface that shows colors and layout is known as a:',
     options: ['Wireframe', 'Mockup', 'Prototype', 'Flowchart'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 4,
     category: 'UI Design',
   },
   {
@@ -26,7 +26,7 @@ export const questions: Question[] = [
     question: 'A process diagram used to visually represent the steps of a process is called a:',
     options: ['Mockup', 'Wireframe', 'Flowchart', 'Schema'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Diagrams',
   },
   {
@@ -35,7 +35,7 @@ export const questions: Question[] = [
     question: 'A property of an entity in a database or system is called an:',
     options: ['Instance', 'Method', 'Attribute', 'Object'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 4,
     category: 'Databases',
   },
   {
@@ -44,7 +44,7 @@ export const questions: Question[] = [
     question: 'A data holder used to store information in a program is called a:',
     options: ['Function', 'Variable', 'Module', 'Class'],
     correctAnswer: 1,
-    difficulty: 1,
+    difficulty: 4,
     category: 'Programming',
   },
   {
@@ -53,7 +53,7 @@ export const questions: Question[] = [
     question: 'An error in software, commonly known as a defect, is called a:',
     options: ['Crash', 'Bug', 'Fault', 'Break'],
     correctAnswer: 1,
-    difficulty: 1,
+    difficulty: 4,
     category: 'Software QA',
   },
   {
@@ -62,7 +62,7 @@ export const questions: Question[] = [
     question: 'The development environment commonly used as an editor for writing and managing code is called an:',
     options: ['SDK', 'API', 'IDE', 'CLI'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Tools',
   },
   {
@@ -71,7 +71,7 @@ export const questions: Question[] = [
     question: 'A user system that requests services from a server is called a:',
     options: ['Host', 'Client', 'Node', 'Proxy'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Networking',
   },
   {
@@ -80,7 +80,7 @@ export const questions: Question[] = [
     question: 'The action of sending code changes from your local repository to a remote repository is called a:',
     options: ['Pull', 'Commit', 'Push', 'Merge'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 4,
     category: 'Git',
   },
   {
@@ -89,7 +89,7 @@ export const questions: Question[] = [
     question: 'The command used to fetch and download changes from a remote repository is:',
     options: ['git push', 'git clone', 'git pull', 'git fetch'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 4,
     category: 'Git',
   },
   {
@@ -98,7 +98,7 @@ export const questions: Question[] = [
     question: 'The operation that creates a duplicate copy of a repository on your local machine is called:',
     options: ['Fork', 'Clone', 'Branch', 'Init'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Git',
   },
   {
@@ -107,7 +107,7 @@ export const questions: Question[] = [
     question: 'The action that allows you to load or include code, libraries, or modules into a project is called:',
     options: ['Export', 'Inject', 'Import', 'Deploy'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Programming',
   },
   {
@@ -116,7 +116,7 @@ export const questions: Question[] = [
     question: 'When you expose or share code, data, or functionality with other systems, you:',
     options: ['Import', 'Deploy', 'Export', 'Compile'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Programming',
   },
   {
@@ -125,7 +125,7 @@ export const questions: Question[] = [
     question: 'A program or feature that helps you perform a task, also known as an instrument, is called a:',
     options: ['Plugin', 'Tool', 'Script', 'Widget'],
     correctAnswer: 1,
-    difficulty: 1,
+    difficulty: 4,
     category: 'Tools',
   },
   {
@@ -134,7 +134,7 @@ export const questions: Question[] = [
     question: 'A flexible method of software development that focuses on delivering work step by step is called:',
     options: ['Waterfall', 'Agile', 'Scrum', 'Kanban'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 4,
     category: 'Methodologies',
   },
   {
@@ -143,7 +143,7 @@ export const questions: Question[] = [
     question: 'A website name, commonly known as a web address or URL, is called a:',
     options: ['Domain', 'Route', 'Endpoint', 'Path'],
     correctAnswer: 0,
-    difficulty: 1,
+    difficulty: 4,
     category: 'Web',
   },
   {
@@ -152,7 +152,7 @@ export const questions: Question[] = [
     question: 'A grid structure used to organize data into rows and columns is called a:',
     options: ['Matrix', 'Array', 'Table', 'Grid'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Databases',
   },
   {
@@ -161,7 +161,7 @@ export const questions: Question[] = [
     question: 'A system trigger or occurrence that causes an action to happen is called an:',
     options: ['Action', 'Event', 'Signal', 'Hook'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Programming',
   },
   {
@@ -170,7 +170,7 @@ export const questions: Question[] = [
     question: 'A prototype-like sketch used to show the structure of a user interface is called a:',
     options: ['Mockup', 'Prototype', 'Wireframe', 'Layout'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 4,
     category: 'UI Design',
   },
   {
@@ -179,7 +179,7 @@ export const questions: Question[] = [
     question: 'The acronym for a Visual UI that allows users to interact with software through graphical elements is:',
     options: ['CLI', 'API', 'SDK', 'GUI'],
     correctAnswer: 3,
-    difficulty: 2,
+    difficulty: 4,
     category: 'Tools',
   },
   {
@@ -188,7 +188,7 @@ export const questions: Question[] = [
     question: 'A note or explanation written inside source code to improve understanding is called a:',
     options: ['Comment', 'Log', 'Label', 'Tag'],
     correctAnswer: 0,
-    difficulty: 1,
+    difficulty: 4,
     category: 'Programming',
   },
   // Easy - Vocabulario Técnico (difficulty 5)
@@ -198,7 +198,7 @@ export const questions: Question[] = [
     question: 'A person or group affected by a system, also known as an interested party, is called a:',
     options: ['User', 'Stakeholder', 'Manager', 'Client'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Project Management',
   },
   {
@@ -207,7 +207,7 @@ export const questions: Question[] = [
     question: 'A simplified code description that uses structured logic without strict programming syntax is called:',
     options: ['Flowchart', 'Pseudocode', 'Diagram', 'Schema'],
     correctAnswer: 1,
-    difficulty: 4,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -216,7 +216,7 @@ export const questions: Question[] = [
     question: 'An object that represents a concept within a system is called an:',
     options: ['Instance', 'Entity', 'Record', 'Module'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Databases',
   },
   {
@@ -225,7 +225,7 @@ export const questions: Question[] = [
     question: 'The UI layer that users interact with directly is called the:',
     options: ['Backend', 'Middleware', 'Frontend', 'Interface'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Web',
   },
   {
@@ -234,7 +234,7 @@ export const questions: Question[] = [
     question: 'The process that involves verification by evaluating whether a system functions correctly is called:',
     options: ['Debugging', 'Testing', 'Compiling', 'Reviewing'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Software QA',
   },
   {
@@ -243,7 +243,7 @@ export const questions: Question[] = [
     question: 'A repo used for storing and managing source code is called a:',
     options: ['Registry', 'Repository', 'Archive', 'Directory'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Git',
   },
   {
@@ -252,7 +252,7 @@ export const questions: Question[] = [
     question: 'A short development iteration in Agile methodologies is called a:',
     options: ['Milestone', 'Sprint', 'Cycle', 'Phase'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Methodologies',
   },
   {
@@ -261,7 +261,7 @@ export const questions: Question[] = [
     question: 'An instance created from a class in object-oriented programming is called an:',
     options: ['Function', 'Method', 'Object', 'Module'],
     correctAnswer: 2,
-    difficulty: 4,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -270,7 +270,7 @@ export const questions: Question[] = [
     question: 'A logical structure used for iteration through repeated execution of code is called a:',
     options: ['Condition', 'Loop', 'Switch', 'Trigger'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -279,7 +279,7 @@ export const questions: Question[] = [
     question: 'A branch structure that allows a program to make decisions based on conditions is called a:',
     options: ['Loop', 'Function', 'Conditional', 'Event'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -288,7 +288,7 @@ export const questions: Question[] = [
     question: 'A reusable code block, also known as a procedure, is called a:',
     options: ['Variable', 'Class', 'Function', 'Module'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -297,7 +297,7 @@ export const questions: Question[] = [
     question: 'An ordered list used to store multiple values is called an:',
     options: ['Object', 'Array', 'Stack', 'Set'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -306,7 +306,7 @@ export const questions: Question[] = [
     question: 'An update specifically designed to fix a software bug is called a:',
     options: ['Release', 'Patch', 'Update', 'Build'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Software QA',
   },
   {
@@ -315,7 +315,7 @@ export const questions: Question[] = [
     question: 'A collection of reusable code, also known as a module, is called a:',
     options: ['Framework', 'Package', 'Library', 'Plugin'],
     correctAnswer: 2,
-    difficulty: 4,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -324,7 +324,7 @@ export const questions: Question[] = [
     question: 'A system that provides services to other computers, also known as a host, is called a:',
     options: ['Client', 'Router', 'Server', 'Gateway'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Networking',
   },
   {
@@ -333,7 +333,7 @@ export const questions: Question[] = [
     question: 'The data interchange format commonly used for exchanging information between systems is:',
     options: ['XML', 'CSV', 'JSON', 'YAML'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Web',
   },
   {
@@ -342,7 +342,7 @@ export const questions: Question[] = [
     question: 'The user interface display presented to the user is called a:',
     options: ['Layout', 'View', 'Page', 'Frame'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'UI Design',
   },
   {
@@ -351,7 +351,7 @@ export const questions: Question[] = [
     question: 'The action of saving changes to a version control repository is called a:',
     options: ['Push', 'Save', 'Commit', 'Stage'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Git',
   },
   {
@@ -360,7 +360,7 @@ export const questions: Question[] = [
     question: 'A parallel copy of code used for independent development is called a:',
     options: ['Fork', 'Clone', 'Branch', 'Tag'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Git',
   },
   {
@@ -369,7 +369,7 @@ export const questions: Question[] = [
     question: 'The operation that creates an independent branch copy of a repository is called a:',
     options: ['Clone', 'Fork', 'Branch', 'Pull'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Git',
   },
   {
@@ -378,7 +378,7 @@ export const questions: Question[] = [
     question: 'A bundle of code distributed as a unit is called a:',
     options: ['Module', 'Library', 'Package', 'Plugin'],
     correctAnswer: 2,
-    difficulty: 4,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -387,7 +387,7 @@ export const questions: Question[] = [
     question: 'A reusable component of code designed for a specific purpose is called a:',
     options: ['Class', 'Module', 'Script', 'Snippet'],
     correctAnswer: 1,
-    difficulty: 4,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -396,7 +396,7 @@ export const questions: Question[] = [
     question: 'The grammar rules that define how code must be written are called:',
     options: ['Logic', 'Semantics', 'Syntax', 'Structure'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -405,7 +405,7 @@ export const questions: Question[] = [
     question: 'A data storage area commonly known as RAM is called:',
     options: ['Cache', 'Storage', 'Memory', 'Buffer'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Hardware',
   },
   {
@@ -414,7 +414,7 @@ export const questions: Question[] = [
     question: 'A looping process that repeats a sequence of actions is called an:',
     options: ['Event', 'Iteration', 'Execution', 'Instance'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -423,7 +423,7 @@ export const questions: Question[] = [
     question: 'The quality that measures the user-friendliness and ease of use of a system is called:',
     options: ['Accessibility', 'Usability', 'Reliability', 'Scalability'],
     correctAnswer: 1,
-    difficulty: 4,
+    difficulty: 5,
     category: 'UI Design',
   },
   {
@@ -432,7 +432,7 @@ export const questions: Question[] = [
     question: 'A useful software function or capability provided to users is called a:',
     options: ['Tool', 'Plugin', 'Feature', 'Module'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Software QA',
   },
   {
@@ -441,7 +441,7 @@ export const questions: Question[] = [
     question: 'The process that makes software newer or better through an upgrade is called an:',
     options: ['Patch', 'Update', 'Release', 'Build'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Software QA',
   },
   {
@@ -450,7 +450,7 @@ export const questions: Question[] = [
     question: 'A software problem or error that needs attention is called a:',
     options: ['Bug', 'Issue', 'Defect', 'Error'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Software QA',
   },
   {
@@ -459,7 +459,7 @@ export const questions: Question[] = [
     question: 'A device address used to identify a machine on a network is called an:',
     options: ['URL', 'MAC Address', 'IP Address', 'Port'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Networking',
   },
   {
@@ -468,7 +468,7 @@ export const questions: Question[] = [
     question: 'The service that provides server space for hosting websites or applications is called:',
     options: ['Domain', 'Hosting', 'CDN', 'DNS'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Web',
   },
   {
@@ -477,7 +477,7 @@ export const questions: Question[] = [
     question: 'A data search or request made to a database is called a:',
     options: ['Command', 'Request', 'Query', 'Call'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Databases',
   },
   {
@@ -486,7 +486,7 @@ export const questions: Question[] = [
     question: 'A save copy of data created for recovery purposes is called a:',
     options: ['Snapshot', 'Archive', 'Backup', 'Copy'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Tools',
   },
   {
@@ -495,7 +495,7 @@ export const questions: Question[] = [
     question: 'The process used to recover data from a backup is called a:',
     options: ['Recovery', 'Restore', 'Rollback', 'Reset'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Tools',
   },
   {
@@ -504,7 +504,7 @@ export const questions: Question[] = [
     question: 'A task buffer where items wait to be processed is called a:',
     options: ['Stack', 'Queue', 'Buffer', 'List'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -513,7 +513,7 @@ export const questions: Question[] = [
     question: 'The process that involves verification by checking whether data meets required rules is called:',
     options: ['Testing', 'Parsing', 'Validation', 'Sanitization'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Software QA',
   },
   {
@@ -522,7 +522,7 @@ export const questions: Question[] = [
     question: 'A technique that performs reduction by decreasing the size of data is called:',
     options: ['Encryption', 'Minification', 'Compression', 'Encoding'],
     correctAnswer: 2,
-    difficulty: 4,
+    difficulty: 5,
     category: 'Tools',
   },
   {
@@ -531,7 +531,7 @@ export const questions: Question[] = [
     question: 'An early model of a system used for testing ideas and designs is called a:',
     options: ['Mockup', 'Wireframe', 'Prototype', 'Draft'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'UI Design',
   },
   {
@@ -540,7 +540,7 @@ export const questions: Question[] = [
     question: 'A user requirement written as a scenario from the user\'s perspective is called a:',
     options: ['Use Case', 'User Story', 'Requirement', 'Scenario'],
     correctAnswer: 1,
-    difficulty: 4,
+    difficulty: 5,
     category: 'Methodologies',
   },
   {
@@ -549,7 +549,7 @@ export const questions: Question[] = [
     question: 'A prioritized task queue maintained during project development is called a:',
     options: ['Roadmap', 'Sprint', 'Backlog', 'Board'],
     correctAnswer: 2,
-    difficulty: 4,
+    difficulty: 5,
     category: 'Methodologies',
   },
   {
@@ -558,7 +558,7 @@ export const questions: Question[] = [
     question: 'A software launch or published version made available to users is called a:',
     options: ['Build', 'Deploy', 'Release', 'Update'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Tools',
   },
   {
@@ -567,7 +567,7 @@ export const questions: Question[] = [
     question: 'The process of recording system events for monitoring and debugging purposes is called:',
     options: ['Tracing', 'Logging', 'Auditing', 'Monitoring'],
     correctAnswer: 1,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Tools',
   },
   {
@@ -576,7 +576,7 @@ export const questions: Question[] = [
     question: 'A visual panel used to display metrics and key information is called a:',
     options: ['Report', 'Dashboard', 'Panel', 'Monitor'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'UI Design',
   },
   {
@@ -585,7 +585,7 @@ export const questions: Question[] = [
     question: 'A user\'s active connection period with a system is called a:',
     options: ['Token', 'Cookie', 'Session', 'Cache'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Web',
   },
   {
@@ -594,7 +594,7 @@ export const questions: Question[] = [
     question: 'A browser-stored data file used to save user information is called a:',
     options: ['Session', 'Token', 'Cache', 'Cookie'],
     correctAnswer: 3,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Web',
   },
   {
@@ -603,7 +603,7 @@ export const questions: Question[] = [
     question: 'An automated program or set of commands executed by a computer is called a:',
     options: ['Program', 'Script', 'Macro', 'Bot'],
     correctAnswer: 1,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Programming',
   },
   {
@@ -612,7 +612,7 @@ export const questions: Question[] = [
     question: 'The acronym for a terminal used for interacting with a system through text commands is:',
     options: ['GUI', 'IDE', 'CLI', 'API'],
     correctAnswer: 2,
-    difficulty: 3,
+    difficulty: 5,
     category: 'Tools',
   },
   {
@@ -621,7 +621,7 @@ export const questions: Question[] = [
     question: 'Written system docs that explain how software works and how to use it are called:',
     options: ['Comments', 'Guides', 'Documentation', 'Manuals'],
     correctAnswer: 2,
-    difficulty: 2,
+    difficulty: 5,
     category: 'Programming',
   },
 ];
@@ -630,17 +630,65 @@ export const getDifficultyLevel = (
   difficulty: number
 ): 'Easy' | 'Medium' | 'Hard' => {
   if (difficulty <= 4) return 'Easy';
-  if (difficulty <= 7) return 'Medium';
+  if (difficulty <= 5) return 'Medium';
   return 'Hard';
 };
 
-export const getLevelFromScore = (
-  score: number
-): { level: string; description: string; message: string } => {
-  if (score >= 91) return { level: 'C2', description: 'Maestría - Dominio completo', message: '¡Perfectamente! Eres prácticamente bilingüe' };
-  if (score >= 76) return { level: 'C1', description: 'Avanzado - Muy dominado', message: '¡Muy bien! Dominas muy bien' };
-  if (score >= 56) return { level: 'B2', description: 'Intermedio-Alto - Competente', message: '¡Excelente! Nivel competente' };
-  if (score >= 36) return { level: 'B1', description: 'Intermedio - Desarrollo', message: '¡Vas bien! Continúa mejorando' };
-  if (score >= 21) return { level: 'A2', description: 'Elemental - Bajo', message: 'Buen inicio, sigue practicando' };
-  return { level: 'A1', description: 'Principiante - Muy básico', message: 'Necesitas más práctica fundamental' };
+export interface LevelResult {
+  level: string;
+  status: 'Failed' | 'Developing' | 'Competent' | 'Mastered';
+  description: string;
+  message: string;
+  passed: boolean;
+  canAdvance: boolean;
+}
+
+export const getLevelFromScore = (score: number): LevelResult => {
+
+  if (score < 50) {
+    return {
+      level: 'A2',
+      status: 'Failed',
+      description: 'Not Passed',
+      message: 'You need more practice with basic English concepts.',
+      passed: false,
+      canAdvance: false,
+    };
+  }
+
+  if (score < 80) {
+    return {
+      level: 'A2',
+      status: 'Developing',
+      description: 'Basic Understanding',
+      message: 'You passed the level, but more practice is recommended.',
+      passed: true,
+      canAdvance: false,
+    };
+  }
+
+  if (score < 95) {
+    return {
+      level: 'A2',
+      status: 'Competent',
+      description: 'Good Performance',
+      message: 'You have a solid understanding of A2 content.',
+      passed: true,
+      canAdvance: false,
+    };
+  }
+
+  return {
+    level: 'A2',
+    status: 'Mastered',
+    description: 'Excellent Performance',
+    message: 'Congratulations! B1 has been unlocked.',
+    passed: true,
+    canAdvance: true,
+  };
+};
+export const getRandomQuestions = (count: number = 20): Question[] => {
+  return [...questions]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, count);
 };

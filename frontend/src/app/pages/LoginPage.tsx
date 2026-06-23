@@ -79,7 +79,7 @@ export function LoginPage() {
               animate={{ opacity: 1, y: 0 }}
               className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl flex items-start gap-3"
             >
-              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
               <p className="text-sm text-destructive">{error}</p>
             </motion.div>
           )}
@@ -167,13 +167,13 @@ export function LoginPage() {
 
           {/* Demo Credentials */}
 
-          
+
         </motion.div>
       </div>
 
       {/* Right Side - Decorative */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-sena-green via-sena-green-dark to-sena-blue relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIwOSAxLjc5MS00IDQtNHM0IDEuNzkxIDQgNC0xLjc5MSA0LTQgNC00LTEuNzkxLTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
+      <div className="hidden lg:flex flex-1 bg-linear-to-br from-sena-green via-sena-green-dark to-sena-blue relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/GenteSena.jpg')] bg-cover bg-center opacity-60" />
 
         <div className="relative z-10 flex flex-col items-center justify-center w-full p-12 text-white">
           <motion.div
@@ -200,11 +200,6 @@ export function LoginPage() {
             className="absolute bottom-32 right-20 w-16 h-16 bg-white/10 rounded-xl backdrop-blur-lg"
             animate={{ y: [0, 20, 0], rotate: [0, -5, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-          />
-          <motion.div
-            className="absolute top-1/2 right-32 w-12 h-12 bg-white/10 rounded-lg backdrop-blur-lg"
-            animate={{ y: [0, 15, 0], rotate: [0, 10, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
           />
         </div>
       </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Star, Clock, Trophy, Zap, X, GraduationCap } from "lucide-react";
-import { questions, getDifficultyLevel } from "../data/questionsA1";
+import { questions, getDifficultyLevel, getLevelFromScore, getRandomQuestions, type Question } from "../data/questionsA1";
 import * as api from "../services/api";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
@@ -31,16 +31,19 @@ export function QuizPage() {
   const [answerState, setAnswerState] = useState<AnswerState>("idle");
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
+  const [selectedQuestions] = useState<Question[]>(() =>
+    getRandomQuestions(9)
+  );
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   const [writingAnswer, setWritingAnswer] = useState<string>("");
   const [mediaError, setMediaError] = useState<string | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
-  const question = questions[currentQuestion];
+  const progress = ((currentQuestion + 1) / selectedQuestions.length) * 100;
+  const question = selectedQuestions[currentQuestion];
   const isSpeakingQuestion = question.type === "speaking";
   const isWritingQuestion = question.type === "writing";
   const isMultipleQuestion = question.type === "multiple";
@@ -211,7 +214,7 @@ export function QuizPage() {
       setSelectedAnswer(null);
       setAnswerState("idle");
     } else {
-      const finalScore = Math.round((score / questions.length) * 100);
+      const finalScore = Math.round((score / selectedQuestions.length) * 100);
       let level = "A1";
       let character = "Beginner";
 
@@ -276,11 +279,22 @@ export function QuizPage() {
         speaking_score: speakingScore,
         writing_score: writingScore,
         correct_answers: score,
-        total_questions: questions.length,
+        total_questions: selectedQuestions.length,
         process,
         duration: "00:10:00",
       });
+      const levelResult = getLevelFromScore(finalScore);
+      localStorage.setItem("quizScore", finalScore.toString());
+      localStorage.setItem("correctAnswers", score.toString());
 
+      localStorage.setItem(
+        "levelResult",
+        JSON.stringify(levelResult)
+      );
+
+      if (levelResult.canAdvance) {
+        localStorage.setItem("A2Unlocked", "true");
+      }
       navigate("/results");
     }
   };
@@ -320,7 +334,7 @@ export function QuizPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sena-blue via-sena-blue-light to-sena-green relative overflow-hidden">
+    <div className="min-h-screen bg-linear-to-br from-sena-blue via-sena-blue-light to-sena-green relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0YzAtMi4yMDkgMS43OTEtNCA0LTRzNCAxLjc5MSA0IDQtMS43OTEgNC00IDQtNC0xLjc5MS00LTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
 
@@ -352,7 +366,7 @@ export function QuizPage() {
           className="mb-6"
         >
           <div className="flex items-center justify-between text-white/80 text-sm mb-2">
-            <span>Pregunta {currentQuestion + 1} de {questions.length}</span>
+            <span>Pregunta {currentQuestion + 1} de {selectedQuestions.length}</span>
             <span>{Math.round(progress)}% completado</span>
           </div>
           <div className="h-2 bg-white/20 rounded-full overflow-hidden backdrop-blur-lg">
@@ -492,7 +506,7 @@ export function QuizPage() {
               </div>
             ) : (
               <div className="px-6 lg:px-8 pb-6 lg:pb-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {question.options?.map((option, index) => (
+                {question.options?.map((option: string, index: number) => (
                   <motion.button
                     key={index}
                     onClick={() => handleAnswerClick(index)}
@@ -509,7 +523,7 @@ export function QuizPage() {
                     }
                   >
                     <div className="flex items-start gap-3">
-                      <span className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">
+                      <span className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
                         {String.fromCharCode(65 + index)}
                       </span>
                       <span className="font-medium text-base lg:text-lg leading-snug">{option}</span>

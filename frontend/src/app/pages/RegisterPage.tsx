@@ -32,7 +32,7 @@ export function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    
+
     if (formData.password !== formData.confirmPassword) {
       setError("Las contrasenas no coinciden");
       return;
@@ -41,9 +41,9 @@ export function RegisterPage() {
       setError("Debes aceptar los terminos y condiciones");
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Intentar registro con API
       await register({
@@ -55,11 +55,11 @@ export function RegisterPage() {
         last_name: formData.lastName,
         phone_num: formData.phoneNum ? parseInt(formData.phoneNum.replace(/\D/g, '')) : undefined,
       });
-      
+
       navigate("/dashboard");
     } catch (err) {
       console.log("[v0] API register failed, using fallback...", err);
-      
+
       // Fallback a registro local
       const fullName = `${formData.firstName} ${formData.lastName}`;
       localStorage.setItem("userName", fullName);
@@ -69,10 +69,10 @@ export function RegisterPage() {
       localStorage.setItem("userDocType", formData.docType);
       localStorage.setItem("userDocNum", formData.docNum);
       localStorage.setItem("userPhone", formData.phoneNum);
-      
+
       navigate("/dashboard");
     }
-    
+
     setIsLoading(false);
   };
 
@@ -87,7 +87,7 @@ export function RegisterPage() {
   };
 
   const countries = [
-    "Colombia", "Mexico", "Argentina", "Chile", "Peru", 
+    "Colombia", "Mexico", "Argentina", "Chile", "Peru",
     "Ecuador", "Venezuela", "Bolivia", "Paraguay", "Uruguay"
   ];
 
@@ -102,59 +102,62 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Side - Decorative */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-sena-blue via-sena-blue-light to-sena-green relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIwOSAxLjc5MS00IDQtNHM0IDEuNzkxIDQgNC0xLjc5MSA0LTQgNC00LTEuNzkxLTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
-        
-        <div className="relative z-10 flex flex-col items-center justify-center w-full p-12 text-white">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-center max-w-md"
-          >
-            <img src="/SENAIMG.png" alt="SENA Logo" className="w-24 h-24 object-contain mx-auto mb-8" />
-            <h3 className="text-3xl font-bold mb-4 text-balance">
-              Unete a la comunidad SENA
-            </h3>
-            <p className="text-white/80 text-lg leading-relaxed mb-8">
-              Crea tu cuenta y comienza a evaluar tu nivel de ingles con herramientas interactivas y retroalimentacion personalizada.
-            </p>
-            
-            {/* Features */}
-            <div className="space-y-4 text-left">
-              {[
-                "Retroalimentacion de docentes",
-                "Certificado de nivel oficial",
-                "Seguimiento de progreso"
-              ].map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + index * 0.1 }}
-                  className="flex items-center gap-3"
-                >
-                  <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Check className="w-4 h-4" />
-                  </div>
-                  <span className="text-white/90">{feature}</span>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+      <div className="hidden lg:flex flex-1 bg-linear-to-br from-sena-blue via-sena-blue-light to-sena-green relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/PersonaSena.png')] bg-cover bg-center opacity-60" />
 
-          {/* Floating Elements */}
-          <motion.div
-            className="absolute top-20 right-20 w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-lg"
-            animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="relative z-10 flex flex-col items-center justify-center w-full p-12"
+        >
+          <img
+            src="/SENAIMG.png"
+            alt="Logo SENA"
+            className="w-12 h-12 object-contain"
           />
-          <motion.div
-            className="absolute bottom-32 left-20 w-16 h-16 bg-white/10 rounded-xl backdrop-blur-lg"
-            animate={{ y: [0, 20, 0], rotate: [0, -5, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-          />
-        </div>
+
+          <h3 className="text-3xl font-bold mb-4 text-balance text-white mt-8">
+            Unete a la comunidad SENA
+          </h3>
+          <p className="text-white/80 text-lg leading-relaxed mb-8 text-center max-w-md">
+            Crea tu cuenta y comienza a evaluar tu nivel de ingles con herramientas interactivas y retroalimentacion personalizada.
+          </p>
+
+          {/* Features */}
+          <div className="space-y-4 text-left max-w-sm">
+            {[
+              "Retroalimentacion de docentes",
+              "Certificado de nivel oficial",
+              "Seguimiento de progreso"
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + index * 0.1 }}
+                className="flex items-center gap-3"
+              >
+                <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                  <Check className="w-4 h-4" />
+                </div>
+                <span className="text-white/90">{feature}</span>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Floating Elements */}
+        <motion.div
+          className="absolute top-20 right-20 w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-lg"
+          animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-32 left-20 w-16 h-16 bg-white/10 rounded-xl backdrop-blur-lg"
+          animate={{ y: [0, 20, 0], rotate: [0, -5, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+        />
       </div>
 
       {/* Right Side - Form */}
@@ -201,10 +204,10 @@ export function RegisterPage() {
 
           {/* Step 1: Datos Personales */}
           {step === 1 && (
-            <motion.form 
+            <motion.form
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              onSubmit={handleNextStep} 
+              onSubmit={handleNextStep}
               className="space-y-4"
             >
               {/* First Name & Last Name */}
@@ -391,10 +394,10 @@ export function RegisterPage() {
 
           {/* Step 2: Credenciales */}
           {step === 2 && (
-            <motion.form 
+            <motion.form
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              onSubmit={handleSubmit} 
+              onSubmit={handleSubmit}
               className="space-y-4"
             >
               {/* Summary Card */}
