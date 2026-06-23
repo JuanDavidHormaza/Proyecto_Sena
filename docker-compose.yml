@@ -1,7 +1,6 @@
 services:
 
   worklex_backend:
-
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -13,8 +12,8 @@ services:
     env_file:
       - .env
 
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
 
     volumes:
       - ./backend:/app
@@ -45,8 +44,8 @@ services:
 
     # Permite que otros contenedores esperen a que PostgreSQL esté listo.
     healthcheck:
-      #test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
-      test: ["CMD","curl","-f","http://localhost:5173"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
+      #test: ["CMD","curl","-f","http://localhost:5173"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -66,8 +65,8 @@ services:
 
     restart: unless-stopped
 
-    expose:
-      - "5173"
+    ports:
+      - "5173:5173"
 
     volumes:
       - ./frontend:/app
@@ -79,8 +78,8 @@ services:
 
     # Permite que otros contenedores esperen a que PostgreSQL esté listo.
     healthcheck:
-      #test: ["CMD", "curl", "-f", "http://localhost:5173"]
-      test: ["CMD","curl","-f","http://localhost:8000/api/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      #test: ["CMD","curl","-f","http://localhost:8000/api/health/"]
       interval: 30s
       timeout: 10s
       retries: 5

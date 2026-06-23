@@ -2,15 +2,18 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { 
-  LogOut, User, Search, Eye, MessageSquare, CheckCircle, XCircle,
+  Search, Eye, MessageSquare, CheckCircle, XCircle,
   GraduationCap, Users, BarChart3, TrendingUp, Send, X, Clock,
-  Award, ChevronDown, Filter, RefreshCw
+  Filter
 } from "lucide-react";
 import { mockTestResults, TestResult, mockUsers } from "../data/users";
 import * as api from "../services/api";
+import { UserAccountMenu } from "../components/UserAccountMenu";
+import { useAuth } from "../context/AuthContext";
 
 export function TeacherDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [results, setResults] = useState<TestResult[]>(mockTestResults);
   const [selectedResult, setSelectedResult] = useState<TestResult | null>(null);
   const [feedback, setFeedback] = useState("");
@@ -19,7 +22,7 @@ export function TeacherDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState(mockUsers.filter(u => u.role === 'student'));
 
-  const teacherName = localStorage.getItem("userName") || "Docente";
+  const teacherName = user?.name || localStorage.getItem("userName") || "Docente";
 
   // Cargar datos desde API
   const loadDataFromApi = async () => {
@@ -73,11 +76,6 @@ export function TeacherDashboard() {
   useEffect(() => {
     loadDataFromApi();
   }, []);
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/");
-  };
 
   const handleViewDetails = (result: TestResult) => {
     setSelectedResult(result);
@@ -148,20 +146,7 @@ export function TeacherDashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 px-4 py-2 bg-muted rounded-xl">
-                <div className="w-8 h-8 bg-sena-blue rounded-lg flex items-center justify-center text-white font-medium text-sm">
-                  {teacherName.charAt(0)}
-                </div>
-                <span className="font-medium text-foreground text-sm hidden sm:block">{teacherName}</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-2.5 text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
+            <UserAccountMenu accent="blue" />
           </div>
         </div>
       </header>

@@ -1,20 +1,20 @@
-import { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 
 import { 
-  LogOut, User, Settings, Target, Flame, BarChart3, 
+  Target, Flame, BarChart3, 
   Clock, ChevronRight, Play, History, MessageSquare,
-  Award, Calendar
+  Calendar
 } from "lucide-react";
 import { getLevelFromScore } from "../data/questionsA1";
 import senaLogo from "../../asset/logo.png";
+import { UserAccountMenu } from "../components/UserAccountMenu";
+import { useAuth } from "../context/AuthContext";
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const [showMenu, setShowMenu] = useState(false);
-  const userName = localStorage.getItem("userName") || "Usuario";
-  const userProgram = localStorage.getItem("userProgram") || "Desarrollo de Software";
+  const { user } = useAuth();
+  const userName = user?.name || localStorage.getItem("userName") || "Usuario";
   const lastScore = Number(localStorage.getItem("quizScore") || "0");
   const lastCorrectAnswers = Number(localStorage.getItem("correctAnswers") || "0");
   const lastTotalQuestions = Number(localStorage.getItem("totalQuestions") || "0");
@@ -46,11 +46,6 @@ export function DashboardPage() {
 
   const feedbacks: Array<{ id: number; teacher: string; date: string; message: string }> = [];
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/");
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -73,53 +68,7 @@ export function DashboardPage() {
                 <span className="font-medium text-sm">{stats.currentStreak} dias de racha</span>
               </div>
               
-              <div className="relative">
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="flex items-center gap-3 p-2 hover:bg-muted rounded-xl transition-colors"
-                >
-                  <div className="w-10 h-10 bg-sena-green rounded-xl flex items-center justify-center text-white font-medium">
-                    {userName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="hidden sm:block text-left">
-                    <p className="font-medium text-foreground text-sm">{userName}</p>
-                    <p className="text-xs text-muted-foreground">{userProgram}</p>
-                  </div>
-                </button>
-
-                {showMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-border py-2 z-50"
-                    >
-                      <div className="px-4 py-3 border-b border-border">
-                        <p className="font-medium text-foreground">{userName}</p>
-                        <p className="text-sm text-muted-foreground">{userProgram}</p>
-                      </div>
-                      <button className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        Mi Perfil
-                      </button>
-                      <button className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm">
-                        <Settings className="w-4 h-4 text-muted-foreground" />
-                        Configuracion
-                      </button>
-                      <div className="border-t border-border mt-2 pt-2">
-                        <button
-                          onClick={handleLogout}
-                          className="w-full px-4 py-2.5 text-left hover:bg-destructive/10 flex items-center gap-3 text-sm text-destructive"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          Cerrar Sesion
-                        </button>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </div>
+              <UserAccountMenu accent="green" />
             </div>
           </div>
         </div>

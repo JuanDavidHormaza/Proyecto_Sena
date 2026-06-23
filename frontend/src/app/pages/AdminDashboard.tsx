@@ -1,9 +1,8 @@
 // frontend/src/pages/AdminDashboard.tsx
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
 import {
-  LogOut, Users, Upload, FileText, Trash2, Plus, Search,
+  Users, Upload, FileText, Trash2, Plus, Search,
   GraduationCap, BarChart3, BookOpen, Settings, X,
   Check, Filter, Eye, ToggleLeft, ToggleRight,
   FolderOpen, Download, Play, Pause, Music, Video,
@@ -19,6 +18,7 @@ import {
 } from "../data/users";
 import * as api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { UserAccountMenu } from "../components/UserAccountMenu";
 import {
   AreaChart, Area, BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -230,7 +230,6 @@ const ROLE_COLORS: Record<string, string> = {
 
 // ════════════════════════════════════════════════════════════════════════════
 export function AdminDashboard() {
-  const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const isSuperAdmin = authUser?.role === "superadmin";
 
@@ -306,8 +305,6 @@ export function AdminDashboard() {
   useEffect(() => { loadDataFromApi(); }, []);
 
   // ── Handlers con API real ─────────────────────────────────────────────────
-  const handleLogout = () => { localStorage.clear(); navigate("/"); };
-
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("¿Eliminar este usuario? Esta acción no se puede deshacer.")) return;
     try {

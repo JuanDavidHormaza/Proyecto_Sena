@@ -9,6 +9,8 @@ import { ResultsPage } from "./pages/ResultsPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
 import { MediaPage } from "./pages/MediaPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -68,6 +70,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute allowedRoles={["student", "teacher", "admin", "superadmin"]}>
         <MediaPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/profile",
+    element: (
+      <ProtectedRoute allowedRoles={["student", "teacher", "admin", "superadmin"]}>
+        <ProfilePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/settings",
+    element: (
+      <ProtectedRoute allowedRoles={["student", "teacher", "admin", "superadmin"]}>
+        <SettingsPage />
       </ProtectedRoute>
     ),
   },
