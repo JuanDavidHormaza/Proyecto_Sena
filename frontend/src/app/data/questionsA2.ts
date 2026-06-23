@@ -634,61 +634,13 @@ export const getDifficultyLevel = (
   return 'Hard';
 };
 
-export interface LevelResult {
-  level: string;
-  status: 'Failed' | 'Developing' | 'Competent' | 'Mastered';
-  description: string;
-  message: string;
-  passed: boolean;
-  canAdvance: boolean;
-}
-
-export const getLevelFromScore = (score: number): LevelResult => {
-
-  if (score < 50) {
-    return {
-      level: 'A2',
-      status: 'Failed',
-      description: 'Not Passed',
-      message: 'You need more practice with basic English concepts.',
-      passed: false,
-      canAdvance: false,
-    };
-  }
-
-  if (score < 80) {
-    return {
-      level: 'A2',
-      status: 'Developing',
-      description: 'Basic Understanding',
-      message: 'You passed the level, but more practice is recommended.',
-      passed: true,
-      canAdvance: false,
-    };
-  }
-
-  if (score < 95) {
-    return {
-      level: 'A2',
-      status: 'Competent',
-      description: 'Good Performance',
-      message: 'You have a solid understanding of A2 content.',
-      passed: true,
-      canAdvance: false,
-    };
-  }
-
-  return {
-    level: 'A2',
-    status: 'Mastered',
-    description: 'Excellent Performance',
-    message: 'Congratulations! B1 has been unlocked.',
-    passed: true,
-    canAdvance: true,
-  };
-};
-export const getRandomQuestions = (count: number = 20): Question[] => {
-  return [...questions]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, count);
+export const getLevelFromScore = (
+  score: number
+): { level: string; description: string; message: string } => {
+  if (score >= 91) return { level: 'C2', description: 'Maestría - Dominio completo', message: '¡Perfectamente! Eres prácticamente bilingüe' };
+  if (score >= 76) return { level: 'C1', description: 'Avanzado - Muy dominado', message: '¡Muy bien! Dominas muy bien' };
+  if (score >= 56) return { level: 'B2', description: 'Intermedio-Alto - Competente', message: '¡Excelente! Nivel competente' };
+  if (score >= 36) return { level: 'B1', description: 'Intermedio - Desarrollo', message: '¡Vas bien! Continúa mejorando' };
+  if (score >= 21) return { level: 'A2', description: 'Elemental - Bajo', message: 'Buen inicio, sigue practicando' };
+  return { level: 'A1', description: 'Principiante - Muy básico', message: 'Necesitas más práctica fundamental' };
 };

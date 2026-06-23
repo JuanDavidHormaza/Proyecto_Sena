@@ -2,7 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Star, Clock, Trophy, Zap, X, GraduationCap } from "lucide-react";
+<<<<<<< HEAD
 import { questions, getDifficultyLevel, getLevelFromScore, getRandomQuestions, type Question } from "../data/questionsA1";
+=======
+import { questions, getDifficultyLevel, getLevelFromScore } from "../data/questionsA1";
+>>>>>>> 12ce7f010480de6a1661eac8b50ff42c8e19028f
 import * as api from "../services/api";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
