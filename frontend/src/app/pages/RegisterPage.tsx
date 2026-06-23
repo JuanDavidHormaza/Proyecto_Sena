@@ -114,7 +114,7 @@ export function RegisterPage() {
           <img
             src="/SENAIMG.png"
             alt="Logo SENA"
-            className="w-12 h-12 object-contain"
+            className="w-24 h-24 object-contain mx-auto mb-8"
           />
 
           <h3 className="text-3xl font-bold mb-4 text-balance text-white mt-8">
