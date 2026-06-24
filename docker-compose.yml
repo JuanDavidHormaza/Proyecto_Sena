@@ -29,7 +29,7 @@ services:
       "
     depends_on:
       worklex_persistencia:
-        condition: service_healthy
+        condition: service_started
       worklex_media_minio:
         #condition: service_healthy
         condition: service_started

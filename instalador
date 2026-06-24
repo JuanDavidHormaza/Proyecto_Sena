@@ -1,17 +1,26 @@
+echo
+echo -------------------------------------------------------------------------------
+echo     Limpieza de los contenedores, el sistema y la caché
+echo -------------------------------------------------------------------------------
+echo
 docker compose down -v --remove-orphans
 docker builder prune -a -f
 docker system prune -a -f
-docker compose down --remove-orphans
 docker network prune
 
+echo -------------------------------------------------------------------------------
+echo   Docker instalado y su versión
+echo -------------------------------------------------------------------------------
 docker --version
 docker compose version
 
-docker network create worklex_edge_network
-docker network create worklex_app_network --driver bridge
-docker network create worklex_data_network --driver bridge
+echo -------------------------------------------------------------------------------
+echo Docker network create worklex_edge_network
+echo -------------------------------------------------------------------------------
 
-echo Revisar Servicios antes de ejecutar
+echo -------------------------------------------------------------------------------
+echo     Revisar Servicios antes de ejecutar
+echo -------------------------------------------------------------------------------
 docker compose \
 -f docker-compose.yml \
 -f docker-compose.db.yml \
@@ -27,6 +36,9 @@ echo Validar quay IO Keycloak
 docker pull quay.io/keycloak/keycloak:latest
 
 
+echo -------------------------------------------------------------------------------
+echo  Implementacion de COntenedores, Volúmenes e Imágenes
+echo -------------------------------------------------------------------------------
 docker compose \
 -f docker-compose.yml \
 -f docker-compose.db.yml \
@@ -37,7 +49,10 @@ docker compose \
 -f docker-compose.IDS_IPS.yml \
 -f docker-compose.media-init.yml \
 up -d --build
-docker ps
+
+echo -------------------------------------------------------------------------------
+echo     Revisar Servicios antes de ejecutar
+echo -------------------------------------------------------------------------------docker ps
 docker logs Worklex_media
 docker logs Worklex_media_init
 
