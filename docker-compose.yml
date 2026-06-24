@@ -1,7 +1,11 @@
 services:
 
+<<<<<<< Updated upstream
   backend:
 
+=======
+  worklex_backend:
+>>>>>>> Stashed changes
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -13,8 +17,15 @@ services:
     env_file:
       - .env
 
+<<<<<<< Updated upstream
     ports:
       - "${DJANGO_PORT}:8000"
+=======
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+>>>>>>> Stashed changes
 
     volumes:
       - ./backend:/app
@@ -45,6 +56,10 @@ services:
     # Permite que otros contenedores esperen a que PostgreSQL esté listo.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
+<<<<<<< Updated upstream
+=======
+      #test: ["CMD","curl","-f","http://localhost:5173"]
+>>>>>>> Stashed changes
       interval: 30s
       timeout: 10s
       retries: 5
@@ -64,8 +79,15 @@ services:
 
     restart: unless-stopped
 
+<<<<<<< Updated upstream
     ports:
       - "${VITE_PORT}:5173"
+=======
+    expose:
+      - "5173"
+    ports:
+      - "5173:5173"
+>>>>>>> Stashed changes
 
     volumes:
       - ./frontend:/app
@@ -78,6 +100,10 @@ services:
     # Permite que otros contenedores esperen a que PostgreSQL esté listo.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5173"]
+<<<<<<< Updated upstream
+=======
+      #test: ["CMD","curl","-f","http://localhost:8000/api/health/"]
+>>>>>>> Stashed changes
       interval: 30s
       timeout: 10s
       retries: 5
@@ -87,4 +113,12 @@ services:
 
 networks:
   worklex_network:
+<<<<<<< Updated upstream
     external: true
+=======
+    external: true
+    #driver: bridge
+
+volumes:
+  frontend_node_modules:    
+>>>>>>> Stashed changes

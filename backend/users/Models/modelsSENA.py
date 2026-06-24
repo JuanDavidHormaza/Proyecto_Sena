@@ -6,6 +6,7 @@ class Person(models.Model):
     person_id = models.AutoField(primary_key=True)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
+    
 
     DOC_TYPES = [
         ('CC', 'Cédula'),

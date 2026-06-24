@@ -451,6 +451,51 @@ class TestResultController:
             feedback=data.get('feedback'),
             duration=data.get('duration'),
         )
+<<<<<<< Updated upstream
+=======
+
+        # Guarda / actualiza el ranking (leaderboard) del usuario.
+        RankingController.update_from_result(result)
+
+        # ── Notificar a los instructores por correo ──────────────────────────
+        try:
+            from django.core.mail import send_mail
+            from django.conf import settings as django_settings
+
+            instructor_emails = list(
+                User.objects.filter(role_id='INSTRUCTOR')
+                .values_list('person__email', flat=True)
+            )
+
+            if instructor_emails:
+                aprendiz_name = (
+                    f"{user.person.first_name} {user.person.last_name}".strip()
+                )
+                duration_str = data.get('duration', 'N/A')
+                subject_line = (
+                    f"[WorkLex] Resultado de prueba: {aprendiz_name}"
+                )
+                body = (
+                    f"El aprendiz {aprendiz_name} completó la prueba de inglés.\n\n"
+                    f"Nivel asignado : {level}\n"
+                    f"Puntaje        : {score}%\n"
+                    f"Respuestas correctas: {correct_answers}/{total_questions}\n"
+                    f"Duración       : {duration_str}\n\n"
+                    f"Ingresa al dashboard de instructores para ver el detalle completo "
+                    f"y dejar retroalimentación."
+                )
+                send_mail(
+                    subject=subject_line,
+                    message=body,
+                    from_email=getattr(django_settings, 'DEFAULT_FROM_EMAIL', ''),
+                    recipient_list=instructor_emails,
+                    fail_silently=True,
+                )
+        except Exception as _email_exc:
+            # El error de email nunca debe interrumpir el guardado del resultado
+            print(f"[WorkLex] Error al notificar instructores: {_email_exc}")
+
+>>>>>>> Stashed changes
         return result, None
 
     @staticmethod
@@ -463,3 +508,77 @@ class TestResultController:
         result.feedback = feedback
         result.save()
         return result, None
+<<<<<<< Updated upstream
+=======
+
+
+# ─── Ranking (Leaderboard) ─────────────────────────────────────────────────────
+
+class RankingController:
+
+    @staticmethod
+    def update_from_result(result):
+        """
+        Crea o actualiza la fila de ranking del usuario.
+        Solo sobreescribe el mejor resultado si el nuevo puntaje es mayor
+        o igual al registrado previamente.
+        """
+        ranking, created = Ranking.objects.get_or_create(
+            user=result.user,
+            defaults={
+                'best_result': result,
+                'best_score': result.score,
+                'level': result.level,
+                'character': result.character,
+                'correct_answers': result.correct_answers,
+                'total_questions': result.total_questions,
+                'speaking_score': result.speaking_score,
+                'writing_score': result.writing_score,
+                'attempts': 1,
+            },
+        )
+
+        if not created:
+            ranking.attempts += 1
+            if result.score >= ranking.best_score:
+                ranking.best_result = result
+                ranking.best_score = result.score
+                ranking.level = result.level
+                ranking.character = result.character
+                ranking.correct_answers = result.correct_answers
+                ranking.total_questions = result.total_questions
+                ranking.speaking_score = result.speaking_score
+                ranking.writing_score = result.writing_score
+            ranking.save()
+
+        return ranking
+
+    @staticmethod
+    def list_all():
+        """Devuelve el leaderboard ordenado por mejor puntaje."""
+        queryset = (
+            Ranking.objects
+            .select_related('user__person', 'best_result')
+            .order_by('-best_score', '-updated_at')
+        )
+
+        leaderboard = []
+        for position, ranking in enumerate(queryset, start=1):
+            person = ranking.user.person
+            leaderboard.append({
+                'position': position,
+                'userId': str(ranking.user.user_id),
+                'userName': f"{person.first_name} {person.last_name}",
+                'bestScore': ranking.best_score,
+                'level': ranking.level,
+                'character': ranking.character,
+                'correctAnswers': ranking.correct_answers,
+                'totalQuestions': ranking.total_questions,
+                'speakingScore': ranking.speaking_score,
+                'writingScore': ranking.writing_score,
+                'attempts': ranking.attempts,
+                'bestResultId': str(ranking.best_result.id) if ranking.best_result else None,
+                'updatedAt': ranking.updated_at.isoformat() if ranking.updated_at else None,
+            })
+        return leaderboard
+>>>>>>> Stashed changes
