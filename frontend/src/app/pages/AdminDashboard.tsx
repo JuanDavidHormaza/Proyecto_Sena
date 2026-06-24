@@ -37,11 +37,11 @@ const ACCEPT_ALL = ".pdf,.doc,.docx,.txt,.xlsx,.mp3,.wav,.ogg,.flac,.aac,.m4a,.m
 function categoryMeta(cat: FileCategory) {
   switch (cat) {
     case "audio":
-      return { icon: Music,    bg: "bg-purple-100", text: "text-purple-600",  label: "Audio" };
+      return { icon: Music, bg: "bg-purple-100", text: "text-purple-600", label: "Audio" };
     case "video":
-      return { icon: Film,     bg: "bg-sena-blue/10", text: "text-sena-blue", label: "Video" };
+      return { icon: Film, bg: "bg-sena-blue/10", text: "text-sena-blue", label: "Video" };
     default:
-      return { icon: FileText, bg: "bg-sena-green/10", text: "text-sena-green", label: "Doc"   };
+      return { icon: FileText, bg: "bg-sena-green/10", text: "text-sena-green", label: "Doc" };
   }
 }
 
@@ -158,11 +158,10 @@ function DocumentCard({
           {(cat === "audio" || cat === "video") && doc.objectUrl ? (
             <button
               onClick={() => setShowPlayer((p) => !p)}
-              className={`p-2 rounded-lg transition-colors ${
-                showPlayer
-                  ? "bg-sena-green/10 text-sena-green"
-                  : "text-muted-foreground hover:text-sena-green hover:bg-sena-green/10"
-              }`}
+              className={`p-2 rounded-lg transition-colors ${showPlayer
+                ? "bg-sena-green/10 text-sena-green"
+                : "text-muted-foreground hover:text-sena-green hover:bg-sena-green/10"
+                }`}
               title={showPlayer ? "Ocultar reproductor" : "Reproducir"}
             >
               {cat === "audio" ? <Music className="w-4 h-4" /> : <Video className="w-4 h-4" />}
@@ -191,11 +190,10 @@ function DocumentCard({
           {meta.label}
         </span>
         {doc.level && (
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-            doc.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${doc.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
             doc.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
-            'bg-warning/10 text-warning'
-          }`}>
+              'bg-warning/10 text-warning'
+            }`}>
             {doc.level}
           </span>
         )}
@@ -352,7 +350,7 @@ export function AdminDashboard() {
         api.getSubjects(),
         api.getDocuments(),
       ]);
-      
+
       // Convertir usuarios de API a formato local
       const convertedUsers: User[] = apiUsers.map((u) => ({
         id: u.id,
@@ -369,7 +367,7 @@ export function AdminDashboard() {
         firstName: u.firstName,
         lastName: u.lastName,
       }));
-      
+
       // Convertir subjects de API a formato local
       const convertedSubjects: Subject[] = apiSubjects.map((s) => ({
         id: s.id,
@@ -378,7 +376,7 @@ export function AdminDashboard() {
         color: s.color,
         createdAt: s.createdAt || new Date().toISOString().split('T')[0],
       }));
-      
+
       // Convertir documentos de API a formato local
       const convertedDocs: ExtendedDocument[] = apiDocs.map((d) => ({
         id: d.id,
@@ -394,7 +392,7 @@ export function AdminDashboard() {
         synonyms: d.synonyms,
         level: undefined,
       }));
-      
+
       setUsers(convertedUsers.length > 0 ? convertedUsers : mockUsers);
       setSubjects(convertedSubjects.length > 0 ? convertedSubjects : mockSubjects);
       setDocuments(convertedDocs.length > 0 ? convertedDocs : mockDocuments);
@@ -544,11 +542,11 @@ export function AdminDashboard() {
   };
 
   const tabs = [
-    { id: "overview",   label: "Resumen",       icon: BarChart3  },
-    { id: "analytics",  label: "Estadisticas",  icon: PieChart   },
-    { id: "users",      label: "Usuarios",      icon: Users      },
-    { id: "documents",  label: "Documentos",    icon: FileText   },
-    { id: "subjects",   label: "Asignaturas",   icon: BookOpen   },
+    { id: "overview", label: "Resumen", icon: BarChart3 },
+    { id: "analytics", label: "Estadisticas", icon: PieChart },
+    { id: "users", label: "Usuarios", icon: Users },
+    { id: "documents", label: "Diccionarios", icon: FileText },
+    { id: "subjects", label: "Asignaturas", icon: BookOpen },
   ];
 
   // ── Preview dentro del modal ───────────────────────────────────────────────
@@ -571,11 +569,10 @@ export function AdminDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  activeTab === tab.id
-                    ? "bg-sena-green text-white shadow-lg shadow-sena-green/25"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id
+                  ? "bg-sena-green text-white shadow-lg shadow-sena-green/25"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
               >
                 <tab.icon className="w-5 h-5" />
                 <span className="font-medium">{tab.label}</span>
@@ -610,9 +607,8 @@ export function AdminDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-all ${
-                activeTab === tab.id ? "bg-sena-green text-white" : "bg-muted text-muted-foreground"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab.id ? "bg-sena-green text-white" : "bg-muted text-muted-foreground"
+                }`}
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
@@ -635,10 +631,10 @@ export function AdminDashboard() {
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: "Total Usuarios",   value: stats.totalUsers,    icon: Users,    color: "sena-green" },
-                  { label: "Usuarios Activos", value: stats.activeUsers,   icon: Check,    color: "sena-blue"  },
-                  { label: "Documentos",       value: stats.totalDocuments, icon: FileText, color: "warning"   },
-                  { label: "Asignaturas",      value: stats.totalSubjects,  icon: BookOpen, color: "destructive" },
+                  { label: "Total Usuarios", value: stats.totalUsers, icon: Users, color: "sena-green" },
+                  { label: "Usuarios Activos", value: stats.activeUsers, icon: Check, color: "sena-blue" },
+                  { label: "Diccionarios", value: stats.totalDocuments, icon: FileText, color: "warning" },
+                  { label: "Asignaturas", value: stats.totalSubjects, icon: BookOpen, color: "destructive" },
                 ].map((stat, i) => (
                   <motion.div
                     key={i}
@@ -684,7 +680,7 @@ export function AdminDashboard() {
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">Estudiantes</span>
+                        <span className="text-muted-foreground">Aprendices</span>
                         <span className="font-medium">{stats.students}</span>
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -693,7 +689,7 @@ export function AdminDashboard() {
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">Docentes</span>
+                        <span className="text-muted-foreground">Instructores</span>
                         <span className="font-medium">{stats.teachers}</span>
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -736,7 +732,7 @@ export function AdminDashboard() {
                 {[
                   { label: "Promedio General", value: `${Math.round(mockTestResults.reduce((a, r) => a + r.score, 0) / mockTestResults.length)}%`, icon: Target, color: "sena-green", trend: "+5.2%", up: true },
                   { label: "Pruebas Completadas", value: mockTestResults.length, icon: Award, color: "sena-blue", trend: "+12", up: true },
-                  { label: "Estudiantes Activos", value: users.filter(u => u.role === 'student' && u.status === 'active').length, icon: Users, color: "warning", trend: "+3", up: true },
+                  { label: "Aprendices Activos", value: users.filter(u => u.role === 'student' && u.status === 'active').length, icon: Users, color: "warning", trend: "+3", up: true },
                   { label: "Tasa de Aprobacion", value: `${Math.round((mockTestResults.filter(r => r.score >= 60).length / mockTestResults.length) * 100)}%`, icon: Zap, color: "destructive", trend: "+2.1%", up: true },
                 ].map((kpi, i) => (
                   <motion.div
@@ -768,7 +764,7 @@ export function AdminDashboard() {
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="font-semibold text-foreground">Distribucion por Nivel</h3>
-                      <p className="text-sm text-muted-foreground">Clasificacion de estudiantes</p>
+                      <p className="text-sm text-muted-foreground">Clasificacion de aprendices</p>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -821,21 +817,21 @@ export function AdminDashboard() {
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={[
-                        { mes: 'Ene', promedio: 65, estudiantes: 12 },
-                        { mes: 'Feb', promedio: 68, estudiantes: 18 },
-                        { mes: 'Mar', promedio: 72, estudiantes: 24 },
-                        { mes: 'Abr', promedio: 75, estudiantes: 32 },
+                        { mes: 'Ene', promedio: 65, aprendices: 12 },
+                        { mes: 'Feb', promedio: 68, aprendices: 18 },
+                        { mes: 'Mar', promedio: 72, aprendices: 24 },
+                        { mes: 'Abr', promedio: 75, aprendices: 32 },
                       ]}>
                         <defs>
                           <linearGradient id="colorPromedio" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#39A900" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#39A900" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#39A900" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#39A900" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                         <XAxis dataKey="mes" stroke="#9ca3af" fontSize={12} />
                         <YAxis stroke="#9ca3af" fontSize={12} />
-                        <Tooltip 
+                        <Tooltip
                           contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e5e7eb' }}
                         />
                         <Area type="monotone" dataKey="promedio" stroke="#39A900" strokeWidth={2} fillOpacity={1} fill="url(#colorPromedio)" />
@@ -858,18 +854,18 @@ export function AdminDashboard() {
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={[
-                        { programa: 'Desarrollo', promedio: 78, estudiantes: 45 },
-                        { programa: 'Analisis', promedio: 72, estudiantes: 32 },
-                        { programa: 'Redes', promedio: 68, estudiantes: 28 },
-                        { programa: 'Diseno', promedio: 82, estudiantes: 20 },
-                        { programa: 'Marketing', promedio: 75, estudiantes: 15 },
+                        { programa: 'Desarrollo', promedio: 78, aprendices: 45 },
+                        { programa: 'Analisis', promedio: 72, aprendices: 32 },
+                        { programa: 'Redes', promedio: 68, aprendices: 28 },
+                        { programa: 'Diseno', promedio: 82, aprendices: 20 },
+                        { programa: 'Marketing', promedio: 75, aprendices: 15 },
                       ]} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                         <XAxis type="number" domain={[0, 100]} stroke="#9ca3af" fontSize={12} />
                         <YAxis dataKey="programa" type="category" stroke="#9ca3af" fontSize={12} width={80} />
-                        <Tooltip 
+                        <Tooltip
                           contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e5e7eb' }}
-                          formatter={(value, name) => [name === 'promedio' ? `${value}%` : value, name === 'promedio' ? 'Promedio' : 'Estudiantes']}
+                          formatter={(value, name) => [name === 'promedio' ? `${value}%` : value, name === 'promedio' ? 'Promedio' : 'Aprendices']}
                         />
                         <Bar dataKey="promedio" fill="#1F4E78" radius={[0, 8, 8, 0]} />
                       </BarChart>
@@ -907,7 +903,7 @@ export function AdminDashboard() {
               <div className="bg-white rounded-2xl p-6 border border-border shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="font-semibold text-foreground">Top Estudiantes</h3>
+                    <h3 className="font-semibold text-foreground">Top Aprendices</h3>
                     <p className="text-sm text-muted-foreground">Mejores calificaciones del periodo</p>
                   </div>
                   <button className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-xl hover:bg-muted/80 transition-all text-sm font-medium">
@@ -920,7 +916,7 @@ export function AdminDashboard() {
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Posicion</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Estudiante</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Aprendiz</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Programa</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Puntuacion</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nivel</th>
@@ -936,12 +932,11 @@ export function AdminDashboard() {
                           return (
                             <tr key={result.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                               <td className="py-4 px-4">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                                  index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
                                   index === 1 ? 'bg-gray-100 text-gray-700' :
-                                  index === 2 ? 'bg-orange-100 text-orange-700' :
-                                  'bg-muted text-muted-foreground'
-                                }`}>
+                                    index === 2 ? 'bg-orange-100 text-orange-700' :
+                                      'bg-muted text-muted-foreground'
+                                  }`}>
                                   {index + 1}
                                 </div>
                               </td>
@@ -955,17 +950,15 @@ export function AdminDashboard() {
                               </td>
                               <td className="py-4 px-4 text-sm text-muted-foreground">{student?.program || 'N/A'}</td>
                               <td className="py-4 px-4">
-                                <span className={`text-lg font-bold ${
-                                  result.score >= 80 ? 'text-sena-green' : 
+                                <span className={`text-lg font-bold ${result.score >= 80 ? 'text-sena-green' :
                                   result.score >= 60 ? 'text-warning' : 'text-destructive'
-                                }`}>{result.score}%</span>
+                                  }`}>{result.score}%</span>
                               </td>
                               <td className="py-4 px-4">
-                                <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
-                                  result.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${result.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
                                   result.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
-                                  'bg-warning/10 text-warning'
-                                }`}>{result.level}</span>
+                                    'bg-warning/10 text-warning'
+                                  }`}>{result.level}</span>
                               </td>
                               <td className="py-4 px-4">
                                 <div className="flex items-center gap-1 text-sena-green text-sm font-medium">
@@ -1014,15 +1007,14 @@ export function AdminDashboard() {
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="font-semibold text-foreground">Recursos mas Usados</h3>
-                      <p className="text-sm text-muted-foreground">Top documentos del mes</p>
+                      <p className="text-sm text-muted-foreground">Top diccionarios del mes</p>
                     </div>
                   </div>
                   <div className="space-y-4">
                     {documents.slice(0, 4).map((doc, i) => (
                       <div key={doc.id} className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          categoryMeta(doc.category ?? getFileCategory(doc.name)).bg
-                        }`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${categoryMeta(doc.category ?? getFileCategory(doc.name)).bg
+                          }`}>
                           {(() => {
                             const Icon = categoryMeta(doc.category ?? getFileCategory(doc.name)).icon;
                             return <Icon className={`w-5 h-5 ${categoryMeta(doc.category ?? getFileCategory(doc.name)).text}`} />;
@@ -1079,8 +1071,8 @@ export function AdminDashboard() {
                   >
                     <option value="all">Todos los roles</option>
                     <option value="admin">Administrador</option>
-                    <option value="teacher">Docente</option>
-                    <option value="student">Estudiante</option>
+                    <option value="teacher">Instructor</option>
+                    <option value="student">Aprendiz</option>
                   </select>
                 </div>
               </div>
@@ -1118,8 +1110,8 @@ export function AdminDashboard() {
                               className={`px-3 py-1.5 rounded-lg text-sm font-medium border-0 cursor-pointer disabled:cursor-not-allowed ${user.role === "admin" ? "bg-destructive/10 text-destructive" : user.role === "teacher" ? "bg-sena-blue/10 text-sena-blue" : "bg-sena-green/10 text-sena-green"}`}
                             >
                               <option value="admin">Administrador</option>
-                              <option value="teacher">Docente</option>
-                              <option value="student">Estudiante</option>
+                              <option value="teacher">Instructor</option>
+                              <option value="student">Aprendiz</option>
                             </select>
                           </td>
                           <td className="py-4 px-5"><span className="text-sm text-muted-foreground">{user.program || "-"}</span></td>
@@ -1156,8 +1148,8 @@ export function AdminDashboard() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground">Archivos y Documentos</h2>
-                  <p className="text-muted-foreground">Gestiona documentos, audios y videos educativos</p>
+                  <h2 className="text-2xl font-bold text-foreground">Diccionarios</h2>
+                  <p className="text-muted-foreground">Gestiona diccionarios, audios y videos educativos</p>
                 </div>
                 <button
                   onClick={() => setShowUploadModal(true)}
@@ -1170,10 +1162,10 @@ export function AdminDashboard() {
               {/* Filtros de categoría */}
               <div className="flex gap-2 flex-wrap">
                 {([
-                  { key: "all",      label: "Todos",      icon: FolderOpen },
-                  { key: "document", label: "Documentos", icon: FileText   },
-                  { key: "audio",    label: "Audios",     icon: Music      },
-                  { key: "video",    label: "Videos",     icon: Film       },
+                  { key: "all", label: "Todos", icon: FolderOpen },
+                  { key: "document", label: "Diccionarios", icon: FileText },
+                  { key: "audio", label: "Audios", icon: Music },
+                  { key: "video", label: "Videos", icon: Film },
                 ] as const).map((f) => {
                   const Icon = f.icon;
                   const active = filterCategory === f.key;
@@ -1181,11 +1173,10 @@ export function AdminDashboard() {
                     <button
                       key={f.key}
                       onClick={() => setFilterCategory(f.key)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                        active
-                          ? "bg-sena-green text-white shadow-md"
-                          : "bg-white border border-border text-muted-foreground hover:border-sena-green/40 hover:text-sena-green"
-                      }`}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${active
+                        ? "bg-sena-green text-white shadow-md"
+                        : "bg-white border border-border text-muted-foreground hover:border-sena-green/40 hover:text-sena-green"
+                        }`}
                     >
                       <Icon className="w-4 h-4" />
                       {f.label}
@@ -1295,8 +1286,8 @@ export function AdminDashboard() {
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1.5">Rol</label>
                     <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as any })} className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50">
-                      <option value="student">Estudiante</option>
-                      <option value="teacher">Docente</option>
+                      <option value="student">Aprendiz</option>
+                      <option value="teacher">Instructor</option>
                       <option value="admin">Administrador</option>
                     </select>
                   </div>
@@ -1466,7 +1457,7 @@ export function AdminDashboard() {
                     <BookOpen className="w-4 h-4 text-sena-green" />
                     Informacion del Diccionario Digital
                   </p>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1.5">Definicion</label>
@@ -1531,14 +1522,14 @@ function PermissionsEditor({ permissions, onSave, onCancel }: { permissions: Use
   const [edited, setEdited] = useState(permissions);
 
   const items: { key: keyof UserPermissions; label: string; description: string }[] = [
-    { key: "canManageUsers",     label: "Gestionar Usuarios",    description: "Crear, editar y eliminar usuarios"         },
-    { key: "canManageDocuments", label: "Gestionar Documentos",  description: "Subir y eliminar documentos"               },
-    { key: "canViewStatistics",  label: "Ver Estadísticas",      description: "Acceder a reportes y métricas"             },
-    { key: "canGiveFeedback",    label: "Dar Retroalimentación", description: "Comentar en resultados de estudiantes"     },
-    { key: "canTakeQuiz",        label: "Realizar Pruebas",      description: "Acceso a evaluaciones de inglés"           },
-    { key: "canViewResults",     label: "Ver Resultados",        description: "Ver resultados de pruebas"                 },
-    { key: "canManageSubjects",  label: "Gestionar Asignaturas", description: "Crear y editar asignaturas"                },
-    { key: "canConfigureLevels", label: "Configurar Niveles",   description: "Ajustar rangos de evaluación"              },
+    { key: "canManageUsers", label: "Gestionar Usuarios", description: "Crear, editar y eliminar usuarios" },
+    { key: "canManageDocuments", label: "Gestionar Diccionarios", description: "Subir y eliminar diccionarios" },
+    { key: "canViewStatistics", label: "Ver Estadísticas", description: "Acceder a reportes y métricas" },
+    { key: "canGiveFeedback", label: "Dar Retroalimentación", description: "Comentar en resultados de aprendices" },
+    { key: "canTakeQuiz", label: "Realizar Pruebas", description: "Acceso a evaluaciones de inglés" },
+    { key: "canViewResults", label: "Ver Resultados", description: "Ver resultados de pruebas" },
+    { key: "canManageSubjects", label: "Gestionar Asignaturas", description: "Crear y editar asignaturas" },
+    { key: "canConfigureLevels", label: "Configurar Niveles", description: "Ajustar rangos de evaluación" },
   ];
 
   return (
@@ -1564,3 +1555,7 @@ function PermissionsEditor({ permissions, onSave, onCancel }: { permissions: Use
     </div>
   );
 }
+
+{/* Documentos=Diccionarios
+  Docentes = Instructores
+  Estudiantes = Aprendices */}
