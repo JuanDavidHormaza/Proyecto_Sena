@@ -6,7 +6,7 @@ def create_teacher(apps, schema_editor):
     Person = apps.get_model('users', 'Person')
     User = apps.get_model('users', 'User')
 
-    email = 'docente@correo.com'
+    email = 'docente1@correo.com'
 
     if Person.objects.filter(email=email).exists():
         return
@@ -15,9 +15,9 @@ def create_teacher(apps, schema_editor):
         email=email,
         password=make_password('123456'),
         doc_type='CC',
-        doc_num='0000000001',
-        first_name='Docente',
-        last_name='Usuario',
+        doc_num='0000000002',
+        first_name='Instructor Pepe',
+        last_name='Aasdq',
         phone_num=None,
         status='ACTIVO',
     )
@@ -32,7 +32,7 @@ def create_teacher(apps, schema_editor):
 
 def reverse_teacher(apps, schema_editor):
     Person = apps.get_model('users', 'Person')
-    Person.objects.filter(email='docente@correo.com').delete()
+    Person.objects.filter(email='docente1@correo.com').delete()
 
 
 class Migration(migrations.Migration):
