@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
-import { 
-  LogOut, User, Settings, Trophy, Target, Flame, BarChart3, 
+import {
+  LogOut, User, Settings, Trophy, Target, Flame, BarChart3,
   GraduationCap, Clock, ChevronRight, Play, History, MessageSquare,
   TrendingUp, Award, Calendar
 } from "lucide-react";
@@ -44,7 +44,7 @@ export function DashboardPage() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/SENAIMG.png" alt="SENA Logo" className="w-11 h-11 object-contain" />
+              <img src="/worklex.png" alt="Proyecto" className="w-11 h-11 object-contain" />
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-foreground">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Panel de Estudiante</p>
@@ -56,7 +56,7 @@ export function DashboardPage() {
                 <Flame className="w-4 h-4" />
                 <span className="font-medium text-sm">{stats.currentStreak} dias de racha</span>
               </div>
-              
+
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
@@ -217,7 +217,7 @@ export function DashboardPage() {
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-              
+
               <div className="divide-y divide-border">
                 {recentTests.map((test, index) => (
                   <motion.div
@@ -228,20 +228,18 @@ export function DashboardPage() {
                     className="p-5 flex items-center justify-between hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
-                        test.score >= 80 ? 'bg-sena-green/10 text-sena-green' :
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${test.score >= 80 ? 'bg-sena-green/10 text-sena-green' :
                         test.score >= 60 ? 'bg-warning/10 text-warning' :
-                        'bg-destructive/10 text-destructive'
-                      }`}>
+                          'bg-destructive/10 text-destructive'
+                        }`}>
                         {test.score}%
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            test.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${test.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
                             test.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
-                            'bg-warning/10 text-warning'
-                          }`}>
+                              'bg-warning/10 text-warning'
+                            }`}>
                             {test.level}
                           </span>
                           <span className="text-sm text-muted-foreground">{test.correctAnswers}/{test.totalQuestions} correctas</span>
@@ -279,7 +277,7 @@ export function DashboardPage() {
                 </div>
                 <h3 className="font-semibold text-foreground">Tu Nivel Actual</h3>
               </div>
-              
+
               <div className="text-center py-6">
                 <div className="w-24 h-24 mx-auto bg-gradient-to-br from-sena-green to-sena-green-dark rounded-2xl flex items-center justify-center text-white text-4xl font-bold shadow-lg shadow-sena-green/30 mb-4">
                   {stats.currentLevel}
@@ -287,7 +285,7 @@ export function DashboardPage() {
                 <p className="text-foreground font-medium">Intermedio-Alto</p>
                 <p className="text-sm text-muted-foreground">Competente en situaciones cotidianas</p>
               </div>
-              
+
               <div className="space-y-3 pt-4 border-t border-border">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Progreso a C1</span>
@@ -318,7 +316,7 @@ export function DashboardPage() {
                   <p className="text-sm text-muted-foreground">Comentarios del docente</p>
                 </div>
               </div>
-              
+
               {feedbacks.length > 0 ? (
                 <div className="space-y-4">
                   {feedbacks.map((feedback) => (

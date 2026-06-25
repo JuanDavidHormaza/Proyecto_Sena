@@ -112,7 +112,7 @@ export function RegisterPage() {
           className="relative z-10 flex flex-col items-center justify-center w-full p-12"
         >
           <img
-            src="/SENAIMG.png"
+            src="/worklex.png"
             alt="Logo SENA"
             className="w-24 h-24 object-contain mx-auto mb-8"
           />
@@ -179,7 +179,7 @@ export function RegisterPage() {
 
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <img src="/SENAIMG.png" alt="SENA Logo" className="w-12 h-12 object-contain" />
+            <img src="/worklex.png" alt="SENA Logo" className="w-12 h-12 object-contain" />
             <div>
               <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
               <p className="text-sm text-muted-foreground">Plataforma SENA</p>

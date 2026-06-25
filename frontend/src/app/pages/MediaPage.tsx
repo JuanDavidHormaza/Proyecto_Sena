@@ -85,9 +85,9 @@ export function MediaPage() {
   const [playingVideo, setPlayingVideo] = useState<number | null>(null);
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
-    { key: "all",    label: "Todo",      icon: Film   },
-    { key: "images", label: "Imágenes",  icon: Camera },
-    { key: "videos", label: "Videos",    icon: Video  },
+    { key: "all", label: "Todo", icon: Film },
+    { key: "images", label: "Imágenes", icon: Camera },
+    { key: "videos", label: "Videos", icon: Video },
   ];
 
   return (
@@ -103,7 +103,7 @@ export function MediaPage() {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <img src="/SENAIMG.png" alt="SENA Logo" className="w-12 h-12 object-contain" />
+              <img src="/worklex.png" alt="SENA Logo" className="w-12 h-12 object-contain" />
               <div>
                 <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Plataforma SENA</p>
@@ -155,7 +155,7 @@ export function MediaPage() {
           >
             {[
               { icon: Camera, value: `${IMAGES.length}`, label: "Imágenes" },
-              { icon: Video,  value: `${VIDEOS.length}`, label: "Videos"   },
+              { icon: Video, value: `${VIDEOS.length}`, label: "Videos" },
             ].map((stat, i) => (
               <div key={i} className="flex items-center gap-3 bg-white rounded-2xl px-6 py-4 shadow-lg border border-border">
                 <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
@@ -187,11 +187,10 @@ export function MediaPage() {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
-                    active
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${active
                       ? "bg-sena-green text-white shadow-lg shadow-sena-green/30"
                       : "bg-white text-muted-foreground border border-border hover:border-sena-green/40 hover:text-sena-green"
-                  }`}
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   {tab.label}
@@ -392,7 +391,7 @@ export function MediaPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <img src="/SENAIMG.png" alt="SENA Logo" className="w-10 h-10 object-contain" />
+              <img src="/worklex.png" alt="SENA Logo" className="w-10 h-10 object-contain" />
               <div>
                 <p className="font-semibold text-foreground">English Level Test</p>
                 <p className="text-sm text-muted-foreground">SENA - 2026</p>

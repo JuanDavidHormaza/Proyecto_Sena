@@ -18,7 +18,7 @@ export function LandingPage() {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <img src="/SENAIMG.png" alt="SENA Logo" className="w-12 h-12 object-contain" />
+              <img src="/worklex.png" alt="worklex" className="w-12 h-12 object-contain" />
               <div>
                 <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Plataforma SENA</p>
@@ -54,14 +54,14 @@ export function LandingPage() {
                 <Sparkles className="w-4 h-4" />
                 Evaluacion Interactiva
               </div>
-              
+
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight text-balance">
                 Evalua tu Nivel de{" "}
                 <span className="text-sena-green">Ingles</span>
               </h2>
 
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-lg">
-                Completa un cuestionario interactivo y descubre tu nivel linguistico en minutos. 
+                Completa un cuestionario interactivo y descubre tu nivel linguistico en minutos.
                 Recibe retroalimentacion personalizada de tus docentes.
               </p>
 
@@ -283,7 +283,7 @@ export function LandingPage() {
             className="relative overflow-hidden bg-gradient-to-br from-sena-green to-sena-green-dark rounded-3xl p-12 text-center text-white shadow-2xl"
           >
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIwOSAxLjc5MS00IDQtNHM0IDEuNzkxIDQgNC0xLjc5MSA0LTQgNC00LTEuNzkxLTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
-            
+
             <div className="relative z-10">
               <GraduationCap className="w-16 h-16 mx-auto mb-6 opacity-90" />
               <h3 className="text-3xl md:text-4xl font-bold mb-4 text-balance">
@@ -311,7 +311,7 @@ export function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <img src="/SENAIMG.png" alt="SENA Logo" className="w-10 h-10 object-contain" />
+              <img src="/worklex.png" alt="worklex" className="w-10 h-10 object-contain" />
               <div>
                 <p className="font-semibold text-foreground">English Level Test</p>
                 <p className="text-sm text-muted-foreground">SENA - 2026</p>

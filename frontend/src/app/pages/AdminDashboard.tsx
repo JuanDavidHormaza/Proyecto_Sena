@@ -558,7 +558,7 @@ export function AdminDashboard() {
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-border z-40 hidden lg:block">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
-            <img src="/SENAIMG.png" alt="SENA Logo" className="w-11 h-11 object-contain" />
+            <img src="/worklex.png" alt="proyecto" className="w-11 h-11 object-contain" />
             <div>
               <h1 className="font-semibold text-foreground">English Test</h1>
               <p className="text-xs text-muted-foreground">Panel Admin</p>
@@ -595,7 +595,7 @@ export function AdminDashboard() {
       <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/SENAIMG.png" alt="SENA Logo" className="w-10 h-10 object-contain" />
+            <img src="/worklex.png" alt="Worklex Logo" className="w-10 h-10 object-contain" />
             <span className="font-semibold text-foreground">Admin</span>
           </div>
           <button onClick={handleLogout} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg">

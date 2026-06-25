@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
-import { 
+import {
   LogOut, User, Search, Eye, MessageSquare, CheckCircle, XCircle,
   GraduationCap, Users, BarChart3, TrendingUp, Send, X, Clock,
   Award, ChevronDown, Filter, RefreshCw
@@ -29,7 +29,7 @@ export function TeacherDashboard() {
         api.getTestResults(),
         api.getUsers('student'),
       ]);
-      
+
       // Convertir resultados de API
       const convertedResults: TestResult[] = apiResults.map((r) => ({
         id: r.id,
@@ -44,7 +44,7 @@ export function TeacherDashboard() {
         duration: r.duration,
         answers: r.answers || [],
       }));
-      
+
       // Convertir estudiantes de API
       const convertedStudents = apiUsers.map((u) => ({
         id: u.id,
@@ -57,7 +57,7 @@ export function TeacherDashboard() {
         createdAt: new Date().toISOString().split('T')[0],
         program: '',
       }));
-      
+
       if (convertedResults.length > 0) {
         setResults(convertedResults);
       }
@@ -92,9 +92,9 @@ export function TeacherDashboard() {
       } catch (error) {
         console.log("[v0] Failed to save feedback to API", error);
       }
-      
+
       // Actualizar estado local
-      const updatedResults = results.map(r => 
+      const updatedResults = results.map(r =>
         r.id === selectedResult.id ? { ...r, feedback } : r
       );
       setResults(updatedResults);
@@ -139,7 +139,7 @@ export function TeacherDashboard() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/SENAIMG.png" alt="SENA Logo" className="w-11 h-11 object-contain" />
+              <img src="/worklex.png" alt="SENA Logo" className="w-11 h-11 object-contain" />
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-foreground">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Panel de Docente</p>
@@ -219,7 +219,7 @@ export function TeacherDashboard() {
               { label: "Avanzado (C1-C2)", value: levelDistribution.advanced, color: "#39A900", percentage: (levelDistribution.advanced / stats.totalTests) * 100 },
             ].map((level, index) => (
               <div key={index} className="text-center">
-                <div 
+                <div
                   className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-white text-xl font-bold mb-2"
                   style={{ backgroundColor: level.color }}
                 >
@@ -270,7 +270,7 @@ export function TeacherDashboard() {
             const student = students.find(s => s.id === userId);
             const latestResult = userResults[0];
             const avgScore = Math.round(userResults.reduce((acc, r) => acc + r.score, 0) / userResults.length);
-            
+
             return (
               <motion.div
                 key={userId}
@@ -296,15 +296,13 @@ export function TeacherDashboard() {
                     <div className="flex items-center gap-3">
                       <div className="text-right hidden sm:block">
                         <p className="text-sm text-muted-foreground">Promedio</p>
-                        <p className={`text-xl font-bold ${
-                          avgScore >= 80 ? 'text-sena-green' : avgScore >= 60 ? 'text-warning' : 'text-destructive'
-                        }`}>{avgScore}%</p>
+                        <p className={`text-xl font-bold ${avgScore >= 80 ? 'text-sena-green' : avgScore >= 60 ? 'text-warning' : 'text-destructive'
+                          }`}>{avgScore}%</p>
                       </div>
-                      <div className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        latestResult.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
-                        latestResult.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
-                        'bg-warning/10 text-warning'
-                      }`}>
+                      <div className={`px-3 py-1.5 rounded-xl text-sm font-medium ${latestResult.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
+                          latestResult.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
+                            'bg-warning/10 text-warning'
+                        }`}>
                         {latestResult.level}
                       </div>
                     </div>
@@ -329,24 +327,22 @@ export function TeacherDashboard() {
                       {userResults.map((result) => (
                         <tr key={result.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="py-4 px-5 text-sm">
-                            {new Date(result.completedAt).toLocaleDateString('es-ES', { 
-                              day: 'numeric', month: 'short', year: 'numeric' 
+                            {new Date(result.completedAt).toLocaleDateString('es-ES', {
+                              day: 'numeric', month: 'short', year: 'numeric'
                             })}
                           </td>
                           <td className="py-4 px-5">
-                            <span className={`text-lg font-bold ${
-                              result.score >= 80 ? 'text-sena-green' : 
-                              result.score >= 60 ? 'text-warning' : 'text-destructive'
-                            }`}>
+                            <span className={`text-lg font-bold ${result.score >= 80 ? 'text-sena-green' :
+                                result.score >= 60 ? 'text-warning' : 'text-destructive'
+                              }`}>
                               {result.score}%
                             </span>
                           </td>
                           <td className="py-4 px-5">
-                            <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
-                              result.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
-                              result.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
-                              'bg-warning/10 text-warning'
-                            }`}>
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${result.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
+                                result.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
+                                  'bg-warning/10 text-warning'
+                              }`}>
                               {result.level}
                             </span>
                           </td>
@@ -423,10 +419,9 @@ export function TeacherDashboard() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-muted/50 rounded-xl p-4 text-center">
                     <p className="text-sm text-muted-foreground mb-1">Puntuacion</p>
-                    <p className={`text-3xl font-bold ${
-                      selectedResult.score >= 80 ? 'text-sena-green' :
-                      selectedResult.score >= 60 ? 'text-warning' : 'text-destructive'
-                    }`}>{selectedResult.score}%</p>
+                    <p className={`text-3xl font-bold ${selectedResult.score >= 80 ? 'text-sena-green' :
+                        selectedResult.score >= 60 ? 'text-warning' : 'text-destructive'
+                      }`}>{selectedResult.score}%</p>
                   </div>
                   <div className="bg-muted/50 rounded-xl p-4 text-center">
                     <p className="text-sm text-muted-foreground mb-1">Nivel</p>

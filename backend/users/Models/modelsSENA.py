@@ -36,8 +36,9 @@ class Person(models.Model):
 class User(models.Model):
     user_id = models.AutoField(primary_key=True)
     person = models.ForeignKey(Person, on_delete=models.CASCADE)
+    #MFA 
     mfa = models.CharField(max_length=255, blank=True, default='')
-    mfa_enabled = models.BooleanField(default=False)  # ← AÑADIR ESTO
+    mfa_enabled = models.BooleanField(default=False)
 
     ROLE_CHOICES = [
         ('ADMIN', 'Admin'),
