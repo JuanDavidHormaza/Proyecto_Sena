@@ -7,7 +7,7 @@ import { questionsA1 } from "../data/questionsA1";
 import { questionsA2 } from "../data/questionsA2";
 import { questionsB1 } from "../data/questionsB1";
 import { questionsB2 } from "../data/questionsB2";
-import senaLogo from "../../asset/logo.png";
+
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
 
@@ -46,7 +46,8 @@ export function QuizPage() {
   const [answerState, setAnswerState] = useState<AnswerState>("idle");
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showLevelModal, setShowLevelModal] = useState(false);
+
+
   const [currentLevel, setCurrentLevel] = useState<Level>("A1");
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
@@ -227,7 +228,21 @@ export function QuizPage() {
       audioBlob: undefined,
     }));
 
-  const saveQuizResult = async (completedLevels: Level[]) => {
+  const saveQuizResult = async (
+    completedLevels: Level[]
+  ): Promise<{
+    score: number;
+    correctAnswers: number;
+    totalQuestions: number;
+    answers: UserAnswer[];
+    levelReached: Level;
+    completedLevels: Level[];
+    duration: string;
+    passed?: boolean;
+    threshold?: number;
+    breakdown?: any;
+    auto_feedback?: string;
+  }> => {
     const completedAnswers = userAnswersRef.current;
     const correctAnswerCount = scoreRef.current;
     const completedQuestionCount = getCompletedQuestionCount(completedLevels);
@@ -235,11 +250,6 @@ export function QuizPage() {
     const duration = formatDuration(Date.now() - quizStartedAtRef.current);
     const userId = Number(localStorage.getItem("userId"));
     const serializableAnswers = getSerializableAnswers(completedAnswers);
-
-    localStorage.setItem("quizScore", String(finalScore));
-    localStorage.setItem("correctAnswers", String(correctAnswerCount));
-    localStorage.setItem("totalQuestions", String(completedQuestionCount));
-    localStorage.setItem("quizDuration", duration);
 
     try {
       const resultPayload: Record<string, unknown> = {
@@ -264,7 +274,22 @@ export function QuizPage() {
 
       const savedResult = await api.createTestResult(resultPayload);
 
+      // Guardado legacy para pantallas existentes (se quitará progresivamente)
       localStorage.setItem("lastTestResult", JSON.stringify(savedResult));
+
+      return {
+        score: finalScore,
+        correctAnswers: correctAnswerCount,
+        totalQuestions: completedQuestionCount,
+        answers: completedAnswers,
+        levelReached: completedLevels[completedLevels.length - 1],
+        completedLevels,
+        duration,
+        passed: savedResult?.passed,
+        threshold: savedResult?.threshold,
+        breakdown: savedResult?.breakdown,
+        auto_feedback: savedResult?.auto_feedback,
+      };
     } catch (error) {
       console.error("No se pudo guardar el resultado del quiz.", error);
     }
@@ -277,8 +302,10 @@ export function QuizPage() {
       levelReached: completedLevels[completedLevels.length - 1],
       completedLevels,
       duration,
+      passed: undefined,
     };
   };
+
 
   const handleAnswerClick = (answerIndex: number) => {
     if (answerState !== "idle" || !isMultipleQuestion) return;
@@ -369,6 +396,7 @@ export function QuizPage() {
   };
 
   const handleNextQuestion = async () => {
+    // Avanzar dentro del nivel
     if (currentQuestion + 1 < currentQuestions.length) {
       cleanupRecording();
       setCurrentQuestion((prev) => prev + 1);
@@ -378,37 +406,36 @@ export function QuizPage() {
       return;
     }
 
-    if (currentLevel !== "B2") {
-      setShowLevelModal(true);
-      return;
-    }
-
-    const resultState = await saveQuizResult(levelOrder);
-    navigate("/results", {
-      state: resultState,
-    });
-  };
-
-  const finishCurrentQuiz = async () => {
+    // Termina el nivel actual
     const completedLevels = levelOrder.slice(0, levelOrder.indexOf(currentLevel) + 1);
+
+    // Guardar y recibir aprobación/reprobación desde backend
     const resultState = await saveQuizResult(completedLevels);
+
+    // Si aprobó y aún hay niveles siguientes, continuar automáticamente
+    if (resultState?.passed && currentLevel !== "B2") {
+      const currentLevelIdx = levelOrder.indexOf(currentLevel);
+      const nextLevel = levelOrder[currentLevelIdx + 1];
+      if (nextLevel) {
+        cleanupRecording();
+        setCurrentLevel(nextLevel);
+        setCurrentQuestion(0);
+        setTimeLeft(30);
+        setSelectedAnswer(null);
+        setAnswerState("idle");
+        return;
+      }
+    }
+
+    // Si reprobó (o es B2), ir al resultado
     navigate("/results", {
       state: resultState,
     });
   };
 
-  const continueNextLevel = () => {
-    const nextLevel = levelOrder[levelOrder.indexOf(currentLevel) + 1];
-    if (nextLevel) {
-      setCurrentLevel(nextLevel);
-    }
 
-    setCurrentQuestion(0);
-    setTimeLeft(30);
-    setSelectedAnswer(null);
-    setAnswerState("idle");
-    setShowLevelModal(false);
-  };
+
+
 
   const answerColors = [
     { bg: "bg-answer-red", hover: "hover:bg-answer-red/90" },
@@ -471,8 +498,8 @@ export function QuizPage() {
           className="flex items-center justify-between mb-6"
         >
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-              <img src={senaLogo} alt="SENA" className="h-9 w-9 object-contain" />
+            <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg">
+              <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover" />
             </div>
             <span className="text-white font-medium hidden sm:block">English Level Test SENA</span>
           </div>
@@ -768,43 +795,7 @@ export function QuizPage() {
         )}
       </AnimatePresence>
 
-      {/* Level Completion Modal */}
-      <AnimatePresence>
-        {showLevelModal && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4 text-center"
-            >
-              <h2 className="text-2xl font-bold mb-4">
-                Nivel {currentLevel} completado
-              </h2>
 
-              <p className="text-gray-600 mb-6">
-                Deseas continuar con el siguiente nivel?
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={finishCurrentQuiz}
-                  className="flex-1 bg-gray-200 py-3 rounded-xl font-medium hover:bg-gray-300 transition-colors"
-                >
-                  Finalizar
-                </button>
-
-                <button
-                  onClick={continueNextLevel}
-                  className="flex-1 bg-sena-blue text-white py-3 rounded-xl font-medium hover:bg-sena-blue/90 transition-colors"
-                >
-                  Continuar
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

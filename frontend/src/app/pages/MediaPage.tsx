@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
-import { GraduationCap, Image, Video, X, Play, ChevronRight, Film, Camera, ZoomIn } from "lucide-react";
+import { Image, Video, X, Play, ChevronRight, Film, Camera, ZoomIn } from "lucide-react";
 import { useState } from "react";
 
 // ─── Datos de ejemplo ───────────────────────────────────────────────────────
@@ -103,8 +103,8 @@ export function MediaPage() {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-sena-green rounded-xl flex items-center justify-center shadow-lg shadow-sena-green/25">
-                <GraduationCap className="w-6 h-6 text-white" />
+              <div className="w-16 h-16 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
+                <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
@@ -394,8 +394,8 @@ export function MediaPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-sena-green rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-white" />
+              <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
+                <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="font-semibold text-foreground">English Level Test</p>

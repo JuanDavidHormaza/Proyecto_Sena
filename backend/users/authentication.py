@@ -1,4 +1,3 @@
-# backend/users/authentication.py
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
 from .Models.modelsSENA import User
@@ -6,8 +5,8 @@ from .Models.modelsSENA import User
 
 class AuthenticatedUser:
     """Wrapper que añade los atributos que DRF espera"""
-    
-    def __init__(self, user):
+
+    def init(self, user):
         self._user = user
         self.is_authenticated = True
         self.is_active = True
@@ -15,9 +14,10 @@ class AuthenticatedUser:
         self.user_id = user.user_id
         self.role_id = user.role_id
         self.status = user.status
+        self.program = user.program
         self.person = user.person
 
-    def __getattr__(self, name):
+    def getattr(self, name):
         return getattr(self._user, name)
 
 

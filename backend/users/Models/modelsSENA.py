@@ -55,7 +55,7 @@ class User(models.Model):
         ('APLAZADO', 'Aplazado'),
     ]
     status = models.CharField(max_length=50, choices=STATUS_CHOICES)
-
+    program = models.CharField(max_length=120, null=True, blank=True)
     mfa = models.CharField(max_length=255)
 
     created_at = models.DateTimeField(default=timezone.now)
@@ -196,3 +196,37 @@ class TestResult(models.Model):
 
     def __str__(self):
         return f"{self.user.person.first_name} - {self.level} ({self.score}%)"
+class EmailOTP(models.Model):
+    """Código de un solo uso (OTP) enviado por correo para el MFA."""
+    email = models.EmailField(db_index=True)
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.email} – {self.code} ({'usado' if self.used else 'activo'})"
+
+
+class RegisterPendingOTP(models.Model):
+    """OTP temporal para el registro + payload pendiente (sin truncar)."""
+
+    email = models.EmailField(db_index=True)
+    otp_code = models.CharField(max_length=6)
+
+    # Payload del registro (RegisterSerializer.validated_data)
+    # TextField para evitar truncamientos por límites pequeños.
+    payload = models.TextField()
+
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"reg:{self.email} – {self.otp_code} ({'usado' if self.used else 'activo'})"

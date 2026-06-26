@@ -83,19 +83,28 @@ def get_permissions_by_role(role):
 
 def _build_user_response(user, person):
     """Construye el dict de usuario que espera el frontend."""
-    frontend_role = ROLE_MAP.get(user.role_id, 'student')
+    # Si hay roles “quemados”/antiguos o valores inesperados, no rompemos el listado.
+    frontend_role = ROLE_MAP.get(user.role_id)
+    if not frontend_role:
+        # Intento por valores comunes (por compatibilidad)
+        frontend_role = ROLE_MAP.get(str(user.role_id).upper(), 'student')
+
+    phone_num = getattr(person, 'phone_num', None)
+
     return {
         'id': str(user.user_id),
-        'name': f"{person.first_name} {person.last_name}",
+        'name': f"{person.first_name} {person.last_name}".strip(),
+
         'email': person.email,
         'role': frontend_role,
-        'status': STATUS_MAP.get(person.status, 'inactive'),
+        'status': STATUS_MAP.get(getattr(person, 'status', None), 'inactive'),
         'permissions': get_permissions_by_role(frontend_role),
-        'docType': person.doc_type,
-        'docNum': person.doc_num,
-        'phoneNum': person.phone_num,
-        'firstName': person.first_name,
-        'lastName': person.last_name,
+        'program': user.program,
+        'docType': getattr(person, 'doc_type', None),
+        'docNum': getattr(person, 'doc_num', None),
+        'phoneNum': phone_num,
+        'firstName': getattr(person, 'first_name', ''),
+        'lastName': getattr(person, 'last_name', ''),
     }
 
 
@@ -166,8 +175,9 @@ class AuthController:
 
         user = User.objects.create(
             person=person,
-            role_id='APRENDIZ',
+            role_id=validated_data.get('role_id', 'APRENDIZ'),
             status='EN_FORMACION',
+            program=validated_data.get('program'),
             mfa='',
         )
 
@@ -296,6 +306,17 @@ class UserController:
         user.role_id = backend_role
         user.save()
         return new_frontend_role, None
+
+    @staticmethod
+    def update_program(user_id, program):
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return None, 'Usuario no encontrado'
+
+        user.program = program or None
+        user.save()
+        return user.program, None
     
     # Agrega dentro de UserController:
 

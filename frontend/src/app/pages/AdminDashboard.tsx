@@ -1,20 +1,20 @@
 // frontend/src/pages/AdminDashboard.tsx
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useNavigate } from "react-router";
 import {
   Users, Upload, FileText, Trash2, Plus, Search,
-  GraduationCap, BarChart3, BookOpen, Settings, X,
+  BarChart3, BookOpen, Settings, X,
   Check, Filter, Eye, ToggleLeft, ToggleRight,
   FolderOpen, Download, Play, Pause, Music, Video,
   Volume2, Film, TrendingUp, PieChart, Activity, Calendar,
   Award, Target, Zap, ChevronUp, ChevronDown, RefreshCw,
-  Shield,
+  Shield, LogOut,
   Edit, 
 } from "lucide-react";
 import {
-  mockUsers, User, UserPermissions, getDefaultPermissions,
-  mockDocuments, Document, mockSubjects, Subject, senaPrograms,
-  mockTestResults,
+  User, UserPermissions, getDefaultPermissions,
+  Document, Subject, senaPrograms,
 } from "../data/users";
 import * as api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -228,19 +228,27 @@ const ROLE_COLORS: Record<string, string> = {
   student: "bg-sena-green/10 text-sena-green",
 };
 
+const ROLE_TO_BACKEND: Record<string, "ADMIN" | "APRENDIZ" | "INSTRUCTOR"> = {
+  admin: "ADMIN",
+  teacher: "INSTRUCTOR",
+  student: "APRENDIZ",
+};
+
 // ════════════════════════════════════════════════════════════════════════════
 export function AdminDashboard() {
-  const { user: authUser } = useAuth();
+  const navigate = useNavigate();
+  const { user: authUser, logout } = useAuth();
   const isSuperAdmin = authUser?.role === "superadmin";
 
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [users, setUsers] = useState<User[]>([]);
-  const [documents, setDocuments] = useState<ExtendedDocument[]>(mockDocuments);
-  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects);
+  const [documents, setDocuments] = useState<ExtendedDocument[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
   const [apiError, setApiError] = useState<string | null>(null);
   const [showEditDataModal, setShowEditDataModal] = useState(false);
-  const [editUserData, setEditUserData] = useState({ id: "", name: "", email: "", phone_num: "" });
+  const [editUserData, setEditUserData] = useState({ id: "", name: "", email: "", phone_num: "", role: "", program: "" });
 
   // Modal states
   const [showUserModal, setShowUserModal] = useState(false);
@@ -258,6 +266,11 @@ export function AdminDashboard() {
   doc_type: "CC", doc_num: "", phone_num: "", role: "student", program: ""});  
   const [newSubject, setNewSubject] = useState({ name: "", description: "", color: "#39A900" });
   const [uploadForm, setUploadForm] = useState({ file: null as File | null, subjectId: "", program: "", previewUrl: "", definition: "", synonyms: "", level: "" });
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   // ── Cargar datos ──────────────────────────────────────────────────────────
   const loadDataFromApi = async () => {
@@ -277,6 +290,7 @@ export function AdminDashboard() {
         docType: u.docType, docNum: u.docNum,
         phoneNum: u.phoneNum?.toString(),
         firstName: u.firstName, lastName: u.lastName,
+        program: u.program || '',
       }));
 
       const convertedSubjects: Subject[] = apiSubjects.map(s => ({
@@ -291,13 +305,13 @@ export function AdminDashboard() {
         definition: d.definition, synonyms: d.synonyms, level: undefined,
       }));
 
-      setUsers(convertedUsers.length > 0 ? convertedUsers : mockUsers);
-      setSubjects(convertedSubjects.length > 0 ? convertedSubjects : mockSubjects);
-      setDocuments(convertedDocs.length > 0 ? convertedDocs : mockDocuments);
+      setUsers(convertedUsers);
+      setSubjects(convertedSubjects);
+      setDocuments(convertedDocs);
     } catch (error) {
-      setUsers(mockUsers);
-      setSubjects(mockSubjects);
-      setDocuments(mockDocuments);
+      setUsers([]);
+      setSubjects([]);
+      setDocuments([]);
     }
     setIsLoading(false);
   };
@@ -333,7 +347,20 @@ export function AdminDashboard() {
     }
   };
 
-  const handleEditUserPermissions = (user: User) => { setSelectedUser(user); setShowEditUserModal(true); };
+  const canAdminManageUser = (targetUser: User) =>
+    isSuperAdmin || targetUser.role === "teacher" || targetUser.role === "student";
+
+  const canModifyUserActions = (targetUser: User) =>
+    canAdminManageUser(targetUser) && targetUser.id !== authUser?.id;
+
+  const canEditUserPermissions = (targetUser: User) =>
+    canAdminManageUser(targetUser);
+
+  const handleEditUserPermissions = (user: User) => {
+    if (!canEditUserPermissions(user)) return;
+    setSelectedUser(user);
+    setShowEditUserModal(true);
+  };
 
 
   // Abre el modal con los datos del usuario
@@ -343,6 +370,8 @@ const handleEditUserData = (user: User) => {
     name: user.name,
     email: user.email,
     phone_num: user.phoneNum || "", // mapeamos phoneNum a phone_num
+    role: user.role,
+    program: user.program || "",
   });
   setShowEditDataModal(true);
 };
@@ -354,6 +383,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     await api.updateUser(editUserData.id, {
       name: editUserData.name,
       email: editUserData.email,
+      phone_num: editUserData.phone_num,
+      program: editUserData.role === 'teacher' || editUserData.role === 'student' ? editUserData.program : '',
     });
     await loadDataFromApi(); // recarga la lista
     setShowEditDataModal(false);
@@ -384,6 +415,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       doc_type: newUser.doc_type,
       doc_num: newUser.doc_num,
       phone_num: newUser.phone_num ? parseInt(newUser.phone_num) : undefined,
+      program: newUser.role === 'teacher' || newUser.role === 'student' ? newUser.program : '',
+      role_id: ROLE_TO_BACKEND[newUser.role] || 'APRENDIZ',
     });
 
     // 2. Si el rol deseado no es student, cambiarlo via API
@@ -455,6 +488,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
 
   const filteredDocs = documents.filter(d => filterCategory === "all" || (d.category ?? getFileCategory(d.name)) === filterCategory);
 
+
   const stats = {
     totalUsers: users.length,
     activeUsers: users.filter(u => u.status === "active").length,
@@ -482,8 +516,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-border z-40 hidden lg:block">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-11 h-11 bg-sena-green rounded-xl flex items-center justify-center shadow-lg shadow-sena-green/25">
-              <GraduationCap className="w-6 h-6 text-white" />
+            <div className="w-14 h-14 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
+              <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="font-semibold text-foreground">English Test</h1>
@@ -519,8 +553,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-sena-green rounded-xl flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
+              <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
             </div>
             <span className="font-semibold text-foreground">{isSuperAdmin ? "SuperAdmin" : "Admin"}</span>
           </div>
@@ -624,10 +658,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: "Promedio General", value: `${mockTestResults.length ? Math.round(mockTestResults.reduce((a, r) => a + r.score, 0) / mockTestResults.length) : 0}%`, icon: Target, color: "sena-green", trend: "+5.2%", up: true },
-                  { label: "Pruebas Completadas", value: mockTestResults.length, icon: Award, color: "sena-blue", trend: "+12", up: true },
-                  { label: "Estudiantes Activos", value: users.filter(u => u.role === 'student' && u.status === 'active').length, icon: Users, color: "warning", trend: "+3", up: true },
-                  { label: "Tasa de Aprobacion", value: `${mockTestResults.length ? Math.round((mockTestResults.filter(r => r.score >= 60).length / mockTestResults.length) * 100) : 0}%`, icon: Zap, color: "destructive", trend: "+2.1%", up: true },
+                  { label: "Promedio General", value: "0%", icon: Target, color: "sena-green", trend: "+0%", up: true },
+                  { label: "Pruebas Completadas", value: "0", icon: Award, color: "sena-blue", trend: "+0", up: true },
+                  { label: "Estudiantes Activos", value: users.filter(u => u.role === 'student' && u.status === 'active').length, icon: Users, color: "warning", trend: "+0", up: true },
+                  { label: "Tasa de Aprobacion", value: "0%", icon: Zap, color: "destructive", trend: "+0%", up: true },
                 ].map((kpi, i) => (
                   <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
                     className="bg-white rounded-2xl p-5 border border-border shadow-sm">
@@ -651,10 +685,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsPie>
                         <Pie data={[
-                          { name: 'Basico (A1-A2)', value: mockTestResults.filter(r => r.level.startsWith('A')).length, color: '#E21B3C' },
-                          { name: 'Intermedio (B1-B2)', value: mockTestResults.filter(r => r.level.startsWith('B')).length, color: '#D89E00' },
-                          { name: 'Avanzado (C1-C2)', value: mockTestResults.filter(r => r.level.startsWith('C')).length, color: '#39A900' },
-                        ]} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value"
+                          { name: 'Basico (A1-A2)', value: 0, color: '#E21B3C' },
+                          { name: 'Intermedio (B1-B2)', value: 0, color: '#D89E00' },
+                          { name: 'Avanzado (C1-C2)', value: 0, color: '#39A900' },
+      ]} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value"
                           label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}>
                           {['#E21B3C', '#D89E00', '#39A900'].map((color, index) => <Cell key={index} fill={color} />)}
                         </Pie>
@@ -748,7 +782,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         {filteredUsers.map(user => {
                           const isSelf = user.id === authUser?.id;
                           const isTargetSuperAdmin = user.role === "superadmin";
-                          const canModify = isSuperAdmin && !isSelf;
+                          const canModify = canModifyUserActions(user);
+                          const canChangeRole = isSuperAdmin && !isSelf && !isTargetSuperAdmin;
+                          const canOpenPermissions = canEditUserPermissions(user);
 
                           return (
                             <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
@@ -764,11 +800,14 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                       {isSelf && <span className="text-xs bg-sena-green/10 text-sena-green px-1.5 py-0.5 rounded-full">Tú</span>}
                                     </p>
                                     <p className="text-sm text-muted-foreground">{user.email}</p>
+                                    {(user.role === 'teacher' || user.role === 'student') && user.program && (
+                                      <p className="text-xs text-muted-foreground">{user.program}</p>
+                                    )}
                                   </div>
                                 </div>
                               </td>
                               <td className="py-4 px-5">
-                                {canModify && !isTargetSuperAdmin ? (
+                                {canChangeRole ? (
                                   <select value={user.role} onChange={e => handleChangeUserRole(user.id, e.target.value)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium border-0 cursor-pointer ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
                                     <option value="admin">Administrador</option>
@@ -799,10 +838,12 @@ const handleSaveUserData = async (e: React.FormEvent) => {
         <Edit className="w-4 h-4" />
       </button>
     )}
-                                  <button onClick={() => handleEditUserPermissions(user)}
-                                    className="p-2 text-sena-blue hover:bg-sena-blue/10 rounded-lg transition-colors" title="Editar permisos">
-                                    <Settings className="w-4 h-4" />
-                                  </button>
+                                  {canOpenPermissions && (
+                                    <button onClick={() => handleEditUserPermissions(user)}
+                                      className="p-2 text-sena-blue hover:bg-sena-blue/10 rounded-lg transition-colors" title="Editar permisos">
+                                      <Settings className="w-4 h-4" />
+                                    </button>
+                                  )}
                                   {canModify && !isTargetSuperAdmin && (
                                     <button onClick={() => handleDeleteUser(user.id)}
                                       className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors" title="Eliminar usuario">
@@ -944,13 +985,27 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       <input type="text" value={newUser.phone_num} onChange={e => setNewUser({ ...newUser, phone_num: e.target.value })}
         className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
     <div><label className="block text-sm font-medium text-foreground mb-1.5">Rol</label>
-      <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}
+      <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value, program: "" })}
         className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50">
         <option value="student">Estudiante</option>
         <option value="teacher">Docente</option>
         <option value="admin">Administrador</option>
       </select></div>
   </div>
+  {(newUser.role === "teacher" || newUser.role === "student") && (
+    <div>
+      <label className="block text-sm font-medium text-foreground mb-1.5">Programa SENA</label>
+      <select
+        value={newUser.program}
+        onChange={e => setNewUser({ ...newUser, program: e.target.value })}
+        required
+        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+      >
+        <option value="">Seleccionar programa</option>
+        {senaPrograms.map(p => <option key={p} value={p}>{p}</option>)}
+      </select>
+    </div>
+  )}
   <div className="flex gap-3 pt-4">
     <button type="submit" className="flex-1 bg-sena-green text-white py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium">Crear Usuario</button>
     <button type="button" onClick={() => setShowUserModal(false)} className="flex-1 bg-muted text-muted-foreground py-2.5 rounded-xl font-medium">Cancelar</button>
@@ -1042,6 +1097,24 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
             />
           </div>
+          {(editUserData.role === "teacher" || editUserData.role === "student") && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Programa SENA
+              </label>
+              <select
+                value={editUserData.program}
+                onChange={(e) =>
+                  setEditUserData({ ...editUserData, program: e.target.value })
+                }
+                required
+                className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+              >
+                <option value="">Seleccionar programa</option>
+                {senaPrograms.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          )}
           <div className="flex gap-3 pt-4">
             <button
               type="submit"

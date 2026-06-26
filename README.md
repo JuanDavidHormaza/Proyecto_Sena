@@ -39,7 +39,7 @@ docker network create worklex_network
 ### 3. Levantar contenedor
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.db.yml -f docker-compose.px.yml  -f  docker-compose.vault.yml  -f  docker-compose.firewall.yml -f docker-compose.auth.yml up  -d --build
+docker compose -f docker-compose.yml -f docker-compose.db.yml -f docker-compose.proxy.yml  -f  docker-compose.vault.yml  -f  docker-compose.firewall.yml -f docker-compose.auth.yml up  -d --build
 ```
 
 ---

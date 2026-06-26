@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
 
 import { 
   Target, Flame, BarChart3, 
@@ -7,44 +8,97 @@ import {
   Calendar
 } from "lucide-react";
 import { getLevelFromScore } from "../data/questionsA1";
-import senaLogo from "../../asset/logo.png";
+// Imagen de marca (worklex.png) en /public y logs/
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
+import * as api from "../services/api";
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const userName = user?.name || localStorage.getItem("userName") || "Usuario";
+  const [testResults, setTestResults] = useState<api.ApiTestResult[]>([]);
+
   const lastScore = Number(localStorage.getItem("quizScore") || "0");
   const lastCorrectAnswers = Number(localStorage.getItem("correctAnswers") || "0");
   const lastTotalQuestions = Number(localStorage.getItem("totalQuestions") || "0");
   const lastDuration = localStorage.getItem("quizDuration") || "00:00";
-  const hasQuizResult = lastTotalQuestions > 0;
-  const currentLevel = hasQuizResult ? getLevelFromScore(lastScore).level : "Sin nivel";
+
+  const userId = user?.id || localStorage.getItem("userId") || undefined;
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (!userId) return;
+
+      try {
+        const results = await api.getTestResults(userId);
+        const sortedResults = Array.isArray(results)
+          ? results.sort(
+              (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+            )
+          : [];
+        setTestResults(sortedResults);
+      } catch (error) {
+        console.error("No se pudieron cargar los resultados desde la base de datos:", error);
+      }
+    };
+
+    fetchResults();
+  }, [userId]);
+
+  const latestResult = testResults[0];
+  const hasQuizResult = Boolean(latestResult) || lastTotalQuestions > 0;
+  const displayScore = latestResult?.score ?? lastScore;
+  const displayCorrectAnswers = latestResult?.correctAnswers ?? lastCorrectAnswers;
+  const displayTotalQuestions = latestResult?.totalQuestions ?? lastTotalQuestions;
+  const displayDuration = latestResult?.duration ?? lastDuration;
+  const currentLevel = latestResult?.level ?? (hasQuizResult ? getLevelFromScore(displayScore).level : "Sin nivel");
 
   const stats = {
-    testsCompleted: hasQuizResult ? 1 : 0,
-    averageScore: hasQuizResult ? lastScore : 0,
+    testsCompleted: testResults.length > 0 ? testResults.length : (hasQuizResult ? 1 : 0),
+    averageScore:
+      testResults.length > 0
+        ? Math.round(testResults.reduce((sum: number, result: api.ApiTestResult) => sum + result.score, 0) / testResults.length)
+        : (hasQuizResult ? displayScore : 0),
     currentLevel,
     currentStreak: 0,
-    quizDuration: lastDuration,
+    quizDuration: displayDuration,
   };
 
-  const recentTests = hasQuizResult
+  const recentTests = testResults.length > 0
+    ? testResults.slice(0, 3).map((test) => ({
+        id: test.id,
+        date: new Date(test.completedAt).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" }),
+        score: test.score,
+        level: test.level,
+        duration: test.duration || displayDuration,
+        correctAnswers: test.correctAnswers,
+        totalQuestions: test.totalQuestions,
+      }))
+    : hasQuizResult
     ? [
         {
-          id: 1,
+          id: "fallback",
           date: "Ultima prueba",
-          score: lastScore,
+          score: displayScore,
           level: currentLevel,
-          duration: lastDuration,
-          correctAnswers: lastCorrectAnswers,
-          totalQuestions: lastTotalQuestions,
+          duration: displayDuration,
+          correctAnswers: displayCorrectAnswers,
+          totalQuestions: displayTotalQuestions,
         },
       ]
     : [];
 
-  const feedbacks: Array<{ id: number; teacher: string; date: string; message: string }> = [];
+  const feedbacks: Array<{ id: string; teacher: string; date: string; message: string }> = latestResult?.feedback
+    ? [
+        {
+          id: latestResult.id,
+          teacher: "Docente",
+          date: new Date(latestResult.completedAt).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" }),
+          message: latestResult.feedback,
+        },
+      ]
+    : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,8 +107,8 @@ export function DashboardPage() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-sena-green/25 overflow-hidden border border-border">
-                <img src={senaLogo} alt="SENA" className="h-9 w-9 object-contain" />
+              <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-slate-900/15 border border-border">
+                <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover" />
               </div>
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-foreground">English Level Test</h1>
@@ -238,7 +292,7 @@ export function DashboardPage() {
             >
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
-                  <img src={senaLogo} alt="SENA" className="h-8 w-8 object-contain" />
+                  <img src="/worklex.png" alt="WorkLex" className="h-8 w-8 object-cover" />
                 </div>
                 <h3 className="font-semibold text-foreground">Tu Nivel Actual</h3>
               </div>
@@ -248,7 +302,7 @@ export function DashboardPage() {
                   {stats.currentLevel}
                 </div>
                 <p className="text-foreground font-medium">{hasQuizResult ? "Resultado de la ultima prueba" : "Sin prueba registrada"}</p>
-                <p className="text-sm text-muted-foreground">{hasQuizResult ? `${lastCorrectAnswers}/${lastTotalQuestions} correctas` : "Completa un quiz para ver tu nivel"}</p>
+                <p className="text-sm text-muted-foreground">{hasQuizResult ? `${displayCorrectAnswers}/${displayTotalQuestions} correctas` : "Completa un quiz para ver tu nivel"}</p>
               </div>
               
               <div className="space-y-3 pt-4 border-t border-border">

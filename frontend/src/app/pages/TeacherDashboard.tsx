@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { 
   Search, Eye, MessageSquare, CheckCircle, XCircle,
-  GraduationCap, Users, BarChart3, TrendingUp, Send, X, Clock,
+  Users, BarChart3, TrendingUp, Send, X, Clock,
   Filter
 } from "lucide-react";
 import { mockTestResults, TestResult, mockUsers } from "../data/users";
@@ -23,6 +23,7 @@ export function TeacherDashboard() {
   const [students, setStudents] = useState(mockUsers.filter(u => u.role === 'student'));
 
   const teacherName = user?.name || localStorage.getItem("userName") || "Docente";
+  const teacherProgram = user?.program || localStorage.getItem("userProgram") || "";
 
   // Cargar datos desde API
   const loadDataFromApi = async () => {
@@ -58,7 +59,7 @@ export function TeacherDashboard() {
         permissions: u.permissions,
         status: u.status,
         createdAt: new Date().toISOString().split('T')[0],
-        program: '',
+        program: u.program || '',
       }));
       
       if (convertedResults.length > 0) {
@@ -102,10 +103,16 @@ export function TeacherDashboard() {
   };
 
   const filteredResults = results.filter(r => {
+    const student = students.find(s => s.id === r.userId);
+    const matchesProgram = !teacherProgram || student?.program === teacherProgram;
     const matchesSearch = r.userName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLevel = filterLevel === "all" || r.level.startsWith(filterLevel);
-    return matchesSearch && matchesLevel;
+    return matchesProgram && matchesSearch && matchesLevel;
   });
+
+  const programStudents = teacherProgram
+    ? students.filter(student => student.program === teacherProgram)
+    : students;
 
   // Group results by student
   const studentResults = filteredResults.reduce((acc, result) => {
@@ -116,19 +123,30 @@ export function TeacherDashboard() {
     return acc;
   }, {} as Record<string, TestResult[]>);
 
+  const studentEntries = programStudents
+    .filter(student => {
+      const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const hasMatchingLevel = filterLevel === "all" || Boolean(studentResults[student.id]?.length);
+      return matchesSearch && hasMatchingLevel;
+    })
+    .map(student => [student.id, studentResults[student.id] || []] as const);
+
   // Stats
   const stats = {
-    totalStudents: students.length,
-    totalTests: results.length,
-    averageScore: Math.round(results.reduce((acc, r) => acc + r.score, 0) / results.length),
-    feedbackGiven: results.filter(r => r.feedback).length,
+    totalStudents: programStudents.length,
+    totalTests: filteredResults.length,
+    averageScore: filteredResults.length
+      ? Math.round(filteredResults.reduce((acc, r) => acc + r.score, 0) / filteredResults.length)
+      : 0,
+    feedbackGiven: filteredResults.filter(r => r.feedback).length,
   };
 
   const levelDistribution = {
-    basic: results.filter(r => r.level.startsWith('A')).length,
-    intermediate: results.filter(r => r.level.startsWith('B')).length,
-    advanced: results.filter(r => r.level.startsWith('C')).length,
+    basic: filteredResults.filter(r => r.level.startsWith('A')).length,
+    intermediate: filteredResults.filter(r => r.level.startsWith('B')).length,
+    advanced: filteredResults.filter(r => r.level.startsWith('C')).length,
   };
+  const totalFilteredTests = filteredResults.length || 1;
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,8 +155,8 @@ export function TeacherDashboard() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-sena-blue rounded-xl flex items-center justify-center shadow-lg shadow-sena-blue/25">
-                <GraduationCap className="w-6 h-6 text-white" />
+              <div className="w-14 h-14 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
+                <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
               </div>
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-foreground">English Level Test</h1>
@@ -163,7 +181,7 @@ export function TeacherDashboard() {
             Bienvenido, {teacherName.split(' ')[0]}
           </h2>
           <p className="text-muted-foreground">
-            Revisa el progreso de tus estudiantes y brinda retroalimentacion personalizada
+            Revisa el progreso de tus estudiantes{teacherProgram ? ` de ${teacherProgram}` : ''} y brinda retroalimentacion personalizada
           </p>
         </motion.div>
 
@@ -201,9 +219,9 @@ export function TeacherDashboard() {
           <h3 className="font-semibold text-foreground mb-4">Distribucion por Nivel</h3>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: "Basico (A1-A2)", value: levelDistribution.basic, color: "#E21B3C", percentage: (levelDistribution.basic / stats.totalTests) * 100 },
-              { label: "Intermedio (B1-B2)", value: levelDistribution.intermediate, color: "#D89E00", percentage: (levelDistribution.intermediate / stats.totalTests) * 100 },
-              { label: "Avanzado (C1-C2)", value: levelDistribution.advanced, color: "#39A900", percentage: (levelDistribution.advanced / stats.totalTests) * 100 },
+              { label: "Basico (A1-A2)", value: levelDistribution.basic, color: "#E21B3C", percentage: (levelDistribution.basic / totalFilteredTests) * 100 },
+              { label: "Intermedio (B1-B2)", value: levelDistribution.intermediate, color: "#D89E00", percentage: (levelDistribution.intermediate / totalFilteredTests) * 100 },
+              { label: "Avanzado (C1-C2)", value: levelDistribution.advanced, color: "#39A900", percentage: (levelDistribution.advanced / totalFilteredTests) * 100 },
             ].map((level, index) => (
               <div key={index} className="text-center">
                 <div 
@@ -253,10 +271,12 @@ export function TeacherDashboard() {
 
         {/* Students Results */}
         <div className="space-y-6">
-          {Object.entries(studentResults).map(([userId, userResults], index) => {
+          {studentEntries.map(([userId, userResults], index) => {
             const student = students.find(s => s.id === userId);
             const latestResult = userResults[0];
-            const avgScore = Math.round(userResults.reduce((acc, r) => acc + r.score, 0) / userResults.length);
+            const avgScore = userResults.length
+              ? Math.round(userResults.reduce((acc, r) => acc + r.score, 0) / userResults.length)
+              : 0;
             
             return (
               <motion.div
@@ -288,18 +308,19 @@ export function TeacherDashboard() {
                         }`}>{avgScore}%</p>
                       </div>
                       <div className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        latestResult.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
-                        latestResult.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
+                        latestResult?.level?.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
+                        latestResult?.level?.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
                         'bg-warning/10 text-warning'
                       }`}>
-                        {latestResult.level}
+                        {latestResult?.level || 'Sin nivel'}
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Results Table */}
-                <div className="overflow-x-auto">
+                {userResults.length > 0 ? (
+                  <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border">
@@ -367,12 +388,17 @@ export function TeacherDashboard() {
                     </tbody>
                   </table>
                 </div>
+                ) : (
+                  <div className="px-5 py-6 text-sm text-muted-foreground">
+                    Sin pruebas registradas.
+                  </div>
+                )}
               </motion.div>
             );
           })}
         </div>
 
-        {Object.keys(studentResults).length === 0 && (
+        {studentEntries.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-border">
             <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No hay resultados</h3>

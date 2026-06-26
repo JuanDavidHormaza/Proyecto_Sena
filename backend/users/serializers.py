@@ -45,7 +45,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'user_id', 'person', 'person_id', 'role_id', 'status', 'mfa', 'created_at',
-            'email', 'first_name', 'last_name'
+            'email', 'first_name', 'last_name', 'program'
         ]
         extra_kwargs = {
             'user_id': {'read_only': True},
@@ -60,7 +60,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['user_id', 'person', 'role_id', 'status', 'mfa', 'created_at']
+        fields = ['user_id', 'person', 'role_id', 'status', 'mfa', 'created_at','program']
 
 
 class SubjectSerializer(serializers.ModelSerializer):
@@ -137,6 +137,7 @@ class RegisterSerializer(serializers.Serializer):
     doc_num = serializers.CharField(max_length=50)
     first_name = serializers.CharField(max_length=50)
     last_name = serializers.CharField(max_length=50)
+    program = serializers.CharField(required=False, allow_blank=True, allow_null=True)          
     phone_num = serializers.IntegerField(required=False, allow_null=True)
     role_id = serializers.ChoiceField(          # ← AGREGAR ESTO
         choices=['SUPERADMIN', 'ADMIN', 'APRENDIZ', 'MONITOR', 'INSTRUCTOR'],
@@ -175,7 +176,9 @@ class RegisterSerializer(serializers.Serializer):
     person=person,
     role_id=validated_data['role_id'],
     status='EN_FORMACION',
+    program=validated_data.get('program'),
     mfa=''
+
 )
         
         return user

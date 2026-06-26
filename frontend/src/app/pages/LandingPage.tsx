@@ -1,7 +1,6 @@
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { Clock, FileQuestion, Award, ChevronRight, Sparkles } from "lucide-react";
-import senaLogo from "../../asset/logo.png";
 
 
 export function LandingPage() {
@@ -19,9 +18,7 @@ export function LandingPage() {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-sena-green/25 overflow-hidden">
-                <img src={senaLogo} alt="SENA" className="h-10 w-10 object-contain" />
-              </div>
+              <img src="/worklex.png" alt="worklex" className="w-12 h-12 object-contain" />
               <div>
                 <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Plataforma SENA</p>
@@ -103,8 +100,8 @@ export function LandingPage() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-sena-green/10 rounded-xl flex items-center justify-center">
-                    <img src={senaLogo} alt="SENA" className="h-10 w-10 object-contain" />
+                  <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center shadow-lg shadow-slate-900/15">
+                    <img src="/worklex.png" alt="WorkLex" className="h-10 w-10 object-cover" />
                   </div>
                   <div>
                     <p className="text-3xl font-bold text-foreground">0</p>
@@ -118,8 +115,8 @@ export function LandingPage() {
                 whileHover={{ y: -5 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="w-12 h-12 bg-sena-blue/10 rounded-xl flex items-center justify-center mb-3">
-                  <img src={senaLogo} alt="SENA" className="h-9 w-9 object-contain" />
+                <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center mb-3 shadow-lg shadow-slate-900/15">
+                  <img src="/worklex.png" alt="WorkLex" className="h-9 w-9 object-cover" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">0</p>
                 <p className="text-sm text-muted-foreground">Programas SENA</p>
@@ -131,7 +128,7 @@ export function LandingPage() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center mb-3">
-                  <img src={senaLogo} alt="SENA" className="h-9 w-9 object-contain" />
+                  <img src="/worklex.png" alt="WorkLex" className="h-9 w-9 object-contain" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">0%</p>
                 <p className="text-sm text-muted-foreground">Satisfaccion</p>
@@ -288,7 +285,9 @@ export function LandingPage() {
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIwOSAxLjc5MS00IDQtNHM0IDEuNzkxIDQgNC0xLjc5MSA0LTQgNC00LTEuNzkxLTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
             
             <div className="relative z-10">
-              <img src={senaLogo} alt="SENA" className="mx-auto mb-6 h-20 w-20 rounded-2xl bg-white object-contain p-2" />
+              <div className="mx-auto mb-6 h-20 w-20 rounded-full overflow-hidden bg-white p-2 shadow-lg shadow-slate-900/15">
+                <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover" />
+              </div>
               <h3 className="text-3xl md:text-4xl font-bold mb-4 text-balance">
                 Listo para conocer tu nivel?
               </h3>
@@ -314,8 +313,8 @@ export function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-border overflow-hidden">
-                <img src={senaLogo} alt="SENA" className="h-8 w-8 object-contain" />
+              <div className="w-12 h-12 rounded-full overflow-hidden border border-border shadow-lg shadow-slate-900/10">
+                <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="font-semibold text-foreground">English Level Test</p>

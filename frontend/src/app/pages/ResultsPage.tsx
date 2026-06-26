@@ -18,7 +18,7 @@ import {
 import confetti from "canvas-confetti";
 
 import { getLevelFromScore } from "../data/questionsA1";
-import senaLogo from "../../asset/logo.png";
+
 
 type ResultAnswer = {
   questionId: number;
@@ -58,7 +58,11 @@ export function ResultsPage() {
   
   const lastTestResultStr = localStorage.getItem("lastTestResult");
   const lastTestResult = lastTestResultStr ? JSON.parse(lastTestResultStr) : null;
-  const teacherFeedback = lastTestResult?.feedback || null;
+  const passed = (resultsState as any)?.passed as boolean | undefined;
+  const threshold = (resultsState as any)?.threshold as number | undefined;
+  const breakdown = (resultsState as any)?.breakdown as any | undefined;
+  const autoFeedback = (resultsState as any)?.auto_feedback as string | undefined;
+
 
   // Confetti effect
   useEffect(() => {
@@ -165,7 +169,9 @@ export function ResultsPage() {
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-lg rounded-full text-sm font-medium mb-6"
             >
-              <img src={senaLogo} alt="SENA" className="h-5 w-5 rounded bg-white object-contain" />
+              <div className="w-6 h-6 rounded-full overflow-hidden bg-white">
+                <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover" />
+              </div>
               Prueba Completada
             </motion.div>
 
@@ -280,8 +286,8 @@ export function ResultsPage() {
           )}
         </motion.div>
 
-        {/* Teacher Feedback */}
-        {teacherFeedback && (
+        {/* Feedback automático del sistema */}
+        {autoFeedback && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -293,12 +299,82 @@ export function ResultsPage() {
                 <MessageSquare className="w-6 h-6 text-sena-blue" />
               </div>
               <div>
-                <h4 className="font-semibold text-foreground mb-1">Retroalimentacion del Docente</h4>
-                <p className="text-muted-foreground">{teacherFeedback}</p>
+                <h4 className="font-semibold text-foreground mb-1">
+                  {passed ? "Resultado del nivel" : "En qué fallaste"}
+                </h4>
+                <p className="text-muted-foreground" style={{ whiteSpace: 'pre-line' }}>{autoFeedback}</p>
+                {typeof threshold === 'number' && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Puntaje mínimo requerido: {threshold}%
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
         )}
+
+        {/* Breakdown para fallos (categoría/dificultad) */}
+        {breakdown && breakdown.failed !== undefined && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.1 }}
+            className="bg-white rounded-2xl p-6 border border-border shadow-lg mb-8"
+          >
+            <h3 className="font-semibold text-foreground mb-4">Desglose de fallos</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Por categoría</p>
+                {breakdown.by_category && Object.entries(breakdown.by_category).length > 0 ? (
+                  <div className="space-y-2">
+                    {Object.entries(breakdown.by_category).map(([cat, data]: any, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-foreground/90">{cat}</span>
+                        <span className="text-muted-foreground">
+                          {data.failed}/{data.total}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Sin información.</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Por dificultad</p>
+                {breakdown.by_difficulty && (
+                  <div className="space-y-2">
+                    {['Easy','Medium','Hard'].map((d) => (
+                      <div key={d} className="flex items-center justify-between text-sm">
+                        <span className="text-foreground/90">{d}</span>
+                        <span className="text-muted-foreground">
+                          {breakdown.by_difficulty[d]?.failed}/{breakdown.by_difficulty[d]?.total}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {Array.isArray(breakdown.multiple_choice_failed) && breakdown.multiple_choice_failed.length > 0 && (
+              <div className="mt-6">
+                <p className="text-sm text-muted-foreground mb-2">Preguntas falladas (opción múltiple)</p>
+                <div className="space-y-2">
+                  {breakdown.multiple_choice_failed.map((item: any, idx: number) => (
+                    <div key={idx} className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-sm font-medium text-foreground">{item.category} • {item.difficulty}</p>
+                      <p className="text-xs text-muted-foreground">{item.question}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
 
         {/* Level Scale */}
         <motion.div

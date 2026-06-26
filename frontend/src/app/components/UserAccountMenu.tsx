@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
-import { LogOut, Settings, User } from "lucide-react";
+import { BookOpen, LogOut, Settings, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -31,7 +31,8 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
 
   const userName = user?.name || localStorage.getItem("userName") || "Usuario";
   const role = user?.role || localStorage.getItem("userRole") || "student";
-  const subtitle = ROLE_LABELS[role] || "Usuario";
+  // Oculta el rol (admin/superadmin/instructor/docente) pero mantiene el valor en token/storage.
+  const subtitle = "";
   const accentClass = accent === "blue" ? "bg-sena-blue" : accent === "purple" ? "bg-purple-600" : "bg-sena-green";
 
   const handleNavigate = (path: string) => {
@@ -57,7 +58,14 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
         {!compact && (
           <div className="hidden sm:block text-left min-w-0">
             <p className="font-medium text-foreground text-sm truncate max-w-40">{userName}</p>
-            {showRole && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+           <div className="hidden sm:block text-left min-w-0">
+  <p className="font-medium text-foreground text-sm truncate max-w-40">
+    {userName}
+  </p>
+  {showRole && (
+    <p className="text-xs text-muted-foreground">&nbsp;</p>
+  )}
+</div>
           </div>
         )}
       </button>
@@ -88,6 +96,15 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
               <Settings className="w-4 h-4 text-muted-foreground" />
               Configuracion
             </button>
+            {role === "teacher" && (
+              <button
+                onClick={() => handleNavigate("/teacher/dictionaries")}
+                className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-foreground"
+              >
+                <BookOpen className="w-4 h-4 text-muted-foreground" />
+                Mis diccionarios
+              </button>
+            )}
             <div className="border-t border-border mt-2 pt-2">
               <button
                 onClick={handleLogout}

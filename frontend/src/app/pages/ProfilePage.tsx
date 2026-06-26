@@ -45,6 +45,7 @@ export function ProfilePage() {
 
   const name = user?.name || localStorage.getItem("userName") || "Usuario";
   const role = user?.role || localStorage.getItem("userRole") || "student";
+  const isStudent = role === "student";
   const roleLabel = ROLE_LABELS[role] || "Usuario";
   const program = localStorage.getItem("userProgram") || (role === "student" ? "Desarrollo de Software" : "English Level Test");
   const activePermissions = PERMISSIONS.filter((permission) => Boolean(user?.permissions?.[permission.key as keyof typeof user.permissions]));
@@ -117,7 +118,7 @@ export function ProfilePage() {
         </motion.section>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-2 bg-white rounded-2xl border border-border shadow-sm p-6">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${isStudent ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-2xl border border-border shadow-sm p-6`}>
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
                 <UserRound className="w-5 h-5 text-sena-green" />
@@ -142,28 +143,30 @@ export function ProfilePage() {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl border border-border shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                <ClipboardList className="w-5 h-5 text-sena-blue" />
+          {isStudent && (
+            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl border border-border shadow-sm p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-sena-blue" />
+                </div>
+                <h2 className="font-semibold text-foreground">Resumen</h2>
               </div>
-              <h2 className="font-semibold text-foreground">Resumen</h2>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Ultima puntuacion</span>
-                <span className="font-bold text-foreground">{lastScore}%</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Ultima puntuacion</span>
+                  <span className="font-bold text-foreground">{lastScore}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Nivel actual</span>
+                  <span className="font-bold text-sena-green">{currentLevel}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Preguntas registradas</span>
+                  <span className="font-bold text-foreground">{totalQuestions}</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Nivel actual</span>
-                <span className="font-bold text-sena-green">{currentLevel}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Preguntas registradas</span>
-                <span className="font-bold text-foreground">{totalQuestions}</span>
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </div>
 
         <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-6 bg-white rounded-2xl border border-border shadow-sm p-6">

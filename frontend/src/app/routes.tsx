@@ -8,6 +8,7 @@ import { QuizPage } from "./pages/QuizPage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
+import { TeacherDictionariesPage } from "./pages/TeacherDictionariesPage";
 import { MediaPage } from "./pages/MediaPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -50,6 +51,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute allowedRoles={["teacher"]}>
         <TeacherDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/teacher/dictionaries",
+    element: (
+      <ProtectedRoute allowedRoles={["teacher"]}>
+        <TeacherDictionariesPage />
       </ProtectedRoute>
     ),
   },

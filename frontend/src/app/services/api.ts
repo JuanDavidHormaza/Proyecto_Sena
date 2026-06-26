@@ -18,6 +18,7 @@ export interface ApiUser {
   status: 'active' | 'inactive';
   permissions: UserPermissions;
   docType?: string;
+  program?: string | null;
   docNum?: string;
   phoneNum?: number;
   firstName?: string;
@@ -48,6 +49,8 @@ export interface RegisterData {
   first_name: string;
   last_name: string;
   phone_num?: number;
+  program?: string;
+  role_id?: 'SUPERADMIN' | 'ADMIN' | 'APRENDIZ' | 'MONITOR' | 'INSTRUCTOR';
 }
 
 export interface ApiSubject {
@@ -229,6 +232,28 @@ export async function getMe(): Promise<ApiUser> {
   return handleResponse<ApiUser>(response);
 }
 
+// ─── Acceso privilegiado sin JWT (sesión) ─────────────────────────────
+
+export async function privilegedLogin(credentials: LoginCredentials): Promise<{ user: ApiUser }> {
+  const response = await fetch(`${API_BASE}/auth/privileged-login/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+
+  // Devuelve un objeto: { user }
+  return handleResponse<{ user: ApiUser }>(response);
+}
+
+export async function privilegedMe(): Promise<{ user: ApiUser }> {
+  const response = await fetch(`${API_BASE}/auth/privileged-me/`, {
+    method: 'GET',
+  });
+
+  return handleResponse<{ user: ApiUser }>(response);
+}
+
+
 // ─── Users API ───────────────────────────────────────────────────────────────
 
 export async function getUsers(role?: string): Promise<ApiUser[]> {
@@ -391,6 +416,78 @@ export async function getRanking(): Promise<any[]> {
   });
 
   return handleResponse<any[]>(response);
+}
+export async function requestLogin(
+  email: string,
+  password: string
+): Promise<{ mfa_required: boolean; email: string }> {
+  const response = await fetch(`${API_BASE}/auth/login/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  return handleResponse<{ mfa_required: boolean; email: string }>(response);
+}
+ 
+/**
+ * Paso 2 del login: verifica el OTP y devuelve tokens JWT.
+ */
+export async function verifyLoginOTP(
+  email: string,
+  code: string
+): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE}/auth/verify-otp/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+  return handleResponse<AuthResponse>(response);
+}
+ 
+/**
+ * Reenvía el OTP del login.
+ */
+export async function resendLoginOTP(
+  email: string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE}/auth/resend-otp/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  return handleResponse<{ message: string }>(response);
+}
+ 
+// ── MFA Registro ───────────────────────────────────────────────────────────
+ 
+/**
+ * Paso 1 del registro: valida datos, verifica dominio de correo y envía OTP.
+ * NO crea la cuenta todavía.
+ */
+export async function registerSendOTP(
+  data: RegisterData
+): Promise<{ message: string; email: string }> {
+  const response = await fetch(`${API_BASE}/auth/register-send-otp/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<{ message: string; email: string }>(response);
+}
+ 
+/**
+ * Paso 2 del registro: verifica el OTP y crea la cuenta definitivamente.
+ */
+export async function registerVerifyOTP(
+  email: string,
+  code: string
+): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE}/auth/register-verify-otp/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+  return handleResponse<AuthResponse>(response);
 }
 
 // ─── Export para compatibilidad ──────────────────────────────────────────────
