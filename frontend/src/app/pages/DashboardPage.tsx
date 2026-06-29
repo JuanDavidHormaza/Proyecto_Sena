@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { 
   Target, Flame, BarChart3, 
   Clock, ChevronRight, Play, History, MessageSquare,
-  Calendar
+  Calendar, X
 } from "lucide-react";
 import { getLevelFromScore } from "../data/questionsA1";
 // Imagen de marca (worklex.png) en /public y logs/
@@ -18,6 +18,16 @@ export function DashboardPage() {
   const { user } = useAuth();
   const userName = user?.name || localStorage.getItem("userName") || "Usuario";
   const [testResults, setTestResults] = useState<api.ApiTestResult[]>([]);
+  const [selectedTest, setSelectedTest] = useState<{
+    id: string;
+    date: string;
+    score: number;
+    level: string;
+    duration: string;
+    correctAnswers: number;
+    totalQuestions: number;
+    feedback?: string;
+  } | null>(null);
 
   const lastScore = Number(localStorage.getItem("quizScore") || "0");
   const lastCorrectAnswers = Number(localStorage.getItem("correctAnswers") || "0");
@@ -74,6 +84,7 @@ export function DashboardPage() {
         duration: test.duration || displayDuration,
         correctAnswers: test.correctAnswers,
         totalQuestions: test.totalQuestions,
+        feedback: test.feedback,
       }))
     : hasQuizResult
     ? [
@@ -85,6 +96,7 @@ export function DashboardPage() {
           duration: displayDuration,
           correctAnswers: displayCorrectAnswers,
           totalQuestions: displayTotalQuestions,
+          feedback: latestResult?.feedback,
         },
       ]
     : [];
@@ -268,7 +280,12 @@ export function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                    <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTest(test)}
+                      className="p-2 hover:bg-muted rounded-lg transition-colors"
+                      aria-label={`Ver detalles de la prueba del ${test.date}`}
+                    >
                       <ChevronRight className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </motion.div>
@@ -363,6 +380,69 @@ export function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {selectedTest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="relative w-full max-w-xl rounded-2xl border border-border bg-white p-6 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setSelectedTest(null)}
+              className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Cerrar detalle de prueba"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="mb-5 pr-10">
+              <h3 className="text-lg font-semibold leading-none text-foreground">Detalle de la prueba</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Informacion del resultado y retroalimentacion del docente.
+              </p>
+            </div>
+
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground">Nivel</p>
+                  <p className="text-2xl font-bold text-sena-green">{selectedTest.level}</p>
+                </div>
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground">Puntuacion</p>
+                  <p className="text-2xl font-bold text-foreground">{selectedTest.score}%</p>
+                </div>
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground">Correctas</p>
+                  <p className="font-semibold text-foreground">
+                    {selectedTest.correctAnswers}/{selectedTest.totalQuestions}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground">Tiempo</p>
+                  <p className="font-semibold text-foreground">{selectedTest.duration}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-sena-blue" />
+                  <p className="text-sm font-medium text-foreground">Fecha de presentacion</p>
+                </div>
+                <p className="text-sm text-muted-foreground">{selectedTest.date}</p>
+              </div>
+
+              <div className="rounded-xl bg-muted/50 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-sena-blue" />
+                  <p className="text-sm font-medium text-foreground">Retroalimentacion del docente</p>
+                </div>
+                <p className="whitespace-pre-line text-sm text-muted-foreground">
+                  {selectedTest.feedback || "No hay retroalimentacion para esta prueba aun."}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

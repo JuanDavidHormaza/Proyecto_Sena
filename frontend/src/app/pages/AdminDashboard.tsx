@@ -234,6 +234,26 @@ const ROLE_TO_BACKEND: Record<string, "ADMIN" | "APRENDIZ" | "INSTRUCTOR"> = {
   student: "APRENDIZ",
 };
 
+const PASS_THRESHOLD: Record<string, number> = {
+  A1: 60,
+  A2: 60,
+  B1: 65,
+  B2: 70,
+  C1: 75,
+  C2: 80,
+};
+
+const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+function isPassingResult(result: api.ApiTestResult) {
+  return result.score >= (PASS_THRESHOLD[result.level] ?? 60);
+}
+
+function toValidDate(value?: string) {
+  const date = value ? new Date(value) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -244,6 +264,7 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [documents, setDocuments] = useState<ExtendedDocument[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [testResults, setTestResults] = useState<api.ApiTestResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const [apiError, setApiError] = useState<string | null>(null);
@@ -277,10 +298,11 @@ export function AdminDashboard() {
     setIsLoading(true);
     setApiError(null);
     try {
-      const [apiUsers, apiSubjects, apiDocs] = await Promise.all([
+      const [apiUsers, apiSubjects, apiDocs, apiResults] = await Promise.all([
         api.getUsers(),
         api.getSubjects(),
         api.getDocuments(),
+        api.getTestResults(),
       ]);
 
       const convertedUsers: User[] = apiUsers.map(u => ({
@@ -305,13 +327,31 @@ export function AdminDashboard() {
         definition: d.definition, synonyms: d.synonyms, level: undefined,
       }));
 
+      const convertedResults: api.ApiTestResult[] = apiResults.map((r: any) => ({
+        id: String(r.id),
+        userId: String(r.userId ?? r.user_id ?? r.user ?? ""),
+        userName: r.userName ?? r.user_name ?? "Estudiante",
+        studentProgram: r.studentProgram ?? r.student_program ?? "",
+        score: Number(r.score ?? 0),
+        level: r.level ?? "A1",
+        correctAnswers: Number(r.correctAnswers ?? r.correct_answers ?? 0),
+        totalQuestions: Number(r.totalQuestions ?? r.total_questions ?? 0),
+        feedback: r.feedback,
+        duration: r.duration,
+        completedAt: r.completedAt ?? r.created_at ?? new Date().toISOString(),
+        process: r.process,
+        answers: r.answers ?? [],
+      }));
+
       setUsers(convertedUsers);
       setSubjects(convertedSubjects);
       setDocuments(convertedDocs);
+      setTestResults(convertedResults);
     } catch (error) {
       setUsers([]);
       setSubjects([]);
       setDocuments([]);
+      setTestResults([]);
     }
     setIsLoading(false);
   };
@@ -500,6 +540,46 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     videos: documents.filter(d => (d.category ?? getFileCategory(d.name)) === "video").length,
   };
 
+  const passedTests = testResults.filter(isPassingResult).length;
+  const testedStudentIds = new Set(testResults.map(result => result.userId).filter(Boolean));
+  const activeStudents = users.filter(u => u.role === "student" && u.status === "active").length;
+  const averageScore = testResults.length
+    ? Math.round(testResults.reduce((sum, result) => sum + result.score, 0) / testResults.length)
+    : 0;
+  const approvalRate = testResults.length ? Math.round((passedTests / testResults.length) * 100) : 0;
+
+  const levelDistributionData = [
+    { name: "Basico (A1-A2)", value: testResults.filter(r => r.level?.startsWith("A")).length, color: "#E21B3C" },
+    { name: "Intermedio (B1-B2)", value: testResults.filter(r => r.level?.startsWith("B")).length, color: "#D89E00" },
+    { name: "Avanzado (C1-C2)", value: testResults.filter(r => r.level?.startsWith("C")).length, color: "#39A900" },
+  ];
+
+  const scoreTrendData = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - index));
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const monthResults = testResults.filter(result => {
+      const resultDate = toValidDate(result.completedAt);
+      return resultDate.getMonth() === month && resultDate.getFullYear() === year;
+    });
+
+    return {
+      mes: MONTH_LABELS[month],
+      promedio: monthResults.length
+        ? Math.round(monthResults.reduce((sum, result) => sum + result.score, 0) / monthResults.length)
+        : 0,
+      pruebas: monthResults.length,
+    };
+  });
+
+  const analyticsKpis = [
+    { label: "Promedio General", value: `${averageScore}%`, icon: Target, color: "sena-green", trend: `${testResults.length} prueba${testResults.length !== 1 ? "s" : ""}`, up: averageScore >= 60 },
+    { label: "Pruebas Completadas", value: testResults.length, icon: Award, color: "sena-blue", trend: `${testedStudentIds.size} estudiante${testedStudentIds.size !== 1 ? "s" : ""}`, up: true },
+    { label: "Estudiantes Activos", value: activeStudents, icon: Users, color: "warning", trend: `${stats.students} total`, up: true },
+    { label: "Tasa de Aprobacion", value: `${approvalRate}%`, icon: Zap, color: "destructive", trend: `${passedTests}/${testResults.length}`, up: approvalRate >= 60 },
+  ];
+
   const tabs = [
     { id: "overview",   label: "Resumen",      icon: BarChart3 },
     { id: "analytics",  label: "Estadisticas", icon: PieChart  },
@@ -657,12 +737,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 <p className="text-muted-foreground">Analisis detallado del rendimiento de la plataforma</p>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { label: "Promedio General", value: "0%", icon: Target, color: "sena-green", trend: "+0%", up: true },
-                  { label: "Pruebas Completadas", value: "0", icon: Award, color: "sena-blue", trend: "+0", up: true },
-                  { label: "Estudiantes Activos", value: users.filter(u => u.role === 'student' && u.status === 'active').length, icon: Users, color: "warning", trend: "+0", up: true },
-                  { label: "Tasa de Aprobacion", value: "0%", icon: Zap, color: "destructive", trend: "+0%", up: true },
-                ].map((kpi, i) => (
+                {analyticsKpis.map((kpi, i) => (
                   <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
                     className="bg-white rounded-2xl p-5 border border-border shadow-sm">
                     <div className="flex items-center justify-between mb-3">
@@ -682,26 +757,45 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 <div className="bg-white rounded-2xl p-6 border border-border shadow-sm">
                   <h3 className="font-semibold text-foreground mb-6">Distribucion por Nivel</h3>
                   <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsPie>
-                        <Pie data={[
-                          { name: 'Basico (A1-A2)', value: 0, color: '#E21B3C' },
-                          { name: 'Intermedio (B1-B2)', value: 0, color: '#D89E00' },
-                          { name: 'Avanzado (C1-C2)', value: 0, color: '#39A900' },
-      ]} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value"
-                          label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}>
-                          {['#E21B3C', '#D89E00', '#39A900'].map((color, index) => <Cell key={index} fill={color} />)}
-                        </Pie>
-                        <Tooltip />
-                      </RechartsPie>
-                    </ResponsiveContainer>
+                    {testResults.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPie>
+                          <Pie
+                            data={levelDistributionData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={90}
+                            paddingAngle={5}
+                            dataKey="value"
+                            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                          >
+                            {levelDistributionData.map((level, index) => <Cell key={index} fill={level.color} />)}
+                          </Pie>
+                          <Tooltip />
+                        </RechartsPie>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                        Sin pruebas registradas
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {levelDistributionData.map(level => (
+                      <div key={level.name} className="text-center">
+                        <div className="w-3 h-3 rounded-full mx-auto mb-1" style={{ backgroundColor: level.color }} />
+                        <p className="text-xs font-medium text-foreground">{level.value}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{level.name}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <div className="bg-white rounded-2xl p-6 border border-border shadow-sm">
                   <h3 className="font-semibold text-foreground mb-6">Tendencia de Puntuaciones</h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={[{ mes: 'Ene', promedio: 65 }, { mes: 'Feb', promedio: 68 }, { mes: 'Mar', promedio: 72 }, { mes: 'Abr', promedio: 75 }]}>
+                      <AreaChart data={scoreTrendData}>
                         <defs>
                           <linearGradient id="colorPromedio" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#39A900" stopOpacity={0.3} />
@@ -715,6 +809,20 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         <Area type="monotone" dataKey="promedio" stroke="#39A900" strokeWidth={2} fillOpacity={1} fill="url(#colorPromedio)" />
                       </AreaChart>
                     </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                    <div className="rounded-xl bg-muted/50 p-3">
+                      <p className="text-muted-foreground">Total pruebas</p>
+                      <p className="text-lg font-bold text-foreground">{testResults.length}</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-3">
+                      <p className="text-muted-foreground">Aprobadas</p>
+                      <p className="text-lg font-bold text-sena-green">{passedTests}</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-3">
+                      <p className="text-muted-foreground">Est. evaluados</p>
+                      <p className="text-lg font-bold text-sena-blue">{testedStudentIds.size}</p>
+                    </div>
                   </div>
                 </div>
               </div>

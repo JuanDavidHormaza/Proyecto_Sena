@@ -20,7 +20,7 @@ type Step = 1 | 2 | 3;
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { updateUser } = useAuth();
 
   const [showPassword, setShowPassword]             = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -51,7 +51,7 @@ export function RegisterPage() {
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.firstName || !formData.lastName || !formData.email ||
-        !formData.docType   || !formData.docNum) {
+        !formData.docType   || !formData.docNum || !formData.program) {
       setError("Por favor completa todos los campos obligatorios.");
       return;
     }
@@ -82,6 +82,7 @@ export function RegisterPage() {
         doc_num:    formData.docNum,
         first_name: formData.firstName,
         last_name:  formData.lastName,
+        program:    formData.program,
         phone_num:  formData.phoneNum
           ? parseInt(formData.phoneNum.replace(/\D/g, ""))
           : undefined
@@ -100,7 +101,10 @@ export function RegisterPage() {
     setError("");
     setIsLoading(true);
     try {
-      await api.registerVerifyOTP(formData.email, otp);
+      const response = await api.registerVerifyOTP(formData.email, otp);
+      localStorage.setItem("accessToken", response.access);
+      localStorage.setItem("refreshToken", response.refresh);
+      updateUser(response.user);
       navigate("/quiz");
 
     } catch (err: any) {
@@ -121,6 +125,7 @@ export function RegisterPage() {
         doc_num:    formData.docNum,
         first_name: formData.firstName,
         last_name:  formData.lastName,
+        program:    formData.program,
         phone_num:  formData.phoneNum
           ? parseInt(formData.phoneNum.replace(/\D/g, ""))
           : undefined,
@@ -375,10 +380,10 @@ export function RegisterPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Programa SENA</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">Programa SENA *</label>
                     <div className="relative">
                       <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <select value={formData.program}
+                      <select required value={formData.program}
                         onChange={(e) => setFormData({ ...formData, program: e.target.value })}
                         className={`${inputClass} appearance-none cursor-pointer`}>
                         <option value="">Seleccionar</option>

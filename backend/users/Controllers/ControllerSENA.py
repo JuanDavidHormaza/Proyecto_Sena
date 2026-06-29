@@ -261,11 +261,13 @@ class PersonController:
 class UserController:
 
     @staticmethod
-    def list_all(role_filter=None):
+    def list_all(role_filter=None, program_filter=None):
         queryset = User.objects.select_related('person').all()
         if role_filter:
             backend_role = ROLE_MAP_REVERSE.get(role_filter, role_filter.upper())
             queryset = queryset.filter(role_id=backend_role)
+        if program_filter:
+            queryset = queryset.filter(program__iexact=program_filter.strip())
 
         users = []
         for user in queryset:
@@ -478,10 +480,12 @@ def _derive_character_from_score(score):
 class TestResultController:
 
     @staticmethod
-    def list_all(user_id=None):
+    def list_all(user_id=None, program_filter=None):
         queryset = TestResult.objects.select_related('user__person').all()
         if user_id:
             queryset = queryset.filter(user_id=user_id)
+        if program_filter:
+            queryset = queryset.filter(user__program__iexact=program_filter.strip())
 
         results = []
         for result in queryset:
@@ -490,6 +494,7 @@ class TestResultController:
                 'id': str(result.id),
                 'userId': str(result.user.user_id),
                 'userName': f"{person.first_name} {person.last_name}",
+                'studentProgram': result.user.program,
                 'score': result.score,
                 'level': result.level,
                 'character': result.character,
@@ -510,7 +515,11 @@ class TestResultController:
         # El frontend envía user_id; aceptamos también 'user' por compatibilidad.
         user_id = data.get('user_id', data.get('user'))
         if user_id is None and authenticated_user is not None:
-            user_id = getattr(authenticated_user, 'user_id', None)
+            user_id = (
+                getattr(authenticated_user, 'user_id', None)
+                or getattr(authenticated_user, 'id', None)
+                or getattr(authenticated_user, 'pk', None)
+            )
 
         if user_id is None:
             return None, 'Usuario no encontrado'

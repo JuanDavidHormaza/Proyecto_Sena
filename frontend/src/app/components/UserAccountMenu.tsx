@@ -31,8 +31,8 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
 
   const userName = user?.name || localStorage.getItem("userName") || "Usuario";
   const role = user?.role || localStorage.getItem("userRole") || "student";
-  // Oculta el rol (admin/superadmin/instructor/docente) pero mantiene el valor en token/storage.
-  const subtitle = "";
+  const userProgram = user?.program || localStorage.getItem("userProgram") || "";
+  const subtitle = userProgram || ROLE_LABELS[role] || "Usuario";
   const accentClass = accent === "blue" ? "bg-sena-blue" : accent === "purple" ? "bg-purple-600" : "bg-sena-green";
 
   const handleNavigate = (path: string) => {
@@ -58,14 +58,9 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
         {!compact && (
           <div className="hidden sm:block text-left min-w-0">
             <p className="font-medium text-foreground text-sm truncate max-w-40">{userName}</p>
-           <div className="hidden sm:block text-left min-w-0">
-  <p className="font-medium text-foreground text-sm truncate max-w-40">
-    {userName}
-  </p>
-  {showRole && (
-    <p className="text-xs text-muted-foreground">&nbsp;</p>
-  )}
-</div>
+            {showRole && (
+              <p className="text-xs text-muted-foreground truncate max-w-40">{subtitle}</p>
+            )}
           </div>
         )}
       </button>
@@ -80,7 +75,7 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
           >
             <div className="px-4 py-3 border-b border-border">
               <p className="font-medium text-foreground truncate">{userName}</p>
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
+              <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
             </div>
             <button
               onClick={() => handleNavigate("/profile")}

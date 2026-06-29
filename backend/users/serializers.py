@@ -86,6 +86,7 @@ class DigitalDictionarySerializer(serializers.ModelSerializer):
 class TestResultSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
+    student_program = serializers.SerializerMethodField()
 
     class Meta:
         model = TestResult
@@ -94,6 +95,7 @@ class TestResultSerializer(serializers.ModelSerializer):
             'user',
             'user_name',
             'user_email',
+            'student_program',
             'score',
             'level',
             'character',
@@ -118,6 +120,9 @@ class TestResultSerializer(serializers.ModelSerializer):
 
     def get_user_email(self, obj):
         return obj.user.person.email
+
+    def get_student_program(self, obj):
+        return obj.user.program
 
 
 # ─── Serializers de Autenticacion ────────────────────────────────────────────
@@ -157,6 +162,18 @@ class RegisterSerializer(serializers.Serializer):
         if Person.objects.filter(doc_num=value).exists():
             raise serializers.ValidationError("Este documento ya esta registrado")
         return value
+
+    def validate(self, attrs):
+        role_id = attrs.get('role_id', 'APRENDIZ')
+        program = (attrs.get('program') or '').strip()
+
+        if role_id in {'APRENDIZ', 'MONITOR', 'INSTRUCTOR'} and not program:
+            raise serializers.ValidationError({
+                'program': 'El programa SENA es obligatorio para aprendices y docentes.'
+            })
+
+        attrs['program'] = program or None
+        return attrs
     
     def create(self, validated_data):
         # Crear Person

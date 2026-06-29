@@ -64,6 +64,7 @@ export interface TestResult {
   id: string;
   userId: string;
   userName: string;
+  studentProgram?: string;
   score: number;
   level: string;
   correctAnswers: number;

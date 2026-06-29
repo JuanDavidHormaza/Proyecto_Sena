@@ -534,8 +534,13 @@ class UserViewSet(viewsets.ViewSet):
 
         return Response(_build_user_response(user, updated_person))
     def list(self, request):
+        program_filter = None
+        if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
+            program_filter = getattr(request.user, 'program', None)
+
         return Response(UserController.list_all(
-            role_filter=request.query_params.get('role')
+            role_filter=request.query_params.get('role'),
+            program_filter=program_filter,
         ))
 
     def retrieve(self, request, pk=None):
@@ -710,8 +715,13 @@ class TestResultViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def list(self, request):
+        program_filter = None
+        if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
+            program_filter = getattr(request.user, 'program', None)
+
         return Response(TestResultController.list_all(
-            user_id=request.query_params.get('user_id')
+            user_id=request.query_params.get('user_id'),
+            program_filter=program_filter,
         ))
 
     def create(self, request):

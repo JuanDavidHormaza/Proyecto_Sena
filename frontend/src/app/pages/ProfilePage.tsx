@@ -47,7 +47,9 @@ export function ProfilePage() {
   const role = user?.role || localStorage.getItem("userRole") || "student";
   const isStudent = role === "student";
   const roleLabel = ROLE_LABELS[role] || "Usuario";
-  const program = localStorage.getItem("userProgram") || (role === "student" ? "Desarrollo de Software" : "English Level Test");
+  const program = user?.program || localStorage.getItem("userProgram") || "";
+  const mainBadgeLabel = isStudent ? (program || "Programa no registrado") : roleLabel;
+  const subtitle = isStudent ? "Aprendiz SENA" : (program || "English Level Test");
   const activePermissions = PERMISSIONS.filter((permission) => Boolean(user?.permissions?.[permission.key as keyof typeof user.permissions]));
   const lastScore = Number(localStorage.getItem("quizScore") || "0");
   const totalQuestions = Number(localStorage.getItem("totalQuestions") || "0");
@@ -84,10 +86,10 @@ export function ProfilePage() {
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-3">
                   <BadgeCheck className="w-4 h-4" />
-                  {roleLabel}
+                  {mainBadgeLabel}
                 </div>
                 <h1 className="text-2xl lg:text-3xl font-bold truncate">{name}</h1>
-                <p className="text-white/80">{program}</p>
+                <p className="text-white/80">{subtitle}</p>
               </div>
             </div>
           </div>
@@ -132,6 +134,7 @@ export function ProfilePage() {
               {[
                 ["Nombres", user?.firstName || name.split(" ")[0] || "No registrado"],
                 ["Apellidos", user?.lastName || name.split(" ").slice(1).join(" ") || "No registrado"],
+                ["Programa SENA", program || "No registrado"],
                 ["Tipo de documento", user?.docType || "No registrado"],
                 ["Numero de documento", user?.docNum || "No registrado"],
               ].map(([label, value]) => (

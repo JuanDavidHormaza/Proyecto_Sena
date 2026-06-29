@@ -6,21 +6,25 @@ import {
   Users, BarChart3, TrendingUp, Send, X, Clock,
   Filter
 } from "lucide-react";
-import { mockTestResults, TestResult, mockUsers } from "../data/users";
+import { mockTestResults, TestResult, mockUsers, User } from "../data/users";
 import * as api from "../services/api";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
 
+function normalizeText(value?: string | null) {
+  return (value || "").trim().toLowerCase();
+}
+
 export function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [results, setResults] = useState<TestResult[]>(mockTestResults);
+  const [results, setResults] = useState<TestResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<TestResult | null>(null);
   const [feedback, setFeedback] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterLevel, setFilterLevel] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
-  const [students, setStudents] = useState(mockUsers.filter(u => u.role === 'student'));
+  const [students, setStudents] = useState<User[]>([]);
 
   const teacherName = user?.name || localStorage.getItem("userName") || "Docente";
   const teacherProgram = user?.program || localStorage.getItem("userProgram") || "";
@@ -39,6 +43,7 @@ export function TeacherDashboard() {
         id: r.id,
         userId: r.userId,
         userName: r.userName,
+        studentProgram: r.studentProgram || r.student_program || "",
         score: r.score,
         level: r.level,
         correctAnswers: r.correctAnswers,
@@ -62,14 +67,12 @@ export function TeacherDashboard() {
         program: u.program || '',
       }));
       
-      if (convertedResults.length > 0) {
-        setResults(convertedResults);
-      }
-      if (convertedStudents.length > 0) {
-        setStudents(convertedStudents);
-      }
+      setResults(convertedResults);
+      setStudents(convertedStudents);
     } catch (error) {
       console.log("[v0] Failed to load from API, using mock data", error);
+      setResults(mockTestResults);
+      setStudents(mockUsers.filter(u => u.role === 'student'));
     }
     setIsLoading(false);
   };
@@ -102,16 +105,19 @@ export function TeacherDashboard() {
     }
   };
 
+  const teacherProgramKey = normalizeText(teacherProgram);
+
   const filteredResults = results.filter(r => {
     const student = students.find(s => s.id === r.userId);
-    const matchesProgram = !teacherProgram || student?.program === teacherProgram;
+    const resultProgram = r.studentProgram || student?.program || "";
+    const matchesProgram = !teacherProgramKey || normalizeText(resultProgram) === teacherProgramKey;
     const matchesSearch = r.userName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLevel = filterLevel === "all" || r.level.startsWith(filterLevel);
     return matchesProgram && matchesSearch && matchesLevel;
   });
 
   const programStudents = teacherProgram
-    ? students.filter(student => student.program === teacherProgram)
+    ? students.filter(student => normalizeText(student.program) === teacherProgramKey)
     : students;
 
   // Group results by student
@@ -123,7 +129,7 @@ export function TeacherDashboard() {
     return acc;
   }, {} as Record<string, TestResult[]>);
 
-  const studentEntries = programStudents
+  const visibleProgramStudentEntries = programStudents
     .filter(student => {
       const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
       const hasMatchingLevel = filterLevel === "all" || Boolean(studentResults[student.id]?.length);
@@ -131,9 +137,24 @@ export function TeacherDashboard() {
     })
     .map(student => [student.id, studentResults[student.id] || []] as const);
 
+  const programStudentIds = new Set(programStudents.map(student => student.id));
+  const resultOnlyEntries = Object.entries(studentResults)
+    .filter(([userId, userResults]) => {
+      if (programStudentIds.has(userId)) return false;
+      const latestResult = userResults[0];
+      return latestResult?.userName.toLowerCase().includes(searchTerm.toLowerCase());
+    })
+    .map(([userId, userResults]) => [userId, userResults] as const);
+
+  const studentEntries = [...visibleProgramStudentEntries, ...resultOnlyEntries];
+  const totalStudentIds = new Set([
+    ...programStudents.map(student => student.id),
+    ...filteredResults.map(result => result.userId),
+  ]);
+
   // Stats
   const stats = {
-    totalStudents: programStudents.length,
+    totalStudents: totalStudentIds.size,
     totalTests: filteredResults.length,
     averageScore: filteredResults.length
       ? Math.round(filteredResults.reduce((acc, r) => acc + r.score, 0) / filteredResults.length)
@@ -274,6 +295,8 @@ export function TeacherDashboard() {
           {studentEntries.map(([userId, userResults], index) => {
             const student = students.find(s => s.id === userId);
             const latestResult = userResults[0];
+            const studentName = student?.name || latestResult?.userName || "Estudiante";
+            const studentProgram = student?.program || latestResult?.studentProgram || "Programa SENA";
             const avgScore = userResults.length
               ? Math.round(userResults.reduce((acc, r) => acc + r.score, 0) / userResults.length)
               : 0;
@@ -291,12 +314,12 @@ export function TeacherDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-sena-green rounded-xl flex items-center justify-center text-white font-medium text-lg">
-                        {userResults[0].userName.charAt(0)}
+                        {studentName.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-foreground">{userResults[0].userName}</h3>
+                        <h3 className="font-semibold text-foreground">{studentName}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {student?.program || 'Programa SENA'} - {userResults.length} prueba{userResults.length !== 1 ? 's' : ''}
+                          {studentProgram} - {userResults.length} prueba{userResults.length !== 1 ? 's' : ''}
                         </p>
                       </div>
                     </div>

@@ -6,7 +6,7 @@ from .Models.modelsSENA import User
 class AuthenticatedUser:
     """Wrapper que añade los atributos que DRF espera"""
 
-    def init(self, user):
+    def __init__(self, user):
         self._user = user
         self.is_authenticated = True
         self.is_active = True
@@ -17,7 +17,15 @@ class AuthenticatedUser:
         self.program = user.program
         self.person = user.person
 
-    def getattr(self, name):
+    @property
+    def pk(self):
+        return self.user_id
+
+    @property
+    def id(self):
+        return self.user_id
+
+    def __getattr__(self, name):
         return getattr(self._user, name)
 
 

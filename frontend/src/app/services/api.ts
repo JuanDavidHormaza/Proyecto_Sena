@@ -83,6 +83,8 @@ export interface ApiTestResult {
   id: string;
   userId: string;
   userName: string;
+  studentProgram?: string | null;
+  student_program?: string | null;
   score: number;
   level: string;
   correctAnswers: number;
