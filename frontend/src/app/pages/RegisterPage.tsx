@@ -1,7 +1,8 @@
 // =======================================================================
-// ARCHIVO: frontend/src/app/pages/RegisterPage.tsx
-// Reemplaza COMPLETAMENTE tu RegisterPage.tsx actual con este contenido.
-// Agrega el paso 3: verificación del correo con OTP antes de crear la cuenta.
+// RegisterPage.tsx
+// Registro en 3 pasos: datos personales → contraseña/términos → OTP.
+// Rediseño visual (radios grandes, sombras suaves, íconos circulares,
+// indicador de pasos en pills) — la lógica de registro no se modifica.
 // =======================================================================
 
 import { useState } from "react";
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 import { senaPrograms } from "../data/users";
 import { useAuth } from "../context/AuthContext";
+import { BrandLogo } from "../components/BrandLogo";
+import { IconBadge } from "../components/ui/icon-badge";
 import * as api from "../services/api";
 
 type Step = 1 | 2 | 3;
@@ -105,7 +108,8 @@ export function RegisterPage() {
       localStorage.setItem("accessToken", response.access);
       localStorage.setItem("refreshToken", response.refresh);
       updateUser(response.user);
-      navigate("/quiz");
+      navigate("/dashboard");
+
 
     } catch (err: any) {
       setError(err?.message || "Código incorrecto o expirado.");
@@ -142,10 +146,38 @@ export function RegisterPage() {
     }
   };
 
+  // Países con su indicativo telefónico internacional.
   const countries = [
-    "Colombia", "Mexico", "Argentina", "Chile", "Peru",
-    "Ecuador", "Venezuela", "Bolivia", "Paraguay", "Uruguay",
+    { name: "Colombia", dial: "+57", flag: "🇨🇴" },
+    { name: "Mexico", dial: "+52", flag: "🇲🇽" },
+    { name: "Argentina", dial: "+54", flag: "🇦🇷" },
+    { name: "Chile", dial: "+56", flag: "🇨🇱" },
+    { name: "Peru", dial: "+51", flag: "🇵🇪" },
+    { name: "Ecuador", dial: "+593", flag: "🇪🇨" },
+    { name: "Venezuela", dial: "+58", flag: "🇻🇪" },
+    { name: "Bolivia", dial: "+591", flag: "🇧🇴" },
+    { name: "Paraguay", dial: "+595", flag: "🇵🇾" },
+    { name: "Uruguay", dial: "+598", flag: "🇺🇾" },
+    { name: "Panama", dial: "+507", flag: "🇵🇦" },
+    { name: "Costa Rica", dial: "+506", flag: "🇨🇷" },
+    { name: "Estados Unidos", dial: "+1", flag: "🇺🇸" },
+    { name: "España", dial: "+34", flag: "🇪🇸" },
+    { name: "Brasil", dial: "+55", flag: "🇧🇷" },
   ];
+
+  // Al elegir país, prellena el indicativo en el teléfono si está vacío.
+  const handleCountryChange = (name: string) => {
+    const selected = countries.find((c) => c.name === name);
+    setFormData((prev) => {
+      const onlyDial = /^\+\d{1,4}\s*$/.test(prev.phoneNum.trim());
+      const shouldPrefill = !prev.phoneNum.trim() || onlyDial;
+      return {
+        ...prev,
+        country: name,
+        phoneNum: shouldPrefill && selected ? `${selected.dial} ` : prev.phoneNum,
+      };
+    });
+  };
 
   const documentTypes = [
     { value: "CC",  label: "Cédula de Ciudadanía" },
@@ -156,7 +188,7 @@ export function RegisterPage() {
   ];
 
   const inputClass =
-    "w-full pl-12 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all";
+    "w-full pl-12 pr-4 py-3 bg-muted/40 border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-green/40 focus:border-sena-green transition-all";
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -174,8 +206,8 @@ export function RegisterPage() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="relative z-10 flex flex-col items-center justify-center w-full p-12"
         >
-          <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-8 shadow-lg shadow-slate-900/15">
-            <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
+          <div className="flex justify-center mb-8">
+            <BrandLogo height="h-24" boxed />
           </div>
 
           <h3 className="text-3xl font-bold mb-4 text-balance text-white mt-8">
@@ -197,7 +229,7 @@ export function RegisterPage() {
                   transition={{ delay: 0.5 + i * 0.1 }}
                   className="flex items-center gap-3"
                 >
-                  <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
                     <Check className="w-4 h-4" />
                   </div>
                   <span className="text-white/90">{feature}</span>
@@ -228,9 +260,7 @@ export function RegisterPage() {
 
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-16 h-16 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
-              <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
-            </div>
+            <BrandLogo height="h-14" />
             <div>
               <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
               <p className="text-sm text-muted-foreground">Plataforma SENA</p>
@@ -245,7 +275,7 @@ export function RegisterPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl flex items-start gap-3"
+              className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-start gap-3"
             >
               <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
               <p className="text-sm text-destructive">{error}</p>
@@ -372,10 +402,14 @@ export function RegisterPage() {
                     <div className="relative">
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                       <select value={formData.country}
-                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                        onChange={(e) => handleCountryChange(e.target.value)}
                         className={`${inputClass} appearance-none cursor-pointer`}>
                         <option value="">Seleccionar</option>
-                        {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+                        {countries.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.flag} {c.name} ({c.dial})
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -394,7 +428,7 @@ export function RegisterPage() {
                 </div>
 
                 <button type="submit"
-                  className="w-full bg-sena-green text-white py-4 rounded-xl font-semibold hover:bg-sena-green/90 transition-all shadow-lg shadow-sena-green/25">
+                  className="w-full bg-sena-green text-white py-4 rounded-full font-semibold hover:bg-sena-green-dark transition-all shadow-brand">
                   Continuar
                 </button>
 
@@ -421,7 +455,7 @@ export function RegisterPage() {
                 className="space-y-4"
               >
                 {/* Resumen del usuario */}
-                <div className="bg-sena-green/5 border border-sena-green/20 rounded-xl p-4 mb-2">
+                <div className="bg-sena-green/5 border border-sena-green/20 rounded-2xl p-4 mb-2">
                   <p className="text-sm text-muted-foreground mb-1">Registrando como:</p>
                   <p className="font-semibold text-foreground">{formData.firstName} {formData.lastName}</p>
                   <p className="text-sm text-muted-foreground">{formData.email}</p>
@@ -435,7 +469,7 @@ export function RegisterPage() {
                     <input type={showPassword ? "text" : "password"} required minLength={6}
                       placeholder="Mínimo 6 caracteres" value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full pl-12 pr-12 py-3.5 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all" />
+                      className="w-full pl-12 pr-12 py-3.5 bg-muted/40 border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-green/40 focus:border-sena-green transition-all" />
                     <button type="button" onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -451,7 +485,7 @@ export function RegisterPage() {
                     <input type={showConfirmPassword ? "text" : "password"} required
                       placeholder="Repite tu contraseña" value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      className="w-full pl-12 pr-12 py-3.5 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all" />
+                      className="w-full pl-12 pr-12 py-3.5 bg-muted/40 border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-green/40 focus:border-sena-green transition-all" />
                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -463,7 +497,7 @@ export function RegisterPage() {
                 <div className="flex items-start gap-3 py-2">
                   <input id="terms" type="checkbox" required checked={formData.acceptTerms}
                     onChange={(e) => setFormData({ ...formData, acceptTerms: e.target.checked })}
-                    className="mt-1 w-5 h-5 rounded border-border text-sena-green focus:ring-sena-green/50 cursor-pointer" />
+                    className="mt-1 w-5 h-5 rounded border-border text-sena-green focus:ring-sena-green/40 cursor-pointer" />
                   <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
                     Acepto los{" "}
                     <span className="text-sena-green hover:underline">términos y condiciones</span>
@@ -474,11 +508,11 @@ export function RegisterPage() {
 
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep(1)}
-                    className="flex-1 bg-muted text-muted-foreground py-4 rounded-xl font-semibold hover:bg-muted/80 transition-all">
+                    className="flex-1 bg-muted text-muted-foreground py-4 rounded-full font-semibold hover:bg-muted/80 transition-all">
                     Atrás
                   </button>
                   <button type="submit" disabled={isLoading}
-                    className="flex-1 bg-sena-green text-white py-4 rounded-xl font-semibold hover:bg-sena-green/90 transition-all shadow-lg shadow-sena-green/25 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    className="flex-1 bg-sena-green text-white py-4 rounded-full font-semibold hover:bg-sena-green-dark transition-all shadow-brand disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     {isLoading
                       ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       : "Enviar código de verificación"
@@ -501,9 +535,9 @@ export function RegisterPage() {
                 className="space-y-4"
               >
                 <div className="flex justify-center mb-4">
-                  <div className="w-16 h-16 bg-sena-blue/10 rounded-2xl flex items-center justify-center">
-                    <KeyRound className="w-8 h-8 text-sena-blue" />
-                  </div>
+                  <IconBadge tone="blue-soft" size="xl">
+                    <KeyRound size={28} />
+                  </IconBadge>
                 </div>
 
                 <p className="text-center text-muted-foreground">
@@ -520,12 +554,12 @@ export function RegisterPage() {
                     required autoFocus value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                     placeholder="000000"
-                    className="w-full text-center text-3xl tracking-[0.5em] py-4 border border-input rounded-xl bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all font-mono"
+                    className="w-full text-center text-3xl tracking-[0.5em] py-4 border border-input rounded-2xl bg-muted/40 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-sena-green/40 focus:border-sena-green transition-all font-mono"
                   />
                 </div>
 
                 <button type="submit" disabled={isLoading || otp.length < 6}
-                  className="w-full bg-sena-green text-white py-4 rounded-xl font-semibold hover:bg-sena-green/90 transition-all shadow-lg shadow-sena-green/25 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  className="w-full bg-sena-green text-white py-4 rounded-full font-semibold hover:bg-sena-green-dark transition-all shadow-brand disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {isLoading
                     ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     : "Crear mi cuenta"

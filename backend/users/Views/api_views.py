@@ -19,10 +19,14 @@ from ..Controllers.ControllerSENA import (
     SubjectController, DictionaryController, TestResultController,
     RankingController, _build_user_response,
 )
-from ..Models.modelsSENA import EmailOTP, RegisterPendingOTP, Person, User, TestResult
+from ..Models.modelsSENA import (
+    EmailOTP, RegisterPendingOTP, Person, User, TestResult,
+    TrainingGroup, TrainingGroupStudent, MediaAsset, Subject,
+)
 from ..serializers import (
     LoginSerializer, RegisterSerializer, PersonSerializer,
     DigitalDictionarySerializer, TestResultSerializer, UserSerializer,
+    MediaAssetSerializer,
 )
 from ..permissions import IsSuperAdmin, IsAdminOrSuperAdmin
 # NOTE: no se usa SESSION_KEY en este archivo; se usa request.session directamente.
@@ -90,7 +94,19 @@ class LoginAPIView(APIView):
         if not user:
             return Response({'error': 'Usuario no tiene cuenta asociada'}, status=status.HTTP_401_UNAUTHORIZED)
 
-
+        # ── Solo los ESTUDIANTES usan verificación por correo (OTP/MFA). ──────
+        # Docentes, administradores y super administradores entran directo,
+        # sin código de verificación.
+        privileged_roles = {'SUPERADMIN', 'ADMIN', 'INSTRUCTOR'}
+        if getattr(user, 'role_id', None) in privileged_roles:
+            from ..Controllers.ControllerSENA import _generate_tokens
+            access, refresh = _generate_tokens(user)
+            return Response({
+                'mfa_required': False,
+                'access': access,
+                'refresh': refresh,
+                'user': _build_user_response(user, person),
+            })
 
         # Invalidar OTPs anteriores para este email
         EmailOTP.objects.filter(email=email, used=False).update(used=True)
@@ -500,49 +516,6 @@ class RegisterVerifyOTPAPIView(APIView):
 class UserViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
-    def partial_update(self, request, pk=None):
-        user, error = UserController.get_by_id(pk)
-        if error:
-            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
-
-        person = user.person
-        person_data = {}
-
-        # Update de Person
-        if 'name' in request.data:
-            full_name = request.data['name'].strip()
-            parts = full_name.split(' ', 1)
-            person_data['first_name'] = parts[0]
-            person_data['last_name'] = parts[1] if len(parts) > 1 else ''
-        if 'email' in request.data:
-            person_data['email'] = request.data['email']
-        if 'phone_num' in request.data:
-            person_data['phone_num'] = request.data['phone_num']
-
-        updated_person = None
-        if person_data:
-            updated_person, error = PersonController.update(person.person_id, person_data)
-            if error:
-                return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            updated_person = person
-
-        # Update de User (program)
-        if 'program' in request.data:
-            user.program = request.data.get('program') or None
-            user.save(update_fields=['program'])
-
-        return Response(_build_user_response(user, updated_person))
-    def list(self, request):
-        program_filter = None
-        if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
-            program_filter = getattr(request.user, 'program', None)
-
-        return Response(UserController.list_all(
-            role_filter=request.query_params.get('role'),
-            program_filter=program_filter,
-        ))
-
     def retrieve(self, request, pk=None):
         user, error = UserController.get_by_id(pk)
         if error:
@@ -586,6 +559,190 @@ class UserViewSet(viewsets.ViewSet):
             return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def partial_update(self, request, pk=None):
+        user, error = UserController.get_by_id(pk)
+        if error:
+            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
+
+        person = user.person
+        person_data = {}
+
+        # Update de Person
+        if 'name' in request.data:
+            full_name = request.data['name'].strip()
+            parts = full_name.split(' ', 1)
+            person_data['first_name'] = parts[0]
+            person_data['last_name'] = parts[1] if len(parts) > 1 else ''
+        if 'email' in request.data:
+            person_data['email'] = request.data['email']
+        if 'phone_num' in request.data:
+            person_data['phone_num'] = request.data['phone_num']
+
+        updated_person = None
+        if person_data:
+            updated_person, error = PersonController.update(person.person_id, person_data)
+            if error:
+                return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            updated_person = person
+
+        # Update de User (program)
+        if 'program' in request.data:
+            user.program = request.data.get('program') or None
+            user.save(update_fields=['program'])
+
+        return Response(_build_user_response(user, updated_person))
+    def list(self, request):
+        program_filter = None
+        student_ids = None
+        if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
+            student_ids = TrainingGroupStudent.objects.filter(
+                group__teachers=request.user,
+            ).values_list('student_id', flat=True)
+
+        users = UserController.list_all(
+            role_filter=request.query_params.get('role'),
+            program_filter=program_filter,
+        )
+        if student_ids is not None:
+            allowed_ids = {str(student_id) for student_id in student_ids}
+            users = [user for user in users if user['id'] in allowed_ids]
+        return Response(users)
+
+
+def _group_response(group):
+    teachers = [
+        _build_user_response(teacher, teacher.person)
+        for teacher in group.teachers.select_related('person').all()
+    ]
+    students = [
+        _build_user_response(membership.student, membership.student.person)
+        for membership in group.student_memberships.select_related('student__person').all()
+    ]
+    return {
+        'id': str(group.id),
+        'ficha': group.ficha,
+        'program': group.program,
+        'teachers': teachers,
+        'students': students,
+        'createdAt': group.created_at.isoformat() if group.created_at else None,
+    }
+
+
+class TrainingGroupViewSet(viewsets.ViewSet):
+    """Administración de fichas. Todas las asignaciones se persisten en tablas."""
+    permission_classes = [IsAdminOrSuperAdmin]
+
+    def list(self, request):
+        groups = TrainingGroup.objects.prefetch_related(
+            'teachers__person', 'student_memberships__student__person'
+        ).all()
+        return Response([_group_response(group) for group in groups])
+
+    def retrieve(self, request, pk=None):
+        try:
+            group = TrainingGroup.objects.prefetch_related(
+                'teachers__person', 'student_memberships__student__person'
+            ).get(pk=pk)
+        except TrainingGroup.DoesNotExist:
+            return Response({'error': 'Ficha no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(_group_response(group))
+
+    @action(detail=False, methods=['get'], url_path='available-students')
+    def available_students(self, request):
+        program = (request.query_params.get('program') or '').strip()
+        group_id = request.query_params.get('group_id')
+        if not program:
+            return Response({'error': 'El programa es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+
+        assigned = TrainingGroupStudent.objects.filter(program__iexact=program)
+        if group_id:
+            assigned = assigned.exclude(group_id=group_id)
+        assigned_ids = assigned.values_list('student_id', flat=True)
+        students = User.objects.select_related('person').filter(
+            role_id='APRENDIZ', program__iexact=program
+        ).exclude(pk__in=assigned_ids)
+        return Response([_build_user_response(student, student.person) for student in students])
+
+    @action(detail=False, methods=['get'], url_path='available-teachers')
+    def available_teachers(self, request):
+        teachers = User.objects.select_related('person').filter(role_id__in=['INSTRUCTOR', 'MONITOR'])
+        return Response([_build_user_response(teacher, teacher.person) for teacher in teachers])
+
+    def create(self, request):
+        return self._save_group(request)
+
+    def update(self, request, pk=None):
+        try:
+            group = TrainingGroup.objects.get(pk=pk)
+        except TrainingGroup.DoesNotExist:
+            return Response({'error': 'Ficha no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        return self._save_group(request, group)
+
+    partial_update = update
+
+    def _save_group(self, request, group=None):
+        ficha = str(request.data.get('ficha', group.ficha if group else '')).strip()
+        program = str(request.data.get('program', group.program if group else '')).strip()
+        teacher_ids = request.data.get('teacher_ids', None)
+        student_ids = request.data.get('student_ids', None)
+        if not ficha or not program:
+            return Response({'error': 'El número de ficha y el programa son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        duplicate = TrainingGroup.objects.filter(ficha=ficha)
+        if group:
+            duplicate = duplicate.exclude(pk=group.pk)
+        if duplicate.exists():
+            return Response({'error': 'Ya existe una ficha con ese número.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if teacher_ids is not None:
+            teachers = list(User.objects.filter(pk__in=teacher_ids, role_id__in=['INSTRUCTOR', 'MONITOR']))
+            if len(teachers) != len(set(map(str, teacher_ids))):
+                return Response({'error': 'Uno o más docentes no son válidos.'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            teachers = None
+
+        if student_ids is not None:
+            students = list(User.objects.filter(pk__in=student_ids, role_id='APRENDIZ', program__iexact=program))
+            if len(students) != len(set(map(str, student_ids))):
+                return Response({'error': 'Los estudiantes deben ser aprendices del programa seleccionado.'}, status=status.HTTP_400_BAD_REQUEST)
+            used = TrainingGroupStudent.objects.filter(student_id__in=[s.pk for s in students], program__iexact=program)
+            if group:
+                used = used.exclude(group=group)
+            if used.exists():
+                return Response({'error': 'Un estudiante ya pertenece a otra ficha de este programa.'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            students = None
+
+        from django.db import transaction
+        with transaction.atomic():
+            if group is None:
+                group = TrainingGroup.objects.create(ficha=ficha, program=program)
+            else:
+                # Cambiar el programa no puede dejar inscripciones incoherentes.
+                if program != group.program and group.student_memberships.exists():
+                    return Response({'error': 'No se puede cambiar el programa mientras la ficha tenga estudiantes.'}, status=status.HTTP_400_BAD_REQUEST)
+                group.ficha = ficha
+                group.program = program
+                group.save()
+            if teachers is not None:
+                group.teachers.set(teachers)
+            if students is not None:
+                group.student_memberships.all().delete()
+                TrainingGroupStudent.objects.bulk_create([
+                    TrainingGroupStudent(group=group, student=student, program=program)
+                    for student in students
+                ])
+        group = TrainingGroup.objects.prefetch_related('teachers__person', 'student_memberships__student__person').get(pk=group.pk)
+        return Response(_group_response(group), status=status.HTTP_201_CREATED if request.method == 'POST' else status.HTTP_200_OK)
+
+    def destroy(self, request, pk=None):
+        try:
+            TrainingGroup.objects.get(pk=pk).delete()
+        except TrainingGroup.DoesNotExist:
+            return Response({'error': 'Ficha no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MATERIAS / DICCIONARIO
@@ -618,11 +775,13 @@ class SubjectViewSet(viewsets.ViewSet):
 
 class DigitalDictionaryViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
-
+    
     def list(self, request):
-        return Response(DictionaryController.list_all(
+        data = DictionaryController.list_all(
             subject_id=request.query_params.get('subject')
-        ))
+        )
+        print(f"[DigitalDictionaryViewSet] /api/dictionary/ -> {len(data)} registros")
+        return Response(data)
 
     def retrieve(self, request, pk=None):
         doc, error = DictionaryController.get_by_id(pk)
@@ -636,11 +795,285 @@ class DigitalDictionaryViewSet(viewsets.ViewSet):
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DigitalDictionarySerializer(doc).data, status=status.HTTP_201_CREATED)
 
+    def update(self, request, pk=None):
+        doc, error = DictionaryController.update(pk, request.data)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DigitalDictionarySerializer(doc).data)
+
+    def partial_update(self, request, pk=None):
+        return self.update(request, pk=pk)
+
     def destroy(self, request, pk=None):
         ok, error = DictionaryController.delete(pk)
         if error:
             return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DictionaryDebugView(APIView):
+    """Diagnóstico simple: conteo de palabras en BD y de archivos en MinIO."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from users.Models.modelsSENA import DigitalDictionary
+        from users.services import media_storage
+
+        bd_count = DigitalDictionary.objects.count()
+        media_counts = {
+            "images": MediaAsset.objects.filter(media_type="image").count(),
+            "audios": MediaAsset.objects.filter(media_type="audio").count(),
+            "videos": MediaAsset.objects.filter(media_type="video").count(),
+        }
+
+        minio_error = None
+        try:
+            media_storage.ensure_buckets()
+        except Exception as exc:
+            minio_error = str(exc)
+
+        return Response({
+            "bd_count": bd_count,
+            "media_counts": media_counts,
+            "total_media": MediaAsset.objects.count(),
+            "minio_error": minio_error,
+            "minio_endpoint": media_storage.os.getenv("MINIO_ENDPOINT", ""),
+        })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MULTIMEDIA (MinIO) — Programa > Ficha > Tipo (y su inversa)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class MediaAssetViewSet(viewsets.ViewSet):
+    """
+    Gestiona los archivos multimedia (imagen/audio/video) guardados en MinIO,
+    organizados por Programa y Ficha.
+
+    GET /api/media/                -> lista (filtros: program, ficha, media_type)
+    GET /api/media/tree/           -> árbol Programa > Ficha > Tipo
+    GET /api/media/tree_by_type/   -> árbol inverso Tipo > Programa > Ficha
+    POST /api/media/               -> sube un archivo (multipart/form-data)
+    DELETE /api/media/{id}/        -> elimina el archivo (BD + MinIO)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        qs = MediaAsset.objects.select_related('uploaded_by__person', 'subject').all()
+
+        media_type = request.query_params.get('media_type')
+        program = request.query_params.get('program')
+        ficha = request.query_params.get('ficha')
+
+        if media_type:
+            qs = qs.filter(media_type=media_type)
+        if program:
+            qs = qs.filter(program__iexact=program)
+        if ficha:
+            qs = qs.filter(ficha__iexact=ficha)
+
+        return Response(MediaAssetSerializer(qs, many=True).data)
+
+    def create(self, request):
+        """Sube un archivo a MinIO y crea el registro MediaAsset."""
+        from ..services import media_storage
+
+        uploaded_file = request.FILES.get('file')
+        media_type = request.data.get('media_type', '')
+        program = (request.data.get('program') or '').strip()
+        ficha = (request.data.get('ficha') or '').strip()
+
+        if not uploaded_file:
+            return Response({'error': 'El archivo es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        if media_type not in ('image', 'audio', 'video'):
+            return Response({'error': 'media_type debe ser image, audio o video.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not program:
+            return Response({'error': 'El programa es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        subject = None
+        subject_id = request.data.get('subject')
+        if subject_id:
+            subject = Subject.objects.filter(pk=subject_id).first()
+
+        try:
+            data = uploaded_file.read()
+            upload_result = media_storage.upload_bytes(
+                media_type,
+                program,
+                ficha,
+                uploaded_file.name,
+                data,
+                content_type=uploaded_file.content_type or '',
+            )
+        except Exception as exc:
+            return Response({'error': f'No se pudo subir el archivo: {exc}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # request.user es un AuthenticatedUser (wrapper), no la instancia real
+        # del modelo User -> hay que resolverla por user_id para el FK.
+        uploader = None
+        user_id = getattr(request.user, 'user_id', None)
+        if user_id is not None:
+            uploader = User.objects.filter(pk=user_id).first()
+
+        asset = MediaAsset.objects.create(
+            media_type=media_type,
+            program=program,
+            ficha=ficha,
+            word_id=request.data.get('word_id', ''),
+            definition=request.data.get('definition', ''),
+            synonyms=request.data.get('synonyms', ''),
+            subject=subject,
+            bucket=upload_result['bucket'],
+            object_key=upload_result['object_key'],
+            url=upload_result['url'],
+            original_filename=uploaded_file.name,
+            size_bytes=uploaded_file.size,
+            uploaded_by=uploader,
+        )
+
+        return Response(MediaAssetSerializer(asset).data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk=None):
+        from ..services import media_storage
+
+        try:
+            asset = MediaAsset.objects.get(pk=pk)
+        except MediaAsset.DoesNotExist:
+            return Response({'error': 'Archivo no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        media_storage.delete_object(asset.bucket, asset.object_key)
+        asset.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['get'], url_path='tree')
+    def tree(self, request):
+        """
+        Árbol NORMAL: Programa -> Ficha -> Tipo de medio.
+        [{ program, fichas: [{ ficha, images: n, audios: n, videos: n, total }] }]
+        """
+        qs = MediaAsset.objects.values('program', 'ficha', 'media_type').all()
+        tree: dict = {}
+        for row in qs:
+            program = row['program'] or 'Sin programa'
+            ficha = row['ficha'] or 'Sin ficha'
+            program_node = tree.setdefault(program, {})
+            ficha_node = program_node.setdefault(ficha, {'images': 0, 'audios': 0, 'videos': 0})
+            ficha_node[f"{row['media_type']}s"] += 1
+
+        result = []
+        for program, fichas in tree.items():
+            ficha_list = []
+            for ficha, counts in fichas.items():
+                total = counts['images'] + counts['audios'] + counts['videos']
+                ficha_list.append({'ficha': ficha, **counts, 'total': total})
+            result.append({'program': program, 'fichas': ficha_list})
+        return Response(result)
+
+    @action(detail=False, methods=['get'], url_path='tree-by-type')
+    def tree_by_type(self, request):
+        """
+        Árbol INVERSO: Tipo de medio -> Programa -> Ficha.
+        { image: [{ program, fichas: [{ ficha, count }] }], audio: [...], video: [...] }
+        """
+        qs = MediaAsset.objects.values('program', 'ficha', 'media_type').all()
+        tree: dict = {'image': {}, 'audio': {}, 'video': {}}
+
+        for row in qs:
+            media_type = row['media_type']
+            program = row['program'] or 'Sin programa'
+            ficha = row['ficha'] or 'Sin ficha'
+            type_node = tree.setdefault(media_type, {})
+            program_node = type_node.setdefault(program, {})
+            program_node[ficha] = program_node.get(ficha, 0) + 1
+
+        result = {}
+        for media_type, programs in tree.items():
+            program_list = []
+            for program, fichas in programs.items():
+                ficha_list = [{'ficha': ficha, 'count': count} for ficha, count in fichas.items()]
+                program_list.append({'program': program, 'fichas': ficha_list})
+            result[media_type] = program_list
+        return Response(result)
+
+
+class PronunciationEvaluationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        audio_file = request.FILES.get("audio")
+        expected_text = request.data.get("expected_text", "")
+        storage_path = request.data.get("storage_path", "")
+        # Nuevo: nivel del quiz para organizar en carpetas A1/A2/B1/B2
+        quiz_level = request.data.get("level", "")
+
+        if not audio_file:
+            return Response({"error": "Audio file is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not expected_text:
+            return Response({"error": "expected_text is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from users.services.quiz_service import evaluate_pronunciation_with_elevenlabs, save_audio_to_supabase
+            import tempfile
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp_file:
+                for chunk in audio_file.chunks():
+                    tmp_file.write(chunk)
+                tmp_path = tmp_file.name
+
+            # Organizar audios en: {level}/user_{userId}/{filename}
+            # Si viene storage_path, se respeta (compatibilidad)
+            # Si viene level, se usa la nueva estructura
+            if quiz_level and quiz_level in ("A1", "A2", "B1", "B2"):
+                effective_storage_path = f"{quiz_level}/user_{request.user.user_id}"
+            elif storage_path:
+                effective_storage_path = storage_path
+            else:
+                effective_storage_path = f"responses/user_{request.user.user_id}"
+
+            audio_bytes = open(tmp_path, "rb").read()
+            filename = f"response-{int(timezone.now().timestamp())}.webm"
+            audio_url = save_audio_to_supabase(
+                audio_bytes,
+                filename,
+                storage_path=effective_storage_path,
+            )
+
+            evaluation = evaluate_pronunciation_with_elevenlabs(tmp_path, expected_text)
+
+            return Response({
+                "audio_url": audio_url,
+                "evaluation": evaluation,
+            })
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class QuizQuestionsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        level = request.query_params.get("level", "A1")
+        count = int(request.query_params.get("count", 5))
+
+        # El quiz se adapta al programa del estudiante autenticado: usa
+        # SU diccionario, sin importar cuál sea el programa. Si viene
+        # explícito por query param (por si un docente quiere previsualizar
+        # otro programa) se respeta ese valor.
+        program = request.query_params.get("program", "")
+        if not program:
+            user_id = getattr(request.user, 'user_id', None)
+            if user_id is not None:
+                from ..Models.modelsSENA import User
+                user_obj = User.objects.filter(pk=user_id).first()
+                program = (user_obj.program or "") if user_obj else ""
+
+        try:
+            from users.services.quiz_service import build_random_quiz_from_dictionary
+            questions = build_random_quiz_from_dictionary(level, count, program=program)
+            return Response({"questions": questions, "program": program})
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -711,18 +1144,65 @@ def _build_failure_breakdown(process: dict) -> dict:
     return breakdown
 
 
+class StudentAudiosView(APIView):
+    """
+    GET /quiz/student-audios/?user_id=XX&level=A1
+    Retorna los audios de speaking de un estudiante organizados por nivel (A1/A2/B1/B2).
+    Solo accesible por instructores/monitores para estudiantes de sus fichas.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user_id = request.query_params.get("user_id", "")
+        level = request.query_params.get("level", "")
+
+        if not user_id:
+            return Response({"error": "user_id es requerido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar que el solicitante sea instructor/admin o el propio estudiante
+        requester_role = getattr(request.user, 'role_id', None)
+        requester_id = str(request.user.user_id) if hasattr(request.user, 'user_id') else ""
+
+        is_teacher = requester_role in ('INSTRUCTOR', 'MONITOR', 'ADMIN', 'SUPERADMIN')
+        is_self = requester_id == user_id
+
+        if not is_teacher and not is_self:
+            return Response({"error": "No tienes permiso para ver estos audios"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            from users.services.quiz_service import list_student_audios_by_level
+
+            audios = list_student_audios_by_level(user_id, level)
+            # Contar totales
+            total = sum(len(audios[lvl]) for lvl in audios)
+            return Response({
+                "audios": audios,
+                "total": total,
+                "user_id": user_id,
+            })
+        except Exception as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class TestResultViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def list(self, request):
         program_filter = None
+        student_ids = None
         if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
-            program_filter = getattr(request.user, 'program', None)
+            student_ids = TrainingGroupStudent.objects.filter(
+                group__teachers=request.user,
+            ).values_list('student_id', flat=True)
 
-        return Response(TestResultController.list_all(
+        results = TestResultController.list_all(
             user_id=request.query_params.get('user_id'),
             program_filter=program_filter,
-        ))
+        )
+        if student_ids is not None:
+            allowed_ids = {str(student_id) for student_id in student_ids}
+            results = [result for result in results if result['userId'] in allowed_ids]
+        return Response(results)
 
     def create(self, request):
         """
@@ -836,6 +1316,17 @@ class TestResultViewSet(viewsets.ViewSet):
         feedback = request.data.get('feedback')
         if not feedback:
             return Response({'error': 'Feedback no proporcionado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Un instructor únicamente puede comentar resultados de aprendices de
+        # las fichas a las que está asignado. Los administradores mantienen
+        # el acceso global de gestión.
+        if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
+            allowed = TrainingGroupStudent.objects.filter(
+                group__teachers=request.user,
+                student__test_results__pk=pk,
+            ).exists()
+            if not allowed:
+                return Response({'error': 'No tienes acceso a este resultado.'}, status=status.HTTP_403_FORBIDDEN)
 
         result, error = TestResultController.add_feedback(pk, feedback)
         if error:

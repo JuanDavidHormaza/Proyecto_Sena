@@ -83,10 +83,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
 
-  // Soporta MFA: si vienen otp_email/otp_code llama al endpoint OTP
+  // Soporta MFA: si vienen otp_email/otp_code llama al endpoint OTP.
+  // Si viene "prefetched" (respuesta de login directo sin OTP para roles
+  // privilegiados) se usa esa respuesta tal cual.
   const login = async (credentials: any) => {
     try {
-      const response = (credentials?.otp_email && credentials?.otp_code)
+      const response = credentials?.prefetched
+        ? credentials.prefetched
+        : (credentials?.otp_email && credentials?.otp_code)
         ? await verifyLoginOTP(credentials.otp_email, credentials.otp_code)
         : await apiLogin(credentials);
 

@@ -5,6 +5,7 @@ import {
     Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
     Sparkles, Hash,X
 } from "lucide-react";
+import { IconBadge } from "../components/ui/icon-badge";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface DocumentPreviewProps {
@@ -158,9 +159,9 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
           {/* ── Header ── */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-gradient-to-r from-sena-green/5 to-sena-blue/5">
             <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <FileText className="w-5 h-5 text-sena-green" />
-                </div>
+                <IconBadge tone="green" size="md" className="flex-shrink-0">
+                <FileText />
+                </IconBadge>
                 <div className="min-w-0">
                 <h2 className="font-bold text-foreground truncate text-lg">{doc.name}</h2>
                 <p className="text-xs text-muted-foreground">{doc.size} · {doc.uploadedAt} · {doc.program}</p>
@@ -171,13 +172,13 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                 <a
                     href={doc.objectUrl}
                     download={doc.name}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-sena-green text-white rounded-xl text-sm font-medium hover:bg-sena-green-dark transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-sena-green text-white rounded-full text-sm font-medium hover:bg-sena-green-dark transition-colors"
                 >
                     <Download className="w-4 h-4" />
                     Descargar
                     </a>
                 )}
-                <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-colors">
+                <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
                 <X className="w-5 h-5 text-muted-foreground" />
                 </button>
             </div>
@@ -193,14 +194,14 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                 <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-border">
                 <button
                     onClick={() => setZoom(z => Math.max(50, z - 10))}
-                    className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-muted rounded-full transition-colors"
                 >
                     <ZoomOut className="w-4 h-4 text-muted-foreground" />
                 </button>
                 <span className="text-xs font-medium text-muted-foreground w-12 text-center">{zoom}%</span>
                 <button
                     onClick={() => setZoom(z => Math.min(200, z + 10))}
-                    className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-muted rounded-full transition-colors"
                 >
                 <ZoomIn className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -229,7 +230,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                 ) : (
                   /* Placeholder cuando no hay preview */
                 <div className="flex flex-col items-center justify-center h-full text-center py-16 px-8">
-                    <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center mb-6">
+                    <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
                     <FileText className="w-12 h-12 text-muted-foreground" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -244,7 +245,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                         <a
                         href={doc.objectUrl}
                         download={doc.name}
-                        className="mt-6 flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-sena-green-dark transition-colors"
+                        className="mt-6 flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-sena-green-dark transition-colors"
                         >
                         <Download className="w-4 h-4" />
                         Descargar archivo
@@ -275,7 +276,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                     { label: "Asignatura", value: doc.subjectName || "Sin asignar"      },
                     { label: "Programa",   value: doc.program || "—"                    },
                 ].map((item) => (
-                    <div key={item.label} className="bg-muted/50 rounded-xl p-3">
+                    <div key={item.label} className="bg-muted/50 rounded-2xl p-3">
                     <p className="text-xs text-muted-foreground mb-0.5">{item.label}</p>
                     <p className="text-xs font-semibold text-foreground truncate">{item.value}</p>
                     </div>
@@ -302,11 +303,11 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                 <>
                     {/* ── Nivel e idioma ── */}
                     <div className="flex gap-2">
-                        <div className="flex-1 bg-sena-green/5 border border-sena-green/20 rounded-xl p-3 text-center">
+                        <div className="flex-1 bg-sena-green/5 border border-sena-green/20 rounded-2xl p-3 text-center">
                         <p className="text-xs text-muted-foreground mb-1">Nivel</p>
                         <p className="text-lg font-bold text-sena-green">{analysis.level}</p>
                     </div>
-                    <div className="flex-1 bg-sena-blue/5 border border-sena-blue/20 rounded-xl p-3 text-center">
+                    <div className="flex-1 bg-sena-blue/5 border border-sena-blue/20 rounded-2xl p-3 text-center">
                         <p className="text-xs text-muted-foreground mb-1">Idioma</p>
                         <p className="text-sm font-bold text-sena-blue leading-tight">{analysis.language}</p>
                     </div>
@@ -318,7 +319,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                         <AlignLeft className="w-4 h-4 text-muted-foreground" />
                         <h4 className="text-sm font-semibold text-foreground">Descripción</h4>
                     </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed bg-muted/30 rounded-xl p-3">
+                    <p className="text-sm text-muted-foreground leading-relaxed bg-muted/30 rounded-2xl p-3">
                         {analysis.description}
                     </p>
                     </div>
@@ -353,7 +354,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                     </div>
 
                     {/* ── Sugerencia educativa ── */}
-                    <div className="bg-gradient-to-br from-sena-green/5 to-sena-blue/5 rounded-xl p-4 border border-sena-green/10">
+                    <div className="bg-gradient-to-br from-sena-green/5 to-sena-blue/5 rounded-2xl p-4 border border-sena-green/10">
                     <div className="flex items-center gap-2 mb-2">
                         <BookOpen className="w-4 h-4 text-sena-green" />
                         <h4 className="text-xs font-semibold text-sena-green">Uso recomendado</h4>

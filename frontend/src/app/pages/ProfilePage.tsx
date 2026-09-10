@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
+import { IconBadge } from "../components/ui/icon-badge";
 
 const ROLE_LABELS: Record<string, string> = {
   superadmin: "SuperAdministrador",
@@ -62,7 +63,7 @@ export function ProfilePage() {
           <div className="flex items-center justify-between gap-4">
             <button
               onClick={() => navigate(ROLE_DASHBOARDS[role] || "/dashboard")}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Volver</span>
@@ -76,11 +77,11 @@ export function ProfilePage() {
         <motion.section
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden mb-6"
+          className="surface-card overflow-hidden mb-6"
         >
           <div className="bg-gradient-to-r from-sena-green to-sena-blue p-6 lg:p-8 text-white">
             <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-              <div className="w-24 h-24 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-4xl font-bold shadow-lg">
+              <div className="w-24 h-24 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-4xl font-bold shadow-lg">
                 {getInitials(name)}
               </div>
               <div className="min-w-0">
@@ -120,11 +121,11 @@ export function ProfilePage() {
         </motion.section>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${isStudent ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-2xl border border-border shadow-sm p-6`}>
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${isStudent ? "lg:col-span-2" : "lg:col-span-3"} surface-card p-6`}>
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
-                <UserRound className="w-5 h-5 text-sena-green" />
-              </div>
+              <IconBadge tone="green" size="md">
+                <UserRound />
+              </IconBadge>
               <div>
                 <h2 className="font-semibold text-foreground">Informacion personal</h2>
                 <p className="text-sm text-muted-foreground">Datos principales de la cuenta</p>
@@ -138,7 +139,7 @@ export function ProfilePage() {
                 ["Tipo de documento", user?.docType || "No registrado"],
                 ["Numero de documento", user?.docNum || "No registrado"],
               ].map(([label, value]) => (
-                <div key={label} className="p-4 bg-muted/50 rounded-xl">
+                <div key={label} className="p-4 bg-muted/50 rounded-2xl">
                   <p className="text-xs text-muted-foreground mb-1">{label}</p>
                   <p className="font-medium text-foreground">{value}</p>
                 </div>
@@ -147,11 +148,11 @@ export function ProfilePage() {
           </motion.div>
 
           {isStudent && (
-            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl border border-border shadow-sm p-6">
+            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="surface-card p-6">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-sena-blue" />
-                </div>
+                <IconBadge tone="blue" size="md">
+                  <ClipboardList />
+                </IconBadge>
                 <h2 className="font-semibold text-foreground">Resumen</h2>
               </div>
               <div className="space-y-4">
@@ -172,11 +173,11 @@ export function ProfilePage() {
           )}
         </div>
 
-        <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-6 bg-white rounded-2xl border border-border shadow-sm p-6">
+        <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-6 surface-card p-6">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
-              <Award className="w-5 h-5 text-warning" />
-            </div>
+            <IconBadge tone="yellow" size="md">
+              <Award />
+            </IconBadge>
             <div>
               <h2 className="font-semibold text-foreground">Permisos activos</h2>
               <p className="text-sm text-muted-foreground">Accesos disponibles para este usuario</p>
@@ -184,7 +185,7 @@ export function ProfilePage() {
           </div>
           <div className="flex flex-wrap gap-2">
             {(activePermissions.length > 0 ? activePermissions : [{ key: "default", label: "Sin permisos asignados" }]).map((permission) => (
-              <span key={permission.key} className="inline-flex items-center gap-2 px-3 py-2 bg-muted rounded-xl text-sm text-foreground">
+              <span key={permission.key} className="inline-flex items-center gap-2 px-3 py-2 bg-muted rounded-full text-sm text-foreground">
                 <BookOpen className="w-4 h-4 text-sena-green" />
                 {permission.label}
               </span>

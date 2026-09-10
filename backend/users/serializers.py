@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password, check_password
-from .Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult
+from .Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, MediaAsset
 
 
 class PersonSerializer(serializers.ModelSerializer):
@@ -79,8 +79,32 @@ class DigitalDictionarySerializer(serializers.ModelSerializer):
         model = DigitalDictionary
         fields = [
             'id', 'word_id', 'subject', 'subject_name', 'definition',
-            'synonyms', 'audio', 'video', 'image'
+            'synonyms', 'audio', 'video', 'image', 'program', 'ficha',
         ]
+
+
+class MediaAssetSerializer(serializers.ModelSerializer):
+    """Serializer para archivos multimedia almacenados en MinIO."""
+    subject_name = serializers.CharField(source='subject.description', read_only=True, default=None)
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MediaAsset
+        fields = [
+            'id', 'media_type', 'program', 'ficha', 'word_id',
+            'definition', 'synonyms', 'subject', 'subject_name',
+            'bucket', 'object_key', 'url', 'original_filename',
+            'size_bytes', 'uploaded_by_name', 'created_at',
+        ]
+        read_only_fields = ['bucket', 'object_key', 'url', 'created_at']
+
+    def get_uploaded_by_name(self, obj):
+        if not obj.uploaded_by:
+            return None
+        person = getattr(obj.uploaded_by, 'person', None)
+        if not person:
+            return None
+        return f"{person.first_name} {person.last_name}".strip()
 
 
 class TestResultSerializer(serializers.ModelSerializer):
@@ -96,9 +120,10 @@ class TestResultSerializer(serializers.ModelSerializer):
             'user_name',
             'user_email',
             'student_program',
+            'character',
+            'process',
             'score',
             'level',
-            'character',
             'correct_answers',
             'total_questions',
             'speaking_score',
@@ -106,10 +131,8 @@ class TestResultSerializer(serializers.ModelSerializer):
             'level_scores',
             'feedback',
             'duration',
-            'process',
-            'created_at'
+            'created_at',
         ]
-
         extra_kwargs = {
             'id': {'read_only': True},
             'created_at': {'read_only': True},

@@ -18,6 +18,8 @@ import {
 import confetti from "canvas-confetti";
 
 import { getLevelFromScore } from "../data/questionsA1";
+import { StatCard } from "../components/ui/stat-card";
+import { IconBadge } from "../components/ui/icon-badge";
 
 
 type ResultAnswer = {
@@ -55,6 +57,10 @@ export function ResultsPage() {
   const answers = resultsState?.answers ?? [];
   const duration = resultsState?.duration ?? localStorage.getItem("quizDuration") ?? "00:00";
   const levelInfo = getLevelFromScore(finalScore);
+  // El nivel alcanzado real proviene del quiz (A1-B2). La escala NO llega a C1/C2.
+  const levelReached = (resultsState?.levelReached as string) || levelInfo.level;
+  // Preguntas falladas (opción múltiple / listening) para mostrar los errores.
+  const failedAnswers = answers.filter((answer) => !answer.isCorrect && !answer.writingAnswer && !answer.audioUrl);
   
   const lastTestResultStr = localStorage.getItem("lastTestResult");
   const lastTestResult = lastTestResultStr ? JSON.parse(lastTestResultStr) : null;
@@ -169,9 +175,7 @@ export function ResultsPage() {
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-lg rounded-full text-sm font-medium mb-6"
             >
-              <div className="w-6 h-6 rounded-full overflow-hidden bg-white">
-                <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover" />
-              </div>
+              <CheckCircle className="w-4 h-4" />
               Prueba Completada
             </motion.div>
 
@@ -180,17 +184,25 @@ export function ResultsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <div className="w-32 h-32 lg:w-40 lg:h-40 mx-auto bg-white/10 backdrop-blur-lg rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
+              <div className="w-32 h-32 lg:w-40 lg:h-40 mx-auto bg-white/10 backdrop-blur-lg rounded-full flex items-center justify-center mb-6 shadow-2xl">
                 <span className="text-5xl lg:text-6xl font-bold">{animatedScore}%</span>
               </div>
               
               <div className="flex items-center justify-center gap-2 mb-3">
                 <Award className="w-6 h-6" />
-                <span className="text-2xl lg:text-3xl font-bold">Nivel {levelInfo.level}</span>
+                <span className="text-2xl lg:text-3xl font-bold">Nivel {levelReached}</span>
               </div>
-              
-              <p className="text-lg text-white/90 mb-2">{levelInfo.description}</p>
-              <p className="text-white/80 max-w-md mx-auto">{levelInfo.message}</p>
+
+              <p className="text-lg text-white/90 mb-2">
+                {passed === false
+                  ? `No alcanzaste el puntaje mínimo del nivel ${levelReached}`
+                  : `Completaste el nivel ${levelReached}`}
+              </p>
+              <p className="text-white/80 max-w-md mx-auto">
+                {passed === false
+                  ? "Repasa el diccionario multimedia y vuelve a intentarlo."
+                  : "¡Buen trabajo! Sigue así."}
+              </p>
             </motion.div>
           </motion.div>
         </div>
@@ -206,24 +218,12 @@ export function ResultsPage() {
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
           {[
-            { label: "Correctas", value: `${correctAnswers}/${totalQuestions}`, icon: CheckCircle, color: "sena-green" },
-            { label: "Incorrectas", value: `${Math.max(totalQuestions - correctAnswers, 0)}/${totalQuestions}`, icon: XCircle, color: "destructive" },
-            { label: "Tiempo Total", value: duration, icon: Clock, color: "sena-blue" },
-            { label: "Puntuacion", value: `${finalScore}%`, icon: Target, color: "warning" },
+            { label: "Correctas", value: `${correctAnswers}/${totalQuestions}`, icon: CheckCircle, tone: "green" as const },
+            { label: "Incorrectas", value: `${Math.max(totalQuestions - correctAnswers, 0)}/${totalQuestions}`, icon: XCircle, tone: "red" as const },
+            { label: "Tiempo Total", value: duration, icon: Clock, tone: "blue" as const },
+            { label: "Puntuacion", value: `${finalScore}%`, icon: Target, tone: "yellow" as const },
           ].map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 + index * 0.1 }}
-              className="bg-white rounded-2xl p-5 border border-border shadow-lg"
-            >
-              <div className={`w-10 h-10 bg-${stat.color}/10 rounded-xl flex items-center justify-center mb-3`}>
-                <stat.icon className={`w-5 h-5 text-${stat.color}`} />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
-            </motion.div>
+            <StatCard key={index} label={stat.label} value={stat.value} icon={stat.icon} tone={stat.tone} delay={0.6 + index * 0.1} className="shadow-soft-lg" />
           ))}
         </motion.div>
 
@@ -232,7 +232,7 @@ export function ResultsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="bg-white rounded-2xl p-6 border border-border shadow-lg mb-8"
+          className="surface-card shadow-soft-lg p-6 mb-8"
         >
           <h3 className="font-semibold text-foreground mb-6">Desempeno por Categoria</h3>
           {categoryPerformance.length > 0 ? (
@@ -271,13 +271,13 @@ export function ResultsPage() {
           {(writingAnswers > 0 || speakingAnswers > 0) && (
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {writingAnswers > 0 && (
-                <div className="rounded-xl border border-sena-blue/20 bg-sena-blue/5 p-4">
+                <div className="rounded-2xl border border-sena-blue/20 bg-sena-blue/5 p-4">
                   <p className="text-sm text-muted-foreground">Respuestas escritas</p>
                   <p className="text-2xl font-bold text-sena-blue">{writingAnswers}</p>
                 </div>
               )}
               {speakingAnswers > 0 && (
-                <div className="rounded-xl border border-sena-green/20 bg-sena-green/5 p-4">
+                <div className="rounded-2xl border border-sena-green/20 bg-sena-green/5 p-4">
                   <p className="text-sm text-muted-foreground">Audios grabados</p>
                   <p className="text-2xl font-bold text-sena-green">{speakingAnswers}</p>
                 </div>
@@ -292,12 +292,12 @@ export function ResultsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1 }}
-            className="bg-sena-blue/5 border border-sena-blue/20 rounded-2xl p-6 mb-8"
+            className="bg-sena-blue/5 border border-sena-blue/20 rounded-3xl p-6 mb-8"
           >
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-sena-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <MessageSquare className="w-6 h-6 text-sena-blue" />
-              </div>
+              <IconBadge tone="blue-soft" size="lg" className="flex-shrink-0">
+                <MessageSquare />
+              </IconBadge>
               <div>
                 <h4 className="font-semibold text-foreground mb-1">
                   {passed ? "Resultado del nivel" : "En qué fallaste"}
@@ -319,7 +319,7 @@ export function ResultsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.1 }}
-            className="bg-white rounded-2xl p-6 border border-border shadow-lg mb-8"
+            className="surface-card shadow-soft-lg p-6 mb-8"
           >
             <h3 className="font-semibold text-foreground mb-4">Desglose de fallos</h3>
 
@@ -364,7 +364,7 @@ export function ResultsPage() {
                 <p className="text-sm text-muted-foreground mb-2">Preguntas falladas (opción múltiple)</p>
                 <div className="space-y-2">
                   {breakdown.multiple_choice_failed.map((item: any, idx: number) => (
-                    <div key={idx} className="p-3 bg-muted/50 rounded-xl">
+                    <div key={idx} className="p-3 bg-muted/50 rounded-2xl">
                       <p className="text-sm font-medium text-foreground">{item.category} • {item.difficulty}</p>
                       <p className="text-xs text-muted-foreground">{item.question}</p>
                     </div>
@@ -376,23 +376,49 @@ export function ResultsPage() {
         )}
 
 
+        {/* Tus errores (preguntas falladas) */}
+        {failedAnswers.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.05 }}
+            className="surface-card shadow-soft-lg p-6 mb-8"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <XCircle className="w-5 h-5 text-destructive" />
+              <h3 className="font-semibold text-foreground">Tus errores ({failedAnswers.length})</h3>
+            </div>
+            <div className="space-y-3">
+              {failedAnswers.map((answer, index) => (
+                <div key={index} className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
+                  <p className="text-xs font-medium text-destructive mb-1">{answer.category}</p>
+                  <p className="text-sm text-foreground">{answer.question}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Repasa estas palabras en el Diccionario Multimedia para mejorar en tu proximo intento.
+            </p>
+          </motion.div>
+        )}
+
         {/* Level Scale */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.1 }}
-          className="bg-white rounded-2xl p-6 border border-border shadow-lg mb-8"
+          className="surface-card shadow-soft-lg p-6 mb-8"
         >
           <h3 className="font-semibold text-foreground mb-6">Escala de Niveles</h3>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { level: "Basico", range: "A1 - A2", percentage: "0% - 40%", color: "#E21B3C", active: finalScore <= 40 },
-              { level: "Intermedio", range: "B1 - B2", percentage: "41% - 70%", color: "#D89E00", active: finalScore > 40 && finalScore <= 70 },
-              { level: "Avanzado", range: "C1 - C2", percentage: "71% - 100%", color: "#39A900", active: finalScore > 70 },
+              { level: "Basico", range: "A1 - A2", percentage: "0% - 59%", color: "#E21B3C", active: levelReached === "A1" || levelReached === "A2" },
+              { level: "Intermedio", range: "B1", percentage: "60% - 74%", color: "#D89E00", active: levelReached === "B1" },
+              { level: "Avanzado", range: "B2", percentage: "75% - 100%", color: "#39A900", active: levelReached === "B2" },
             ].map((item, index) => (
               <div 
                 key={index} 
-                className={`relative p-4 rounded-xl text-center transition-all ${
+                className={`relative p-4 rounded-2xl text-center transition-all ${
                   item.active ? 'ring-2 ring-offset-2' : 'opacity-60'
                 }`}
                 style={{
@@ -433,7 +459,7 @@ export function ResultsPage() {
           <motion.button
             onClick={handleDownloadCertificate}
             disabled
-            className="flex items-center justify-center gap-2 bg-muted text-muted-foreground px-6 py-4 rounded-xl font-medium cursor-not-allowed"
+            className="flex items-center justify-center gap-2 bg-muted text-muted-foreground px-6 py-4 rounded-full font-medium cursor-not-allowed"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -442,7 +468,7 @@ export function ResultsPage() {
           </motion.button>
           <motion.button
             onClick={() => navigate("/quiz")}
-            className="flex items-center justify-center gap-2 bg-sena-green text-white px-6 py-4 rounded-xl font-medium hover:bg-sena-green-dark transition-all shadow-lg"
+            className="flex items-center justify-center gap-2 bg-sena-green text-white px-6 py-4 rounded-full font-medium hover:bg-sena-green-dark transition-all shadow-brand"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -451,7 +477,7 @@ export function ResultsPage() {
           </motion.button>
           <motion.button
             onClick={() => navigate("/dashboard")}
-            className="flex items-center justify-center gap-2 bg-muted text-muted-foreground px-6 py-4 rounded-xl font-medium hover:bg-muted/80 transition-all"
+            className="flex items-center justify-center gap-2 bg-muted text-muted-foreground px-6 py-4 rounded-full font-medium hover:bg-muted/80 transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >

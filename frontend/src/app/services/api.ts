@@ -92,6 +92,10 @@ export interface ApiTestResult {
   feedback?: string;
   duration?: string;
   completedAt: string;
+  passed?: boolean;
+  threshold?: number;
+  breakdown?: any;
+  auto_feedback?: string;
   process?: {
     answers?: Array<{
       questionId: number;
@@ -113,6 +117,18 @@ export interface ApiTestResult {
       audioUrl: string;
       category: string;
     }>;
+    userAnswers?: Array<{
+      questionId: number;
+      question: string;
+      difficulty?: string;
+      userAnswer: number;
+      correctAnswer: number;
+      isCorrect: boolean;
+      category: string;
+      audioUrl?: string;
+      writingAnswer?: string;
+      pronunciationEvaluation?: any;
+    }>;
   };
   answers: Array<{
     questionId: number;
@@ -122,6 +138,15 @@ export interface ApiTestResult {
     isCorrect: boolean;
     category: string;
   }>;
+}
+
+export interface ApiTrainingGroup {
+  id: string;
+  ficha: string;
+  program: string;
+  teachers: ApiUser[];
+  students: ApiUser[];
+  createdAt?: string | null;
 }
 
 // ─── Utilidades ──────────────────────────────────────────────────────────────
@@ -358,11 +383,41 @@ export async function getDocuments(): Promise<ApiDocument[]> {
   return handleResponse<ApiDocument[]>(response);
 }
 
-export async function createDocument(docData: Partial<ApiDocument>): Promise<ApiDocument> {
+export async function createDocument(docData: Partial<ApiDocument> & { subjectId?: string; ficha?: string }): Promise<ApiDocument> {
+  // El backend (DigitalDictionary) espera claves en snake_case y el FK
+  // de la asignatura bajo la llave "subject". Aqui traducimos lo que
+  // envia el formulario del frontend (camelCase) a ese formato.
+  
+  const payload = {
+  word_id: docData.wordId ?? docData.name,
+
+  name: docData.name,
+
+  subject: docData.subjectId,
+
+  
+definition: docData.definition,
+
+  synonyms: docData.synonyms,
+
+  image: docData.imageUrl,
+
+  audio: docData.audioUrl,
+
+  video: docData.videoUrl,
+
+  program: docData.program,
+
+  ficha: docData.ficha,
+};
+console.log("IMAGE =>", payload.image);
+console.log("AUDIO =>", payload.audio);
+console.log("VIDEO =>", payload.video);
+console.log(payload);
   const response = await fetch(`${API_BASE}/dictionary/`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(docData),
+    body: JSON.stringify(payload),
   });
   
   return handleResponse<ApiDocument>(response);
@@ -390,6 +445,35 @@ export async function getTestResults(userId?: string): Promise<ApiTestResult[]> 
   return handleResponse<ApiTestResult[]>(response);
 }
 
+export async function getGroups(): Promise<ApiTrainingGroup[]> {
+  const response = await fetch(`${API_BASE}/groups/`, { headers: getAuthHeaders() });
+  return handleResponse<ApiTrainingGroup[]>(response);
+}
+
+export async function getAvailableGroupStudents(program: string, groupId?: string): Promise<ApiUser[]> {
+  const query = new URLSearchParams({ program });
+  if (groupId) query.set('group_id', groupId);
+  const response = await fetch(`${API_BASE}/groups/available-students/?${query}`, { headers: getAuthHeaders() });
+  return handleResponse<ApiUser[]>(response);
+}
+
+export async function getAvailableGroupTeachers(): Promise<ApiUser[]> {
+  const response = await fetch(`${API_BASE}/groups/available-teachers/`, { headers: getAuthHeaders() });
+  return handleResponse<ApiUser[]>(response);
+}
+
+export async function saveGroup(data: { ficha: string; program: string; teacher_ids: string[]; student_ids: string[] }, groupId?: string): Promise<ApiTrainingGroup> {
+  const response = await fetch(`${API_BASE}/groups/${groupId ? `${groupId}/` : ''}`, {
+    method: groupId ? 'PUT' : 'POST', headers: getAuthHeaders(), body: JSON.stringify(data),
+  });
+  return handleResponse<ApiTrainingGroup>(response);
+}
+
+export async function deleteGroup(groupId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/groups/${groupId}/`, { method: 'DELETE', headers: getAuthHeaders() });
+  if (!response.ok) throw new ApiError('Error al eliminar la ficha', response.status);
+}
+
 export async function createTestResult(data: any): Promise<ApiTestResult> {
   const response = await fetch(`${API_BASE}/results/`, {
     method: 'POST',
@@ -410,6 +494,59 @@ export async function addFeedback(resultId: string, feedback: string): Promise<{
   return handleResponse<{ feedback: string }>(response);
 }
 
+export async function evaluatePronunciation(
+  audioBlob: Blob,
+  expectedText: string,
+  storagePath?: string,
+  level?: string,
+): Promise<any> {
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "response.webm");
+  formData.append("expected_text", expectedText);
+  if (storagePath) {
+    formData.append("storage_path", storagePath);
+  }
+  if (level) {
+    formData.append("level", level);
+  }
+
+
+  const token = localStorage.getItem("accessToken");
+  const response = await fetch(`${API_BASE}/quiz/evaluate-pronunciation/`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  return handleResponse<any>(response);
+}
+
+export async function getStudentAudios(userId: string, level?: string): Promise<any> {
+  const params = new URLSearchParams({ user_id: userId });
+  if (level) params.set("level", level);
+
+  const token = localStorage.getItem("accessToken");
+  const response = await fetch(`${API_BASE}/quiz/student-audios/?${params}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  return handleResponse<any>(response);
+}
+
+export async function fetchQuizQuestions(level: string, count = 5, program?: string): Promise<any> {
+  const token = localStorage.getItem("accessToken");
+  const params = new URLSearchParams({ level, count: String(count) });
+  // El backend ya resuelve el programa del usuario autenticado si no se
+  // envía, pero lo pasamos explícito cuando lo tenemos para asegurar que
+  // el quiz siempre use el diccionario del programa correcto.
+  if (program) params.set("program", program);
+  const response = await fetch(`${API_BASE}/quiz/questions/?${params.toString()}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  return handleResponse<any>(response);
+}
+
 // ─── Ranking / Leaderboard API ───────────────────────────────────────────────
 
 export async function getRanking(): Promise<any[]> {
@@ -422,13 +559,21 @@ export async function getRanking(): Promise<any[]> {
 export async function requestLogin(
   email: string,
   password: string
-): Promise<{ mfa_required: boolean; email: string }> {
+): Promise<{
+  mfa_required: boolean;
+  email?: string;
+  // Cuando el rol es privilegiado (docente/admin/superadmin) el backend
+  // devuelve directamente los tokens sin exigir OTP.
+  access?: string;
+  refresh?: string;
+  user?: ApiUser;
+}> {
   const response = await fetch(`${API_BASE}/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  return handleResponse<{ mfa_required: boolean; email: string }>(response);
+  return handleResponse(response);
 }
  
 /**
@@ -511,6 +656,11 @@ export const api = {
   createDocument,
   deleteDocument,
   getTestResults,
+  getGroups,
+  getAvailableGroupStudents,
+  getAvailableGroupTeachers,
+  saveGroup,
+  deleteGroup,
   createTestResult,
   addFeedback,
   getRanking,

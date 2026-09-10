@@ -61,6 +61,59 @@ class User(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
 
+class TrainingGroup(models.Model):
+    """Ficha SENA y sus instructores asignados."""
+    ficha = models.CharField(max_length=50, unique=True)
+    program = models.CharField(max_length=120)
+    teachers = models.ManyToManyField(
+        User,
+        related_name='teaching_groups',
+        blank=True,
+        limit_choices_to={'role_id__in': ['INSTRUCTOR', 'MONITOR']},
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['ficha']
+
+    def __str__(self):
+        return f"Ficha {self.ficha} - {self.program}"
+
+
+class TrainingGroupStudent(models.Model):
+    """Inscripción de un aprendiz en una ficha.
+
+    ``program`` se conserva en esta tabla para que PostgreSQL pueda garantizar
+    que un aprendiz no sea inscrito en dos fichas del mismo programa.
+    """
+    group = models.ForeignKey(
+        TrainingGroup,
+        on_delete=models.CASCADE,
+        related_name='student_memberships',
+    )
+    student = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='group_memberships',
+        limit_choices_to={'role_id': 'APRENDIZ'},
+    )
+    program = models.CharField(max_length=120)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['group', 'student'], name='unique_student_per_group'),
+            models.UniqueConstraint(fields=['student', 'program'], name='unique_student_per_program_group'),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.program != self.group.program:
+            raise ValidationError({'program': 'El programa de la inscripción debe coincidir con el de la ficha.'})
+        if self.student.role_id != 'APRENDIZ':
+            raise ValidationError({'student': 'Solo los aprendices pueden pertenecer a una ficha.'})
+
+
 class RoleAccess(models.Model):
     role_id = models.CharField(max_length=50)
     link_id = models.CharField(max_length=50)
@@ -76,17 +129,114 @@ class Subject(models.Model):
 
 
 class DigitalDictionary(models.Model):
-    word_id = models.CharField(max_length=50)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
 
-    definition = models.CharField(max_length=255)
-    synonyms = models.CharField(max_length=255)
-    audio = models.CharField(max_length=255)
-    video = models.CharField(max_length=255, null=True, blank=True)
-    image = models.CharField(max_length=255)
+    word_id = models.CharField(max_length=255)
 
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE
+    )
+
+    # Jerarquía de organización del contenido multimedia: Programa > Ficha.
+    # Se usa "Todos los programas" / vacío para contenido global.
+    program = models.CharField(max_length=120, blank=True, default="")
+    ficha = models.CharField(max_length=50, blank=True, default="")
+
+    CATEGORY_CHOICES = [
+        ("GRAMMAR", "Grammar"),
+        ("SPEAKING", "Speaking"),
+        ("WRITING", "Writing"),
+        ("LISTENING", "Listening"),
+        ("MULTIMEDIA", "Multimedia"),
+    ]
+
+    category = models.CharField(
+        max_length=30,
+        choices=CATEGORY_CHOICES,
+        default="MULTIMEDIA",
+    )
+
+    # Dificultad real de la palabra según el diccionario ADSO (escala 2-9).
+    # Se usa para armar el quiz por nivel MCER:
+    #   A1 = 2-3, A2 = 4-5, B1 = 6-7, B2 = 8-9
+    difficulty = models.IntegerField(default=2)
+
+    definition = models.CharField(max_length=500)
+
+    synonyms = models.CharField(max_length=500)
+
+    image = models.CharField(max_length=1000, blank=True, default="")
+
+    audio = models.CharField(max_length=1000, blank=True, default="")
+
+    video = models.CharField(max_length=1000, null=True, blank=True)
     class Meta:
         unique_together = ('word_id', 'subject')
+
+
+class MediaAsset(models.Model):
+    """
+    Archivo multimedia (imagen, audio o video) almacenado en MinIO.
+
+    Jerarquía de navegación (dos formas, mismo dato):
+      - Normal:  Programa -> Ficha -> Tipo de medio
+      - Inversa: Tipo de medio -> Programa -> Ficha
+
+    Cada TIPO de medio vive en su propio bucket de MinIO (su propio
+    "espacio" de almacenamiento), y dentro de ese bucket el archivo se
+    guarda bajo la ruta {programa}/{ficha}/{archivo}.
+    """
+
+    MEDIA_TYPE_CHOICES = [
+        ("image", "Imagen"),
+        ("audio", "Audio"),
+        ("video", "Video"),
+    ]
+
+    media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES)
+
+    # Jerarquía: a qué programa y ficha pertenece este archivo.
+    program = models.CharField(max_length=120)
+    ficha = models.CharField(max_length=50, blank=True, default="")
+
+    # Palabra/tema asociado (opcional, para vincularlo al diccionario).
+    word_id = models.CharField(max_length=255, blank=True, default="")
+    definition = models.CharField(max_length=500, blank=True, default="")
+    synonyms = models.CharField(max_length=500, blank=True, default="")
+
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    # Ubicación física en MinIO.
+    bucket = models.CharField(max_length=100)
+    object_key = models.CharField(max_length=500)
+    url = models.CharField(max_length=1000)
+    original_filename = models.CharField(max_length=255, blank=True, default="")
+    size_bytes = models.BigIntegerField(default=0)
+
+    uploaded_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_media',
+    )
+
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['media_type', 'program', 'ficha']),
+            models.Index(fields=['program', 'ficha', 'media_type']),
+        ]
+
+    def __str__(self):
+        return f"[{self.media_type}] {self.program}/{self.ficha} - {self.original_filename}"
 
 
 class Ranking(models.Model):
@@ -165,13 +315,12 @@ class TestResult(models.Model):
 )
     score = models.IntegerField()
 
+    # La escala llega hasta B2 (no se usan C1/C2).
     LEVEL_CHOICES = [
         ('A1', 'A1 - Principiante'),
         ('A2', 'A2 - Elemental'),
         ('B1', 'B1 - Intermedio'),
         ('B2', 'B2 - Intermedio Alto'),
-        ('C1', 'C1 - Avanzado'),
-        ('C2', 'C2 - Maestría'),
     ]
 
     level = models.CharField(max_length=10, choices=LEVEL_CHOICES)

@@ -1,3 +1,5 @@
+from pydoc import doc
+
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -393,18 +395,24 @@ class DictionaryController:
 
     @staticmethod
     def list_all(subject_id=None):
+        """
+        Lee el diccionario multimedia directamente de la base de datos
+        (tabla DigitalDictionary). Ya no depende de un Excel ni de Supabase:
+        cada palabra guarda sus propias URLs de imagen/audio/video, que
+        apuntan a MinIO (worklex-images/audios/videos).
+        """
         queryset = DigitalDictionary.objects.select_related('subject').all()
         if subject_id:
             queryset = queryset.filter(subject_id=subject_id)
-
         documents = []
         for doc in queryset:
-            documents.append({
+             documents.append({
                 'id': str(doc.id),
                 'name': doc.word_id,
                 'subjectId': doc.subject.subject_id if doc.subject else None,
                 'subjectName': doc.subject.description if doc.subject else 'Sin asignar',
-                'program': 'Todos los programas',
+                'program': doc.program or 'Todos los programas',
+                'ficha': doc.ficha or '',
                 'uploadedAt': None,
                 'fileType': 'DICT',
                 'size': '-',
@@ -427,21 +435,69 @@ class DictionaryController:
 
     @staticmethod
     def create(data):
+
+        print("========== DATA ==========")
+        print(data)
+        print("==========================")
+
+        subject_id = data.get("subject")
+        print("SUBJECT:", subject_id)
+
+        if not subject_id:
+            
+            return None, "Debe seleccionar una asignatura"
+
         try:
-            subject = Subject.objects.get(pk=data['subject'])
+            subject = Subject.objects.get(subject_id=subject_id)
         except Subject.DoesNotExist:
-            return None, 'Asignatura no encontrada'
+            print(Subject.objects.filter(subject_id=subject_id).exists())
+            return None, f"Asignatura '{subject_id}' no encontrada"
 
         doc = DigitalDictionary.objects.create(
-            word_id=data['word_id'],
+            word_id=data.get("word_id", ""),
             subject=subject,
-            definition=data['definition'],
-            synonyms=data['synonyms'],
-            audio=data['audio'],
-            video=data.get('video'),
-            image=data['image'],
+            definition=data.get("definition", ""),
+            synonyms=data.get("synonyms", ""),
+            image=data.get("image", ""),
+            audio=data.get("audio", ""),
+            video=data.get("video", ""),
+            program=data.get("program", "") or "",
+            ficha=data.get("ficha", "") or "",
         )
+
         return doc, None
+
+    @staticmethod
+    def update(doc_id, data):
+
+        try:
+            doc = DigitalDictionary.objects.get(pk=doc_id)
+        except DigitalDictionary.DoesNotExist:
+            return None, "Palabra no encontrada"
+
+        if "subject" in data:
+            try:
+                doc.subject = Subject.objects.get(subject_id=data["subject"])
+            except Subject.DoesNotExist:
+                return None, "Asignatura no encontrada"
+
+        for field in (
+            "word_id",
+            "definition",
+            "synonyms",
+            "image",
+            "audio",
+            "video",
+            "program",
+            "ficha",
+        ):
+            if field in data:
+                setattr(doc, field, data[field])
+
+        doc.save()
+
+        return doc, None
+
 
     @staticmethod
     def delete(doc_id):

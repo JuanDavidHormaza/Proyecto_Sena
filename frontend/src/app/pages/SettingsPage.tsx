@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, Bell, Check, Lock, Mail, Phone, Save, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
+import { IconBadge } from "../components/ui/icon-badge";
 import * as api from "../services/api";
 
 const ROLE_DASHBOARDS: Record<string, string> = {
@@ -63,7 +64,7 @@ export function SettingsPage() {
           <div className="flex items-center justify-between gap-4">
             <button
               onClick={() => navigate(ROLE_DASHBOARDS[role] || "/dashboard")}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Volver</span>
@@ -80,11 +81,11 @@ export function SettingsPage() {
         </motion.div>
 
         <form onSubmit={handleSubmit} className="grid lg:grid-cols-3 gap-6">
-          <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-2 bg-white rounded-2xl border border-border shadow-sm p-6">
+          <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-2 surface-card p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
-                <User className="w-5 h-5 text-sena-green" />
-              </div>
+              <IconBadge tone="green" size="md">
+                <User />
+              </IconBadge>
               <div>
                 <h2 className="font-semibold text-foreground">Datos del perfil</h2>
                 <p className="text-sm text-muted-foreground">Informacion visible en tu cuenta</p>
@@ -100,7 +101,7 @@ export function SettingsPage() {
                     type="text"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+                    className="w-full pl-12 pr-4 py-3 bg-muted/40 border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-green/40"
                     required
                   />
                 </div>
@@ -114,7 +115,7 @@ export function SettingsPage() {
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+                    className="w-full pl-12 pr-4 py-3 bg-muted/40 border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-green/40"
                     required
                   />
                 </div>
@@ -128,7 +129,7 @@ export function SettingsPage() {
                     type="tel"
                     value={phoneNum}
                     onChange={(event) => setPhoneNum(event.target.value.replace(/\D/g, ""))}
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+                    className="w-full pl-12 pr-4 py-3 bg-muted/40 border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-green/40"
                     placeholder="Numero de contacto"
                   />
                 </div>
@@ -137,15 +138,15 @@ export function SettingsPage() {
           </motion.section>
 
           <motion.aside initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
-            <section className="bg-white rounded-2xl border border-border shadow-sm p-6">
+            <section className="surface-card p-6">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-sena-blue" />
-                </div>
+                <IconBadge tone="blue" size="md">
+                  <Bell />
+                </IconBadge>
                 <h2 className="font-semibold text-foreground">Preferencias</h2>
               </div>
               <div className="space-y-3">
-                <label className="flex items-center justify-between gap-4 p-3 bg-muted/50 rounded-xl cursor-pointer">
+                <label className="flex items-center justify-between gap-4 p-3 bg-muted/50 rounded-2xl cursor-pointer">
                   <span className="text-sm text-foreground">Notificaciones por correo</span>
                   <input
                     type="checkbox"
@@ -154,7 +155,7 @@ export function SettingsPage() {
                     className="w-5 h-5 accent-sena-green"
                   />
                 </label>
-                <label className="flex items-center justify-between gap-4 p-3 bg-muted/50 rounded-xl cursor-pointer">
+                <label className="flex items-center justify-between gap-4 p-3 bg-muted/50 rounded-2xl cursor-pointer">
                   <span className="text-sm text-foreground">Recordatorios de estudio</span>
                   <input
                     type="checkbox"
@@ -166,7 +167,7 @@ export function SettingsPage() {
               </div>
             </section>
 
-            <section className="bg-white rounded-2xl border border-border shadow-sm p-6">
+            <section className="surface-card p-6">
               <div className="flex items-center gap-3 mb-3">
                 <Lock className="w-5 h-5 text-warning" />
                 <h2 className="font-semibold text-foreground">Seguridad</h2>
@@ -177,7 +178,7 @@ export function SettingsPage() {
             <button
               type="submit"
               disabled={isSaving || !user?.id}
-              className="w-full flex items-center justify-center gap-2 bg-sena-green text-white py-3 rounded-xl hover:bg-sena-green-dark transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 bg-sena-green text-white py-3 rounded-full hover:bg-sena-green-dark transition-all font-medium shadow-brand disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSaving ? <Check className="w-5 h-5" /> : <Save className="w-5 h-5" />}
               {isSaving ? "Guardando..." : "Guardar cambios"}

@@ -12,7 +12,9 @@ from .Views.api_views import (
     RegisterSendOTPAPIView, RegisterVerifyOTPAPIView,
     PrivilegedLoginAPIView, PrivilegedMeAPIView,
     UserViewSet, SubjectViewSet,
-    DigitalDictionaryViewSet, TestResultViewSet, RankingViewSet,
+    DigitalDictionaryViewSet, TestResultViewSet, RankingViewSet, TrainingGroupViewSet,
+    DictionaryDebugView, PronunciationEvaluationView, QuizQuestionsView,
+    StudentAudiosView, MediaAssetViewSet,
 )
 
 
@@ -23,6 +25,8 @@ router.register(r'subjects',   SubjectViewSet,           basename='subject')
 router.register(r'dictionary', DigitalDictionaryViewSet, basename='dictionary')
 router.register(r'results',    TestResultViewSet,        basename='result')
 router.register(r'ranking',    RankingViewSet,           basename='ranking')
+router.register(r'groups',     TrainingGroupViewSet,     basename='group')
+router.register(r'media',      MediaAssetViewSet,        basename='media')
 
 urlpatterns = [
     # ── Autenticación (login) con MFA ──────────────────────────────────
@@ -46,6 +50,13 @@ urlpatterns = [
     path('auth/privileged-login/', PrivilegedLoginAPIView.as_view(), name='privileged_login'),
     path('auth/privileged-me/',     PrivilegedMeAPIView.as_view(),     name='privileged_me'),
 
+    path('debug/dictionary/', DictionaryDebugView.as_view(), name='dictionary_debug'),
+
+    path('quiz/evaluate-pronunciation/', PronunciationEvaluationView.as_view(), name='evaluate_pronunciation'),
+
+    path('quiz/questions/', QuizQuestionsView.as_view(), name='quiz_questions'),
+
+    path('quiz/student-audios/', StudentAudiosView.as_view(), name='student_audios'),
 
     # ── ViewSets ───────────────────────────────────────────────────────
     path('', include(router.urls)),

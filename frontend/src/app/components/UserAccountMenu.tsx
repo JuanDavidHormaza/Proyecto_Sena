@@ -49,10 +49,10 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className={`flex items-center gap-3 rounded-xl transition-colors hover:bg-muted ${compact ? "p-1.5" : "p-2"}`}
+        className={`flex items-center gap-3 rounded-full transition-colors hover:bg-muted ${compact ? "p-1.5" : "p-2"}`}
         aria-label="Abrir menu de usuario"
       >
-        <div className={`${compact ? "w-9 h-9" : "w-10 h-10"} ${accentClass} rounded-xl flex items-center justify-center text-white font-medium`}>
+        <div className={`${compact ? "w-9 h-9" : "w-10 h-10"} ${accentClass} rounded-full flex items-center justify-center text-white font-medium`}>
           {getInitials(userName)}
         </div>
         {!compact && (
@@ -71,7 +71,7 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-border py-2 z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-soft-lg border border-border py-2 z-50 overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-border">
               <p className="font-medium text-foreground truncate">{userName}</p>
