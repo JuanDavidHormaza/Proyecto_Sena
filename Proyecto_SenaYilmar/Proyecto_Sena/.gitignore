@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Django
+db.sqlite3
+*.tar.gz
+media_source/
+# Node
+node_modules/
+dist/
+
+# Env
+.env
+
+# OS
+.DS_Store
+Thumbs.db

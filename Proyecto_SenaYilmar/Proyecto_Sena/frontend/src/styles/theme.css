@@ -1,0 +1,231 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  
+  /* SENA Official Colors */
+  --sena-green: #39A900;
+  --sena-green-dark: #2D8A00;
+  --sena-green-light: #4CBB17;
+  --sena-blue: #1F4E78;
+  --sena-blue-light: #2E75B6;
+  
+  /* Response Colors (Kahoot style) */
+  --answer-red: #E21B3C;
+  --answer-blue: #1368CE;
+  --answer-yellow: #D89E00;
+  --answer-green: #26890C;
+  
+  /* Semantic Colors */
+  --background: #F8FAFC;
+  --foreground: #1E293B;
+  --card: #ffffff;
+  --card-foreground: #1E293B;
+  --popover: #ffffff;
+  --popover-foreground: #1E293B;
+  --primary: #39A900;
+  --primary-foreground: #ffffff;
+  --secondary: #1F4E78;
+  --secondary-foreground: #ffffff;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --accent: #E0F2E8;
+  --accent-foreground: #1E293B;
+  --destructive: #E21B3C;
+  --destructive-foreground: #ffffff;
+  --success: #39A900;
+  --success-foreground: #ffffff;
+  --warning: #D89E00;
+  --warning-foreground: #1E293B;
+  --border: #E2E8F0;
+  --input: transparent;
+  --input-background: #F8FAFC;
+  --switch-background: #CBD5E1;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+  --ring: #39A900;
+  --chart-1: #39A900;
+  --chart-2: #1F4E78;
+  --chart-3: #2E75B6;
+  --chart-4: #D89E00;
+  --chart-5: #E21B3C;
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1E293B;
+  --sidebar-primary: #39A900;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #E0F2E8;
+  --sidebar-accent-foreground: #1E293B;
+  --sidebar-border: #E2E8F0;
+  --sidebar-ring: #39A900;
+}
+
+.dark {
+  --background: #0F172A;
+  --foreground: #F8FAFC;
+  --card: #1E293B;
+  --card-foreground: #F8FAFC;
+  --popover: #1E293B;
+  --popover-foreground: #F8FAFC;
+  --primary: #4CBB17;
+  --primary-foreground: #0F172A;
+  --secondary: #2E75B6;
+  --secondary-foreground: #F8FAFC;
+  --muted: #334155;
+  --muted-foreground: #94A3B8;
+  --accent: #1E3A2F;
+  --accent-foreground: #F8FAFC;
+  --destructive: #FF4D6D;
+  --destructive-foreground: #0F172A;
+  --border: #334155;
+  --input: #334155;
+  --ring: #4CBB17;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+  --chart-1: #4CBB17;
+  --chart-2: #2E75B6;
+  --chart-3: #60A5FA;
+  --chart-4: #FBBF24;
+  --chart-5: #F87171;
+  --sidebar: #1E293B;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #4CBB17;
+  --sidebar-primary-foreground: #0F172A;
+  --sidebar-accent: #334155;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: #334155;
+  --sidebar-ring: #4CBB17;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* SENA Theme Colors */
+  --color-sena-green: var(--sena-green);
+  --color-sena-green-dark: var(--sena-green-dark);
+  --color-sena-green-light: var(--sena-green-light);
+  --color-sena-blue: var(--sena-blue);
+  --color-sena-blue-light: var(--sena-blue-light);
+  --color-answer-red: var(--answer-red);
+  --color-answer-blue: var(--answer-blue);
+  --color-answer-yellow: var(--answer-yellow);
+  --color-answer-green: var(--answer-green);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.3;
+    letter-spacing: -0.025em;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+/* Custom Utility Classes */
+@layer utilities {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl;
+  }
+  
+  .gradient-sena {
+    background: linear-gradient(135deg, var(--sena-green) 0%, var(--sena-green-dark) 100%);
+  }
+  
+  .gradient-hero {
+    background: linear-gradient(135deg, var(--sena-blue) 0%, var(--sena-blue-light) 50%, var(--sena-green) 100%);
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+}

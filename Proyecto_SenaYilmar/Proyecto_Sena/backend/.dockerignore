@@ -1,0 +1,15 @@
+venv
+__pycache__
+*.pyc
+db.sqlite3
+numpy-*.whl
+pandas-*.whl
+matplotlib-*.whl
+scipy-*.whl
+searborn-*.whl
+sklearn-*.whl
+cycler-*.whl
+pillow-*.whl
+pyparsing-*.whl
+python-dateutil-*.whl
+six-*.whl

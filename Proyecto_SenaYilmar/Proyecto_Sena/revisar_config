@@ -1,0 +1,7 @@
+echo "REVISION YAML BACKEND"
+
+docker compose config
+
+pause
+
+docker compose -f docker-compose.proxy.yml config
