@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { RecoverAccountPage } from "./pages/RecoverAccountPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { QuizPage } from "./pages/QuizPage";
 import { ResultsPage } from "./pages/ResultsPage";
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
   { path: "/", Component: LandingPage },
   { path: "/login", Component: LoginPage },
   { path: "/register", Component: RegisterPage },
+  { path: "/recuperar-cuenta", Component: RecoverAccountPage },
 
   // Estudiante
   {
@@ -41,6 +43,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute allowedRoles={["student"]}>
         <ResultsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/dictionary",
+    element: (
+      <ProtectedRoute allowedRoles={["student", "teacher", "admin", "superadmin"]}>
+        <DashboardPage defaultTab="study" />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/diccionario",
+    element: (
+      <ProtectedRoute allowedRoles={["student", "teacher", "admin", "superadmin"]}>
+        <DashboardPage defaultTab="study" />
       </ProtectedRoute>
     ),
   },

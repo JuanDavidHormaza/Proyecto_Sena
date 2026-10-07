@@ -56,6 +56,19 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# Permitir nombres de contenedor Docker con guiones bajos (ej. worklex_proxy, worklex_backend)
+import django.http.request
+_orig_validate_host = django.http.request.validate_host
+
+def _tolerant_validate_host(host, allowed_hosts):
+    if not host:
+        return False
+    if '*' in allowed_hosts or allowed_hosts == ['*']:
+        return True
+    return _orig_validate_host(host, allowed_hosts)
+
+django.http.request.validate_host = _tolerant_validate_host
+
 from datetime import timedelta
 
 REST_FRAMEWORK = {
@@ -65,8 +78,14 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'USER_ID_FIELD': 'user_id',   # ← campo en TU modelo User
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'user_id',
     'USER_ID_CLAIM': 'user_id',
 }
 
@@ -97,6 +116,18 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 ROOT_URLCONF = 'config.urls'
 

@@ -4,8 +4,10 @@ services:
     container_name: worklex_auth
 
     environment:
-      KEYCLOAK_USER: ${KEYCLOAK_USER}
-      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD}
+      KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
+      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-Admin123*}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD:-Admin123*}
 
     command: start-dev
 

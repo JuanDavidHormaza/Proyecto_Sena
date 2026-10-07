@@ -229,3 +229,26 @@
     text-wrap: balance;
   }
 }
+
+/* ─── Reglas de Accesibilidad Visual Universal ─── */
+:root.high-contrast {
+  --background: #050505;
+  --foreground: #ffffff;
+  --card: #121212;
+  --card-foreground: #ffffff;
+  --muted: #242424;
+  --muted-foreground: #f0f0f0;
+  --border: #555555;
+  --sena-green: #00e676;
+  --sena-blue: #40c4ff;
+}
+
+:root.clean-reading {
+  --background: #fbf7ee;
+  --foreground: #2d2a24;
+  --card: #fffdf8;
+  --card-foreground: #2d2a24;
+  --muted: #f4edd9;
+  --muted-foreground: #6b6354;
+  --border: #e8ddc4;
+}

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password, check_password
-from .Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult
+from .Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, FichaRequest
 
 
 class PersonSerializer(serializers.ModelSerializer):
@@ -10,7 +10,7 @@ class PersonSerializer(serializers.ModelSerializer):
         model = Person
         fields = [
             'person_id', 'email', 'password', 'doc_type', 'doc_num',
-            'first_name', 'last_name', 'phone_num', 'status', 'created_at'
+            'first_name', 'last_name', 'phone_num', 'country', 'status', 'created_at'
         ]
         extra_kwargs = {
             'password': {'write_only': True},
@@ -83,7 +83,7 @@ class DigitalDictionarySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'word_id', 'subject', 'subject_name', 'definition',
             'synonyms', 'audio', 'video', 'image', 'level', 'competence',
-            'imageUrl', 'audioUrl', 'videoUrl'
+            'program', 'imageUrl', 'audioUrl', 'videoUrl'
         ]
 
     def _strip_key(self, val):
@@ -166,7 +166,7 @@ class LoginSerializer(serializers.Serializer):
 
 
 class RegisterSerializer(serializers.Serializer):
-    """Serializer para el registro de nuevos usuarios"""
+    """Serializer para el registro de nuevos usuarios y vinculación multiprograma"""
     # Datos de Person
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=6)
@@ -174,24 +174,25 @@ class RegisterSerializer(serializers.Serializer):
     doc_num = serializers.CharField(max_length=50)
     first_name = serializers.CharField(max_length=50)
     last_name = serializers.CharField(max_length=50)
+    country = serializers.CharField(max_length=100, required=False, default='Colombia')
     program = serializers.CharField(required=False, allow_blank=True, allow_null=True)          
     phone_num = serializers.IntegerField(required=False, allow_null=True)
-    role_id = serializers.ChoiceField(          # ← AGREGAR ESTO
+    role_id = serializers.ChoiceField(
         choices=['SUPERADMIN', 'ADMIN', 'APRENDIZ', 'MONITOR', 'INSTRUCTOR'],
         default='APRENDIZ',
         required=False
     )
- 
+    is_alternate_program = serializers.BooleanField(required=False, default=False)
 
-
-    
     def validate_email(self, value):
-        if Person.objects.filter(email=value).exists():
+        is_alternate = bool(self.initial_data.get('is_alternate_program'))
+        if not is_alternate and Person.objects.filter(email=value).exists():
             raise serializers.ValidationError("Este correo ya esta registrado")
         return value
     
     def validate_doc_num(self, value):
-        if Person.objects.filter(doc_num=value).exists():
+        is_alternate = bool(self.initial_data.get('is_alternate_program'))
+        if not is_alternate and Person.objects.filter(doc_num=value).exists():
             raise serializers.ValidationError("Este documento ya esta registrado")
         return value
 
@@ -199,11 +200,7 @@ class RegisterSerializer(serializers.Serializer):
         role_id = attrs.get('role_id', 'APRENDIZ')
         program = (attrs.get('program') or '').strip()
 
-        if role_id in {'APRENDIZ', 'MONITOR', 'INSTRUCTOR'} and not program:
-            raise serializers.ValidationError({
-                'program': 'El programa SENA es obligatorio para aprendices y docentes.'
-            })
-
+        # Programa opcional en registro inicial; aprendices vinculan fichas en perfil o alerta
         attrs['program'] = program or None
         return attrs
     
@@ -238,3 +235,44 @@ class AuthResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
     user = serializers.DictField()
+
+
+class FichaRequestSerializer(serializers.ModelSerializer):
+    learner_name = serializers.SerializerMethodField()
+    learner_email = serializers.SerializerMethodField()
+    current_program = serializers.SerializerMethodField()
+    reviewed_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FichaRequest
+        fields = [
+            'request_id',
+            'user',
+            'person',
+            'learner_name',
+            'learner_email',
+            'current_program',
+            'ficha_code',
+            'program_name',
+            'status',
+            'admin_notes',
+            'created_at',
+            'reviewed_at',
+            'reviewed_by',
+            'reviewed_by_name',
+        ]
+        read_only_fields = ['request_id', 'status', 'created_at', 'reviewed_at', 'reviewed_by']
+
+    def get_learner_name(self, obj):
+        return f"{obj.person.first_name} {obj.person.last_name}"
+
+    def get_learner_email(self, obj):
+        return obj.person.email
+
+    def get_current_program(self, obj):
+        return obj.user.program or ''
+
+    def get_reviewed_by_name(self, obj):
+        if obj.reviewed_by and hasattr(obj.reviewed_by, 'person'):
+            return f"{obj.reviewed_by.person.first_name} {obj.reviewed_by.person.last_name}"
+        return None

@@ -75,8 +75,11 @@ class StorageService:
 
         endpoint = getattr(settings, 'MINIO_ENDPOINT', 'minio:9000')
         use_ssl = getattr(settings, 'MINIO_USE_SSL', False)
-        protocol = 'https' if use_ssl else 'http'
-        endpoint_url = f"{protocol}://{endpoint}"
+        if str(endpoint).startswith(('http://', 'https://')):
+            endpoint_url = str(endpoint)
+        else:
+            protocol = 'https' if use_ssl else 'http'
+            endpoint_url = f"{protocol}://{endpoint}"
 
         access_key = getattr(settings, 'MINIO_ACCESS_KEY', 'admin')
         secret_key = getattr(settings, 'MINIO_SECRET_KEY', 'Admin123*')

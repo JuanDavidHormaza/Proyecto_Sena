@@ -1,0 +1,6 @@
+# Crowdsec acquisition configuration for Nginx
+filenames:
+  - /var/log/nginx/*.log
+labels:
+  type: nginx
+---

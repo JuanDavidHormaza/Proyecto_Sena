@@ -4,7 +4,12 @@ import {
   CreateDictionaryWord,
 } from "../types/dictionary";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_BASE = (() => {
+  if (typeof window !== 'undefined') {
+    return '/api';
+  }
+  return import.meta.env.VITE_API_URL || '/api';
+})();
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem("accessToken") || localStorage.getItem("token");

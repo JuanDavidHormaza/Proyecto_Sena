@@ -4,12 +4,14 @@ import { useNavigate } from "react-router";
 import { 
   Search, Eye, MessageSquare, CheckCircle, XCircle,
   Users, BarChart3, TrendingUp, Send, X, Clock,
-  Filter
+  Filter,
+  Languages,
 } from "lucide-react";
 import { mockTestResults, TestResult, mockUsers, User } from "../data/users";
 import * as api from "../services/api";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
+import { toast } from "../components/Toast";
 
 function normalizeText(value?: string | null) {
   return (value || "").trim().toLowerCase();
@@ -26,7 +28,7 @@ export function TeacherDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<User[]>([]);
 
-  const teacherName = user?.name || localStorage.getItem("userName") || "Docente";
+  const teacherName = user?.name || localStorage.getItem("userName") || "Instructor";
   const teacherProgram = user?.program || localStorage.getItem("userProgram") || "";
 
   // Cargar datos desde API
@@ -51,7 +53,7 @@ export function TeacherDashboard() {
         feedback: r.feedback,
         completedAt: r.completedAt,
         duration: r.duration,
-        answers: r.answers || [],
+        answers: r.answers || (r.process as any)?.answers || (r.process as any)?.userAnswers || [],
       }));
       
       // Convertir estudiantes de API
@@ -89,10 +91,11 @@ export function TeacherDashboard() {
   const handleSaveFeedback = async () => {
     if (selectedResult) {
       try {
-        // Intentar guardar en API
         await api.addFeedback(selectedResult.id, feedback);
+        toast.success("Retroalimentación guardada con éxito");
       } catch (error) {
         console.log("[v0] Failed to save feedback to API", error);
+        toast.error("No se pudo guardar la retroalimentación en el servidor");
       }
       
       // Actualizar estado local
@@ -176,12 +179,14 @@ export function TeacherDashboard() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
-                <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
-              </div>
+              <img
+                src="/worklex.png"
+                alt="WorkLex"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              />
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-foreground">English Level Test</h1>
-                <p className="text-xs text-muted-foreground">Panel de Docente</p>
+                <p className="text-xs text-muted-foreground">Panel de Instructor</p>
               </div>
             </div>
 
@@ -202,14 +207,14 @@ export function TeacherDashboard() {
             Bienvenido, {teacherName.split(' ')[0]}
           </h2>
           <p className="text-muted-foreground">
-            Revisa el progreso de tus estudiantes{teacherProgram ? ` de ${teacherProgram}` : ''} y brinda retroalimentacion personalizada
+            Revisa el progreso de tus aprendices{teacherProgram ? ` de ${teacherProgram}` : ''} y brinda retroalimentación personalizada
           </p>
         </motion.div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Estudiantes", value: stats.totalStudents, icon: Users, color: "sena-blue" },
+            { label: "Aprendices", value: stats.totalStudents, icon: Users, color: "sena-blue" },
             { label: "Pruebas Realizadas", value: stats.totalTests, icon: BarChart3, color: "sena-green" },
             { label: "Promedio General", value: `${stats.averageScore}%`, icon: TrendingUp, color: "warning" },
             { label: "Retroalimentaciones", value: stats.feedbackGiven, icon: MessageSquare, color: "destructive" },
@@ -219,10 +224,10 @@ export function TeacherDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-2xl p-5 border border-border shadow-sm"
+              className="bg-white rounded-2xl p-5 border border-border shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className={`w-11 h-11 bg-${stat.color}/10 rounded-xl flex items-center justify-center mb-3`}>
-                <stat.icon className={`w-5 h-5 text-${stat.color}`} />
+                <stat.icon className={`w-5 h-5 text-${stat.color}`} strokeWidth={1.8} />
               </div>
               <p className="text-2xl font-bold text-foreground">{stat.value}</p>
               <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -252,7 +257,7 @@ export function TeacherDashboard() {
                   {level.value}
                 </div>
                 <p className="text-sm font-medium text-foreground">{level.label}</p>
-                <p className="text-xs text-muted-foreground">{level.percentage.toFixed(0)}% del total</p>
+                <p className="text-xs text-muted-foreground">{level.percentage.toFixed(0)}%</p>
               </div>
             ))}
           </div>
@@ -266,17 +271,17 @@ export function TeacherDashboard() {
           className="flex flex-col sm:flex-row gap-4 mb-6"
         >
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
             <input
               type="text"
-              placeholder="Buscar estudiante..."
+              placeholder="Buscar aprendiz..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50"
             />
           </div>
           <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
             <select
               value={filterLevel}
               onChange={(e) => setFilterLevel(e.target.value)}
@@ -295,7 +300,7 @@ export function TeacherDashboard() {
           {studentEntries.map(([userId, userResults], index) => {
             const student = students.find(s => s.id === userId);
             const latestResult = userResults[0];
-            const studentName = student?.name || latestResult?.userName || "Estudiante";
+            const studentName = student?.name || latestResult?.userName || "Aprendiz";
             const studentProgram = student?.program || latestResult?.studentProgram || "Programa SENA";
             const avgScore = userResults.length
               ? Math.round(userResults.reduce((acc, r) => acc + r.score, 0) / userResults.length)
@@ -386,15 +391,15 @@ export function TeacherDashboard() {
                           </td>
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Clock className="w-4 h-4" />
+                              <Clock className="w-4 h-4" strokeWidth={1.8} />
                               {result.duration || '~9:00'}
                             </div>
                           </td>
                           <td className="py-4 px-5">
                             {result.feedback ? (
-                              <CheckCircle className="w-5 h-5 text-sena-green" />
+                              <CheckCircle className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
                             ) : (
-                              <XCircle className="w-5 h-5 text-muted-foreground/40" />
+                              <XCircle className="w-5 h-5 text-muted-foreground/40" strokeWidth={1.8} />
                             )}
                           </td>
                           <td className="py-4 px-5">
@@ -402,7 +407,7 @@ export function TeacherDashboard() {
                               onClick={() => handleViewDetails(result)}
                               className="flex items-center gap-2 px-4 py-2 bg-sena-blue text-white rounded-lg hover:bg-sena-blue-light transition-colors text-sm font-medium"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye className="w-4 h-4" strokeWidth={1.8} />
                               Revisar
                             </button>
                           </td>
@@ -423,7 +428,7 @@ export function TeacherDashboard() {
 
         {studentEntries.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-border">
-            <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+            <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" strokeWidth={1.8} />
             <h3 className="text-lg font-semibold text-foreground mb-2">No hay resultados</h3>
             <p className="text-muted-foreground">No se encontraron pruebas que coincidan con tu busqueda</p>
           </div>
@@ -450,7 +455,7 @@ export function TeacherDashboard() {
                   onClick={() => { setSelectedResult(null); setFeedback(""); }}
                   className="p-2 hover:bg-muted rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" strokeWidth={1.8} />
                 </button>
               </div>
 
@@ -476,43 +481,85 @@ export function TeacherDashboard() {
                   </div>
                 </div>
 
-                {/* Areas to Improve */}
+                {/* Question-by-Question Pedagogical Audit */}
                 <div>
-                  <h4 className="font-semibold text-foreground mb-3">Areas de Mejora</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3 p-3 bg-destructive/5 border-l-4 border-destructive rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">Gramatica - Condicionales</p>
-                        <p className="text-sm text-muted-foreground">2 preguntas incorrectas</p>
-                      </div>
-                      <span className="text-destructive font-medium">60%</span>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-warning/5 border-l-4 border-warning rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">Vocabulario - Phrasal Verbs</p>
-                        <p className="text-sm text-muted-foreground">1 pregunta incorrecta</p>
-                      </div>
-                      <span className="text-warning font-medium">80%</span>
-                    </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-foreground">Auditoría Pedagógica de Preguntas</h4>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedResult.answers?.length || selectedResult.totalQuestions || 0} reactivos auditados
+                    </span>
                   </div>
+
+                  {selectedResult.answers && selectedResult.answers.length > 0 ? (
+                    <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                      {selectedResult.answers.map((ans, idx) => (
+                        <div
+                          key={ans.questionId || idx}
+                          className={`p-3.5 rounded-xl border text-xs transition-colors ${
+                            ans.isCorrect
+                              ? "bg-emerald-50/60 border-emerald-200 text-emerald-950"
+                              : "bg-red-50/60 border-red-200 text-red-950"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <span className="font-semibold text-slate-800">
+                              {idx + 1}. {ans.question}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${
+                                ans.isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {ans.isCorrect ? "Correcto" : "Incorrecto"}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-600 mt-1">
+                            <p>
+                              <strong className="text-slate-700">Respuesta del aprendiz:</strong>{" "}
+                              Opción {(ans.userAnswer !== undefined && ans.userAnswer !== null) ? Number(ans.userAnswer) + 1 : "Sin responder"}
+                            </p>
+                            <p>
+                              <strong className="text-emerald-700">Respuesta correcta:</strong>{" "}
+                              Opción {(ans.correctAnswer !== undefined && ans.correctAnswer !== null) ? Number(ans.correctAnswer) + 1 : "N/A"}
+                            </p>
+                          </div>
+                          {ans.category && (
+                            <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                              Competencia: {ans.category}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="p-4 bg-muted/40 rounded-xl text-center text-xs text-muted-foreground border border-dashed border-border">
+                      No hay desglose individual de reactivos disponible para este intento.
+                    </p>
+                  )}
                 </div>
 
                 {/* Feedback Section */}
                 <div>
                   <label className="flex items-center gap-2 font-semibold text-foreground mb-3">
-                    <MessageSquare className="w-5 h-5 text-sena-blue" />
-                    Retroalimentacion para el estudiante
+                    <MessageSquare className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+                    Retroalimentación para el aprendiz
                   </label>
                   <textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     rows={4}
-                    placeholder="Escribe tus comentarios y recomendaciones para el estudiante..."
+                    placeholder="Escribe tus comentarios y recomendaciones pedagógicas para el aprendiz..."
                     className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50 resize-none"
                   />
-                  {selectedResult.feedback && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Ultima retroalimentacion guardada
+                  {selectedResult.feedback ? (
+                    <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+                      <CheckCircle className="w-3.5 h-3.5 text-sena-green shrink-0" />
+                      <span>Última retroalimentación guardada: "{selectedResult.feedback}"</span>
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>Pendiente de retroalimentación por parte del instructor asignado.</span>
                     </p>
                   )}
                 </div>
@@ -522,14 +569,14 @@ export function TeacherDashboard() {
               <div className="flex gap-3 p-6 border-t border-border">
                 <button
                   onClick={handleSaveFeedback}
-                  className="flex-1 flex items-center justify-center gap-2 bg-sena-green text-white py-3 rounded-xl hover:bg-sena-green-dark transition-all font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 bg-sena-green text-white py-3 rounded-xl hover:bg-sena-green-dark transition-all font-medium cursor-pointer"
                 >
-                  <Send className="w-5 h-5" />
-                  Enviar Retroalimentacion
+                  <Send className="w-5 h-5" strokeWidth={1.8} />
+                  Enviar Retroalimentación
                 </button>
                 <button
                   onClick={() => { setSelectedResult(null); setFeedback(""); }}
-                  className="flex-1 bg-muted text-muted-foreground py-3 rounded-xl hover:bg-muted/80 transition-all font-medium"
+                  className="flex-1 bg-muted text-muted-foreground py-3 rounded-xl hover:bg-muted/80 transition-all font-medium cursor-pointer"
                 >
                   Cerrar
                 </button>

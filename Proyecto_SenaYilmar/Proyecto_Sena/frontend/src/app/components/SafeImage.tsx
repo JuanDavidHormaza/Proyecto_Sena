@@ -73,7 +73,7 @@ export function SafeImage({
       {hasError && (
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-slate-100 flex flex-col items-center justify-center text-slate-400 p-3 text-center">
           <div className="w-10 h-10 rounded-xl bg-emerald-100/80 border border-emerald-200/80 text-emerald-700 flex items-center justify-center mb-1.5 shadow-2xs">
-            <Code className="w-5 h-5 text-emerald-600" />
+            <Code className="w-5 h-5 text-emerald-600" strokeWidth={1.8} />
           </div>
           <span className="text-xs font-bold text-slate-700 tracking-wider">
             {initials}
@@ -88,7 +88,7 @@ export function SafeImage({
       {showHoverZoom && !hasError && isLoaded && onClick && (
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10 pointer-events-none">
           <div className="w-9 h-9 rounded-full bg-white/95 text-slate-800 flex items-center justify-center shadow-lg backdrop-blur-xs transform scale-90 group-hover:scale-100 transition-transform">
-            <ZoomIn className="w-4 h-4 text-emerald-700" />
+            <ZoomIn className="w-4 h-4 text-emerald-700" strokeWidth={1.8} />
           </div>
         </div>
       )}

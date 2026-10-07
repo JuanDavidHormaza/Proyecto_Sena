@@ -2,7 +2,8 @@ from django.db import models
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from ..Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, Ranking
+from django.utils import timezone
+from ..Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, Ranking, FichaRequest
 
 
 # ─── Mapas de roles y estados ────────────────────────────────────────────────
@@ -84,28 +85,59 @@ def get_permissions_by_role(role):
 
 def _build_user_response(user, person):
     """Construye el dict de usuario que espera el frontend."""
-    # Si hay roles “quemados”/antiguos o valores inesperados, no rompemos el listado.
     frontend_role = ROLE_MAP.get(user.role_id)
     if not frontend_role:
-        # Intento por valores comunes (por compatibilidad)
         frontend_role = ROLE_MAP.get(str(user.role_id).upper(), 'student')
 
     phone_num = getattr(person, 'phone_num', None)
+    country = getattr(person, 'country', 'Colombia') or 'Colombia'
+
+    # Programas matriculados para esta persona
+    enrolled_programs = list(
+        User.objects.filter(person=person)
+        .exclude(program__isnull=True)
+        .exclude(program='')
+        .values_list('program', flat=True)
+        .distinct()
+    )
+    if user.program and user.program not in enrolled_programs:
+        enrolled_programs.append(user.program)
+    if not enrolled_programs and user.program:
+        enrolled_programs = [user.program]
+
+    # Roles disponibles para esta persona (ej. Aprendiz e Instructor)
+    all_role_ids = list(
+        User.objects.filter(person=person)
+        .values_list('role_id', flat=True)
+        .distinct()
+    )
+    available_roles = list(set([ROLE_MAP.get(r, 'student') for r in all_role_ids if r]))
+    if frontend_role not in available_roles:
+        available_roles.append(frontend_role)
+
+    is_dual = len(available_roles) > 1 or ('student' in available_roles and 'teacher' in available_roles)
+
+    created_at_dt = getattr(person, 'created_at', None) or getattr(user, 'created_at', None)
+    created_at_str = created_at_dt.isoformat() if created_at_dt else None
 
     return {
         'id': str(user.user_id),
         'name': f"{person.first_name} {person.last_name}".strip(),
-
         'email': person.email,
         'role': frontend_role,
         'status': STATUS_MAP.get(getattr(person, 'status', None), 'inactive'),
         'permissions': get_permissions_by_role(frontend_role),
         'program': user.program,
+        'enrolledPrograms': enrolled_programs,
+        'availableRoles': available_roles,
+        'isDualRole': is_dual,
+        'country': country,
         'docType': getattr(person, 'doc_type', None),
         'docNum': getattr(person, 'doc_num', None),
         'phoneNum': phone_num,
         'firstName': getattr(person, 'first_name', ''),
         'lastName': getattr(person, 'last_name', ''),
+        'createdAt': created_at_str,
     }
 
 
@@ -154,23 +186,56 @@ class AuthController:
     @staticmethod
     def register(validated_data):
         """
-        Registra una nueva persona + usuario.
+        Registra una nueva persona + usuario, o vincula un programa alterno a una persona existente.
         Retorna (data_dict, None) en éxito o (None, error_str) en fallo.
         """
-        if Person.objects.filter(email=validated_data['email']).exists():
-            return None, 'Este correo ya está registrado'
+        email = validated_data.get('email', '').strip().lower()
+        doc_num = validated_data.get('doc_num', '').strip()
+        program = validated_data.get('program')
+        is_alternate = validated_data.get('is_alternate_program', False)
 
-        if Person.objects.filter(doc_num=validated_data['doc_num']).exists():
-            return None, 'Este documento ya está registrado'
+        existing_person = Person.objects.filter(doc_num=doc_num).first() or Person.objects.filter(email=email).first()
 
+        if existing_person:
+            if not is_alternate:
+                if Person.objects.filter(email=email).exists():
+                    return None, 'Este correo ya está registrado'
+                if Person.objects.filter(doc_num=doc_num).exists():
+                    return None, 'Este documento ya está registrado'
+
+            # Flujo alterno: vincular al nuevo programa sin duplicar Person
+            if program and User.objects.filter(person=existing_person, program=program).exists():
+                return None, f'Ya te encuentras matriculado en el programa "{program}".'
+
+            if validated_data.get('country') and not getattr(existing_person, 'country', None):
+                existing_person.country = validated_data.get('country')
+                existing_person.save(update_fields=['country'])
+
+            user = User.objects.create(
+                person=existing_person,
+                role_id=validated_data.get('role_id', 'APRENDIZ'),
+                status='EN_FORMACION',
+                program=program,
+                mfa='',
+            )
+
+            access, refresh = _generate_tokens(user)
+            return {
+                'access': access,
+                'refresh': refresh,
+                'user': _build_user_response(user, existing_person),
+            }, None
+
+        # Registro primera vez
         person = Person.objects.create(
-            email=validated_data['email'],
+            email=email,
             password=make_password(validated_data['password']),
             doc_type=validated_data['doc_type'],
-            doc_num=validated_data['doc_num'],
+            doc_num=doc_num,
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             phone_num=validated_data.get('phone_num'),
+            country=validated_data.get('country', 'Colombia') or 'Colombia',
             status='ACTIVO',
         )
 
@@ -178,7 +243,7 @@ class AuthController:
             person=person,
             role_id=validated_data.get('role_id', 'APRENDIZ'),
             status='EN_FORMACION',
-            program=validated_data.get('program'),
+            program=program,
             mfa='',
         )
 
@@ -320,8 +385,110 @@ class UserController:
         user.program = program or None
         user.save()
         return user.program, None
-    
-    # Agrega dentro de UserController:
+
+    @staticmethod
+    def switch_program(user_id, program):
+        try:
+            user = User.objects.select_related('person').get(pk=user_id)
+        except User.DoesNotExist:
+            return None, 'Usuario no encontrado'
+
+        clean_program = (program or '').strip()
+        user.program = clean_program or None
+        user.save(update_fields=['program'])
+        return _build_user_response(user, user.person), None
+
+    @staticmethod
+    def enroll_ficha(user_id, ficha, program_name=None):
+        try:
+            current_user = User.objects.select_related('person').get(pk=user_id)
+        except User.DoesNotExist:
+            return None, 'Usuario no encontrado'
+
+        if not ficha or not str(ficha).strip():
+            return None, 'El código o número de la ficha es obligatorio'
+
+        clean_input = str(ficha).strip()
+        matched_name = None
+
+        if program_name and str(program_name).strip():
+            prog_clean = str(program_name).strip()
+            if 'ficha' in prog_clean.lower():
+                matched_name = prog_clean
+            else:
+                matched_name = f"{prog_clean} - Ficha {clean_input}"
+        else:
+            SENA_CATALOG = [
+                {"code": "3520681", "name": "Mecánica - Ficha 3520681", "area": "Mecánica Industrial"},
+                {"code": "3411643", "name": "Análisis de Datos - Ficha 3411643", "area": "Tecnologías de la Información"},
+                {"code": "2670142", "name": "Desarrollo de Software - Ficha 2670142", "area": "ADSO"},
+                {"code": "2710321", "name": "Redes y Telecomunicaciones - Ficha 2710321", "area": "Infraestructura TI"},
+                {"code": "2554901", "name": "Producción Multimedia - Ficha 2554901", "area": "Diseño y Medios"},
+                {"code": "2901412", "name": "Seguridad Informática - Ficha 2901412", "area": "Ciberseguridad"},
+                {"code": "2894102", "name": "Automatización Industrial - Ficha 2894102", "area": "Mecatrónica"},
+                {"code": "2689104", "name": "Gestión Empresarial - Ficha 2689104", "area": "Administración"},
+                {"code": "2450912", "name": "Diseño Gráfico - Ficha 2450912", "area": "Comunicación Visual"},
+                {"code": "ADSO", "name": "ADSO (Análisis y Desarrollo de Software)", "area": "Desarrollo de Software"},
+            ]
+
+            for item in SENA_CATALOG:
+                if clean_input.lower() == item['code'].lower() or clean_input.lower() in item['name'].lower() or item['code'] in clean_input:
+                    matched_name = item['name']
+                    break
+
+        if not matched_name:
+            existing_prog = User.objects.filter(models.Q(program__icontains=clean_input)).values_list('program', flat=True).first()
+            if existing_prog:
+                matched_name = existing_prog
+            else:
+                import re
+                if re.match(r'^\d{4,8}$', clean_input):
+                    matched_name = f"Programa Técnico - Ficha {clean_input}"
+                else:
+                    return None, f"La ficha o programa '{clean_input}' no fue encontrado en el catálogo oficial SENA."
+
+        person = current_user.person
+        if User.objects.filter(person=person, program=matched_name).exists():
+            return None, f"Ya te encuentras matriculado en '{matched_name}'."
+
+        if not current_user.program:
+            current_user.program = matched_name
+            current_user.save(update_fields=['program'])
+        else:
+            User.objects.create(
+                person=person,
+                role_id=current_user.role_id,
+                status='EN_FORMACION',
+                program=matched_name,
+                mfa=current_user.mfa or '',
+            )
+            current_user.program = matched_name
+            current_user.save(update_fields=['program'])
+
+        return _build_user_response(current_user, person), None
+
+    @staticmethod
+    def switch_role(user_id, target_role=None):
+        try:
+            user = User.objects.select_related('person').get(pk=user_id)
+        except User.DoesNotExist:
+            return None, 'Usuario no encontrado'
+
+        current_role = user.role_id
+        if target_role:
+            new_backend_role = ROLE_MAP_REVERSE.get(target_role.lower(), target_role.upper())
+        else:
+            # Alternar entre APRENDIZ e INSTRUCTOR
+            if current_role == 'APRENDIZ':
+                new_backend_role = 'INSTRUCTOR'
+            elif current_role in ('INSTRUCTOR', 'MONITOR'):
+                new_backend_role = 'APRENDIZ'
+            else:
+                new_backend_role = current_role
+
+        user.role_id = new_backend_role
+        user.save(update_fields=['role_id'])
+        return _build_user_response(user, user.person), None
 
     @staticmethod
     def delete(user_id):
@@ -432,7 +599,7 @@ def _clean_media_key(val):
 class DictionaryController:
 
     @staticmethod
-    def list_all(subject_id=None, level=None, competence=None, search=None):
+    def list_all(subject_id=None, level=None, competence=None, search=None, program=None, ficha_id=None):
         queryset = DigitalDictionary.objects.select_related('subject').all()
         if subject_id:
             queryset = queryset.filter(subject_id=subject_id)
@@ -447,6 +614,23 @@ class DictionaryController:
                 models.Q(definition__icontains=s) |
                 models.Q(synonyms__icontains=s)
             )
+
+        # Filtro estricto por programa / ficha (Aislamiento Multi-tenant)
+        target_prog = (program or ficha_id or '').strip()
+        if target_prog and target_prog != 'all':
+            import re
+            m = re.search(r'\d{6,8}', target_prog)
+            if m:
+                ficha_code = m.group(0)
+                queryset = queryset.filter(
+                    models.Q(program__icontains=target_prog) |
+                    models.Q(program__icontains=ficha_code)
+                )
+            else:
+                queryset = queryset.filter(
+                    models.Q(program__iexact=target_prog) |
+                    models.Q(program__icontains=target_prog)
+                )
 
         documents = []
         for doc in queryset:
@@ -467,7 +651,7 @@ class DictionaryController:
                 'name': doc.word_id,
                 'subjectId': subject_id,
                 'subjectName': subject_name,
-                'program': 'ADSO',
+                'program': getattr(doc, 'program', 'ADSO') or 'ADSO',
                 'uploadedAt': None,
                 'fileType': 'DICT',
                 'size': '-',
@@ -520,6 +704,8 @@ class DictionaryController:
         if competence_val == "ADSO":
             competence_val = subject_val
 
+        program_val = data.get("program") or "ADSO"
+
         doc = DigitalDictionary.objects.create(
             word_id=word_id,
             subject=subject,
@@ -530,6 +716,7 @@ class DictionaryController:
             video=video_key,
             level=data.get("level", "A1") or "A1",
             competence=competence_val,
+            program=program_val,
         )
 
         return doc, None
@@ -548,7 +735,7 @@ class DictionaryController:
             except Subject.DoesNotExist:
                 return None, 'Asignatura no encontrada'
 
-        for field in ('word_id', 'definition', 'synonyms', 'level', 'competence'):
+        for field in ('word_id', 'definition', 'synonyms', 'level', 'competence', 'program'):
             if field in data:
                 setattr(doc, field, data[field])
 
@@ -575,19 +762,28 @@ class DictionaryController:
 
 # ─── TestResults ──────────────────────────────────────────────────────────────
 
-def _derive_level_from_score(score):
-    """Deriva el nivel CEFR alcanzado a partir del puntaje total (0-100)."""
+def _derive_level_from_score(score, total_questions=0, answered=0):
+    """
+    Deriva el nivel CEFR alcanzado a partir del puntaje total (0-100).
+    Si el estudiante no respondió ninguna pregunta o abandona, se asigna 'Sin Nivel'.
+    """
+    if total_questions == 0 or (answered == 0 and score == 0):
+        return 'Sin Nivel'
     if score >= 85:
         return 'B2'
     if score >= 70:
         return 'B1'
     if score >= 50:
         return 'A2'
-    return 'A1'
+    if score >= 20:
+        return 'A1'
+    return 'Sin Nivel'
 
 
-def _derive_character_from_score(score):
-    """Asigna un 'character' descriptivo según el desempeño."""
+def _derive_character_from_score(score, level='A1'):
+    """Asigna un 'character' descriptivo según el desempeño y nivel."""
+    if level in ('Sin Nivel', 'No Presentado') or score == 0:
+        return 'No Presentado'
     if score >= 85:
         return 'Experto'
     if score >= 70:
@@ -652,6 +848,9 @@ class TestResultController:
 
         correct_answers = int(data.get('correct_answers', 0))
         total_questions = int(data.get('total_questions', 0)) or 0
+        is_abandoned = bool(data.get('is_abandoned') or data.get('abandoned'))
+        is_invalidated = bool(data.get('is_invalidated') or data.get('invalidated'))
+        answered = int(data.get('answered', 0) or 0)
 
         # El puntaje se calcula si no viene explícito en la petición.
         score = data.get('score')
@@ -659,8 +858,17 @@ class TestResultController:
             score = round((correct_answers / total_questions) * 100) if total_questions else 0
         score = int(score)
 
-        level = data.get('level') or _derive_level_from_score(score)
-        character = data.get('character') or _derive_character_from_score(score)
+        explicit_level = (data.get('level') or '').strip()
+        if is_abandoned or is_invalidated or total_questions == 0 or (correct_answers == 0 and answered == 0 and score == 0):
+            level = 'Invalidada' if is_invalidated else 'No Presentado'
+            character = 'No Presentado'
+            score = 0
+        elif explicit_level and explicit_level not in ('None', ''):
+            level = explicit_level
+            character = data.get('character') or _derive_character_from_score(score, level)
+        else:
+            level = _derive_level_from_score(score, total_questions=total_questions, answered=correct_answers)
+            character = data.get('character') or _derive_character_from_score(score, level)
 
         result = TestResult.objects.create(
             user=user,
@@ -677,7 +885,7 @@ class TestResultController:
             duration=data.get('duration'),
         )
 
-        # Guarda / actualiza el ranking (leaderboard) del usuario.
+        # Guarda / actualiza el ranking (leaderboard) del usuario solo si finalizó formalmente.
         RankingController.update_from_result(result)
 
         return result, None
@@ -702,9 +910,13 @@ class RankingController:
     def update_from_result(result):
         """
         Crea o actualiza la fila de ranking del usuario.
-        Solo sobreescribe el mejor resultado si el nuevo puntaje es mayor
-        o igual al registrado previamente.
+        PROTECCIÓN DEL PROMEDIO: No actualiza el ranking si la prueba fue abandonada,
+        invalidada o sin nivel, asegurando que solo exámenes completados formalmente
+        recalculen el nivel y promedio histórico.
         """
+        if result.level in ('Sin Nivel', 'No Presentado', 'Invalidada') or result.character in ('No Presentado', 'Invalidada'):
+            return None
+
         ranking, created = Ranking.objects.get_or_create(
             user=result.user,
             defaults={
@@ -763,3 +975,121 @@ class RankingController:
                 'updatedAt': ranking.updated_at.isoformat() if ranking.updated_at else None,
             })
         return leaderboard
+
+
+class FichaRequestController:
+
+    @staticmethod
+    def create(user, ficha_code, program_name=None):
+        if not ficha_code or not str(ficha_code).strip():
+            return None, 'El código de ficha es obligatorio.'
+
+        clean_input = str(ficha_code).strip()
+        real_user = getattr(user, '_user', user)
+        person = real_user.person
+
+        # Catálogo oficial SENA para resolver nombre
+        SENA_CATALOG = [
+            {"code": "3520681", "name": "Mecánica - Ficha 3520681", "area": "Mecánica Industrial"},
+            {"code": "3411643", "name": "Análisis de Datos - Ficha 3411643", "area": "Tecnologías de la Información"},
+            {"code": "2670142", "name": "Desarrollo de Software - Ficha 2670142", "area": "ADSO"},
+            {"code": "2710321", "name": "Redes y Telecomunicaciones - Ficha 2710321", "area": "Infraestructura TI"},
+            {"code": "2554901", "name": "Producción Multimedia - Ficha 2554901", "area": "Diseño y Medios"},
+            {"code": "2901412", "name": "Seguridad Informática - Ficha 2901412", "area": "Ciberseguridad"},
+            {"code": "2894102", "name": "Automatización Industrial - Ficha 2894102", "area": "Mecatrónica"},
+            {"code": "2689104", "name": "Gestión Empresarial - Ficha 2689104", "area": "Administración"},
+            {"code": "2450912", "name": "Diseño Gráfico - Ficha 2450912", "area": "Comunicación Visual"},
+            {"code": "ADSO", "name": "ADSO (Análisis y Desarrollo de Software)", "area": "Desarrollo de Software"},
+        ]
+
+        matched_name = None
+        if program_name and str(program_name).strip():
+            prog_clean = str(program_name).strip()
+            if 'ficha' in prog_clean.lower():
+                matched_name = prog_clean
+            else:
+                matched_name = f"{prog_clean} - Ficha {clean_input}"
+        else:
+            for item in SENA_CATALOG:
+                if clean_input.lower() == item['code'].lower() or clean_input.lower() in item['name'].lower() or item['code'] in clean_input:
+                    matched_name = item['name']
+                    break
+
+        if not matched_name:
+            import re
+            if re.match(r'^\d{5,9}$', clean_input):
+                matched_name = f"Programa Técnico - Ficha {clean_input}"
+            else:
+                return None, f"El código '{clean_input}' debe ser un número de ficha válido (ej. 3520681)."
+
+        # Verificar si el aprendiz ya está matriculado en este programa
+        if User.objects.filter(person=person, program=matched_name).exists():
+            return None, f"Ya te encuentras matriculado en '{matched_name}'."
+
+        # Verificar si ya tiene una solicitud pendiente para esta ficha
+        if FichaRequest.objects.filter(person=person, ficha_code=clean_input, status='PENDIENTE').exists():
+            return None, f"Ya tienes una solicitud pendiente para la ficha {clean_input}."
+
+        req = FichaRequest.objects.create(
+            user=real_user,
+            person=person,
+            ficha_code=clean_input,
+            program_name=matched_name,
+            status='PENDIENTE',
+        )
+        return req, None
+
+    # Alias para compatibilidad con llamadas de vistas
+    request_ficha = create
+
+    @staticmethod
+    def list_all(user):
+        if getattr(user, 'role_id', None) in ('ADMIN', 'SUPERADMIN'):
+            return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person').all()
+        return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person').filter(person=user.person)
+
+    @staticmethod
+    def approve(request_id, admin_user):
+        try:
+            req = FichaRequest.objects.select_related('person', 'user').get(pk=request_id)
+        except FichaRequest.DoesNotExist:
+            return None, 'Solicitud no encontrada.'
+
+        if req.status != 'PENDIENTE':
+            return None, f"La solicitud ya fue procesada anteriormente con estado: {req.status}."
+
+        real_admin = getattr(admin_user, '_user', admin_user) if admin_user else None
+        req.status = 'APROBADA'
+        req.reviewed_at = timezone.now()
+        req.reviewed_by = real_admin
+        req.save(update_fields=['status', 'reviewed_at', 'reviewed_by'])
+
+        # Vincular programa al aprendiz creando/actualizando el User para esa persona
+        if not User.objects.filter(person=req.person, program=req.program_name).exists():
+            User.objects.create(
+                person=req.person,
+                role_id=req.user.role_id,
+                status='EN_FORMACION',
+                program=req.program_name,
+                mfa=req.user.mfa or '',
+            )
+
+        return req, None
+
+    @staticmethod
+    def reject(request_id, admin_user, notes=None):
+        try:
+            req = FichaRequest.objects.select_related('person', 'user').get(pk=request_id)
+        except FichaRequest.DoesNotExist:
+            return None, 'Solicitud no encontrada.'
+
+        if req.status != 'PENDIENTE':
+            return None, f"La solicitud ya fue procesada anteriormente con estado: {req.status}."
+
+        real_admin = getattr(admin_user, '_user', admin_user) if admin_user else None
+        req.status = 'RECHAZADA'
+        req.admin_notes = notes or 'Rechazada por el Administrador.'
+        req.reviewed_at = timezone.now()
+        req.reviewed_by = real_admin
+        req.save(update_fields=['status', 'admin_notes', 'reviewed_at', 'reviewed_by'])
+        return req, None

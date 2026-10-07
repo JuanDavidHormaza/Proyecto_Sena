@@ -27,11 +27,16 @@ import {
   BookMarked,
   GraduationCap,
   ArrowRight,
-  Search
+  Search,
+  History,
+  Calendar,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { getLevelFromScore } from "../data/questionsA1";
+import * as api from "../services/api";
 import { resolveMediaUrl } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { toast } from "../components/Toast";
 
 type ResultAnswer = {
   questionId: number;
@@ -48,6 +53,8 @@ type ResultAnswer = {
   scoreAwarded?: number;
   rubricFeedback?: string;
   wordId?: string;
+  definition?: string;
+  options?: string[];
 };
 
 type ReinforceTerm = {
@@ -68,10 +75,11 @@ export function ResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [animatedScore, setAnimatedScore] = useState(0);
-  const [activeTab, setActiveTab] = useState<"summary" | "vocabulary" | "review" | "speaking" | "writing">("summary");
+  const [activeTab, setActiveTab] = useState<"summary" | "vocabulary" | "review" | "speaking" | "writing" | "history">("summary");
   const [filterReview, setFilterReview] = useState<"all" | "correct" | "incorrect">("all");
   const [vocabFilter, setVocabFilter] = useState<"all" | "mastered" | "reinforce">("all");
   const [playingTerm, setPlayingTerm] = useState<string | null>(null);
+  const [pastTests, setPastTests] = useState<api.ApiTestResult[]>([]);
 
   const resultsState = location.state as
     | {
@@ -114,9 +122,48 @@ export function ResultsPage() {
   const passed = resultsState?.passed ?? lastTestSummary?.passed ?? (finalScore >= 60);
   const threshold = resultsState?.threshold ?? 60;
   const breakdown = resultsState?.breakdown ?? lastTestResult?.breakdown;
-  const autoFeedback = resultsState?.auto_feedback ?? lastTestSummary?.autoFeedback ?? lastTestResult?.feedback;
+  const autoFeedback = resultsState?.auto_feedback ?? lastTestSummary?.autoFeedback;
 
-  // Vocabulario técnico ADSO evaluado (Mastered & Reinforce)
+  const { user } = useAuth();
+  const isInstructor = Boolean(
+    user?.role === "teacher" ||
+    user?.role === "admin" ||
+    user?.role === "superadmin" ||
+    user?.permissions?.canGiveFeedback
+  );
+
+  const [currentInstructorFeedback, setCurrentInstructorFeedback] = useState<string | null>(
+    (resultsState as any)?.feedback || lastTestResult?.feedback || null
+  );
+  const [instructorDraft, setInstructorDraft] = useState<string>(
+    currentInstructorFeedback || ""
+  );
+  const [isSavingFeedback, setIsSavingFeedback] = useState<boolean>(false);
+
+  const handleSaveInstructorFeedback = async () => {
+    const resultId = lastTestResult?.id;
+    if (!resultId) {
+      toast.error("No se encontró el identificador de la prueba para guardar feedback.");
+      return;
+    }
+    setIsSavingFeedback(true);
+    try {
+      await api.addFeedback(String(resultId), instructorDraft);
+      setCurrentInstructorFeedback(instructorDraft);
+      if (lastTestResult) {
+        lastTestResult.feedback = instructorDraft;
+        localStorage.setItem("lastTestResult", JSON.stringify(lastTestResult));
+      }
+      toast.success("Retroalimentación guardada con éxito");
+    } catch (err: any) {
+      toast.error(err?.message || "Error al guardar la retroalimentación");
+    } finally {
+      setIsSavingFeedback(false);
+    }
+  };
+
+  // Vocabulario técnico evaluado del programa activo (Mastered & Reinforce)
+  const activeProgram = localStorage.getItem("userProgram") || "Programa Formativo";
   const masteredTerms: string[] =
     resultsState?.masteredTerms ??
     lastTestSummary?.masteredTerms ??
@@ -242,6 +289,19 @@ export function ResultsPage() {
     return () => clearInterval(interval);
   }, [finalScore]);
 
+  // Cargar historial consolidado de pruebas anteriores
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    api.getTestResults(userId)
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setPastTests(res);
+        }
+      })
+      .catch((err) => console.warn("No fue posible cargar historial anterior:", err));
+  }, []);
+
   const handleDownloadCertificate = () => {
     return;
   };
@@ -280,10 +340,10 @@ export function ResultsPage() {
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-lg rounded-full text-sm font-medium mb-6"
             >
-              <div className="w-6 h-6 rounded-full overflow-hidden bg-white">
-                <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover" />
+              <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white">
+                <CheckCircle className="w-4 h-4 text-emerald-200" strokeWidth={2} />
               </div>
-              Evaluación Adaptativa CEFR Completada
+              Evaluación enviada con éxito
             </motion.div>
 
             <motion.div
@@ -296,7 +356,7 @@ export function ResultsPage() {
               </div>
 
               <div className="flex items-center justify-center gap-2 mb-3">
-                <Award className="w-7 h-7 text-amber-300" />
+                <Award className="w-7 h-7 text-amber-300" strokeWidth={1.8} />
                 <span className="text-2xl lg:text-3xl font-bold">Nivel Obtenido: {levelReached}</span>
               </div>
 
@@ -317,10 +377,10 @@ export function ResultsPage() {
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
           {[
-            { label: "Correctas", value: `${correctAnswers}/${totalQuestions}`, icon: CheckCircle, color: "text-sena-green", bg: "bg-sena-green/10" },
-            { label: "Incorrectas", value: `${Math.max(totalQuestions - correctAnswers, 0)}/${totalQuestions}`, icon: XCircle, color: "text-destructive", bg: "bg-destructive/10" },
-            { label: "Tiempo Total", value: duration, icon: Clock, color: "text-sena-blue", bg: "bg-sena-blue/10" },
             { label: "Puntuación Global", value: `${finalScore}%`, icon: Target, color: "text-warning", bg: "bg-warning/10" },
+            { label: "Nivel Asignado", value: levelReached, icon: Award, color: "text-sena-green", bg: "bg-sena-green/10" },
+            { label: "Tiempo Total", value: duration, icon: Clock, color: "text-sena-blue", bg: "bg-sena-blue/10" },
+            { label: "Preguntas Evaluadas", value: `${totalQuestions}`, icon: FileCheck, color: "text-purple-600", bg: "bg-purple-100" },
           ].map((stat, index) => (
             <motion.div
               key={index}
@@ -330,7 +390,7 @@ export function ResultsPage() {
               className="bg-white rounded-2xl p-5 border border-border shadow-lg"
             >
               <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center mb-3`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                <stat.icon className={`w-5 h-5 ${stat.color}`} strokeWidth={1.8} />
               </div>
               <p className="text-2xl font-bold text-foreground">{stat.value}</p>
               <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -346,7 +406,7 @@ export function ResultsPage() {
           className="bg-white rounded-2xl p-6 border border-border shadow-lg mb-8"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Layers className="w-5 h-5 text-sena-green" />
+            <Layers className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
             <h3 className="font-semibold text-lg text-foreground">Progresión por Niveles Marco CEFR (A1 → B2)</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-6">
@@ -419,7 +479,7 @@ export function ResultsPage() {
           className="bg-white rounded-2xl p-6 border border-border shadow-lg mb-8"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-sena-blue" />
+            <Sparkles className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
             <h3 className="font-semibold text-lg text-foreground">Desempeño por Competencias Lingüísticas</h3>
           </div>
 
@@ -441,7 +501,7 @@ export function ResultsPage() {
               return (
                 <div key={comp.name} className="p-4 rounded-xl border border-border bg-muted/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <CompIcon className="w-4 h-4 text-muted-foreground" />
+                    <CompIcon className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                     <span className="font-medium text-sm text-foreground">{comp.name}</span>
                   </div>
                   <p className={`text-2xl font-bold ${colorClass} mb-2`}>{comp.score}%</p>
@@ -465,60 +525,64 @@ export function ResultsPage() {
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
-            Resumen y Feedback
+            Confirmación y Estado
           </button>
           <button
-            onClick={() => setActiveTab("vocabulary")}
+            onClick={() => setActiveTab("history")}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all inline-flex items-center gap-1.5 ${
-              activeTab === "vocabulary"
+              activeTab === "history"
                 ? "bg-sena-green text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
-            <BookMarked className="w-3.5 h-3.5" />
-            Vocabulario ADSO ({masteredTerms.length + reinforceTerms.length})
+            <History className="w-3.5 h-3.5" strokeWidth={1.8} />
+            Historial de Pruebas ({pastTests.length})
           </button>
-          <button
-            onClick={() => setActiveTab("review")}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              activeTab === "review"
-                ? "bg-sena-green text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
-          >
-            Revisión de Preguntas ({answers.length})
-          </button>
-          {speakingAnswers.length > 0 && (
-            <button
-              onClick={() => setActiveTab("speaking")}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all inline-flex items-center gap-1.5 ${
-                activeTab === "speaking"
-                  ? "bg-sena-green text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
-              <Mic className="w-3.5 h-3.5" />
-              Audios Speaking ({speakingAnswers.length})
-            </button>
-          )}
-          {writingAnswers.length > 0 && (
-            <button
-              onClick={() => setActiveTab("writing")}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all inline-flex items-center gap-1.5 ${
-                activeTab === "writing"
-                  ? "bg-sena-green text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
-              <PenTool className="w-3.5 h-3.5" />
-              Escritura / Writing ({writingAnswers.length})
-            </button>
-          )}
         </div>
 
         {/* Tab 1: Resumen y Feedback */}
         {activeTab === "summary" && (
           <div className="space-y-6">
+            {/* Confirmación Oficial de Entrega */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl p-6 border border-border shadow-lg"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-sena-green/10 flex items-center justify-center flex-shrink-0 text-sena-green">
+                    <CheckCircle className="w-6 h-6" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground text-base mb-1">
+                      Evaluación enviada con éxito
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Tu prueba adaptativa ha sido completada y almacenada de forma segura. La auditoría completa de tus respuestas y el seguimiento pedagógico están disponibles en la sección <strong>Historial de Pruebas</strong> de tu Dashboard y para consulta de tu Instructor.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex sm:flex-col gap-2 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/dashboard?tab=overview&sub=stats")}
+                    className="px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  >
+                    <History className="w-3.5 h-3.5" strokeWidth={1.8} />
+                    <span>Ver en Historial</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/dashboard")}
+                    className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground font-semibold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  >
+                    <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
+                    <span>Ir al Dashboard</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
             {/* Feedback Automático */}
             {autoFeedback && (
               <motion.div
@@ -528,7 +592,7 @@ export function ResultsPage() {
               >
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-sena-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="w-6 h-6 text-sena-blue" />
+                    <MessageSquare className="w-6 h-6 text-sena-blue" strokeWidth={1.8} />
                   </div>
                   <div>
                     <h4 className="font-semibold text-foreground mb-1">
@@ -547,6 +611,66 @@ export function ResultsPage() {
               </motion.div>
             )}
 
+            {/* Retroalimentación del Instructor */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl p-6 border border-border shadow-xs space-y-4"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-sena-green/10 flex items-center justify-center text-sena-green">
+                    <MessageSquare className="w-5 h-5" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground text-sm">
+                      Retroalimentación del Instructor
+                    </h4>
+                    <p className="text-xs text-muted-foreground">Observaciones pedagógicas del docente</p>
+                  </div>
+                </div>
+                {isInstructor && (
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sena-green/10 text-sena-green">
+                    Rol Instructor
+                  </span>
+                )}
+              </div>
+
+              {isInstructor && lastTestResult?.id ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={instructorDraft}
+                    onChange={(e) => setInstructorDraft(e.target.value)}
+                    placeholder="Escribe tus observaciones y recomendaciones pedagógicas para el aprendiz..."
+                    rows={3}
+                    className="w-full text-xs p-3 bg-muted/30 rounded-xl border border-border focus:ring-2 focus:ring-sena-green/40 focus:outline-none resize-none transition-all placeholder:text-muted-foreground"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveInstructorFeedback}
+                      disabled={isSavingFeedback}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-sena-green hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>{isSavingFeedback ? "Guardando..." : "Guardar Retroalimentación"}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : currentInstructorFeedback ? (
+                <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line bg-muted/20 p-3.5 rounded-xl border border-border/60">
+                  {currentInstructorFeedback}
+                </p>
+              ) : (
+                <div className="py-4 px-4 bg-muted/20 rounded-xl border border-dashed border-border/70 flex items-center gap-3 text-muted-foreground">
+                  <Clock className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={1.8} />
+                  <p className="text-xs">
+                    Pendiente de retroalimentación por parte del instructor asignado.
+                  </p>
+                </div>
+              )}
+            </motion.div>
+
             {/* Vocabulario Técnico ADSO: Términos Dominados y para Reforzar */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
@@ -556,14 +680,14 @@ export function ResultsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-sena-green/10 flex items-center justify-center">
-                    <BookMarked className="w-5 h-5 text-sena-green" />
+                    <BookMarked className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground text-base">
-                      Vocabulario Técnico ADSO de la Evaluación
+                      Vocabulario Técnico ({activeProgram}) de la Evaluación
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Términos de software evaluados adaptativamente según el Diccionario Activo
+                      Términos técnicos evaluados adaptativamente según el Diccionario Activo
                     </p>
                   </div>
                 </div>
@@ -572,9 +696,9 @@ export function ResultsPage() {
                   onClick={() => navigate("/dashboard?tab=study")}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sena-blue/10 text-sena-blue rounded-xl text-xs font-semibold hover:bg-sena-blue/20 transition-all self-start sm:self-center"
                 >
-                  <GraduationCap className="w-4 h-4" />
+                  <GraduationCap className="w-4 h-4" strokeWidth={1.8} />
                   Ir al Espacio de Estudio
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.8} />
                 </button>
               </div>
 
@@ -583,7 +707,7 @@ export function ResultsPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-sena-green" />
+                      <CheckCircle className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
                       Términos Dominados ({masteredTerms.length})
                     </span>
                     <span className="text-xs bg-sena-green/10 text-sena-green font-medium px-2 py-0.5 rounded-full">
@@ -606,7 +730,7 @@ export function ResultsPage() {
                             className="p-0.5 text-muted-foreground hover:text-sena-green transition-colors"
                             title={`Escuchar pronunciación de ${term}`}
                           >
-                            <Volume2 className={`w-3.5 h-3.5 ${playingTerm === term ? "text-sena-green animate-pulse" : ""}`} />
+                            <Volume2 className={`w-3.5 h-3.5 ${playingTerm === term ? "text-sena-green animate-pulse" : ""}`} strokeWidth={1.8} />
                           </button>
                         </div>
                       ))}
@@ -622,7 +746,7 @@ export function ResultsPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <Target className="w-4 h-4 text-amber-600" />
+                      <Target className="w-4 h-4 text-amber-600" strokeWidth={1.8} />
                       Términos Recomendados para Reforzar ({reinforceTerms.length})
                     </span>
                     <span className="text-xs bg-amber-500/10 text-amber-700 font-medium px-2 py-0.5 rounded-full">
@@ -651,7 +775,7 @@ export function ResultsPage() {
                                 className="px-2 py-1 rounded-lg bg-white border border-amber-500/30 text-amber-800 hover:bg-amber-100/50 transition-colors inline-flex items-center gap-1"
                                 title="Escuchar pronunciación"
                               >
-                                <Volume2 className={`w-3 h-3 ${playingTerm === rf.wordId ? "text-amber-600 animate-pulse" : ""}`} />
+                                <Volume2 className={`w-3 h-3 ${playingTerm === rf.wordId ? "text-amber-600 animate-pulse" : ""}`} strokeWidth={1.8} />
                                 Audio
                               </button>
                               <button
@@ -672,7 +796,7 @@ export function ResultsPage() {
                     </div>
                   ) : (
                     <div className="p-4 rounded-xl bg-sena-green/10 border border-sena-green/30 text-center">
-                      <CheckCircle className="w-8 h-8 text-sena-green mx-auto mb-1" />
+                      <CheckCircle className="w-8 h-8 text-sena-green mx-auto mb-1" strokeWidth={1.8} />
                       <p className="text-xs font-semibold text-sena-green">
                         ¡Felicitaciones! Has dominado todos los términos evaluados.
                       </p>
@@ -688,8 +812,8 @@ export function ResultsPage() {
               <div className="mt-5 p-4 rounded-xl bg-gradient-to-r from-sena-blue/10 via-sena-blue/5 to-transparent border border-sena-blue/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4 text-sena-blue" />
-                    Espacio de Estudio ADSO Disponible
+                    <GraduationCap className="w-4 h-4 text-sena-blue" strokeWidth={1.8} />
+                    Espacio de Estudio ({activeProgram}) Disponible
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     Accede al glosario de 32 términos técnicos organizados por niveles A1-B2 con práctica de pronunciación por voz.
@@ -759,7 +883,7 @@ export function ResultsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
               <div>
                 <h3 className="font-semibold text-foreground">
-                  Glosario ADSO Evaluado en esta Prueba
+                  Glosario de {activeProgram} Evaluado en esta Prueba
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   Revisa tu dominio del vocabulario y reproduce la pronunciación oficial de cada concepto
@@ -809,7 +933,7 @@ export function ResultsPage() {
                         onClick={() => handlePlayPronunciation(rf.wordId, rf.audioUrl)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground text-xs font-medium transition-colors"
                       >
-                        <Volume2 className={`w-3.5 h-3.5 text-sena-blue ${playingTerm === rf.wordId ? "animate-pulse" : ""}`} />
+                        <Volume2 className={`w-3.5 h-3.5 text-sena-blue ${playingTerm === rf.wordId ? "animate-pulse" : ""}`} strokeWidth={1.8} />
                         Pronunciación
                       </button>
                       <button
@@ -817,8 +941,8 @@ export function ResultsPage() {
                         onClick={() => navigate(`/dashboard?tab=study&term=${encodeURIComponent(rf.wordId)}`)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-sena-green text-white text-xs font-semibold hover:bg-sena-green-dark transition-colors shadow-sm"
                       >
-                        Estudiar en ADSO
-                        <ArrowRight className="w-3 h-3" />
+                        Estudiar en Vocabulario
+                        <ArrowRight className="w-3 h-3" strokeWidth={1.8} />
                       </button>
                     </div>
                   </div>
@@ -835,11 +959,11 @@ export function ResultsPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-foreground text-base">{term}</span>
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-sena-green/10 text-sena-green font-semibold border border-sena-green/20">
-                          ADSO
+                          {activeProgram}
                         </span>
                       </div>
                       <span className="text-xs px-2.5 py-0.5 rounded-full bg-sena-green/10 text-sena-green font-medium flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
+                        <CheckCircle className="w-3 h-3" strokeWidth={1.8} />
                         Dominado
                       </span>
                     </div>
@@ -854,7 +978,7 @@ export function ResultsPage() {
                         onClick={() => handlePlayPronunciation(term)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground text-xs font-medium transition-colors"
                       >
-                        <Volume2 className={`w-3.5 h-3.5 text-sena-green ${playingTerm === term ? "animate-pulse" : ""}`} />
+                        <Volume2 className={`w-3.5 h-3.5 text-sena-green ${playingTerm === term ? "animate-pulse" : ""}`} strokeWidth={1.8} />
                         Pronunciación
                       </button>
                       <button
@@ -863,7 +987,7 @@ export function ResultsPage() {
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
                       >
                         Ver en glosario
-                        <ArrowRight className="w-3 h-3" />
+                        <ArrowRight className="w-3 h-3" strokeWidth={1.8} />
                       </button>
                     </div>
                   </div>
@@ -912,9 +1036,9 @@ export function ResultsPage() {
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="flex items-center gap-2">
                         {item.isCorrect ? (
-                          <CheckCircle className="w-5 h-5 text-sena-green flex-shrink-0" />
+                          <CheckCircle className="w-5 h-5 text-sena-green flex-shrink-0" strokeWidth={1.8} />
                         ) : (
-                          <XCircle className="w-5 h-5 text-destructive flex-shrink-0" />
+                          <XCircle className="w-5 h-5 text-destructive flex-shrink-0" strokeWidth={1.8} />
                         )}
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white border border-border">
                           {item.level || "CEFR"} • {item.competency || item.category}
@@ -926,6 +1050,59 @@ export function ResultsPage() {
                     </div>
 
                     <p className="text-sm font-medium text-foreground mb-2">{item.question}</p>
+
+                    {/* Desglose de Opciones y Justificación Pedagógica para Selección Múltiple y Listening */}
+                    {item.options && item.options.length > 0 && (
+                      <div className="space-y-2 mt-2 mb-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {item.options.map((opt, optIdx) => {
+                            const isChosen = item.userAnswer === optIdx;
+                            const isAnswerCorrect = item.correctAnswer === optIdx;
+                            let style = "bg-muted/40 border-border text-muted-foreground";
+                            if (isAnswerCorrect) {
+                              style = "bg-emerald-50 border-emerald-400 text-emerald-900 font-semibold";
+                            } else if (isChosen && !item.isCorrect) {
+                              style = "bg-rose-50 border-rose-400 text-rose-900 font-semibold";
+                            }
+                            return (
+                              <div
+                                key={optIdx}
+                                className={`p-2.5 rounded-lg border flex items-center justify-between gap-2 ${style}`}
+                              >
+                                <span className="truncate">
+                                  <strong>{String.fromCharCode(65 + optIdx)}.</strong> {opt}
+                                </span>
+                                {isAnswerCorrect && (
+                                  <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                                    Respuesta Correcta
+                                  </span>
+                                )}
+                                {isChosen && !isAnswerCorrect && (
+                                  <span className="text-[10px] bg-rose-600 text-white px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                                    Tu Selección
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Justificación pedagógica / Razón técnica */}
+                        <div className="p-3 bg-white/90 rounded-xl border border-slate-200 text-xs mt-2">
+                          <p className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
+                            <Sparkles className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
+                            <span>Justificación Pedagógica:</span>
+                          </p>
+                          <p className="text-slate-600 leading-relaxed">
+                            {item.definition
+                              ? `Concepto técnico evaluado: "${item.definition}". La opción correcta se ajusta con exactitud a esta definición técnica.`
+                              : item.isCorrect
+                              ? "¡Excelente! La opción que seleccionaste satisface las reglas morfosintácticas y la convención técnica esperada por el estándar internacional de inglés SENA."
+                              : `La opción seleccionada no cumple con la regla o contexto requerido. La opción correcta es "${item.options[item.correctAnswer ?? 0]}" por precisión conceptual y coherencia gramatical.`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {item.writingAnswer && (
                       <div className="p-3 bg-white rounded-lg border border-border text-xs mb-2">
@@ -969,7 +1146,7 @@ export function ResultsPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-sena-green/10 flex items-center justify-center">
-                      <Mic className="w-4 h-4 text-sena-green" />
+                      <Mic className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
                     </div>
                     <div>
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted">
@@ -988,7 +1165,7 @@ export function ResultsPage() {
                 {spk.audioUrl ? (
                   <div className="bg-muted/40 p-3 rounded-xl">
                     <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                      <Volume2 className="w-3.5 h-3.5 text-sena-green" />
+                      <Volume2 className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
                       Reproductor de Audio (Proxy Django / MinIO):
                     </p>
                     <audio
@@ -1020,7 +1197,7 @@ export function ResultsPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-sena-blue/10 flex items-center justify-center">
-                      <PenTool className="w-4 h-4 text-sena-blue" />
+                      <PenTool className="w-4 h-4 text-sena-blue" strokeWidth={1.8} />
                     </div>
                     <div>
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted">
@@ -1056,6 +1233,80 @@ export function ResultsPage() {
           </div>
         )}
 
+        {/* Tab 5: Historial Consolidado de Pruebas Anteriores */}
+        {activeTab === "history" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="font-semibold text-foreground text-base">Historial Consolidado de Evaluaciones</h3>
+                <p className="text-xs text-muted-foreground">Registro de todas las pruebas de nivel y evolución de competencias</p>
+              </div>
+            </div>
+
+            {pastTests.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pastTests.map((test) => (
+                  <div key={test.id} className="bg-white rounded-2xl border border-border p-5 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        test.level.startsWith("B2")
+                          ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                          : test.level.startsWith("B1")
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : test.level.startsWith("A2")
+                          ? "bg-teal-50 text-teal-700 border border-teal-200"
+                          : test.level.includes("Sin Nivel")
+                          ? "bg-slate-100 text-slate-600 border border-slate-200"
+                          : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      }`}>
+                        Nivel: {test.level}
+                      </span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" strokeWidth={1.8} />
+                        {new Date(test.completedAt).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-2xl font-black text-foreground">{test.score}%</p>
+                        <p className="text-xs text-muted-foreground">
+                          {test.correctAnswers}/{test.totalQuestions} respuestas correctas
+                        </p>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground">
+                        <p className="flex items-center gap-1 justify-end">
+                          <Clock className="w-3.5 h-3.5" strokeWidth={1.8} />
+                          <span>{test.duration || "N/A"}</span>
+                        </p>
+                        <p className={`mt-1 font-semibold ${test.passed ? "text-sena-green" : "text-amber-600"}`}>
+                          {test.passed ? "✓ Suficiencia Aprobada" : "En Desarrollo"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {test.feedback ? (
+                      <div className="p-3 bg-muted/40 rounded-xl text-xs text-muted-foreground border border-border/50">
+                        <p className="font-semibold text-slate-800 mb-0.5">Observación del instructor:</p>
+                        <p className="line-clamp-2">{test.feedback}</p>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-muted/20 rounded-xl text-xs text-muted-foreground border border-dashed border-border/50 flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={1.8} />
+                        <span>Pendiente de retroalimentación por parte del instructor asignado.</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center bg-white rounded-2xl border border-border text-muted-foreground text-sm">
+                No se registran otras pruebas históricas para este aprendiz en el sistema.
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1070,7 +1321,7 @@ export function ResultsPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Download className="w-5 h-5" />
+            <Download className="w-5 h-5" strokeWidth={1.8} />
             Certificado no disponible
           </motion.button>
           <motion.button
@@ -1079,7 +1330,7 @@ export function ResultsPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <RotateCcw className="w-5 h-5" />
+            <RotateCcw className="w-5 h-5" strokeWidth={1.8} />
             Hacer otra Prueba
           </motion.button>
           <motion.button
@@ -1088,7 +1339,7 @@ export function ResultsPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Home className="w-5 h-5" />
+            <Home className="w-5 h-5" strokeWidth={1.8} />
             Volver al Dashboard
           </motion.button>
         </motion.div>

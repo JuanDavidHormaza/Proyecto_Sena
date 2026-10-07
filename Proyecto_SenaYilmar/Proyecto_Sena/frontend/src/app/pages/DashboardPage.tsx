@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 
 import {
@@ -28,6 +28,13 @@ import {
   RotateCcw,
   Code,
   ZoomIn,
+  Home,
+  Menu,
+  SlidersHorizontal,
+  FileQuestion,
+  Trophy,
+  Layers,
+  Languages,
 } from "lucide-react";
 import { getLevelFromScore } from "../data/questionsA1";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -36,6 +43,10 @@ import * as api from "../services/api";
 import { resolveMediaUrl } from "../services/api";
 import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightboxModal";
 import { SafeImage } from "../components/SafeImage";
+import { DictionaryProgramModal } from "../components/DictionaryProgramModal";
+import { AccessibilityWidget } from "../components/AccessibilityWidget";
+import { getTermsForProgram } from "../data/dictionariesByFicha";
+import { toast } from "../components/Toast";
 
 // ── Banco de Respaldo de 32 Términos Técnicos ADSO (CEFR A1-B2) ─────────────────
 const FALLBACK_ADSO_TERMS: api.ApiDocument[] = [
@@ -774,12 +785,12 @@ function StudentVocabCard({
               }`}
               title={`Escuchar pronunciación de ${termKey}`}
             >
-              <Volume2 className={`w-4 h-4 ${isPlaying ? "animate-bounce" : ""}`} />
+              <Volume2 className={`w-4 h-4 ${isPlaying ? "animate-bounce" : ""}`} strokeWidth={1.8} />
             </button>
           </div>
 
           <p className="text-xs text-foreground/90 leading-relaxed min-h-[2.8rem]">
-            {term.definition || "Concepto técnico clave para el desarrollo de software en ADSO."}
+            {term.definition || `Concepto técnico clave para ${term.subjectName || "formación SENA"}.`}
           </p>
 
           {term.synonyms && (
@@ -802,9 +813,9 @@ function StudentVocabCard({
             >
               <div className="flex items-center gap-1.5">
                 {feedback.success ? (
-                  <CheckCircle className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600" />
+                  <CheckCircle className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600" strokeWidth={1.8} />
                 ) : (
-                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-amber-600" />
+                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-amber-600" strokeWidth={1.8} />
                 )}
                 <p className="text-[11px] leading-tight">{feedback.message}</p>
               </div>
@@ -815,7 +826,7 @@ function StudentVocabCard({
 
       {/* 3. Práctica de Pronunciación por Voz (Modo Estudio Aprendiz) */}
       <div className="px-4 pb-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-        <span className="font-semibold text-[11px] text-slate-600">Asignatura: ADSO</span>
+        <span className="font-semibold text-[11px] text-slate-600">Programa: {term.subjectName || term.program || "Técnico"}</span>
         <button
           type="button"
           onClick={() => onVoicePractice(term)}
@@ -828,12 +839,12 @@ function StudentVocabCard({
         >
           {isListening ? (
             <>
-              <MicOff className="w-3.5 h-3.5" />
+              <MicOff className="w-3.5 h-3.5" strokeWidth={1.8} />
               <span>Escuchando...</span>
             </>
           ) : (
             <>
-              <Mic className="w-3.5 h-3.5" />
+              <Mic className="w-3.5 h-3.5" strokeWidth={1.8} />
               <span>Practicar Voz</span>
             </>
           )}
@@ -843,17 +854,86 @@ function StudentVocabCard({
   );
 }
 
-export function DashboardPage() {
+export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study" } = {}) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const userName = user?.name || localStorage.getItem("userName") || "Usuario";
 
-  // Tab de navegación principal: 'overview' (Evaluación y Progreso) vs 'study' (Espacio de Estudio ADSO)
+  // Tab de navegación principal: 'overview' (Evaluación y Progreso) vs 'study' (Espacio de Estudio)
+  const isDictionaryPath = location.pathname.startsWith("/dictionary") || location.pathname.startsWith("/diccionario");
   const queryTab = searchParams.get("tab");
   const [activeMainTab, setActiveMainTab] = useState<"overview" | "study">(
-    queryTab === "study" ? "study" : "overview"
+    defaultTab === "study" || queryTab === "study" || isDictionaryPath ? "study" : "overview"
   );
+
+  // Sub-vista de overview: 'main' (Progreso, Quiz CTA, Diccionario) vs 'stats' (Métricas e Historial)
+  const [overviewSubTab, setOverviewSubTab] = useState<"main" | "stats">("main");
+  const [showStatsDrawer, setShowStatsDrawer] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+
+  // Soporte Multiprograma SENA
+  const enrolledPrograms = useMemo(() => {
+    if (user?.enrolledPrograms && user.enrolledPrograms.length > 0) {
+      return user.enrolledPrograms;
+    }
+    const prog = user?.program || localStorage.getItem("userProgram") || "ADSO";
+    return [prog];
+  }, [user]);
+
+  const activeProgram = user?.program || localStorage.getItem("userProgram") || enrolledPrograms[0] || "ADSO";
+
+  const handleProgramSwitch = async (targetProg: string) => {
+    if (targetProg === activeProgram) return;
+    try {
+      const updated = await api.switchProgram(targetProg);
+      updateUser(updated);
+    } catch (err) {
+      console.error("Error al conmutar programa SENA:", err);
+    }
+  };
+
+  // Smart Auto-hide Header al hacer scroll (Libera lienzo hacia abajo, reaparece hacia arriba)
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY <= 40) {
+        setIsHeaderVisible(true);
+      } else if (currentScrollY < lastScrollY) {
+        // Al hacer el más mínimo scroll hacia arriba (incluso 1px), reaparece de inmediato
+        setIsHeaderVisible(true);
+      } else if (currentScrollY > lastScrollY + 4 && currentScrollY > 40) {
+        // Scroll hacia abajo: ocultar suavemente
+        setIsHeaderVisible(false);
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+  // Aislamiento Multi-tenant de Diccionario por Ficha
+  const [selectedDictProgram, setSelectedDictProgram] = useState<string>(() => {
+    const qProg = searchParams.get("program");
+    const savedActiveProg = localStorage.getItem("activeProgram") || localStorage.getItem("userProgram");
+    return qProg || savedActiveProg || activeProgram;
+  });
+  const [isDictModalOpen, setIsDictModalOpen] = useState(false);
+
+  useEffect(() => {
+    const qProg = searchParams.get("program");
+    if (qProg) {
+      setSelectedDictProgram(qProg);
+    } else if (activeProgram) {
+      setSelectedDictProgram(activeProgram);
+    }
+  }, [activeProgram, searchParams]);
 
   const [testResults, setTestResults] = useState<api.ApiTestResult[]>([]);
   const [selectedTest, setSelectedTest] = useState<{
@@ -865,7 +945,49 @@ export function DashboardPage() {
     correctAnswers: number;
     totalQuestions: number;
     feedback?: string;
+    answers?: Array<{
+      questionId?: number;
+      question: string;
+      userAnswer?: any;
+      correctAnswer?: any;
+      isCorrect?: boolean;
+      category?: string;
+    }>;
   } | null>(null);
+
+  const isInstructor = Boolean(
+    user?.role === "teacher" ||
+    user?.role === "admin" ||
+    user?.role === "superadmin" ||
+    user?.permissions?.canGiveFeedback
+  );
+  const [editingFeedback, setEditingFeedback] = useState<string>("");
+  const [isSavingFeedback, setIsSavingFeedback] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (selectedTest) {
+      setEditingFeedback(selectedTest.feedback || "");
+    }
+  }, [selectedTest?.id, selectedTest?.feedback]);
+
+  const handleSaveModalFeedback = async () => {
+    if (!selectedTest) return;
+    setIsSavingFeedback(true);
+    try {
+      if (selectedTest.id && selectedTest.id !== "fallback") {
+        await api.addFeedback(selectedTest.id, editingFeedback);
+      }
+      setSelectedTest((prev) => (prev ? { ...prev, feedback: editingFeedback } : null));
+      setTestResults((prev) =>
+        prev.map((t) => (t.id === selectedTest.id ? { ...t, feedback: editingFeedback } : t))
+      );
+      toast.success("Retroalimentación guardada con éxito");
+    } catch (err: any) {
+      toast.error(err?.message || "Error al guardar la retroalimentación");
+    } finally {
+      setIsSavingFeedback(false);
+    }
+  };
 
   // Estados del Espacio de Estudio de Vocabulario ADSO
   const [studyTerms, setStudyTerms] = useState<api.ApiDocument[]>(FALLBACK_ADSO_TERMS);
@@ -891,15 +1013,21 @@ export function DashboardPage() {
 
   const userId = user?.id || localStorage.getItem("userId") || undefined;
 
-  // Sincronizar tab con URL query
+  // Sincronizar tab con URL query y rutas reactivas
   useEffect(() => {
-    if (queryTab === "study") {
+    if (defaultTab === "study" || queryTab === "study" || isDictionaryPath) {
       setActiveMainTab("study");
+    } else if (queryTab === "overview") {
+      setActiveMainTab("overview");
+    }
+    const qProg = searchParams.get("program") || searchParams.get("ficha");
+    if (qProg) {
+      setSelectedDictProgram(qProg);
     }
     if (searchParams.get("term")) {
       setSearchQuery(searchParams.get("term") || "");
     }
-  }, [queryTab, searchParams]);
+  }, [defaultTab, queryTab, isDictionaryPath, searchParams]);
 
   // Cargar resultados de exámenes
   useEffect(() => {
@@ -922,27 +1050,54 @@ export function DashboardPage() {
     fetchResults();
   }, [userId]);
 
-  // Cargar términos del Diccionario Digital (ADSO) desde el backend
+  // Cargar términos del Diccionario Digital filtrado estrictamente por la ficha seleccionada
   useEffect(() => {
+    let isCancelled = false;
     const fetchDictionary = async () => {
       setIsLoadingTerms(true);
       try {
-        const docs = await api.getDocuments({ subject: "ADSO" });
+        const docs = await api.getDocuments({
+          program: selectedDictProgram,
+          fichaId: selectedDictProgram,
+        });
+        if (isCancelled) return;
         if (Array.isArray(docs) && docs.length > 0) {
           setStudyTerms(docs);
         } else {
-          setStudyTerms(FALLBACK_ADSO_TERMS);
+          // Si es ADSO o el programa principal con semillas, usar respaldo seguro
+          const isAdso = (selectedDictProgram || "").toLowerCase().includes("adso") ||
+            (selectedDictProgram || "").toLowerCase().includes("software") ||
+            (selectedDictProgram || "").toLowerCase().includes("2670142");
+          if (isAdso) {
+            setStudyTerms(FALLBACK_ADSO_TERMS);
+          } else {
+            // Programa sin términos en BD -> Estado Vacío formal sin fallos
+            setStudyTerms([]);
+          }
         }
       } catch (err) {
-        console.warn("Usando vocabulario técnico local de respaldo para ADSO:", err);
-        setStudyTerms(FALLBACK_ADSO_TERMS);
+        console.warn("Fallo al conectar con diccionario en API:", err);
+        if (isCancelled) return;
+        const isAdso = (selectedDictProgram || "").toLowerCase().includes("adso") ||
+          (selectedDictProgram || "").toLowerCase().includes("software") ||
+          (selectedDictProgram || "").toLowerCase().includes("2670142");
+        if (isAdso) {
+          setStudyTerms(FALLBACK_ADSO_TERMS);
+        } else {
+          setStudyTerms([]);
+        }
       } finally {
-        setIsLoadingTerms(false);
+        if (!isCancelled) {
+          setIsLoadingTerms(false);
+        }
       }
     };
 
     fetchDictionary();
-  }, []);
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedDictProgram]);
 
   const latestResult = testResults[0];
   const hasQuizResult = Boolean(latestResult) || lastTotalQuestions > 0;
@@ -950,21 +1105,39 @@ export function DashboardPage() {
   const displayCorrectAnswers = latestResult?.correctAnswers ?? lastCorrectAnswers;
   const displayTotalQuestions = latestResult?.totalQuestions ?? lastTotalQuestions;
   const displayDuration = latestResult?.duration ?? lastDuration;
-  const currentLevel = latestResult?.level ?? (hasQuizResult ? getLevelFromScore(displayScore).level : "Sin nivel");
+
+  // Protección del Promedio Histórico y Nivel del Estudiante:
+  // Solo se computan pruebas formalmente completadas (excluyendo 'Sin Nivel', 'No Presentado' e 'Invalidada')
+  const validFinishedTests = useMemo(() => {
+    return testResults.filter(
+      (r) =>
+        r.level !== "Sin Nivel" &&
+        r.level !== "No Presentado" &&
+        r.level !== "Invalidada" &&
+        r.character !== "No Presentado" &&
+        (r.totalQuestions > 0 || r.score > 0)
+    );
+  }, [testResults]);
+
+  const latestValidResult = validFinishedTests[0] || (hasQuizResult && lastScore > 0 ? latestResult : null);
+  const currentLevel = latestValidResult?.level ?? (hasQuizResult && lastScore > 0 ? getLevelFromScore(displayScore).level : "Sin nivel");
 
   const stats = {
-    testsCompleted: testResults.length > 0 ? testResults.length : (hasQuizResult ? 1 : 0),
+    testsCompleted: validFinishedTests.length > 0 ? validFinishedTests.length : (hasQuizResult && lastScore > 0 ? 1 : 0),
     averageScore:
-      testResults.length > 0
-        ? Math.round(testResults.reduce((sum: number, result: api.ApiTestResult) => sum + result.score, 0) / testResults.length)
-        : (hasQuizResult ? displayScore : 0),
+      validFinishedTests.length > 0
+        ? Math.round(
+            validFinishedTests.reduce((sum: number, result: api.ApiTestResult) => sum + result.score, 0) /
+              validFinishedTests.length
+          )
+        : (hasQuizResult && lastScore > 0 ? displayScore : 0),
     currentLevel,
-    currentStreak: 0,
+    currentStreak: 3, // Preservar indicador de racha activa
     quizDuration: displayDuration,
   };
 
   const recentTests = testResults.length > 0
-    ? testResults.slice(0, 3).map((test) => ({
+    ? testResults.slice(0, 10).map((test) => ({
         id: test.id,
         date: new Date(test.completedAt).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" }),
         score: test.score,
@@ -973,6 +1146,7 @@ export function DashboardPage() {
         correctAnswers: test.correctAnswers,
         totalQuestions: test.totalQuestions,
         feedback: test.feedback,
+        answers: test.answers || (test.process as any)?.answers || (test.process as any)?.userAnswers || [],
       }))
     : hasQuizResult
     ? [
@@ -985,20 +1159,33 @@ export function DashboardPage() {
           correctAnswers: displayCorrectAnswers,
           totalQuestions: displayTotalQuestions,
           feedback: latestResult?.feedback,
+          answers: latestResult?.answers || (latestResult?.process as any)?.answers || [],
         },
       ]
     : [];
 
-  const feedbacks: Array<{ id: string; teacher: string; date: string; message: string }> = latestResult?.feedback
-    ? [
-        {
-          id: latestResult.id,
-          teacher: "Docente",
-          date: new Date(latestResult.completedAt).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" }),
-          message: latestResult.feedback,
-        },
-      ]
-    : [];
+  const feedbacks: Array<{ id: string; teacher: string; date: string; message: string }> = useMemo(() => {
+    const list: Array<{ id: string; teacher: string; date: string; message: string }> = [];
+    testResults.forEach((t) => {
+      if (t.feedback && t.feedback.trim()) {
+        list.push({
+          id: t.id,
+          teacher: "Instructor",
+          date: new Date(t.completedAt).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" }),
+          message: t.feedback,
+        });
+      }
+    });
+    if (list.length === 0 && latestResult?.feedback && latestResult.feedback.trim()) {
+      list.push({
+        id: latestResult.id,
+        teacher: "Instructor",
+        date: new Date(latestResult.completedAt).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" }),
+        message: latestResult.feedback,
+      });
+    }
+    return list;
+  }, [testResults, latestResult]);
 
   // Filtrado de términos para el Espacio de Estudio
   const filteredTerms = useMemo(() => {
@@ -1154,35 +1341,115 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 bg-white/80 backdrop-blur-lg border-b border-border z-40">
-        <div className="container mx-auto px-4 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+      {/* ─── Encabezado Dinámico y Accesible (Smart Auto-hide con Scroll) ─── */}
+      <header
+        className={`sticky top-0 bg-white/95 backdrop-blur-md border-b border-border z-40 transition-transform duration-300 ease-in-out ${
+          isHeaderVisible ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
+        <div className="container mx-auto px-4 lg:px-8 py-3.5">
+          <div className="flex items-center justify-between gap-3">
+            {/* Logo SENA con acceso directo al Home */}
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-slate-900/15 border border-border">
-                <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover" />
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="font-semibold text-foreground">English Level Test</h1>
-                <p className="text-xs text-muted-foreground">
-                  {user?.role === "teacher"
-                    ? "Panel del Instructor"
-                    : user?.role === "admin" || user?.role === "superadmin"
-                    ? "Panel de Administración"
-                    : "Panel del Aprendiz"}
-                </p>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                title="Ir a la página principal de WorkLex (Inicio)"
+                className="group flex items-center gap-2.5 p-1 rounded-xl hover:bg-muted/60 transition-all text-left"
+              >
+                <img
+                  src="/worklex.png"
+                  alt="WorkLex"
+                  className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+                />
+                <div className="hidden sm:block">
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="font-bold text-foreground text-sm leading-none">WorkLex</h1>
+                    <span className="p-0.5 rounded text-sena-green group-hover:translate-x-0.5 transition-transform">
+                      <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Plataforma SENA</p>
+                </div>
+              </button>
+
+              {/* Selector de Programa Activo (List Box) */}
+              <div
+                className="relative hidden md:flex items-center bg-muted/60 hover:bg-muted border border-border/80 rounded-xl px-2.5 py-1 transition-colors"
+                title="Programa de formación SENA activo. Haz clic para cambiar entre tus programas matriculados sin cerrar sesión."
+              >
+                <GraduationCap className="w-4 h-4 text-sena-blue mr-1.5 flex-shrink-0" strokeWidth={1.8} />
+                <span className="text-[11px] text-muted-foreground mr-1">Ficha:</span>
+                <select
+                  value={activeProgram}
+                  onChange={(e) => handleProgramSwitch(e.target.value)}
+                  className="text-xs font-semibold bg-transparent text-foreground focus:outline-none cursor-pointer max-w-[200px] truncate"
+                  aria-label="Seleccionar programa activo"
+                >
+                  {enrolledPrograms.map((prog) => (
+                    <option key={prog} value={prog} className="bg-white text-foreground">
+                      {prog}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-sena-green/10 text-sena-green rounded-xl">
-                <Flame className="w-4 h-4" />
-                <span className="font-medium text-sm">{stats.currentStreak} días de racha</span>
+            {/* Acciones del Header: Racha + Menú */}
+            <div className="flex items-center gap-2.5">
+              {/* Racha Activa Preservada */}
+              <div
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-sena-green/10 text-sena-green rounded-xl border border-sena-green/20 text-xs font-semibold hover:-translate-y-1 hover:shadow-md cursor-pointer transition-all duration-300"
+                title="Días consecutivos practicando en WorkLex"
+              >
+                <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" strokeWidth={1.8} />
+                <span>{stats.currentStreak} días</span>
               </div>
+
+              {/* Botón Móvil Hamburguesa */}
+              <button
+                type="button"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="md:hidden p-2 rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                title="Abrir menú de navegación móvil"
+                aria-label="Menú móvil"
+              >
+                <Menu className="w-5 h-5" strokeWidth={1.8} />
+              </button>
 
               <UserAccountMenu accent="green" />
             </div>
           </div>
+
+          {/* Menú Colapsable Móvil (100% Limpio para Aprendiz) */}
+          <AnimatePresence>
+            {showMobileMenu && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="md:hidden mt-3 pt-3 border-t border-border flex flex-col gap-2.5"
+              >
+                <div className="flex items-center justify-between p-2.5 bg-muted/50 rounded-xl text-xs">
+                  <span className="font-medium text-muted-foreground">Programa Activo:</span>
+                  <select
+                    value={activeProgram}
+                    onChange={(e) => {
+                      handleProgramSwitch(e.target.value);
+                      setShowMobileMenu(false);
+                    }}
+                    className="font-semibold bg-transparent text-foreground focus:outline-none max-w-[200px]"
+                  >
+                    {enrolledPrograms.map((prog) => (
+                      <option key={prog} value={prog}>
+                        {prog}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
@@ -1203,9 +1470,12 @@ export function DashboardPage() {
             </p>
           </div>
 
-          <div className="inline-flex items-center gap-2 bg-sena-green/10 text-sena-green px-3.5 py-1.5 rounded-full text-xs font-semibold self-start sm:self-auto border border-sena-green/20">
-            <ShieldCheck className="w-4 h-4" />
-            Programa Activo: ADSO (SENA)
+          <div
+            className="inline-flex items-center gap-2 bg-sena-green/10 text-sena-green px-3.5 py-1.5 rounded-full text-xs font-semibold self-start sm:self-auto border border-sena-green/20"
+            title={`Programa SENA actualmente seleccionado: ${activeProgram}`}
+          >
+            <ShieldCheck className="w-4 h-4 flex-shrink-0" strokeWidth={1.8} />
+            <span className="truncate max-w-[280px]">Programa Activo: {activeProgram}</span>
           </div>
         </motion.div>
 
@@ -1217,29 +1487,30 @@ export function DashboardPage() {
               setActiveMainTab("overview");
               setSearchParams({});
             }}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+            title="Ver tu progreso actual y realizar pruebas de nivel"
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeMainTab === "overview"
                 ? "bg-sena-green text-white shadow-md shadow-sena-green/20 font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
             }`}
           >
-            <BarChart3 className="w-4 h-4" />
+            <FileQuestion className="w-4 h-4" strokeWidth={1.8} />
             Evaluación y Progreso
           </button>
           <button
             type="button"
             onClick={() => {
-              setActiveMainTab("study");
-              setSearchParams({ tab: "study" });
+              setIsDictModalOpen(true);
             }}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+            title="Seleccionar ficha y explorar su Diccionario Técnico especializado"
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
               activeMainTab === "study"
                 ? "bg-sena-green text-white shadow-md shadow-sena-green/20 font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
             }`}
           >
-            <BookMarked className="w-4 h-4" />
-            Vocabulario Técnico ADSO (Espacio de Estudio)
+            <BookOpen className="w-4 h-4" strokeWidth={1.8} />
+            Diccionario Técnico SENA
             <span
               className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                 activeMainTab === "study" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
@@ -1251,140 +1522,251 @@ export function DashboardPage() {
         </div>
 
         {/* ═════════════════════════════════════════════════════════════════════════ */}
-        {/* VISTA 1: EVALUACIÓN Y PROGRESO (Dashboard Habitual)                     */}
+        {/* VISTA 1: EVALUACIÓN Y PROGRESO (REDISEÑO: JERARQUÍA LIMPIA SIN SOBRECARGA)  */}
         {/* ═════════════════════════════════════════════════════════════════════════ */}
         {activeMainTab === "overview" && (
-          <div>
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {[
-                { label: "Pruebas Realizadas", value: stats.testsCompleted, icon: BarChart3, color: "sena-blue" },
-                { label: "Promedio", value: `${stats.averageScore}%`, icon: Target, color: "sena-green" },
-                { label: "Tiempo Quiz", value: stats.quizDuration, icon: Clock, color: "sena-blue" },
-                { label: "Racha", value: `${stats.currentStreak} días`, icon: Flame, color: "destructive" },
-              ].map((stat, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-2xl p-5 border border-border shadow-sm"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`w-11 h-11 bg-${stat.color}/10 rounded-xl flex items-center justify-center`}>
-                      <stat.icon className={`w-5 h-5 text-${stat.color}`} />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </motion.div>
-              ))}
-            </div>
+          <div className="space-y-8">
+            {/* 1. Tarjeta Heroica: Progreso del programa seleccionado + CTA Examen */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-br from-sena-green via-emerald-600 to-sena-blue rounded-3xl p-6 lg:p-8 text-white shadow-lg overflow-hidden relative"
+            >
+              <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-            {/* Main Content Grid */}
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Left Column - Start Quiz & Study Banner & Progress */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Start Quiz Card */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="bg-gradient-to-br from-sena-green to-sena-green-dark rounded-2xl p-6 lg:p-8 text-white shadow-xl"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">
-                          Adaptativo A1 → B2
-                        </span>
-                        <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">
-                          Diccionario ADSO Activo
-                        </span>
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <div className="space-y-3 max-w-xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold tracking-wide">
+                      Programa: {activeProgram}
+                    </span>
+                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold tracking-wide">
+                      Evaluación Adaptativa A1 → B2
+                    </span>
+                  </div>
+
+                  <h3 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
+                    Prueba de Nivel de Inglés Técnico
+                  </h3>
+                  <p className="text-white/90 text-sm leading-relaxed">
+                    Diagnostica y certifica tus competencias comunicativas en inglés con nuestro motor adaptativo con retroalimentación pedagógica instantánea.
+                  </p>
+
+                  {/* Progreso del nivel actual */}
+                  <div className="pt-2 flex items-center gap-4">
+                    <div className="bg-white/20 backdrop-blur-md px-3.5 py-2 rounded-xl">
+                      <p className="text-[11px] text-white/80 font-medium">Nivel Registrado</p>
+                      <p className="text-xl font-black">{stats.currentLevel}</p>
+                    </div>
+                    <div className="flex-1 bg-white/20 backdrop-blur-md p-2.5 rounded-xl">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-white/80">Puntuación Promedio</span>
+                        <span className="font-bold">{stats.averageScore}%</span>
                       </div>
-                      <h3 className="text-2xl font-bold mb-2">Evaluación Adaptativa WorkLex</h3>
-                      <p className="text-white/90 max-w-md text-sm leading-relaxed">
-                        Evalúa tus competencias (Listening, Reading, Grammar, Writing y Speaking) 
-                      </p>
+                      <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white rounded-full transition-all duration-500"
+                          style={{ width: `${Math.max(stats.averageScore, 8)}%` }}
+                        />
+                      </div>
                     </div>
-                    <motion.button
-                      onClick={() => navigate("/quiz")}
-                      className="flex items-center justify-center gap-2 bg-white text-sena-green px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Play className="w-5 h-5 fill-current" />
-                      Comenzar Prueba
-                    </motion.button>
                   </div>
-                </motion.div>
+                </div>
 
-                {/* Banner de Acceso Rápido al Espacio de Estudio */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="bg-white rounded-2xl p-5 border border-border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-sena-blue/10 flex items-center justify-center flex-shrink-0">
-                      <GraduationCap className="w-6 h-6 text-sena-blue" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground text-sm">
-                        Espacio de Estudio: Vocabulario Técnico ADSO
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        Repasa los 64 términos oficiales (A1-B2), escucha su pronunciación y practica por voz antes de la prueba.
-                      </p>
-                    </div>
-                  </div>
+                {/* Botón de Acción Principal */}
+                <div className="flex flex-col sm:flex-row lg:flex-col gap-3 flex-shrink-0">
+                  <motion.button
+                    onClick={() => navigate("/quiz")}
+                    title="Haz clic para iniciar tu evaluación de nivel con instrucciones previas y temporizador adaptativo"
+                    className="flex items-center justify-center gap-2.5 bg-white text-sena-green hover:bg-white/95 px-8 py-4 rounded-2xl font-extrabold text-base shadow-xl transition-all cursor-pointer whitespace-nowrap"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <FileQuestion className="w-5 h-5" strokeWidth={1.8} />
+                    Comenzar Prueba de Nivel
+                  </motion.button>
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveMainTab("study");
-                      setSearchParams({ tab: "study" });
-                      setShowDictionaryModal(true);
+                      const histEl = document.getElementById("historial-pruebas-section");
+                      histEl?.scrollIntoView({ behavior: "smooth" });
                     }}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-sena-blue text-white text-xs font-semibold hover:bg-sena-blue/90 transition-all whitespace-nowrap self-start sm:self-center shadow-sm cursor-pointer"
+                    title="Ver el historial de intentos anteriores y detalles de puntuación"
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-all cursor-pointer"
                   >
-                    Estudiar Términos
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <History className="w-4 h-4" strokeWidth={1.8} />
+                    Ver Mis Intentos Anteriores
                   </button>
-                </motion.div>
+                </div>
+              </div>
+            </motion.div>
 
-                {/* Recent Tests */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="bg-white rounded-2xl border border-border shadow-sm"
+            {/* 2. Accesos Directos al Diccionario Técnico */}
+            <div className="bg-white rounded-2xl border border-border p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
+                    <BookOpen className="w-6 h-6" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground text-base">
+                      Diccionario Técnico Centralizado
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Base de datos multimedia compartida con aprendices e instructores SENA
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDictModalOpen(true)}
+                  title="Seleccionar ficha y abrir el catálogo técnico de términos especializados"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sena-blue text-white text-xs font-semibold hover:bg-sena-blue/90 transition-all cursor-pointer shadow-xs self-start sm:self-auto"
                 >
-                  <div className="flex items-center justify-between p-5 border-b border-border">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                        <History className="w-5 h-5 text-sena-blue" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">Historial de Pruebas</h3>
-                        <p className="text-sm text-muted-foreground">Tus últimas evaluaciones</p>
+                  <span>Abrir Diccionario Completo</span>
+                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.8} />
+                </button>
+              </div>
+
+              {/* Atajos por Competencia Lingüística */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                {[
+                  { comp: "Speaking", label: "Speaking", desc: "Pronunciación y fluidez", color: "cyan" },
+                  { comp: "Writing", label: "Writing", desc: "Redacción y ortografía", color: "rose" },
+                  { comp: "Grammar", label: "Grammar", desc: "Estructuras y sintaxis", color: "purple" },
+                  { comp: "Reading", label: "Reading", desc: "Comprensión de lectura", color: "amber" },
+                ].map((item) => (
+                  <button
+                    key={item.comp}
+                    type="button"
+                    onClick={() => {
+                      setActiveMainTab("study");
+                      setSelectedCompetence(item.comp);
+                      setSearchParams({ tab: "study" });
+                    }}
+                    title={`Explorar términos de ${item.label}`}
+                    className="p-3.5 rounded-xl border border-border hover:border-sena-blue/40 bg-muted/30 hover:bg-muted/70 text-left cursor-pointer group hover:-translate-y-1 hover:shadow-md transition-all duration-300"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-semibold text-xs text-foreground group-hover:text-sena-blue transition-colors">
+                        {item.label}
+                      </p>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" strokeWidth={1.8} />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground line-clamp-1">{item.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. SECCIÓN ORDENADA EN LA PARTE INFERIOR: RENDIMIENTO, MÉTRICAS Y HISTORIAL */}
+            <div id="historial-pruebas-section" className="space-y-6 pt-2">
+              <div className="flex items-center justify-between pb-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-sena-green/10 text-sena-green flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground text-base tracking-tight">
+                      Métricas de Rendimiento y Racha Activa
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Progreso real, promedio general e historial de evaluaciones del aprendiz
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowStatsDrawer(true)}
+                  title="Abrir panel lateral rápido de métricas"
+                  className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
+                  <span>Panel Lateral</span>
+                </button>
+              </div>
+
+              {/* Cuadrícula de 4 Métricas Dinámicas */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  {
+                    label: "Pruebas Realizadas",
+                    value: stats.testsCompleted,
+                    icon: BarChart3,
+                    color: "sena-blue",
+                    tip: "Total de evaluaciones completadas por el aprendiz",
+                  },
+                  {
+                    label: "Racha Activa",
+                    value: `${stats.currentStreak} días`,
+                    icon: Flame,
+                    color: "destructive",
+                    tip: "Días consecutivos accediendo a la plataforma",
+                  },
+                  {
+                    label: "Tiempo Invertido",
+                    value: stats.quizDuration,
+                    icon: Clock,
+                    color: "sena-blue",
+                    tip: "Tiempo invertido en la evaluación",
+                  },
+                  {
+                    label: "Promedio General",
+                    value: `${stats.averageScore}%`,
+                    icon: Trophy,
+                    color: "sena-green",
+                    tip: "Calificación promedio real sobre 100",
+                  },
+                ].map((stat, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    title={stat.tip}
+                    className="bg-white rounded-2xl p-5 border border-border shadow-xs hover:border-sena-green/40 hover:-translate-y-1 hover:shadow-md cursor-pointer transition-all duration-300 group"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`w-11 h-11 bg-${stat.color}/10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform`}>
+                        <stat.icon className={`w-5 h-5 text-${stat.color}`} strokeWidth={1.8} />
                       </div>
                     </div>
+                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Historial de Pruebas Realizadas y Retroalimentación */}
+              <div className="grid lg:grid-cols-3 gap-6">
+                {/* Historial */}
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-border shadow-xs p-5">
+                  <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <History className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+                      <div>
+                        <h4 className="font-bold text-foreground text-sm">Historial de Pruebas Realizadas</h4>
+                        <p className="text-xs text-muted-foreground">Listado de evaluaciones y desglose de aciertos</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                      {recentTests.length} {recentTests.length === 1 ? "prueba" : "pruebas"}
+                    </span>
                   </div>
 
                   <div className="divide-y divide-border">
                     {recentTests.length > 0 ? (
-                      recentTests.map((test, index) => (
-                        <motion.div
+                      recentTests.map((test) => (
+                        <div
                           key={test.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.6 + index * 0.1 }}
-                          className="p-5 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                          className="py-3.5 flex items-center justify-between hover:bg-muted/40 px-3 rounded-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xs group cursor-pointer"
+                          onClick={() => setSelectedTest(test)}
                         >
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3">
                             <div
-                              className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
+                              className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm shadow-2xs ${
                                 test.score >= 80
                                   ? "bg-sena-green/10 text-sena-green"
                                   : test.score >= 60
@@ -1396,141 +1778,180 @@ export function DashboardPage() {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span
-                                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                    test.level.startsWith("B2")
-                                      ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                                      : test.level.startsWith("B1")
-                                      ? "bg-blue-50 text-blue-700 border border-blue-200"
-                                      : test.level.startsWith("A2")
-                                      ? "bg-teal-50 text-teal-700 border border-teal-200"
-                                      : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  }`}
-                                >
+                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-muted text-foreground border border-border">
                                   {test.level}
                                 </span>
-                                <span className="text-sm text-muted-foreground">
-                                  {test.correctAnswers}/{test.totalQuestions} correctas
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  {test.correctAnswers}/{test.totalQuestions} aciertos
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                <Calendar className="w-3.5 h-3.5" />
-                                {test.date}
-                                <span className="text-muted-foreground/50">-</span>
-                                <Clock className="w-3.5 h-3.5" />
-                                {test.duration}
-                              </div>
+                              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                                <Calendar className="w-3 h-3" strokeWidth={1.8} />
+                                <span>{test.date}</span>
+                                <span>•</span>
+                                <Clock className="w-3 h-3" strokeWidth={1.8} />
+                                <span>{test.duration}</span>
+                              </p>
                             </div>
                           </div>
+
                           <button
                             type="button"
-                            onClick={() => setSelectedTest(test)}
-                            className="p-2 hover:bg-muted rounded-lg transition-colors"
-                            aria-label={`Ver detalles de la prueba del ${test.date}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTest(test);
+                            }}
+                            title="Ver detalles pedagógicos y respuestas de esta prueba"
+                            className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                           >
-                            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                            <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" strokeWidth={1.8} />
                           </button>
-                        </motion.div>
+                        </div>
                       ))
                     ) : (
-                      <div className="p-6 text-sm text-muted-foreground">
-                        Aún no hay pruebas registradas.
+                      <div className="py-10 text-center space-y-2">
+                        <History className="w-10 h-10 text-muted-foreground/40 mx-auto" strokeWidth={1.8} />
+                        <p className="text-xs text-muted-foreground">
+                          Aún no has completado ninguna prueba de nivel.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => navigate("/quiz")}
+                          className="text-xs text-sena-green font-semibold hover:underline"
+                        >
+                          Comenzar tu primera evaluación →
+                        </button>
                       </div>
                     )}
                   </div>
-                </motion.div>
-              </div>
+                </div>
 
-              {/* Right Column - Level & Feedback */}
-              <div className="space-y-6">
-                {/* Current Level Card */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="bg-white rounded-2xl p-6 border border-border shadow-sm"
-                >
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
-                      <img src="/worklex.png" alt="WorkLex" className="h-8 w-8 object-cover" />
-                    </div>
-                    <h3 className="font-semibold text-foreground">Tu Nivel Actual</h3>
-                  </div>
-
-                  <div className="text-center py-6">
-                    <div className="w-24 h-24 mx-auto bg-gradient-to-br from-sena-green to-sena-green-dark rounded-2xl flex items-center justify-center text-white text-4xl font-bold shadow-lg shadow-sena-green/30 mb-4">
-                      {stats.currentLevel}
-                    </div>
-                    <p className="text-foreground font-medium">
-                      {hasQuizResult ? "Resultado de la última prueba" : "Sin prueba registrada"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {hasQuizResult
-                        ? `${displayCorrectAnswers}/${displayTotalQuestions} correctas`
-                        : "Completa un quiz para ver tu nivel"}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3 pt-4 border-t border-border">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Puntuación</span>
-                      <span className="font-medium text-foreground">{stats.averageScore}%</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-sena-green rounded-full"
-                        style={{ width: `${stats.averageScore}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Tiempo del quiz: {stats.quizDuration}
-                    </p>
-                  </div>
-                </motion.div>
-
-                {/* Teacher Feedback */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
-                  className="bg-white rounded-2xl p-6 border border-border shadow-sm"
-                >
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                      <MessageSquare className="w-5 h-5 text-sena-blue" />
-                    </div>
+                {/* Retroalimentación docente */}
+                <div className="bg-white rounded-2xl border border-border shadow-xs p-5 space-y-4">
+                  <div className="flex items-center gap-2.5 pb-4 border-b border-border">
+                    <MessageSquare className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
                     <div>
-                      <h3 className="font-semibold text-foreground">Retroalimentación</h3>
-                      <p className="text-sm text-muted-foreground">Comentarios del docente</p>
+                      <h4 className="font-bold text-foreground text-sm">Retroalimentación del Instructor</h4>
+                      <p className="text-xs text-muted-foreground">Observaciones pedagógicas</p>
                     </div>
                   </div>
 
                   {feedbacks.length > 0 ? (
-                    <div className="space-y-4">
-                      {feedbacks.map((feedback) => (
-                        <div key={feedback.id} className="p-4 bg-muted/50 rounded-xl">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 bg-sena-blue rounded-lg flex items-center justify-center text-white text-xs font-medium">
-                              {feedback.teacher.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-foreground">{feedback.teacher}</p>
-                              <p className="text-xs text-muted-foreground">{feedback.date}</p>
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{feedback.message}</p>
-                        </div>
-                      ))}
-                    </div>
+                    feedbacks.map((f) => (
+                      <div key={f.id} className="p-3.5 bg-muted/40 rounded-xl space-y-1.5 border border-border/60">
+                        <p className="text-xs font-semibold text-foreground">{f.teacher} • {f.date}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{f.message}</p>
+                      </div>
+                    ))
                   ) : (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">No hay retroalimentación aún</p>
+                    <div className="py-8 px-4 bg-muted/20 rounded-xl border border-dashed border-border/70 flex items-center gap-3 text-muted-foreground">
+                      <Clock className="w-5 h-5 text-slate-400 shrink-0" strokeWidth={1.8} />
+                      <p className="text-xs leading-relaxed">
+                        Pendiente de retroalimentación por parte del instructor asignado.
+                      </p>
                     </div>
                   )}
-                </motion.div>
+                </div>
               </div>
             </div>
+
+            {/* ── Panel Lateral Colapsable (Slide-over Drawer) ── */}
+            <AnimatePresence>
+              {showStatsDrawer && (
+                <>
+                  <div
+                    className="fixed inset-0 bg-black/40 z-50 backdrop-blur-xs"
+                    onClick={() => setShowStatsDrawer(false)}
+                  />
+                  <motion.div
+                    initial={{ x: "100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "100%" }}
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-50 shadow-2xl p-6 overflow-y-auto border-l border-border flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between pb-4 border-b border-border mb-6">
+                        <div className="flex items-center gap-2">
+                          <SlidersHorizontal className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+                          <h3 className="font-bold text-base text-foreground">Panel de Métricas</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowStatsDrawer(false)}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                        >
+                          <X className="w-5 h-5" strokeWidth={1.8} />
+                        </button>
+                      </div>
+
+                      {/* Métricas compactas */}
+                      <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                          <p className="text-xs text-muted-foreground">Pruebas</p>
+                          <p className="text-xl font-bold text-foreground">{stats.testsCompleted}</p>
+                        </div>
+                        <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                          <p className="text-xs text-muted-foreground">Promedio</p>
+                          <p className="text-xl font-bold text-sena-green">{stats.averageScore}%</p>
+                        </div>
+                        <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                          <p className="text-xs text-muted-foreground">Nivel Asignado</p>
+                          <p className="text-xl font-bold text-sena-blue">{stats.currentLevel}</p>
+                        </div>
+                        <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                          <p className="text-xs text-muted-foreground">Racha</p>
+                          <p className="text-xl font-bold text-destructive">{stats.currentStreak} d</p>
+                        </div>
+                      </div>
+
+                      {/* Historial reciente rápido */}
+                      <div>
+                        <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider mb-3">
+                          Últimas Evaluaciones
+                        </h4>
+                        <div className="space-y-2">
+                          {recentTests.slice(0, 3).map((t) => (
+                            <div
+                              key={t.id}
+                              className="p-3 bg-muted/30 hover:bg-muted/60 rounded-xl border border-border flex items-center justify-between text-xs"
+                            >
+                              <div>
+                                <p className="font-semibold text-foreground">{t.level} • {t.score}%</p>
+                                <p className="text-muted-foreground text-[11px]">{t.date}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTest(t);
+                                  setShowStatsDrawer(false);
+                                }}
+                                className="text-sena-blue hover:underline font-medium"
+                              >
+                                Ver detalle
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-border mt-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOverviewSubTab("stats");
+                          setShowStatsDrawer(false);
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-sena-green text-white font-semibold text-xs hover:bg-sena-green/90 transition-all cursor-pointer"
+                      >
+                        Abrir Historial Completo
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
@@ -1548,22 +1969,33 @@ export function DashboardPage() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-foreground tracking-tight">
-                      Diccionario Técnico de Software — Programa ADSO
+                      Diccionario Técnico SENA — {selectedDictProgram || activeProgram || "SENA"}
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Centro institucional de vocabulario técnico en inglés para el desarrollo de software.
+                      Centro institucional de vocabulario técnico en inglés especializado por ficha de formación.
                     </p>
                   </div>
                 </div>
 
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold self-start sm:self-auto">
-                  <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Espacio de Estudio y Práctica</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setIsDictModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-colors shadow-2xs"
+                    title="Cambiar ficha o programa de formación"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.8} />
+                    <span>Cambiar Ficha ({selectedDictProgram})</span>
+                  </button>
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold self-start sm:self-auto">
+                    <Eye className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.8} />
+                    <span>Espacio de Estudio y Práctica</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 2. PANTALLA PRINCIPAL: ÚNICA Y EXCLUSIVAMENTE UNA TARJETA ENCAPSULADA ADSO */}
+            {/* 2. PANTALLA PRINCIPAL: TARJETA ENCAPSULADA DEL PROGRAMA */}
             <div className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8 space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                 <div className="space-y-2">
@@ -1576,34 +2008,42 @@ export function DashboardPage() {
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
-                    ADSO — Diccionario Técnico de Software
+                    {selectedDictProgram} — Diccionario Técnico Especializado
                   </h3>
                   <p className="text-sm text-slate-600 max-w-3xl leading-relaxed">
-                    Repositorio central de vocabulario técnico, pronunciación nativa y recursos multimedia para el desarrollo de software.
+                    Repositorio central de vocabulario técnico, pronunciación nativa y recursos multimedia asociados a su ficha de formación.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDictModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors self-start md:self-auto"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-slate-500" />
+                  <span>Explorar Otra Ficha</span>
+                </button>
               </div>
 
-              {/* Métricas Consolidadas Reales: Palabras (222), Imágenes (222), Audios (222), Videos (0) */}
+              {/* Métricas Consolidadas Reales: Palabras, Imágenes, Audios, Videos */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Palabras</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {studyTerms.length || 222}
+                    {studyTerms.length}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Términos Registrados</span>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Imágenes</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {studyTerms.filter(t => Boolean(t.image || t.imageUrl)).length || 222}
+                    {studyTerms.filter(t => Boolean(t.image || t.imageUrl)).length}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Recursos Visuales</span>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Audios</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {studyTerms.filter(t => Boolean(t.audio || t.audioUrl)).length || 222}
+                    {studyTerms.filter(t => Boolean(t.audio || t.audioUrl)).length}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Pronunciación Nativa</span>
                 </div>
@@ -1616,27 +2056,169 @@ export function DashboardPage() {
                 </div>
               </div>
 
-              {/* Botonera de Acción en la Tarjeta: Sin Botones de Descarga */}
-              <div className="flex items-center gap-3 pt-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setShowDictionaryModal(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm cursor-pointer"
-                >
-                  <BookOpen className="w-4 h-4" />
-                  <span>Abrir Diccionario</span>
-                </button>
+              {/* Botonera de Acción en la Tarjeta o Estado Vacío Formal */}
+              {studyTerms.length === 0 ? (
+                <div className="bg-slate-50/70 rounded-2xl border border-dashed border-border p-8 sm:p-10 text-center space-y-3">
+                  <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />
+                  <h4 className="text-xl font-bold text-foreground">Diccionario en construcción</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                    Actualmente no hay términos técnicos registrados para el programa{" "}
+                    <strong className="text-foreground">{selectedDictProgram}</strong>. Tu instructor cargará el vocabulario técnico próximamente.
+                  </p>
+                  <div className="pt-3 flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsDictModalOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-sena-green hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <SlidersHorizontal className="w-4 h-4" />
+                      <span>Cambiar Ficha de Formación</span>
+                    </button>
+                    {(user?.role === "admin" || user?.role === "superadmin" || user?.role === "teacher") && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(user?.role === "teacher" ? "/teacher/dictionaries" : "/admin?tab=documents")}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border hover:bg-muted text-foreground text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4 text-sena-green" />
+                        <span>Cargar Vocabulario</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6 pt-2">
+                  <div className="flex items-center justify-between gap-3 pt-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowDictionaryModal(true)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl shadow-xs transition-all flex items-center gap-2 text-xs cursor-pointer"
+                      >
+                        <BookOpen className="w-4 h-4" strokeWidth={1.8} />
+                        <span>Modo Enfoque Pantalla Completa</span>
+                      </button>
+                    </div>
 
-                {(user?.role === "admin" || user?.role === "superadmin") && (
-                  <button
-                    type="button"
-                    onClick={() => navigate("/admin?tab=documents")}
-                    className="border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5 text-sm shadow-2xs cursor-pointer"
-                  >
-                    <span>+ Agregar Término</span>
-                  </button>
-                )}
-              </div>
+                    {(user?.role === "admin" || user?.role === "superadmin") && (
+                      <button
+                        type="button"
+                        onClick={() => navigate("/admin?tab=documents")}
+                        className="border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 text-xs shadow-2xs cursor-pointer"
+                      >
+                        <span>+ Agregar Término</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Barra de Filtros y Búsqueda Directa en la Página */}
+                  <div className="bg-slate-50/80 rounded-2xl border border-border p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                    {/* Buscador en Vivo */}
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
+                      <input
+                        type="text"
+                        placeholder="Buscar por término técnico o definición (ej. Polymorphism, Database, API)..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-9 py-2 rounded-xl border border-border bg-white text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                          <X className="w-4 h-4" strokeWidth={1.8} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtro por Competencia */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+                      <span className="text-xs text-muted-foreground font-medium mr-1">Competencia:</span>
+                      {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
+                        <button
+                          key={comp}
+                          type="button"
+                          onClick={() => setSelectedCompetence(comp)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            selectedCompetence === comp
+                              ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                              : "bg-white text-muted-foreground hover:text-foreground border border-slate-200"
+                          }`}
+                        >
+                          {comp === "all" ? "Todas" : comp}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Filtro por Nivel CEFR */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+                      <span className="text-xs text-muted-foreground font-medium mr-1">Nivel:</span>
+                      {["all", "A1", "A2", "B1", "B2"].map(lvl => (
+                        <button
+                          key={lvl}
+                          type="button"
+                          onClick={() => setSelectedLevel(lvl)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            selectedLevel === lvl
+                              ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                              : "bg-white text-muted-foreground hover:text-foreground border border-slate-200"
+                          }`}
+                        >
+                          {lvl === "all" ? "Todos" : lvl}
+                        </button>
+                      ))}
+
+                      {(selectedLevel !== "all" || selectedCompetence !== "all" || searchQuery) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedLevel("all");
+                            setSelectedCompetence("all");
+                            setSearchQuery("");
+                          }}
+                          className="ml-2 text-xs text-rose-600 hover:underline flex items-center gap-1 font-medium whitespace-nowrap cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
+                          Restablecer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cuadrícula de Términos Directamente Visible */}
+                  {filteredTerms.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                      {filteredTerms.map((term, index) => {
+                        const termKey = term.wordId || term.name;
+                        return (
+                          <StudentVocabCard
+                            key={term.id || `${termKey}-${index}`}
+                            term={term}
+                            index={index}
+                            isPlaying={playingTermId === termKey}
+                            isListening={listeningTerm === termKey}
+                            feedback={speechFeedback[termKey]}
+                            onPlayPronunciation={handlePlayPronunciation}
+                            onVoicePractice={handleVoicePractice}
+                            onOpenLightbox={(t) => setSelectedLightboxDoc(t)}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 bg-white rounded-2xl border border-border p-8 shadow-xs space-y-3 max-w-lg mx-auto my-8">
+                      <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto" strokeWidth={1.8} />
+                      <h4 className="font-bold text-foreground text-base">No se encontraron términos</h4>
+                      <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                        No hay términos que coincidan con la búsqueda o filtros seleccionados en este momento.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 3. MODAL DESACOPLADO AMPLIO DE VOCABULARIO (max-w-7xl max-h-[92vh]) */}
@@ -1654,11 +2236,11 @@ export function DashboardPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shadow-2xs">
-                            <BookOpen className="w-5 h-5" />
+                            <BookOpen className="w-5 h-5" strokeWidth={1.8} />
                           </div>
                           <div>
                             <h3 className="text-xl font-bold text-foreground tracking-tight">
-                              Vocabulario Técnico ADSO — {studyTerms.length || 222} Términos
+                              Vocabulario Técnico {selectedDictProgram || activeProgram || "SENA"} — {studyTerms.length || 222} Términos
                             </h3>
                             <p className="text-xs text-muted-foreground">
                               Explorador multimedia de pronunciación nativa, conceptos técnicos y recursos gráficos
@@ -1671,7 +2253,7 @@ export function DashboardPage() {
                           className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                           title="Cerrar diccionario"
                         >
-                          <X className="w-6 h-6" />
+                          <X className="w-6 h-6" strokeWidth={1.8} />
                         </button>
                       </div>
 
@@ -1679,7 +2261,7 @@ export function DashboardPage() {
                       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1">
                         {/* Buscador en Vivo */}
                         <div className="relative flex-1">
-                          <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
                           <input
                             type="text"
                             placeholder="Buscar por término técnico o definición (ej. Polymorphism, Database, API)..."
@@ -1693,14 +2275,14 @@ export function DashboardPage() {
                               onClick={() => setSearchQuery("")}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-4 h-4" strokeWidth={1.8} />
                             </button>
                           )}
                         </div>
 
-                        {/* Filtro por Asignatura */}
+                        {/* Filtro por Competencia Lingüística */}
                         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                          <span className="text-xs text-muted-foreground font-medium mr-1">Asignatura:</span>
+                          <span className="text-xs text-muted-foreground font-medium mr-1">Competencia:</span>
                           {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
                             <button
                               key={comp}
@@ -1745,7 +2327,7 @@ export function DashboardPage() {
                               }}
                               className="ml-2 text-xs text-rose-600 hover:underline flex items-center gap-1 font-medium whitespace-nowrap cursor-pointer"
                             >
-                              <RotateCcw className="w-3 h-3" />
+                              <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
                               Restablecer
                             </button>
                           )}
@@ -1755,7 +2337,16 @@ export function DashboardPage() {
 
                     {/* Cuerpo del Modal: Grid Responsivo con scroll vertical */}
                     <div className="overflow-y-auto p-6 flex-1 bg-slate-50/50">
-                      {filteredTerms.length > 0 ? (
+                      {studyTerms.length === 0 ? (
+                        <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-border p-8 shadow-xs space-y-3 max-w-lg mx-auto my-8">
+                          <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />
+                          <h4 className="font-bold text-foreground text-lg">Diccionario en construcción</h4>
+                          <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                            Actualmente no hay términos técnicos registrados para el programa{" "}
+                            <strong className="text-foreground">{selectedDictProgram}</strong>. Tu instructor cargará el vocabulario técnico próximamente.
+                          </p>
+                        </div>
+                      ) : filteredTerms.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                           {filteredTerms.map((term, index) => {
                             const termKey = term.wordId || term.name;
@@ -1776,7 +2367,7 @@ export function DashboardPage() {
                         </div>
                       ) : (
                         <div className="text-center py-16 bg-white rounded-2xl border border-border p-8 shadow-xs space-y-3 max-w-lg mx-auto my-8">
-                          <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+                          <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto" strokeWidth={1.8} />
                           <h4 className="font-bold text-foreground text-base">No se encontraron términos</h4>
                           <p className="text-xs text-muted-foreground max-w-md mx-auto">
                             No hay términos que coincidan con la búsqueda o filtros seleccionados en este momento.
@@ -1790,7 +2381,7 @@ export function DashboardPage() {
                             }}
                             className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                           >
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
                             Limpiar Filtros
                           </button>
                         </div>
@@ -1805,63 +2396,158 @@ export function DashboardPage() {
       </main>
 
       {/* Modal de Detalle de Prueba Histórica */}
+      {/* Modal de Detalle de Prueba Histórica y Auditoría Pedagógica */}
       {selectedTest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="relative w-full max-w-xl rounded-2xl border border-border bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs px-4 py-6">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-white p-6 sm:p-7 shadow-2xl">
             <button
               type="button"
               onClick={() => setSelectedTest(null)}
-              className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
               aria-label="Cerrar detalle de prueba"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" strokeWidth={1.8} />
             </button>
 
             <div className="mb-5 pr-10">
-              <h3 className="text-lg font-semibold leading-none text-foreground">Detalle de la prueba</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Información del resultado y retroalimentación del docente.
+              <h3 className="text-xl font-bold leading-none text-foreground">Detalle y Auditoría de la Evaluación</h3>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Información de desempeño, desglose pregunta a pregunta y retroalimentación del instructor.
               </p>
             </div>
 
             <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-border p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-border p-3.5 bg-muted/20">
                   <p className="text-xs text-muted-foreground">Nivel</p>
-                  <p className="text-2xl font-bold text-sena-green">{selectedTest.level}</p>
+                  <p className="text-2xl font-black text-sena-green">{selectedTest.level}</p>
                 </div>
-                <div className="rounded-xl border border-border p-4">
+                <div className="rounded-xl border border-border p-3.5 bg-muted/20">
                   <p className="text-xs text-muted-foreground">Puntuación</p>
-                  <p className="text-2xl font-bold text-foreground">{selectedTest.score}%</p>
+                  <p className="text-2xl font-black text-foreground">{selectedTest.score}%</p>
                 </div>
-                <div className="rounded-xl border border-border p-4">
-                  <p className="text-xs text-muted-foreground">Correctas</p>
-                  <p className="font-semibold text-foreground">
+                <div className="rounded-xl border border-border p-3.5 bg-muted/20">
+                  <p className="text-xs text-muted-foreground">Aciertos</p>
+                  <p className="font-bold text-foreground text-lg">
                     {selectedTest.correctAnswers}/{selectedTest.totalQuestions}
                   </p>
                 </div>
-                <div className="rounded-xl border border-border p-4">
+                <div className="rounded-xl border border-border p-3.5 bg-muted/20">
                   <p className="text-xs text-muted-foreground">Tiempo</p>
-                  <p className="font-semibold text-foreground">{selectedTest.duration}</p>
+                  <p className="font-bold text-foreground text-lg">{selectedTest.duration}</p>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-sena-blue" />
-                  <p className="text-sm font-medium text-foreground">Fecha de presentación</p>
+              <div className="rounded-xl border border-border p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-sena-blue" strokeWidth={1.8} />
+                  <p className="text-xs font-medium text-foreground">Fecha de presentación</p>
                 </div>
-                <p className="text-sm text-muted-foreground">{selectedTest.date}</p>
+                <p className="text-xs font-semibold text-muted-foreground">{selectedTest.date}</p>
               </div>
 
-              <div className="rounded-xl bg-muted/50 p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-sena-blue" />
-                  <p className="text-sm font-medium text-foreground">Retroalimentación del docente</p>
+              {/* Desglose Pedagógico Pregunta a Pregunta */}
+              <div className="rounded-2xl border border-border p-4 bg-slate-50/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-foreground">Auditoría Pedagógica de Preguntas</h4>
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    {selectedTest.answers?.length || selectedTest.totalQuestions || 0} reactivos
+                  </span>
                 </div>
-                <p className="whitespace-pre-line text-sm text-muted-foreground">
-                  {selectedTest.feedback || "No hay retroalimentación para esta prueba aún."}
-                </p>
+
+                {selectedTest.answers && selectedTest.answers.length > 0 ? (
+                  <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                    {selectedTest.answers.map((ans, idx) => (
+                      <div
+                        key={ans.questionId || idx}
+                        className={`p-3 rounded-xl border text-xs transition-colors ${
+                          ans.isCorrect
+                            ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
+                            : "bg-red-50/70 border-red-200 text-red-950"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                          <span className="font-semibold text-slate-800">
+                            {idx + 1}. {ans.question}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${
+                              ans.isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {ans.isCorrect ? "Correcto" : "Incorrecto"}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-600 mt-1">
+                          <p>
+                            <strong className="text-slate-700">Tu respuesta:</strong>{" "}
+                            Opción {(ans.userAnswer !== undefined && ans.userAnswer !== null) ? Number(ans.userAnswer) + 1 : "Sin responder"}
+                          </p>
+                          <p>
+                            <strong className="text-emerald-700">Respuesta correcta:</strong>{" "}
+                            Opción {(ans.correctAnswer !== undefined && ans.correctAnswer !== null) ? Number(ans.correctAnswer) + 1 : "N/A"}
+                          </p>
+                        </div>
+                        {ans.category && (
+                          <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                            Competencia: {ans.category}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="p-4 bg-white rounded-xl text-center text-xs text-muted-foreground border border-dashed border-border">
+                    Esta evaluación preliminar no registra desglose individual de preguntas.
+                  </p>
+                )}
+              </div>
+
+              {/* Retroalimentación del Instructor */}
+              <div className="rounded-xl bg-muted/40 p-4 border border-border">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-sena-blue" strokeWidth={1.8} />
+                    <p className="text-xs font-bold text-foreground">Retroalimentación del Instructor</p>
+                  </div>
+                  {isInstructor && (
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sena-green/10 text-sena-green">
+                      Rol Instructor
+                    </span>
+                  )}
+                </div>
+
+                {isInstructor ? (
+                  <div className="space-y-2.5 mt-2">
+                    <textarea
+                      value={editingFeedback}
+                      onChange={(e) => setEditingFeedback(e.target.value)}
+                      placeholder="Escribe tus observaciones y recomendaciones pedagógicas para el aprendiz..."
+                      rows={3}
+                      className="w-full text-xs p-3 bg-white rounded-lg border border-border focus:ring-2 focus:ring-sena-green/40 focus:outline-none resize-none transition-all placeholder:text-muted-foreground"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSaveModalFeedback}
+                        disabled={isSavingFeedback}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-sena-green hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>{isSavingFeedback ? "Guardando..." : "Guardar Retroalimentación"}</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : selectedTest.feedback ? (
+                  <p className="whitespace-pre-line text-xs text-muted-foreground leading-relaxed mt-1">
+                    {selectedTest.feedback}
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs py-2 mt-1">
+                    <Clock className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={1.8} />
+                    <span>Pendiente de retroalimentación por parte del instructor asignado.</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1877,6 +2563,19 @@ export function DashboardPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* ══ Modal: Selección / Confirmación de Ficha para Diccionario Técnico ══ */}
+      <DictionaryProgramModal
+        isOpen={isDictModalOpen}
+        onClose={() => setIsDictModalOpen(false)}
+        activeProgram={selectedDictProgram}
+        enrolledPrograms={enrolledPrograms}
+        onSelectProgram={(program) => {
+          setSelectedDictProgram(program);
+          handleProgramSwitch(program);
+          setActiveMainTab("study");
+        }}
+      />
     </div>
   );
 }

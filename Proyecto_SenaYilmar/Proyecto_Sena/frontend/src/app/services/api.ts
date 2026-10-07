@@ -1,6 +1,10 @@
-// ─── Configuracion Base de la API ────────────────────────────────────────────
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE = (() => {
+  if (typeof window !== 'undefined') {
+    // Si corre en Vite (5173) o Nginx (80/443/custom), usar ruta relativa '/api' para evitar fallos de CORS y accesos móviles
+    return '/api';
+  }
+  return import.meta.env.VITE_API_URL || '/api';
+})();
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -19,10 +23,15 @@ export interface ApiUser {
   permissions: UserPermissions;
   docType?: string;
   program?: string | null;
+  enrolledPrograms?: string[];
+  availableRoles?: string[];
+  isDualRole?: boolean;
   docNum?: string;
   phoneNum?: number;
+  country?: string;
   firstName?: string;
   lastName?: string;
+  createdAt?: string;
 }
 
 export interface UserPermissions {
@@ -49,8 +58,10 @@ export interface RegisterData {
   first_name: string;
   last_name: string;
   phone_num?: number;
+  country?: string;
   program?: string;
   role_id?: 'SUPERADMIN' | 'ADMIN' | 'APRENDIZ' | 'MONITOR' | 'INSTRUCTOR';
+  is_alternate_program?: boolean;
 }
 
 export interface ApiSubject {
@@ -153,9 +164,86 @@ function getAuthHeaders(includeJsonContentType = true): HeadersInit {
   return headers;
 }
 
+function extractErrorMessage(data: any, status: number): string {
+  if (data) {
+    if (typeof data === 'string' && data.trim()) return data;
+    if (data.error && typeof data.error === 'string' && data.error.trim()) return data.error;
+    if (data.detail && typeof data.detail === 'string' && data.detail.trim()) return data.detail;
+    if (data.message && typeof data.message === 'string' && data.message.trim()) return data.message;
+
+    // DRF non_field_errors
+    if (Array.isArray(data.non_field_errors) && data.non_field_errors.length > 0) {
+      return String(data.non_field_errors[0]);
+    }
+
+    // DRF field validation errors (e.g. { email: ["..."], password: ["..."] })
+    if (typeof data === 'object' && !Array.isArray(data)) {
+      const keys = Object.keys(data);
+      if (keys.length > 0) {
+        const firstKey = keys[0];
+        const val = data[firstKey];
+        if (Array.isArray(val) && val.length > 0) {
+          const fieldNames: Record<string, string> = {
+            email: 'Correo electrónico',
+            password: 'Contraseña',
+            first_name: 'Nombre',
+            last_name: 'Apellidos',
+            doc_num: 'Número de documento',
+            doc_type: 'Tipo de documento',
+            phone_num: 'Teléfono',
+            country: 'País',
+          };
+          const fieldName = fieldNames[firstKey] || firstKey;
+          return `${fieldName}: ${val[0]}`;
+        }
+        if (typeof val === 'string') {
+          return `${firstKey}: ${val}`;
+        }
+      }
+    }
+  }
+
+  // Fallback según código de estado HTTP
+  switch (status) {
+    case 400:
+      return 'Datos de solicitud inválidos. Por favor verifica la información ingresada.';
+    case 401:
+      return 'Credenciales incorrectas o sesión expirada.';
+    case 403:
+      return 'Acceso denegado o permisos insuficientes.';
+    case 404:
+      return 'El recurso solicitado no fue encontrado en el servidor.';
+    case 409:
+      return 'Conflicto: El registro ya existe en el sistema.';
+    case 429:
+      return 'Demasiadas solicitudes. Por favor espera unos momentos antes de reintentar.';
+    case 502:
+    case 503:
+    case 504:
+      return 'El servicio no está disponible temporalmente. Intente nuevamente en unos segundos.';
+    default:
+      if (status >= 500) {
+        return 'Error interno del servidor. Por favor contacta al soporte técnico.';
+      }
+      return 'Error al procesar la solicitud.';
+  }
+}
+
+export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (err: any) {
+    console.error('Error de red al consultar API:', err);
+    throw new ApiError(
+      'No se pudo conectar con el servidor. Verifica que los servicios estén activos y tu conexión de red.',
+      0
+    );
+  }
+}
+
 export async function post<T = any>(path: string, body: BodyInit): Promise<T> {
   const isFormData = body instanceof FormData;
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await safeFetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: getAuthHeaders(!isFormData),
     body,
@@ -166,19 +254,35 @@ export async function post<T = any>(path: string, body: BodyInit): Promise<T> {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Error de conexion' }));
-    console.log("HANDLE RESPONSE ERROR:", error, "STATUS:", response.status);
-    
-    // Solo intentar refresh si hay token guardado (no en login)
-    if (response.status === 401 && localStorage.getItem('accessToken')) {
+    let rawError: any = null;
+    try {
+      rawError = await response.json();
+    } catch {
+      rawError = null;
+    }
+
+    const message = extractErrorMessage(rawError, response.status);
+    console.warn("API Error Response:", { status: response.status, url: response.url, message, rawError });
+
+    // Solo intentar refresh si hay token guardado y no es un endpoint de login/registro
+    const isAuthEndpoint = response.url && (
+      response.url.includes("/auth/login") ||
+      response.url.includes("/auth/register") ||
+      response.url.includes("/auth/check-document") ||
+      response.url.includes("/auth/verify-otp")
+    );
+    if (response.status === 401 && localStorage.getItem("accessToken") && !isAuthEndpoint) {
       const refreshed = await refreshToken();
       if (!refreshed) {
-        localStorage.clear();
-        window.location.href = '/login';
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/register" && window.location.pathname !== "/") {
+          window.location.href = "/login";
+        }
       }
     }
-    
-    throw new ApiError(error.error || error.detail || 'Error en la peticion', response.status);
+
+    throw new ApiError(message, response.status);
   }
 
   return response.json();
@@ -190,7 +294,7 @@ async function refreshToken(): Promise<boolean> {
   if (!refresh) return false;
   
   try {
-    const response = await fetch(`${API_BASE}/auth/refresh/`, {
+    const response = await safeFetch(`${API_BASE}/auth/refresh/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),
@@ -209,7 +313,7 @@ async function refreshToken(): Promise<boolean> {
 // ─── Auth API ────────────────────────────────────────────────────────────────
 
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/auth/login/`, {
+  const response = await safeFetch(`${API_BASE}/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -219,7 +323,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
 }
 
 export async function register(data: RegisterData): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/auth/register/`, {
+  const response = await safeFetch(`${API_BASE}/auth/register/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -229,7 +333,7 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
 }
 
 export async function getMe(): Promise<ApiUser> {
-  const response = await fetch(`${API_BASE}/auth/me/`, {
+  const response = await safeFetch(`${API_BASE}/auth/me/`, {
     headers: getAuthHeaders(),
   });
   
@@ -239,7 +343,7 @@ export async function getMe(): Promise<ApiUser> {
 // ─── Acceso privilegiado sin JWT (sesión) ─────────────────────────────
 
 export async function privilegedLogin(credentials: LoginCredentials): Promise<{ user: ApiUser }> {
-  const response = await fetch(`${API_BASE}/auth/privileged-login/`, {
+  const response = await safeFetch(`${API_BASE}/auth/privileged-login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -250,7 +354,7 @@ export async function privilegedLogin(credentials: LoginCredentials): Promise<{ 
 }
 
 export async function privilegedMe(): Promise<{ user: ApiUser }> {
-  const response = await fetch(`${API_BASE}/auth/privileged-me/`, {
+  const response = await safeFetch(`${API_BASE}/auth/privileged-me/`, {
     method: 'GET',
   });
 
@@ -366,12 +470,16 @@ export async function getDocuments(params?: {
   level?: string;
   competence?: string;
   search?: string;
+  program?: string;
+  fichaId?: string;
 }): Promise<ApiDocument[]> {
   const query = new URLSearchParams();
   if (params?.subject && params.subject !== 'all') query.append('subject', params.subject);
   if (params?.level && params.level !== 'all') query.append('level', params.level);
   if (params?.competence && params.competence !== 'all') query.append('competence', params.competence);
   if (params?.search && params.search.trim()) query.append('search', params.search.trim());
+  if (params?.program && params.program !== 'all') query.append('program', params.program);
+  if (params?.fichaId && params.fichaId !== 'all') query.append('fichaId', params.fichaId);
 
   const qs = query.toString();
   const url = `${API_BASE}/dictionary/${qs ? `?${qs}` : ''}`;
@@ -389,6 +497,15 @@ export async function createDocument(docData: Partial<ApiDocument>): Promise<Api
     body: JSON.stringify(docData),
   });
   
+  return handleResponse<ApiDocument>(response);
+}
+
+export async function updateDocument(docId: string, docData: Partial<ApiDocument>): Promise<ApiDocument> {
+  const response = await fetch(`${API_BASE}/dictionary/${docId}/`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(docData),
+  });
   return handleResponse<ApiDocument>(response);
 }
 
@@ -460,7 +577,7 @@ export async function addFeedback(resultId: string, feedback: string): Promise<{
 // ─── Ranking / Leaderboard API ───────────────────────────────────────────────
 
 export async function getRanking(): Promise<any[]> {
-  const response = await fetch(`${API_BASE}/ranking/`, {
+  const response = await safeFetch(`${API_BASE}/ranking/`, {
     headers: getAuthHeaders(),
   });
 
@@ -470,7 +587,7 @@ export async function requestLogin(
   email: string,
   password: string
 ): Promise<{ mfa_required: boolean; email: string }> {
-  const response = await fetch(`${API_BASE}/auth/login/`, {
+  const response = await safeFetch(`${API_BASE}/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -485,7 +602,7 @@ export async function verifyLoginOTP(
   email: string,
   code: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/auth/verify-otp/`, {
+  const response = await safeFetch(`${API_BASE}/auth/verify-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code }),
@@ -499,7 +616,7 @@ export async function verifyLoginOTP(
 export async function resendLoginOTP(
   email: string
 ): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE}/auth/resend-otp/`, {
+  const response = await safeFetch(`${API_BASE}/auth/resend-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -516,7 +633,7 @@ export async function resendLoginOTP(
 export async function registerSendOTP(
   data: RegisterData
 ): Promise<{ message: string; email: string }> {
-  const response = await fetch(`${API_BASE}/auth/register-send-otp/`, {
+  const response = await safeFetch(`${API_BASE}/auth/register-send-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -531,12 +648,129 @@ export async function registerVerifyOTP(
   email: string,
   code: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/auth/register-verify-otp/`, {
+  const response = await safeFetch(`${API_BASE}/auth/register-verify-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code }),
   });
   return handleResponse<AuthResponse>(response);
+}
+
+export interface CheckDocumentResponse {
+  exists: boolean;
+  personId?: number;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNum?: number;
+  country?: string;
+  docType?: string;
+  docNum?: string;
+  enrolledPrograms?: string[];
+}
+
+export async function checkDocument(docType: string, docNum: string): Promise<CheckDocumentResponse> {
+  const response = await safeFetch(`${API_BASE}/auth/check-document/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ doc_type: docType, doc_num: docNum }),
+  });
+  return handleResponse<CheckDocumentResponse>(response);
+}
+
+export interface CheckEmailResponse {
+  exists: boolean;
+  email: string;
+}
+
+export async function checkEmail(email: string): Promise<CheckEmailResponse> {
+  const response = await safeFetch(`${API_BASE}/auth/check-email/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+  });
+  return handleResponse<CheckEmailResponse>(response);
+}
+
+export async function switchProgram(program: string): Promise<ApiUser> {
+  const response = await safeFetch(`${API_BASE}/users/switch-program/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ program }),
+  });
+  return handleResponse<ApiUser>(response);
+}
+
+export async function enrollFicha(data: string | { ficha: string; program?: string }): Promise<ApiUser> {
+  const payload = typeof data === 'string' ? { ficha: data } : data;
+  const response = await safeFetch(`${API_BASE}/users/enroll-ficha/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<ApiUser>(response);
+}
+
+export async function switchRole(role?: string): Promise<ApiUser> {
+  const response = await safeFetch(`${API_BASE}/users/switch-role/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ role }),
+  });
+  return handleResponse<ApiUser>(response);
+}
+
+// ── Solicitudes de Ficha Alterna (Multi-programa SENA) ─────────────────────
+
+export interface ApiFichaRequest {
+  request_id: number;
+  user: number;
+  person: number;
+  learner_name: string;
+  learner_email: string;
+  current_program: string;
+  ficha_code: string;
+  program_name: string;
+  status: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+  admin_notes?: string;
+  created_at: string;
+  reviewed_at?: string | null;
+  reviewed_by?: number | null;
+  reviewed_by_name?: string | null;
+}
+
+export async function getFichaRequests(): Promise<ApiFichaRequest[]> {
+  const response = await safeFetch(`${API_BASE}/ficha-requests/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<ApiFichaRequest[]>(response);
+}
+
+export async function createFichaRequest(ficha_code: string, program?: string): Promise<ApiFichaRequest> {
+  const response = await safeFetch(`${API_BASE}/ficha-requests/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ ficha_code, program, program_name: program }),
+  });
+  return handleResponse<ApiFichaRequest>(response);
+}
+
+export async function approveFichaRequest(requestId: number): Promise<ApiFichaRequest> {
+  const response = await safeFetch(`${API_BASE}/ficha-requests/${requestId}/approve/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<ApiFichaRequest>(response);
+}
+
+export async function rejectFichaRequest(requestId: number, notes?: string): Promise<ApiFichaRequest> {
+  const response = await safeFetch(`${API_BASE}/ficha-requests/${requestId}/reject/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ notes }),
+  });
+  return handleResponse<ApiFichaRequest>(response);
 }
 
 // ─── Exam Multimedia (Speaking & ElevenLabs TTS) ─────────────────────────────
@@ -619,7 +853,15 @@ export function resolveMediaUrl(pathOrUrl?: string, defaultBucket: string = 'dic
 
   // Si es solo la clave del archivo (ej. 'input.png' o 'code.mp3')
   const pureKey = clean.replace(/^\/+/, '');
-  return `/api/media/${defaultBucket}/${pureKey}`;
+  let bucket = defaultBucket;
+  if (pureKey.endsWith('.mp3') || pureKey.endsWith('.wav') || pureKey.endsWith('.ogg')) {
+    bucket = 'dictionary-audios';
+  } else if (pureKey.endsWith('.mp4') || pureKey.endsWith('.webm')) {
+    bucket = 'dictionary-videos';
+  } else if (pureKey.endsWith('.png') || pureKey.endsWith('.jpg') || pureKey.endsWith('.jpeg') || pureKey.endsWith('.webp') || pureKey.endsWith('.svg')) {
+    bucket = 'dictionary-images';
+  }
+  return `/api/media/${bucket}/${pureKey}`;
 }
 
 export async function uploadSpeakingAudio(
@@ -789,12 +1031,16 @@ export const api = {
   deleteSubject,
   getDocuments,
   createDocument,
+  updateDocument,
   deleteDocument,
   getTestResults,
   createTestResult,
   addFeedback,
   getRanking,
   post,
+  enrollFicha,
+  switchProgram,
+  switchRole,
   uploadSpeakingAudio,
   evaluateSpeakingAudio,
   uploadMediaFile,
@@ -804,6 +1050,17 @@ export const api = {
   startAdaptiveExam,
   getAdaptiveBank,
   evaluateAdaptiveStep,
+  getFichaRequests,
+  createFichaRequest,
+  approveFichaRequest,
+  rejectFichaRequest,
+  requestLogin,
+  verifyLoginOTP,
+  resendLoginOTP,
+  registerSendOTP,
+  registerVerifyOTP,
+  checkDocument,
+  checkEmail,
 };
 
 export default api;

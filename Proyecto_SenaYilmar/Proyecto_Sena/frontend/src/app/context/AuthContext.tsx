@@ -18,7 +18,7 @@ interface AuthContextType {
   user: ApiUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: any) => Promise<void>;
+  login: (credentials: any) => Promise<ApiUser>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   updateUser: (user: ApiUser) => void;
@@ -35,7 +35,30 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<ApiUser | null>(null);
+  // Pre-hidratar usuario desde localStorage para evitar desconexiones o parpadeos al recargar
+  const [user, setUser] = useState<ApiUser | null>(() => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const userId = localStorage.getItem('userId');
+      const userName = localStorage.getItem('userName');
+      const userRole = localStorage.getItem('userRole') as any;
+      if (token && userId && userName) {
+        return {
+          id: userId,
+          name: userName,
+          email: localStorage.getItem('userEmail') || '',
+          role: userRole || 'student',
+          status: 'active',
+          program: localStorage.getItem('userProgram') || null,
+          enrolledPrograms: JSON.parse(localStorage.getItem('userEnrolledPrograms') || '[]'),
+          permissions: JSON.parse(localStorage.getItem('userPermissions') || '{}'),
+        } as ApiUser;
+      }
+    } catch {
+      // Ignorar error al parsear storage
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   // Verificar token al montar, o sesión privilegiada si no hay token
@@ -47,12 +70,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
           const resp = await privilegedMe();
           setUser(resp.user);
-          // compatibilidad local
           localStorage.setItem('userName', resp.user.name);
           localStorage.setItem('userRole', resp.user.role);
           localStorage.setItem('userId', resp.user.id);
           localStorage.setItem('userPermissions', JSON.stringify(resp.user.permissions));
           localStorage.setItem('userProgram', resp.user.program || '');
+          if (resp.user.enrolledPrograms) {
+            localStorage.setItem('userEnrolledPrograms', JSON.stringify(resp.user.enrolledPrograms));
+          }
         } catch {
           // no autenticado
         } finally {
@@ -65,15 +90,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const userData = await getMe();
         setUser(userData);
 
-        // Actualizar localStorage para compatibilidad con componentes existentes
+        // Actualizar localStorage para compatibilidad y persistencia
         localStorage.setItem('userName', userData.name);
         localStorage.setItem('userRole', userData.role);
         localStorage.setItem('userId', userData.id);
+        localStorage.setItem('userEmail', userData.email || '');
         localStorage.setItem('userPermissions', JSON.stringify(userData.permissions));
         localStorage.setItem('userProgram', userData.program || '');
-      } catch (error) {
-        // Token invalido, limpiar storage
-        localStorage.clear();
+        if (userData.enrolledPrograms) {
+          localStorage.setItem('userEnrolledPrograms', JSON.stringify(userData.enrolledPrograms));
+        }
+      } catch (error: any) {
+        console.warn("Validación de sesión con getMe:", error);
+        // Solo invalidar si el token fue rechazado con 401 no recuperable
+        if (error?.status === 401) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          setUser(null);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -98,8 +132,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('userName', response.user.name);
       localStorage.setItem('userRole', response.user.role);
       localStorage.setItem('userId', response.user.id);
+      localStorage.setItem('userEmail', response.user.email || '');
       localStorage.setItem('userPermissions', JSON.stringify(response.user.permissions));
       localStorage.setItem('userProgram', response.user.program || '');
+      if (response.user.enrolledPrograms) {
+        localStorage.setItem('userEnrolledPrograms', JSON.stringify(response.user.enrolledPrograms));
+      }
+      return response.user;
     } catch (err) {
       console.log("AUTH CONTEXT ERROR:", err);
       throw err;

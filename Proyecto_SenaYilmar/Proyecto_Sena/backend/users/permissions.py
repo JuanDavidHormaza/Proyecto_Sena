@@ -21,9 +21,9 @@ class IsAdminOrSuperAdmin(BasePermission):
 class IsDictionaryAdminOrReadOnly(BasePermission):
     """
     Permite lectura (GET, HEAD, OPTIONS) a cualquier usuario autenticado (incluyendo APRENDIZ e INSTRUCTOR).
-    Permite escritura/modificación/eliminación (POST, PUT, PATCH, DELETE) ÚNICAMENTE a ADMIN y SUPERADMIN.
+    Permite escritura/modificación/eliminación (POST, PUT, PATCH, DELETE) a ADMIN, SUPERADMIN e INSTRUCTOR.
     """
-    message = 'Acceso restringido: Solo ADMIN y SUPERADMIN pueden crear, modificar o eliminar términos del diccionario.'
+    message = 'Acceso restringido: Solo docentes y administradores pueden crear, modificar o eliminar términos del diccionario.'
 
     def has_permission(self, request, view):
         user = request.user
@@ -35,4 +35,4 @@ class IsDictionaryAdminOrReadOnly(BasePermission):
             return True
 
         role = str(getattr(user, 'role_id', '') or getattr(user, 'role', '')).upper()
-        return role in ('SUPERADMIN', 'ADMIN')
+        return role in ('SUPERADMIN', 'ADMIN', 'INSTRUCTOR', 'TEACHER', 'MONITOR')

@@ -20,6 +20,7 @@ class Person(models.Model):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     phone_num = models.CharField(max_length=20, null=True, blank=True)
+    country = models.CharField(max_length=100, default='Colombia', blank=True, null=True)
 
     PERSTATUS_CHOICES = [
         ('ACTIVO', 'Activo'),
@@ -99,6 +100,7 @@ class DigitalDictionary(models.Model):
     image = models.CharField(max_length=255)
     level = models.CharField(max_length=10, choices=LEVEL_CHOICES, default='A1', blank=True)
     competence = models.CharField(max_length=20, choices=COMPETENCE_CHOICES, default='Grammar', blank=True)
+    program = models.CharField(max_length=120, default='ADSO', blank=True, null=True, db_index=True)
 
     class Meta:
         unique_together = ('word_id', 'subject')
@@ -127,7 +129,7 @@ class Ranking(models.Model):
     )
 
     best_score = models.IntegerField(default=0)
-    level = models.CharField(max_length=10, null=True, blank=True)
+    level = models.CharField(max_length=25, null=True, blank=True)
     character = models.CharField(max_length=50, null=True, blank=True)
 
     correct_answers = models.IntegerField(default=0)
@@ -187,9 +189,12 @@ class TestResult(models.Model):
         ('B2', 'B2 - Intermedio Alto'),
         ('C1', 'C1 - Avanzado'),
         ('C2', 'C2 - Maestría'),
+        ('Sin Nivel', 'Sin Nivel / No Presentado'),
+        ('Invalidada', 'Prueba Invalidada'),
+        ('No Presentado', 'No Presentado'),
     ]
 
-    level = models.CharField(max_length=10, choices=LEVEL_CHOICES)
+    level = models.CharField(max_length=25, choices=LEVEL_CHOICES, default='Sin Nivel')
 
     correct_answers = models.IntegerField()
     total_questions = models.IntegerField()
@@ -245,3 +250,35 @@ class RegisterPendingOTP(models.Model):
 
     def __str__(self):
         return f"reg:{self.email} – {self.otp_code} ({'usado' if self.used else 'activo'})"
+
+
+class FichaRequest(models.Model):
+    """Solicitud de vinculación a una segunda ficha o programa alterno pendiente de aprobación por el Administrador."""
+    request_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ficha_requests')
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='ficha_requests')
+    ficha_code = models.CharField(max_length=50)
+    program_name = models.CharField(max_length=200)
+
+    STATUS_CHOICES = [
+        ('PENDIENTE', 'Pendiente'),
+        ('APROBADA', 'Aprobada'),
+        ('RECHAZADA', 'Rechazada'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDIENTE')
+    admin_notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_ficha_requests'
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Solicitud {self.ficha_code} - {self.person.first_name} {self.person.last_name} ({self.status})"

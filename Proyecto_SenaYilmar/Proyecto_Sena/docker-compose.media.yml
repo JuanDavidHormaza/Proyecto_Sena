@@ -1,19 +1,57 @@
+version: '3.8'
+
 services:
   worklex_minio:
-    image: cgr.dev/chainguard/minio:latest
+    image: elestio/minio:latest
     container_name: worklex_minio
-    hostname: minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER=${MINIO_USER:-admin}
-      - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD:-Admin123*}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Admin123*}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: minio server /data --console-address ":9001"
     volumes:
       - minio_data:/data
     networks:
       worklex_network:
         aliases:
           - minio
+
+  worklex_minio_provision:
+    image: worklex_provision:latest
+    container_name: worklex_minio_provision
+    depends_on:
+      - worklex_minio
+    volumes:
+      - ./minio-seed:/seed:ro
+    networks:
+      - worklex_network
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Esperando que MinIO arranque...';
+      sleep 5;
+      mc alias set localminio http://worklex_minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-Admin123*};
+
+      echo 'Creando buckets...';
+      mc mb --ignore-existing localminio/dictionary-audios;
+      mc mb --ignore-existing localminio/dictionary-images;
+      mc mb --ignore-existing localminio/dictionary-videos;
+      mc mb --ignore-existing localminio/exam-audios;
+      mc mb --ignore-existing localminio/exam-submissions;
+
+      echo 'Configurando lectura publica...';
+      mc anonymous set download localminio/dictionary-audios;
+      mc anonymous set download localminio/dictionary-images;
+      mc anonymous set download localminio/dictionary-videos;
+
+      echo 'Copiando archivos multimedia si existen...';
+      mc cp --recursive /seed/dictionary-audios/ localminio/dictionary-audios/ || true;
+      mc cp --recursive /seed/dictionary-images/ localminio/dictionary-images/ || true;
+
+      echo 'Aprovisionamiento completado con exito.';
+      exit 0;
+      "
 
 volumes:
   minio_data:

@@ -12,7 +12,7 @@ import {
   Shield, LogOut,
   Edit,
   Mic, PenTool, Languages, BookMarked, Image as ImageIcon, Layers, RotateCcw,
-  Code, MoreVertical,
+  Code, MoreVertical, GraduationCap, SlidersHorizontal,
 } from "lucide-react";
 import {
   User, UserPermissions, getDefaultPermissions,
@@ -65,12 +65,12 @@ function AudioPlayer({ src, name }: { src: string; name: string }) {
     <div className="mt-3 flex items-center gap-3 bg-purple-50 rounded-xl px-4 py-3">
       <audio ref={ref} src={resolveMediaUrl(src)} onEnded={() => setPlaying(false)} />
       <button onClick={toggle} className="w-9 h-9 bg-purple-600 text-white rounded-full flex items-center justify-center hover:bg-purple-700 transition-colors flex-shrink-0">
-        {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+        {playing ? <Pause className="w-4 h-4" strokeWidth={1.8} /> : <Play className="w-4 h-4 ml-0.5" strokeWidth={1.8} />}
       </button>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-purple-700 truncate">{name}</p>
         <div className="flex items-center gap-1 mt-1">
-          <Volume2 className="w-3 h-3 text-purple-400" />
+          <Volume2 className="w-3 h-3 text-purple-400" strokeWidth={1.8} />
           <p className="text-xs text-purple-400">{playing ? "Reproduciendo..." : "Pausado"}</p>
         </div>
       </div>
@@ -93,18 +93,18 @@ function VideoPlayer({ src, name }: { src: string; name: string }) {
         {!playing && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
             <button onClick={toggle} className="w-12 h-12 bg-white/90 text-sena-blue rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-lg">
-              <Play className="w-6 h-6 ml-0.5" />
+              <Play className="w-6 h-6 ml-0.5" strokeWidth={1.8} />
             </button>
           </div>
         )}
         {playing && (
           <button onClick={toggle} className="absolute bottom-2 right-2 w-8 h-8 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
-            <Pause className="w-4 h-4" />
+            <Pause className="w-4 h-4" strokeWidth={1.8} />
           </button>
         )}
       </div>
       <div className="px-3 py-2 bg-sena-blue/5 flex items-center gap-2">
-        <Video className="w-3.5 h-3.5 text-sena-blue" />
+        <Video className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
         <p className="text-xs font-medium text-sena-blue truncate">{name}</p>
       </div>
     </div>
@@ -147,7 +147,7 @@ function VocabCard({
 
   const wordName = doc.name;
   const level = (doc.level || "A1").toUpperCase();
-  const asignatura = doc.subjectId || doc.competence || "Grammar";
+  const competence = doc.competence || doc.subjectId || "Speaking";
 
   // Badges por Nivel CEFR (Tonos sobrios)
   const levelColors: Record<string, string> = {
@@ -158,15 +158,15 @@ function VocabCard({
   };
   const levelBadge = levelColors[level] || "bg-emerald-50 text-emerald-700 border-emerald-200";
 
-  // Badges por Asignatura
-  const asigColors: Record<string, string> = {
+  // Badges por Competencia Lingüística
+  const compColors: Record<string, string> = {
     Speaking: "bg-cyan-50 text-cyan-700 border-cyan-200",
     Writing: "bg-rose-50 text-rose-700 border-rose-200",
     Grammar: "bg-purple-50 text-purple-700 border-purple-200",
     Listening: "bg-sky-50 text-sky-700 border-sky-200",
     Reading: "bg-amber-50 text-amber-700 border-amber-200",
   };
-  const asigBadge = asigColors[asignatura] || "bg-purple-50 text-purple-700 border-purple-200";
+  const compBadge = compColors[competence] || "bg-purple-50 text-purple-700 border-purple-200";
 
   // Resolución de ruta de imagen (proxy de Django a MinIO)
   const rawImage = doc.image || (doc.imageUrl ? doc.imageUrl.replace(/^\/api\/media\/dictionary-images\//, '') : `${wordName.toLowerCase().replace(/\s+/g, '_')}.png`);
@@ -226,13 +226,13 @@ function VocabCard({
             containerClassName="rounded-t-xl"
           />
 
-          {/* Badges Flotantes: Nivel CEFR y Asignatura */}
+          {/* Badges Flotantes: Nivel CEFR y Competencia Lingüística */}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10 pointer-events-none">
             <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-xs ${levelBadge}`}>
               {level}
             </span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-xs ${asigBadge}`}>
-              {asignatura}
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-xs ${compBadge}`}>
+              {competence}
             </span>
           </div>
 
@@ -249,7 +249,7 @@ function VocabCard({
                   className="w-7 h-7 rounded-lg bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors shadow-xs cursor-pointer"
                   title="Opciones de administración"
                 >
-                  <MoreVertical className="w-3.5 h-3.5" />
+                  <MoreVertical className="w-3.5 h-3.5" strokeWidth={1.8} />
                 </button>
 
                 {showMenu && (
@@ -263,7 +263,7 @@ function VocabCard({
                         }}
                         className="w-full text-left px-3 py-1.5 hover:bg-muted text-slate-700 flex items-center gap-2"
                       >
-                        <Edit className="w-3.5 h-3.5 text-slate-500" />
+                        <Edit className="w-3.5 h-3.5 text-slate-500" strokeWidth={1.8} />
                         Editar Término
                       </button>
                     )}
@@ -276,7 +276,7 @@ function VocabCard({
                         }}
                         className="w-full text-left px-3 py-1.5 hover:bg-rose-50 text-rose-600 flex items-center gap-2"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} />
                         Eliminar
                       </button>
                     )}
@@ -311,7 +311,7 @@ function VocabCard({
                   <span className="w-1 bg-white rounded-full animate-[pulse_0.5s_ease-in-out_infinite] h-2"></span>
                 </div>
               ) : (
-                <Volume2 className="w-5 h-5" />
+                <Volume2 className="w-5 h-5" strokeWidth={1.8} />
               )}
             </button>
           </div>
@@ -345,7 +345,7 @@ function VocabCard({
   );
 }
 
-// ─── AsignaturaCard (Entidad Principal Encapsulada con Conteo de Recursos y Acciones) ───
+// ─── CompetenciaCard / AsignaturaCard (Entidad Principal Encapsulada con Conteo de Recursos y Acciones) ───
 export interface AsignaturaCardProps {
   id: string;
   name: string;
@@ -387,11 +387,11 @@ export function AsignaturaCard({
     <div className={`bg-white rounded-2xl p-6 border transition-all space-y-5 shadow-xs hover:shadow-md ${
       isOpen ? "border-emerald-500/60 ring-2 ring-emerald-500/10" : "border-border"
     }`}>
-      {/* 1. Cabecera de la Asignatura */}
+      {/* 1. Cabecera de la Competencia Lingüística */}
       <div className="flex items-start justify-between gap-3 pb-4 border-b border-border">
         <div className="flex items-start gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 flex-shrink-0 shadow-xs">
-            <IconComponent className="w-6 h-6" />
+            <IconComponent className="w-6 h-6" strokeWidth={1.8} />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -418,7 +418,7 @@ export function AsignaturaCard({
             <p className="text-[10px] text-muted-foreground">Términos en BD</p>
           </div>
           <div className="w-9 h-9 rounded-lg bg-emerald-100/80 flex items-center justify-center text-emerald-700">
-            <FileText className="w-4 h-4" />
+            <FileText className="w-4 h-4" strokeWidth={1.8} />
           </div>
         </div>
 
@@ -429,7 +429,7 @@ export function AsignaturaCard({
             <p className="text-[10px] text-muted-foreground">Recursos 16:9</p>
           </div>
           <div className="w-9 h-9 rounded-lg bg-teal-100/80 flex items-center justify-center text-teal-700">
-            <ImageIcon className="w-4 h-4" />
+            <ImageIcon className="w-4 h-4" strokeWidth={1.8} />
           </div>
         </div>
 
@@ -440,7 +440,7 @@ export function AsignaturaCard({
             <p className="text-[10px] text-muted-foreground">Pronunciación</p>
           </div>
           <div className="w-9 h-9 rounded-lg bg-blue-100/80 flex items-center justify-center text-blue-700">
-            <Volume2 className="w-4 h-4" />
+            <Volume2 className="w-4 h-4" strokeWidth={1.8} />
           </div>
         </div>
 
@@ -451,7 +451,7 @@ export function AsignaturaCard({
             <p className="text-[10px] text-muted-foreground">Clips técnicos</p>
           </div>
           <div className="w-9 h-9 rounded-lg bg-purple-100/80 flex items-center justify-center text-purple-700">
-            <Video className="w-4 h-4" />
+            <Video className="w-4 h-4" strokeWidth={1.8} />
           </div>
         </div>
       </div>
@@ -468,9 +468,9 @@ export function AsignaturaCard({
               : "bg-emerald-600 hover:bg-emerald-700 text-white"
           }`}
         >
-          <BookOpen className="w-4 h-4" />
+          <BookOpen className="w-4 h-4" strokeWidth={1.8} />
           <span>{isOpen ? "Abierto (Explorando)" : "Abrir"}</span>
-          {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          {isOpen ? <ChevronUp className="w-3.5 h-3.5" strokeWidth={1.8} /> : <ChevronDown className="w-3.5 h-3.5" strokeWidth={1.8} />}
         </button>
 
         {/* Controles de Administración (RBAC: Solo ADMIN / SUPERADMIN) */}
@@ -482,7 +482,7 @@ export function AsignaturaCard({
               onClick={onAddTerm}
               className="border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" strokeWidth={1.8} />
               <span>+ Agregar</span>
             </button>
 
@@ -492,7 +492,7 @@ export function AsignaturaCard({
               onClick={onEdit}
               className="bg-slate-700 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-xs"
             >
-              <Edit className="w-4 h-4" />
+              <Edit className="w-4 h-4" strokeWidth={1.8} />
               <span>Editar</span>
             </button>
 
@@ -503,7 +503,7 @@ export function AsignaturaCard({
                 onClick={onDelete}
                 className="text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition ml-auto shadow-xs"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" strokeWidth={1.8} />
                 <span>Eliminar</span>
               </button>
             )}
@@ -533,10 +533,10 @@ type ExtendedDocument = Document & {
 
 // ─── Etiquetas de rol para mostrar ───────────────────────────────────────────
 const ROLE_LABELS: Record<string, string> = {
-  superadmin: "SuperAdmin",
+  superadmin: "SuperAdministrador",
   admin: "Administrador",
-  teacher: "Docente",
-  student: "Estudiante",
+  teacher: "Instructor",
+  student: "Aprendiz",
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -572,12 +572,12 @@ function toValidDate(value?: string) {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
-// ─── Las 4 Asignaturas Oficiales del Sistema WorkLex ─────────────────────────
-export const SYSTEM_ASIGNATURAS = [
+// ─── Las 4 Competencias Lingüísticas Oficiales del Sistema WorkLex ───────────
+export const SYSTEM_COMPETENCIAS = [
   {
     id: "Speaking",
     name: "Speaking",
-    code: "ASIG-SPK",
+    code: "COMP-SPK",
     icon: Mic,
     description: "Producción oral, pronunciación fonética de términos de software y fluidez conversacional técnica.",
     matches: (doc: any) => (doc.competence || "").toLowerCase() === "speaking",
@@ -585,7 +585,7 @@ export const SYSTEM_ASIGNATURAS = [
   {
     id: "Writing",
     name: "Writing",
-    code: "ASIG-WRT",
+    code: "COMP-WRT",
     icon: PenTool,
     description: "Expresión escrita, documentación de código, especificaciones de software y redacción técnica.",
     matches: (doc: any) => (doc.competence || "").toLowerCase() === "writing",
@@ -593,7 +593,7 @@ export const SYSTEM_ASIGNATURAS = [
   {
     id: "Grammar",
     name: "Grammar",
-    code: "ASIG-GMR",
+    code: "COMP-GMR",
     icon: BookMarked,
     description: "Estructuras gramaticales, tiempos verbales y sintaxis aplicada a la ingeniería de software.",
     matches: (doc: any) => (doc.competence || "").toLowerCase() === "grammar",
@@ -601,7 +601,7 @@ export const SYSTEM_ASIGNATURAS = [
   {
     id: "Listening",
     name: "Listening",
-    code: "ASIG-LSN",
+    code: "COMP-LSN",
     icon: Volume2,
     description: "Comprensión auditiva y receptiva de requerimientos de clientes, standups y diálogos ágiles.",
     matches: (doc: any) => {
@@ -610,6 +610,27 @@ export const SYSTEM_ASIGNATURAS = [
     },
   },
 ];
+
+export const SYSTEM_ASIGNATURAS = SYSTEM_COMPETENCIAS;
+
+// Helper para matching exacto / flexible de programas SENA
+export function matchesSelectedProgram(docProgram?: string, targetProgram?: string): boolean {
+  if (!targetProgram || targetProgram === "ALL") return true;
+  const dp = (docProgram || "ADSO").trim().toLowerCase();
+  const tp = targetProgram.trim().toLowerCase();
+
+  if (tp === "adso" || tp.startsWith("adso")) {
+    return dp.includes("adso") || !docProgram || dp === "adso";
+  }
+
+  const fichaTarget = tp.match(/\d{6,8}/);
+  const fichaDoc = dp.match(/\d{6,8}/);
+  if (fichaTarget && fichaDoc && fichaTarget[0] === fichaDoc[0]) {
+    return true;
+  }
+
+  return dp === tp || dp.includes(tp) || tp.includes(dp);
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 export function AdminDashboard() {
@@ -623,10 +644,38 @@ export function AdminDashboard() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [testResults, setTestResults] = useState<api.ApiTestResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
+  const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [showEditDataModal, setShowEditDataModal] = useState(false);
   const [editUserData, setEditUserData] = useState({ id: "", name: "", email: "", phone_num: "", role: "", program: "" });
+
+  const handleApproveFichaRequest = async (requestId: number) => {
+    setProcessingRequestId(requestId);
+    try {
+      await api.approveFichaRequest(requestId);
+      await loadDataFromApi();
+    } catch (err: any) {
+      alert(err?.message || "Error al aprobar solicitud de ficha");
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const handleRejectFichaRequest = async (requestId: number) => {
+    const notes = window.prompt("Ingresa la observación o motivo de rechazo (opcional):", "No se evidenció matrícula simultánea");
+    if (notes === null) return;
+    setProcessingRequestId(requestId);
+    try {
+      await api.rejectFichaRequest(requestId, notes);
+      await loadDataFromApi();
+    } catch (err: any) {
+      alert(err?.message || "Error al rechazar solicitud de ficha");
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
 
   // Modal states
   const [showUserModal, setShowUserModal] = useState(false);
@@ -664,6 +713,8 @@ export function AdminDashboard() {
     isUploading: false,
   });
 
+  const [selectedAdminProgram, setSelectedAdminProgram] = useState<string>("ADSO");
+
   const resetUploadForm = () => {
     setUploadForm({
       file: null,
@@ -674,7 +725,7 @@ export function AdminDashboard() {
       audio: null,
       video: null,
       subjectId: "Speaking",
-      program: "ADSO",
+      program: selectedAdminProgram || "ADSO",
       previewUrl: "",
       imagePreviewUrl: "",
       audioPreviewUrl: "",
@@ -685,7 +736,7 @@ export function AdminDashboard() {
     });
   };
 
-  // Estado para gestión y apertura de asignaturas en Documentos
+  // Estado para gestión y apertura de diccionarios por programa
   const [openedSubjectId, setOpenedSubjectId] = useState<string | null>("ADSO");
 
   const handleLogout = () => {
@@ -698,12 +749,17 @@ export function AdminDashboard() {
     setIsLoading(true);
     setApiError(null);
     try {
-      const [apiUsers, apiSubjects, apiDocs, apiResults] = await Promise.all([
+      const [apiUsers, apiSubjects, apiDocs, apiResults, apiRequests] = await Promise.all([
         api.getUsers(),
         api.getSubjects(),
         api.getDocuments(),
         api.getTestResults(),
+        api.getFichaRequests().catch(() => []),
       ]);
+
+      if (Array.isArray(apiRequests)) {
+        setFichaRequests(apiRequests);
+      }
 
       const convertedUsers: User[] = apiUsers.map(u => ({
         id: u.id, name: u.name, email: u.email, password: '',
@@ -736,7 +792,7 @@ export function AdminDashboard() {
       const convertedResults: api.ApiTestResult[] = apiResults.map((r: any) => ({
         id: String(r.id),
         userId: String(r.userId ?? r.user_id ?? r.user ?? ""),
-        userName: r.userName ?? r.user_name ?? "Estudiante",
+        userName: r.userName ?? r.user_name ?? "Aprendiz",
         studentProgram: r.studentProgram ?? r.student_program ?? "",
         score: Number(r.score ?? 0),
         level: r.level ?? "A1",
@@ -887,7 +943,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
   };
 
   const handleDeleteSubject = (subjectId: string) => {
-    if (confirm("¿Eliminar esta asignatura?")) setSubjects(subjects.filter(s => s.id !== subjectId));
+    if (confirm("¿Eliminar esta competencia evaluada?")) setSubjects(subjects.filter(s => s.id !== subjectId));
   };
 
   const handleFileSelect = (file: File) => {
@@ -935,7 +991,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
         name: wordText,
         wordId: wordText,
         subjectId: uploadForm.subjectId || "Speaking",
-        program: "ADSO",
+        program: uploadForm.program || selectedAdminProgram || "ADSO",
         definition: uploadForm.definition || "",
         synonyms: uploadForm.synonyms || "",
         level: uploadForm.level || "A1",
@@ -974,7 +1030,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       audio: null,
       video: null,
       subjectId: doc.subjectId || "Speaking",
-      program: "ADSO",
+      program: doc.program || selectedAdminProgram || "ADSO",
       previewUrl: "",
       imagePreviewUrl: doc.imageUrl || (doc.image ? `/api/media/dictionary-images/${doc.image}` : ""),
       audioPreviewUrl: doc.audioUrl || (doc.audio ? `/api/media/dictionary-audios/${doc.audio}` : ""),
@@ -1011,28 +1067,28 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     setUploadForm(prev => ({
       ...prev,
       subjectId: asigId,
-      program: "ADSO",
+      program: selectedAdminProgram || "ADSO",
     }));
     setShowUploadModal(true);
   };
 
   const handleEditAsignatura = (asigName: string) => {
-    alert(`Edición de la asignatura '${asigName}'. En este modo puedes actualizar las competencias pedagógicas asociadas.`);
+    alert(`Edición de la competencia '${asigName}'. En este modo puedes actualizar los descriptores pedagógicos asociados.`);
   };
 
   const handleDeleteAsignatura = async (asigId: string) => {
     const asigConfig = SYSTEM_ASIGNATURAS.find(a => a.id === asigId);
     const asigDocs = asigConfig ? documents.filter(asigConfig.matches) : [];
     if (asigDocs.length === 0) {
-      alert(`No hay palabras registradas en la asignatura ${asigId}.`);
+      alert(`No hay palabras registradas en la competencia ${asigId}.`);
       return;
     }
-    if (confirm(`¿Estás seguro de eliminar todos los ${asigDocs.length} términos de la asignatura ${asigId}? Esta acción no se puede deshacer.`)) {
+    if (confirm(`¿Estás seguro de eliminar todos los ${asigDocs.length} términos de la competencia ${asigId}? Esta acción no se puede deshacer.`)) {
       try {
         await Promise.all(asigDocs.map(d => api.deleteDocument(d.id)));
         setDocuments(prev => prev.filter(d => !asigDocs.some(ad => ad.id === d.id)));
       } catch (err: any) {
-        alert("Error al eliminar términos de la asignatura: " + (err.message || err.detail || err));
+        alert("Error al eliminar términos de la competencia: " + (err.message || err.detail || err));
       }
     }
   };
@@ -1049,6 +1105,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
   });
 
   const filteredDocs = documents.filter(d => {
+    const matchProg = matchesSelectedProgram(d.program, selectedAdminProgram);
+    if (!matchProg) return false;
+
     const isAudio = Boolean(d.audioUrl) || (d.category ?? getFileCategory(d.name)) === "audio";
     const isVideo = Boolean(d.videoUrl) || (d.category ?? getFileCategory(d.name)) === "video";
     const isImage = Boolean(d.imageUrl) || (d.category ?? getFileCategory(d.name)) === "image";
@@ -1121,17 +1180,17 @@ const handleSaveUserData = async (e: React.FormEvent) => {
 
   const analyticsKpis = [
     { label: "Promedio General", value: `${averageScore}%`, icon: Target, color: "sena-green", trend: `${testResults.length} prueba${testResults.length !== 1 ? "s" : ""}`, up: averageScore >= 60 },
-    { label: "Pruebas Completadas", value: testResults.length, icon: Award, color: "sena-blue", trend: `${testedStudentIds.size} estudiante${testedStudentIds.size !== 1 ? "s" : ""}`, up: true },
-    { label: "Estudiantes Activos", value: activeStudents, icon: Users, color: "warning", trend: `${stats.students} total`, up: true },
+    { label: "Pruebas Completadas", value: testResults.length, icon: Award, color: "sena-blue", trend: `${testedStudentIds.size} aprendiz${testedStudentIds.size !== 1 ? "es" : ""}`, up: true },
+    { label: "Aprendices Activos", value: activeStudents, icon: Users, color: "warning", trend: `${stats.students} total`, up: true },
     { label: "Tasa de Aprobacion", value: `${approvalRate}%`, icon: Zap, color: "destructive", trend: `${passedTests}/${testResults.length}`, up: approvalRate >= 60 },
   ];
 
   const tabs = [
-    { id: "overview",   label: "Resumen",      icon: BarChart3 },
-    { id: "analytics",  label: "Estadisticas", icon: PieChart  },
-    { id: "users",      label: "Usuarios",     icon: Users     },
-    { id: "documents",  label: "Documentos",   icon: FileText  },
-    { id: "subjects",   label: "Asignaturas",  icon: BookOpen  },
+    { id: "overview",   label: "Resumen",                 icon: BarChart3 },
+    { id: "analytics",  label: "Estadisticas",            icon: PieChart  },
+    { id: "users",      label: "Usuarios",                icon: Users     },
+    { id: "documents",  label: "Diccionarios",            icon: BookOpen  },
+    { id: "subjects",   label: "Competencias Evaluadas",  icon: Layers    },
   ];
 
   const uploadCat = uploadForm.file ? getFileCategory(uploadForm.file.name) : null;
@@ -1142,9 +1201,11 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-border z-40 hidden lg:block">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-14 h-14 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
-              <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
-            </div>
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+            />
             <div>
               <h1 className="font-semibold text-foreground">English Test</h1>
               <p className="text-xs text-muted-foreground">
@@ -1154,14 +1215,14 @@ const handleSaveUserData = async (e: React.FormEvent) => {
           </div>
           {/* Badge de rol */}
           <div className={`mb-6 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 w-fit ${isSuperAdmin ? "bg-purple-100 text-purple-700" : "bg-destructive/10 text-destructive"}`}>
-            <Shield className="w-3.5 h-3.5" />
+            <Shield className="w-3.5 h-3.5" strokeWidth={1.8} />
             {isSuperAdmin ? "SuperAdministrador" : "Administrador"}
           </div>
           <nav className="space-y-1">
             {tabs.map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as TabType)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id ? "bg-sena-green text-white shadow-lg shadow-sena-green/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
-                <tab.icon className="w-5 h-5" />
+                <tab.icon className="w-5 h-5" strokeWidth={1.8} />
                 <span className="font-medium">{tab.label}</span>
               </button>
             ))}
@@ -1170,7 +1231,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-border">
           <button onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-destructive/10 text-destructive rounded-xl hover:bg-destructive/20 transition-all font-medium">
-            <LogOut className="w-5 h-5" /> Cerrar Sesión
+            <LogOut className="w-5 h-5" strokeWidth={1.8} /> Cerrar Sesión
           </button>
         </div>
       </aside>
@@ -1179,20 +1240,22 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
-              <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
-            </div>
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+            />
             <span className="font-semibold text-foreground">{isSuperAdmin ? "SuperAdmin" : "Admin"}</span>
           </div>
           <button onClick={handleLogout} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg">
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-5 h-5" strokeWidth={1.8} />
           </button>
         </div>
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as TabType)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab.id ? "bg-sena-green text-white" : "bg-muted text-muted-foreground"}`}>
-              <tab.icon className="w-4 h-4" />{tab.label}
+              <tab.icon className="w-4 h-4" strokeWidth={1.8} />{tab.label}
             </button>
           ))}
         </div>
@@ -1221,13 +1284,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 {[
                   { label: "Total Usuarios",    value: stats.totalUsers,     icon: Users,    color: "sena-green"  },
                   { label: "Usuarios Activos",  value: stats.activeUsers,    icon: Check,    color: "sena-blue"   },
-                  { label: "Documentos",        value: stats.totalDocuments, icon: FileText, color: "warning"     },
-                  { label: "Asignaturas",       value: stats.totalSubjects,  icon: BookOpen, color: "destructive" },
+                  { label: "Diccionarios",      value: stats.totalDocuments, icon: BookOpen, color: "warning"     },
+                  { label: "Competencias",      value: stats.totalSubjects,  icon: Layers,   color: "destructive" },
                 ].map((stat, i) => (
                   <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
-                    className="bg-white rounded-2xl p-5 border border-border shadow-sm">
+                    className="bg-white rounded-2xl p-5 border border-border shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer">
                     <div className={`w-12 h-12 bg-${stat.color}/10 rounded-xl flex items-center justify-center mb-3`}>
-                      <stat.icon className={`w-6 h-6 text-${stat.color}`} />
+                      <stat.icon className={`w-6 h-6 text-${stat.color}`} strokeWidth={1.8} />
                     </div>
                     <p className="text-3xl font-bold text-foreground">{stat.value}</p>
                     <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -1237,13 +1300,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-border shadow-sm flex items-center gap-4">
                   <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Music className="w-6 h-6 text-purple-600" />
+                    <Music className="w-6 h-6 text-purple-600" strokeWidth={1.8} />
                   </div>
                   <div><p className="text-2xl font-bold text-foreground">{stats.audios}</p><p className="text-sm text-muted-foreground">Archivos de audio</p></div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-border shadow-sm flex items-center gap-4">
                   <div className="w-12 h-12 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                    <Film className="w-6 h-6 text-sena-blue" />
+                    <Film className="w-6 h-6 text-sena-blue" strokeWidth={1.8} />
                   </div>
                   <div><p className="text-2xl font-bold text-foreground">{stats.videos}</p><p className="text-sm text-muted-foreground">Archivos de video</p></div>
                 </div>
@@ -1253,11 +1316,11 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   <h3 className="font-semibold text-foreground mb-4">Distribución de Usuarios</h3>
                   <div className="space-y-4">
                     <div>
-                      <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">Estudiantes</span><span className="font-medium">{stats.students}</span></div>
+                      <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">Aprendices</span><span className="font-medium">{stats.students}</span></div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-sena-green rounded-full" style={{ width: `${stats.totalUsers ? (stats.students / stats.totalUsers) * 100 : 0}%` }} /></div>
                     </div>
                     <div>
-                      <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">Docentes</span><span className="font-medium">{stats.teachers}</span></div>
+                      <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">Instructores</span><span className="font-medium">{stats.teachers}</span></div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-sena-blue rounded-full" style={{ width: `${stats.totalUsers ? (stats.teachers / stats.totalUsers) * 100 : 0}%` }} /></div>
                     </div>
                   </div>
@@ -1265,10 +1328,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 <div className="bg-white rounded-2xl p-6 border border-border shadow-sm">
                   <h3 className="font-semibold text-foreground mb-4">Acciones Rápidas</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setActiveTab("users")} className="flex items-center gap-2 p-3 bg-sena-green/10 text-sena-green rounded-xl hover:bg-sena-green/20 transition-all font-medium text-sm"><Users className="w-4 h-4" /> Ver Usuarios</button>
-                    <button onClick={() => setShowUploadModal(true)} className="flex items-center gap-2 p-3 bg-sena-blue/10 text-sena-blue rounded-xl hover:bg-sena-blue/20 transition-all font-medium text-sm"><Upload className="w-4 h-4" /> Subir Archivo</button>
-                    <button onClick={() => setShowSubjectModal(true)} className="flex items-center gap-2 p-3 bg-warning/10 text-warning rounded-xl hover:bg-warning/20 transition-all font-medium text-sm"><BookOpen className="w-4 h-4" /> Nueva Asignatura</button>
-                    <button onClick={() => setActiveTab("documents")} className="flex items-center gap-2 p-3 bg-muted text-muted-foreground rounded-xl hover:bg-muted/80 transition-all font-medium text-sm"><Settings className="w-4 h-4" /> Gestionar</button>
+                    <button onClick={() => setActiveTab("users")} className="flex items-center gap-2 p-3 bg-sena-green/10 text-sena-green rounded-xl hover:bg-sena-green/20 transition-all font-medium text-sm cursor-pointer"><Users className="w-4 h-4" strokeWidth={1.8} /> Ver Usuarios</button>
+                    <button onClick={() => { setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: selectedAdminProgram || "ADSO" })); setShowUploadModal(true); }} className="flex items-center gap-2 p-3 bg-sena-blue/10 text-sena-blue rounded-xl hover:bg-sena-blue/20 transition-all font-medium text-sm cursor-pointer"><Upload className="w-4 h-4" strokeWidth={1.8} /> Subir Término</button>
+                    <button onClick={() => setShowSubjectModal(true)} className="flex items-center gap-2 p-3 bg-warning/10 text-warning rounded-xl hover:bg-warning/20 transition-all font-medium text-sm cursor-pointer"><Layers className="w-4 h-4" strokeWidth={1.8} /> Nueva Competencia</button>
+                    <button onClick={() => setActiveTab("documents")} className="flex items-center gap-2 p-3 bg-muted text-muted-foreground rounded-xl hover:bg-muted/80 transition-all font-medium text-sm cursor-pointer"><BookOpen className="w-4 h-4" strokeWidth={1.8} /> Ver Diccionarios</button>
                   </div>
                 </div>
               </div>
@@ -1285,13 +1348,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {analyticsKpis.map((kpi, i) => (
                   <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
-                    className="bg-white rounded-2xl p-5 border border-border shadow-sm">
+                    className="bg-white rounded-2xl p-5 border border-border shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer">
                     <div className="flex items-center justify-between mb-3">
                       <div className={`w-11 h-11 bg-${kpi.color}/10 rounded-xl flex items-center justify-center`}>
-                        <kpi.icon className={`w-5 h-5 text-${kpi.color}`} />
+                        <kpi.icon className={`w-5 h-5 text-${kpi.color}`} strokeWidth={1.8} />
                       </div>
                       <div className={`flex items-center gap-1 text-xs font-medium ${kpi.up ? 'text-sena-green' : 'text-destructive'}`}>
-                        {kpi.up ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}{kpi.trend}
+                        {kpi.up ? <ChevronUp className="w-3 h-3" strokeWidth={1.8} /> : <ChevronDown className="w-3 h-3" strokeWidth={1.8} />}{kpi.trend}
                       </div>
                     </div>
                     <p className="text-2xl font-bold text-foreground">{kpi.value}</p>
@@ -1366,7 +1429,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <p className="text-lg font-bold text-sena-green">{passedTests}</p>
                     </div>
                     <div className="rounded-xl bg-muted/50 p-3">
-                      <p className="text-muted-foreground">Est. evaluados</p>
+                      <p className="text-muted-foreground">Aprendices evaluados</p>
                       <p className="text-lg font-bold text-sena-blue">{testedStudentIds.size}</p>
                     </div>
                   </div>
@@ -1387,12 +1450,12 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={loadDataFromApi} className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all text-sm">
-                    <RefreshCw className="w-4 h-4" /> Actualizar
+                    <RefreshCw className="w-4 h-4" strokeWidth={1.8} /> Actualizar
                   </button>
                   {isSuperAdmin && (
                     <button onClick={() => setShowUserModal(true)}
                       className="flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium shadow-lg shadow-sena-green/25">
-                      <Plus className="w-5 h-5" /> Agregar Usuario
+                      <Plus className="w-5 h-5" strokeWidth={1.8} /> Agregar Usuario
                     </button>
                   )}
                 </div>
@@ -1400,20 +1463,20 @@ const handleSaveUserData = async (e: React.FormEvent) => {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
                   <input type="text" placeholder="Buscar por nombre o email..." value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" />
                 </div>
                 <div className="relative">
-                  <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
                   <select value={filterRole} onChange={e => setFilterRole(e.target.value)}
                     className="pl-12 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer">
                     <option value="all">Todos los roles</option>
-                    <option value="superadmin">SuperAdmin</option>
+                    <option value="superadmin">SuperAdministrador</option>
                     <option value="admin">Administrador</option>
-                    <option value="teacher">Docente</option>
-                    <option value="student">Estudiante</option>
+                    <option value="teacher">Instructor</option>
+                    <option value="student">Aprendiz</option>
                   </select>
                 </div>
               </div>
@@ -1465,8 +1528,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                   <select value={user.role} onChange={e => handleChangeUserRole(user.id, e.target.value)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium border-0 cursor-pointer ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
                                     <option value="admin">Administrador</option>
-                                    <option value="teacher">Docente</option>
-                                    <option value="student">Estudiante</option>
+                                    <option value="teacher">Instructor</option>
+                                    <option value="student">Aprendiz</option>
                                   </select>
                                 ) : (
                                   <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
@@ -1478,30 +1541,30 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                 <button onClick={() => canModify && handleToggleUserStatus(user.id)}
                                   disabled={!canModify}
                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${user.status === "active" ? "bg-sena-green/10 text-sena-green hover:bg-sena-green/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
-                                  {user.status === "active" ? <><ToggleRight className="w-4 h-4" /> Activo</> : <><ToggleLeft className="w-4 h-4" /> Inactivo</>}
+                                  {user.status === "active" ? <><ToggleRight className="w-4 h-4" strokeWidth={1.8} /> Activo</> : <><ToggleLeft className="w-4 h-4" strokeWidth={1.8} /> Inactivo</>}
                                 </button>
                               </td>
                               <td className="py-4 px-5">
                                 <div className="flex items-center gap-2">
                                   {canModify && (
-      <button
-        onClick={() => handleEditUserData(user)}
-        className="p-2 text-sena-green hover:bg-sena-green/10 rounded-lg transition-colors"
-        title="Editar datos"
-      >
-        <Edit className="w-4 h-4" />
-      </button>
-    )}
+                                    <button
+                                      onClick={() => handleEditUserData(user)}
+                                      className="p-2 text-sena-green hover:bg-sena-green/10 rounded-lg transition-colors"
+                                      title="Editar datos"
+                                    >
+                                      <Edit className="w-4 h-4" strokeWidth={1.8} />
+                                    </button>
+                                  )}
                                   {canOpenPermissions && (
                                     <button onClick={() => handleEditUserPermissions(user)}
                                       className="p-2 text-sena-blue hover:bg-sena-blue/10 rounded-lg transition-colors" title="Editar permisos">
-                                      <Settings className="w-4 h-4" />
+                                      <Settings className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
                                   {canModify && !isTargetSuperAdmin && (
                                     <button onClick={() => handleDeleteUser(user.id)}
                                       className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors" title="Eliminar usuario">
-                                      <Trash2 className="w-4 h-4" />
+                                      <Trash2 className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
                                 </div>
@@ -1517,136 +1580,452 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   </div>
                 </div>
               )}
-            </motion.div>
-          )}
 
-          {/* ══ Documentos: Tarjeta Única Central ADSO (Explorador Desacoplado en Modal) ══ */}
-          {activeTab === "documents" && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              {/* 1. Cabecera Principal Institucional */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-xs">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shadow-2xs">
-                      <BookMarked className="w-6 h-6" />
+              {/* ══ Bandeja de Solicitudes de Programa Alterno (Multiprograma SENA) ══ */}
+              <div className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
+                      <GraduationCap className="w-5 h-5" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-foreground tracking-tight">
-                        Gestión Documental y Diccionario — Programa ADSO
-                      </h2>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Centro institucional de vocabulario técnico en inglés para el desarrollo de software.
+                      <h3 className="font-bold text-lg text-foreground">
+                        Bandeja de Solicitudes de Programa Alterno
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Validación y aprobación de aprendices matriculados en una segunda ficha simultánea
                       </p>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-                  {(authUser?.role === "admin" || authUser?.role === "superadmin") && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: "ADSO" }));
-                        setShowUploadModal(true);
-                      }}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>+ Agregar Término</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 2. PANTALLA PRINCIPAL: ÚNICA Y EXCLUSIVAMENTE UNA TARJETA ENCAPSULADA ADSO */}
-              <div className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8 space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                        PROGRAMA DE FORMACIÓN SENA
-                      </span>
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                        CEFR A1 — B2
-                      </span>
-                    </div>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
-                      ADSO — Diccionario Técnico de Software
-                    </h3>
-                    <p className="text-sm text-slate-600 max-w-3xl leading-relaxed">
-                      Repositorio central de vocabulario técnico, pronunciación nativa y recursos multimedia para el desarrollo de software.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Métricas Consolidadas (Base de datos y MinIO) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                    <span className="text-xs text-slate-500 font-medium block mb-1">Palabras</span>
-                    <span className="text-2xl font-bold text-slate-800 font-mono">
-                      {documents.length || 222}
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                      {fichaRequests.filter(r => r.status === "PENDIENTE").length} pendientes
                     </span>
-                    <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Términos Registrados</span>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                    <span className="text-xs text-slate-500 font-medium block mb-1">Imágenes</span>
-                    <span className="text-2xl font-bold text-slate-800 font-mono">
-                      {documents.filter(d => Boolean(d.image || d.imageUrl)).length || 222}
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      {fichaRequests.length} total
                     </span>
-                    <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Recursos Visuales</span>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                    <span className="text-xs text-slate-500 font-medium block mb-1">Audios</span>
-                    <span className="text-2xl font-bold text-slate-800 font-mono">
-                      {documents.filter(d => Boolean(d.audio || d.audioUrl)).length || 222}
-                    </span>
-                    <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Pronunciación Nativa</span>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                    <span className="text-xs text-slate-500 font-medium block mb-1">Videos</span>
-                    <span className="text-2xl font-bold text-slate-800 font-mono">
-                      {documents.filter(d => Boolean(d.video || d.videoUrl)).length}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Videoclips Técnicos</span>
                   </div>
                 </div>
 
-                {/* Botonera de Acción en la Tarjeta */}
-                <div className="flex items-center gap-3 pt-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setShowDictionaryExplorerModal(true)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm cursor-pointer"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    <span>Abrir Diccionario</span>
-                  </button>
-
-                  {(authUser?.role === "admin" || authUser?.role === "superadmin") && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: "ADSO" }));
-                        setShowUploadModal(true);
-                      }}
-                      className="border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5 text-sm shadow-2xs cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>+ Agregar Término</span>
-                    </button>
-                  )}
-                </div>
+                {fichaRequests.length === 0 ? (
+                  <p className="text-center py-8 text-xs text-muted-foreground">
+                    No hay solicitudes de vinculación registradas por aprendices.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
+                          <th className="py-3 px-4">Aprendiz</th>
+                          <th className="py-3 px-4">Programa Actual</th>
+                          <th className="py-3 px-4">Ficha Solicitada</th>
+                          <th className="py-3 px-4">Fecha Solicitud</th>
+                          <th className="py-3 px-4">Estado</th>
+                          <th className="py-3 px-4 text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border text-xs">
+                        {fichaRequests.map((req) => (
+                          <tr key={req.request_id} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-3.5 px-4">
+                              <p className="font-bold text-foreground">{req.learner_name}</p>
+                              <p className="text-muted-foreground text-[11px]">{req.learner_email}</p>
+                            </td>
+                            <td className="py-3.5 px-4 text-muted-foreground">
+                              {req.current_program || "Sin programa principal"}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="font-bold text-sena-blue">{req.ficha_code}</span>
+                              <p className="text-[11px] text-muted-foreground truncate max-w-xs">{req.program_name}</p>
+                            </td>
+                            <td className="py-3.5 px-4 text-muted-foreground">
+                              {new Date(req.created_at).toLocaleDateString("es-CO")}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-bold text-[10px] border ${
+                                  req.status === "APROBADA"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : req.status === "RECHAZADA"
+                                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                                    : "bg-amber-50 text-amber-700 border-amber-200"
+                                }`}
+                              >
+                                {req.status === "APROBADA"
+                                  ? "Aprobada"
+                                  : req.status === "RECHAZADA"
+                                  ? "Rechazada"
+                                  : "Pendiente"}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              {req.status === "PENDIENTE" ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={processingRequestId === req.request_id}
+                                    onClick={() => handleApproveFichaRequest(req.request_id)}
+                                    className="px-3 py-1 bg-sena-green hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs flex items-center gap-1 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                                    title="Aprobar vinculación del aprendiz a esta ficha"
+                                  >
+                                    <Check className="w-3.5 h-3.5" strokeWidth={2} />
+                                    <span>Aprobar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={processingRequestId === req.request_id}
+                                    onClick={() => handleRejectFichaRequest(req.request_id)}
+                                    className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg font-semibold text-xs flex items-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
+                                    title="Rechazar vinculación"
+                                  >
+                                    <X className="w-3.5 h-3.5" strokeWidth={2} />
+                                    <span>Rechazar</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground italic">
+                                  {req.reviewed_by_name ? `Por ${req.reviewed_by_name}` : "Procesada"}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
 
-          {/* ══ Subjects ══ */}
+          {/* ══ Diccionarios: Gestión Multi-Programa por Ficha (Explorador Desacoplado en Modal) ══ */}
+          {activeTab === "documents" && (() => {
+            const currentProgramDocs = documents.filter(d => matchesSelectedProgram(d.program, selectedAdminProgram));
+            const progAudios = currentProgramDocs.filter(d => Boolean(d.audio || d.audioUrl)).length;
+            const progImages = currentProgramDocs.filter(d => Boolean(d.image || d.imageUrl)).length;
+            const progVideos = currentProgramDocs.filter(d => Boolean(d.video || d.videoUrl)).length;
+
+            return (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                {/* 1. Cabecera Principal Institucional */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-xs">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shadow-2xs">
+                        <BookMarked className="w-6 h-6" strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                          Gestión de Diccionarios Técnicos por Ficha/Programa
+                        </h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Administración institucional de vocabulario técnico, pronunciación nativa y recursos pedagógicos multimedia por programa de formación.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                    {(authUser?.role === "admin" || authUser?.role === "superadmin") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: selectedAdminProgram }));
+                          setShowUploadModal(true);
+                        }}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" strokeWidth={1.8} />
+                        <span>+ Agregar Término</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Barra de Selección de Programa / Ficha Activa */}
+                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-border shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                      <GraduationCap className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground">Programa de Formación Activo</h3>
+                      <p className="text-[11px] text-muted-foreground">Selecciona el programa para visualizar o cargar su vocabulario técnico</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Botones de acceso rápido */}
+                    {["ADSO", "Análisis de Datos", "Mecánica Automotriz"].map((prog) => {
+                      const isSelected = matchesSelectedProgram(selectedAdminProgram, prog);
+                      const count = documents.filter(d => matchesSelectedProgram(d.program, prog)).length;
+                      return (
+                        <button
+                          key={prog}
+                          type="button"
+                          onClick={() => setSelectedAdminProgram(prog)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                            isSelected
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                        >
+                          <span>{prog}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                            isSelected ? "bg-white/20 text-white" : "bg-white text-slate-500 border border-slate-200"
+                          }`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+
+                    {/* Selector desplegable con todos los programas */}
+                    <div className="relative">
+                      <select
+                        value={selectedAdminProgram}
+                        onChange={(e) => setSelectedAdminProgram(e.target.value)}
+                        className="px-3 py-1.5 bg-slate-50 border border-border rounded-xl text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer max-w-[200px] truncate"
+                        title="Seleccionar programa de formación SENA"
+                      >
+                        <option value="ADSO">ADSO (Análisis y Desarrollo de Software)</option>
+                        <option value="Análisis de Datos">Análisis de Datos — Ficha 3411643</option>
+                        <option value="Mecánica Automotriz">Mecánica Automotriz — Ficha 3520681</option>
+                        {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("3411643") && !p.includes("3520681")).map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. TARJETA CENTRAL ENCAPSULADA DEL PROGRAMA ACTIVO */}
+                <div className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8 space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                          PROGRAMA DE FORMACIÓN SENA
+                        </span>
+                        <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                          CEFR A1 — B2
+                        </span>
+                      </div>
+                      <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
+                        {selectedAdminProgram} — Diccionario Técnico Especializado
+                      </h3>
+                      <p className="text-sm text-slate-600 max-w-3xl leading-relaxed">
+                        Repositorio central de vocabulario técnico, pronunciación nativa y recursos pedagógicos multimedia asociados a la ficha de formación.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Métricas Consolidadas Reales del Programa */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <span className="text-xs text-slate-500 font-medium block mb-1">Palabras</span>
+                      <span className="text-2xl font-bold text-slate-800 font-mono">
+                        {currentProgramDocs.length}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Términos Registrados</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <span className="text-xs text-slate-500 font-medium block mb-1">Imágenes</span>
+                      <span className="text-2xl font-bold text-slate-800 font-mono">
+                        {progImages}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Recursos Visuales</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <span className="text-xs text-slate-500 font-medium block mb-1">Audios</span>
+                      <span className="text-2xl font-bold text-slate-800 font-mono">
+                        {progAudios}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Pronunciación Nativa</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <span className="text-xs text-slate-500 font-medium block mb-1">Videos</span>
+                      <span className="text-2xl font-bold text-slate-800 font-mono">
+                        {progVideos}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Videoclips Técnicos</span>
+                    </div>
+                  </div>
+
+                  {/* Botonera de Acción en la Tarjeta o Estado Vacío Formal */}
+                  {currentProgramDocs.length === 0 ? (
+                    <div className="bg-slate-50/70 rounded-2xl border border-dashed border-border p-8 sm:p-10 text-center space-y-3">
+                      <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />
+                      <h4 className="text-xl font-bold text-foreground">Diccionario en construcción</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                        Actualmente no hay términos técnicos registrados para el programa{" "}
+                        <strong className="text-foreground">{selectedAdminProgram}</strong>. Tu instructor cargará el vocabulario técnico próximamente.
+                      </p>
+                      {(authUser?.role === "admin" || authUser?.role === "superadmin") && (
+                        <div className="pt-3 flex items-center justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: selectedAdminProgram }));
+                              setShowUploadModal(true);
+                            }}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sena-green hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>+ Agregar Primer Término para {selectedAdminProgram}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 pt-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setShowDictionaryExplorerModal(true)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        <BookOpen className="w-4 h-4" strokeWidth={1.8} />
+                        <span>Abrir Diccionario</span>
+                      </button>
+
+                      {(authUser?.role === "admin" || authUser?.role === "superadmin") && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: selectedAdminProgram }));
+                            setShowUploadModal(true);
+                          }}
+                          className="border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5 text-sm shadow-2xs cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" strokeWidth={1.8} />
+                          <span>+ Agregar Término</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Directorio Institucional de Diccionarios por Programa */}
+                <div className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+                    <div>
+                      <h4 className="text-base font-bold text-foreground">Directorio Institucional de Diccionarios por Ficha</h4>
+                      <p className="text-xs text-muted-foreground">Monitoreo y administración independiente por cada programa de formación</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      Total: {documents.length} términos registrados
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border text-[11px] font-bold text-muted-foreground uppercase tracking-wider bg-slate-50/50">
+                          <th className="py-3 px-4">Programa / Ficha</th>
+                          <th className="py-3 px-4">Términos</th>
+                          <th className="py-3 px-4">Multimedia</th>
+                          <th className="py-3 px-4">Estado</th>
+                          <th className="py-3 px-4 text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60 text-xs">
+                        {[
+                          { name: "ADSO", title: "ADSO (Análisis y Desarrollo de Software)" },
+                          { name: "Análisis de Datos", title: "Análisis de Datos — Ficha 3411643" },
+                          { name: "Mecánica Automotriz", title: "Mecánica — Ficha 3520681" },
+                          ...senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("3411643") && !p.includes("3520681")).map(p => ({ name: p, title: p }))
+                        ].map(progItem => {
+                          const pDocs = documents.filter(d => matchesSelectedProgram(d.program, progItem.name));
+                          const isCurrent = matchesSelectedProgram(progItem.name, selectedAdminProgram);
+                          const hasTerms = pDocs.length > 0;
+                          const aCount = pDocs.filter(d => Boolean(d.audio || d.audioUrl)).length;
+                          const iCount = pDocs.filter(d => Boolean(d.image || d.imageUrl)).length;
+
+                          return (
+                            <tr key={progItem.name} className={`hover:bg-slate-50/80 transition-colors ${isCurrent ? "bg-emerald-50/40" : ""}`}>
+                              <td className="py-3 px-4 font-semibold text-foreground">
+                                <div className="flex items-center gap-2">
+                                  <GraduationCap className="w-4 h-4 text-slate-400" />
+                                  <span>{progItem.title}</span>
+                                  {isCurrent && (
+                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                                      Seleccionado
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 font-mono font-medium text-foreground">
+                                {pDocs.length}
+                              </td>
+                              <td className="py-3 px-4 text-muted-foreground">
+                                {hasTerms ? `${aCount} audios • ${iCount} imágenes` : "Sin recursos"}
+                              </td>
+                              <td className="py-3 px-4">
+                                {hasTerms ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Activo ({pDocs.length})
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                    En construcción
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedAdminProgram(progItem.name);
+                                      if (hasTerms) {
+                                        setShowDictionaryExplorerModal(true);
+                                      }
+                                    }}
+                                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                                      isCurrent
+                                        ? "bg-emerald-600 text-white"
+                                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                    }`}
+                                  >
+                                    {hasTerms ? "Ver Términos" : "Seleccionar"}
+                                  </button>
+                                  {(authUser?.role === "admin" || authUser?.role === "superadmin") && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedAdminProgram(progItem.name);
+                                        setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: progItem.name }));
+                                        setShowUploadModal(true);
+                                      }}
+                                      className="px-2.5 py-1 text-emerald-700 hover:bg-emerald-50 border border-emerald-300 rounded-lg text-xs font-medium transition cursor-pointer"
+                                      title={`Agregar término para ${progItem.name}`}
+                                    >
+                                      + Término
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })()}
+
+          {/* ══ Competencias Evaluadas ══ */}
           {activeTab === "subjects" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div><h2 className="text-2xl font-bold text-foreground">Asignaturas</h2><p className="text-muted-foreground">Organiza el contenido por áreas temáticas</p></div>
-                <button onClick={() => setShowSubjectModal(true)} className="flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium shadow-lg shadow-sena-green/25">
-                  <Plus className="w-5 h-5" /> Nueva Asignatura
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">Competencias Lingüísticas Evaluadas</h2>
+                  <p className="text-muted-foreground">Estructura curricular de las 4 habilidades formativas del marco CEFR: Reading, Listening, Speaking y Writing</p>
+                </div>
+                <button onClick={() => setShowSubjectModal(true)} className="flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium shadow-lg shadow-sena-green/25 cursor-pointer">
+                  <Plus className="w-5 h-5" strokeWidth={1.8} /> Nueva Competencia
                 </button>
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1658,16 +2037,16 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: subject.color }} />
                       <div className="flex items-start justify-between mb-4 pt-2">
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${subject.color}20` }}>
-                          <BookOpen className="w-6 h-6" style={{ color: subject.color }} />
+                          <BookOpen className="w-6 h-6" style={{ color: subject.color }} strokeWidth={1.8} />
                         </div>
                         <button onClick={() => handleDeleteSubject(subject.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" strokeWidth={1.8} />
                         </button>
                       </div>
                       <h4 className="font-semibold text-foreground mb-2">{subject.name}</h4>
                       <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{subject.description}</p>
                       <div className="flex items-center justify-between pt-4 border-t border-border">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground"><FileText className="w-4 h-4" /><span>{docsCount} archivo{docsCount !== 1 ? "s" : ""}</span></div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground"><FileText className="w-4 h-4" strokeWidth={1.8} /><span>{docsCount} archivo{docsCount !== 1 ? "s" : ""}</span></div>
                         <span className="text-xs text-muted-foreground">{subject.createdAt}</span>
                       </div>
                     </motion.div>
@@ -1686,7 +2065,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-foreground">Agregar Usuario</h3>
-                <button onClick={() => setShowUserModal(false)} className="p-2 hover:bg-muted rounded-lg transition-colors"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowUserModal(false)} className="p-2 hover:bg-muted rounded-lg transition-colors"><X className="w-5 h-5" strokeWidth={1.8} /></button>
               </div>
               <form onSubmit={handleAddUser} className="space-y-4">
   <div className="grid grid-cols-2 gap-4">
@@ -1723,8 +2102,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     <div><label className="block text-sm font-medium text-foreground mb-1.5">Rol</label>
       <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value, program: "" })}
         className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50">
-        <option value="student">Estudiante</option>
-        <option value="teacher">Docente</option>
+        <option value="student">Aprendiz</option>
+        <option value="teacher">Instructor</option>
         <option value="admin">Administrador</option>
       </select></div>
   </div>
@@ -1759,7 +2138,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <div><h3 className="text-xl font-bold text-foreground">Editar Permisos</h3><p className="text-sm text-muted-foreground">{selectedUser.name}</p></div>
-                <button onClick={() => { setShowEditUserModal(false); setSelectedUser(null); }} className="p-2 hover:bg-muted rounded-lg transition-colors"><X className="w-5 h-5" /></button>
+                <button onClick={() => { setShowEditUserModal(false); setSelectedUser(null); }} className="p-2 hover:bg-muted rounded-lg transition-colors"><X className="w-5 h-5" strokeWidth={1.8} /></button>
               </div>
               <PermissionsEditor permissions={selectedUser.permissions} onSave={handleSaveUserPermissions} onCancel={() => { setShowEditUserModal(false); setSelectedUser(null); }} />
             </motion.div>
@@ -1788,7 +2167,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             onClick={() => setShowEditDataModal(false)}
             className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" strokeWidth={1.8} />
           </button>
         </div>
         <form onSubmit={handleSaveUserData} className="space-y-4">
@@ -1872,18 +2251,18 @@ const handleSaveUserData = async (e: React.FormEvent) => {
   )}
 </AnimatePresence>
 
-      {/* ══ Modal: Nueva Asignatura ══ */}
+      {/* ══ Modal: Nueva Competencia Lingüística ══ */}
       <AnimatePresence>
         {showSubjectModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-foreground">Nueva Asignatura</h3>
-                <button onClick={() => setShowSubjectModal(false)} className="p-2 hover:bg-muted rounded-lg transition-colors"><X className="w-5 h-5" /></button>
+                <h3 className="text-xl font-bold text-foreground">Nueva Competencia Lingüística</h3>
+                <button onClick={() => setShowSubjectModal(false)} className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"><X className="w-5 h-5" strokeWidth={1.8} /></button>
               </div>
               <form onSubmit={handleAddSubject} className="space-y-4">
                 <div><label className="block text-sm font-medium text-foreground mb-1.5">Nombre</label>
-                  <input type="text" value={newSubject.name} onChange={e => setNewSubject({ ...newSubject, name: e.target.value })} required placeholder="Ej: Gramática Avanzada" className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
+                  <input type="text" value={newSubject.name} onChange={e => setNewSubject({ ...newSubject, name: e.target.value })} required placeholder="Ej: Fonética Técnica / Speaking" className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
                 <div><label className="block text-sm font-medium text-foreground mb-1.5">Descripción</label>
                   <textarea value={newSubject.description} onChange={e => setNewSubject({ ...newSubject, description: e.target.value })} required rows={3} className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 resize-none" /></div>
                 <div><label className="block text-sm font-medium text-foreground mb-1.5">Color</label>
@@ -1904,7 +2283,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
         )}
       </AnimatePresence>
 
-      {/* ══ Modal: Explorador de Vocabulario ADSO (Ventana Emergente Desacoplada) ══ */}
+      {/* ══ Modal: Explorador de Vocabulario Técnico por Ficha (Ventana Emergente Desacoplada) ══ */}
       <AnimatePresence>
         {showDictionaryExplorerModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -1919,32 +2298,32 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shadow-2xs">
-                      <BookOpen className="w-5 h-5" />
+                      <BookOpen className="w-5 h-5" strokeWidth={1.8} />
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-foreground tracking-tight">
-                        Vocabulario Técnico ADSO — {documents.length} Términos
+                        Vocabulario Técnico {selectedAdminProgram} — {filteredDocs.length} Término{filteredDocs.length !== 1 ? "s" : ""}
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        Explorador multimedia de pronunciación nativa, conceptos técnicos y recursos gráficos
+                        Explorador multimedia de pronunciación nativa, conceptos técnicos y recursos gráficos por programa
                       </p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowDictionaryExplorerModal(false)}
-                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                     title="Cerrar explorador"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-6 h-6" strokeWidth={1.8} />
                   </button>
                 </div>
 
-                {/* Filtros: Buscador en Vivo, Filtro por Asignatura y Nivel CEFR */}
+                {/* Filtros: Buscador en Vivo, Filtro por Competencia y Nivel CEFR */}
                 <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1">
                   {/* Buscador en Vivo */}
                   <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
                     <input
                       type="text"
                       placeholder="Buscar por término técnico o definición (ej. Polymorphism, Database, API)..."
@@ -1956,16 +2335,16 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <button
                         type="button"
                         onClick={() => setSearchDocTerm("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-4 h-4" strokeWidth={1.8} />
                       </button>
                     )}
                   </div>
 
-                  {/* Filtro por Asignatura (Habilidades Lingüísticas) */}
+                  {/* Filtro por Competencia Lingüística Evaluada */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                    <span className="text-xs text-muted-foreground font-medium mr-1">Asignatura:</span>
+                    <span className="text-xs text-muted-foreground font-medium mr-1">Competencia:</span>
                     {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
                       <button
                         key={comp}
@@ -2010,7 +2389,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         }}
                         className="ml-2 text-xs text-rose-600 hover:underline flex items-center gap-1 font-medium whitespace-nowrap"
                       >
-                        <RotateCcw className="w-3 h-3" />
+                        <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
                         Restablecer
                       </button>
                     )}
@@ -2035,7 +2414,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   </div>
                 ) : (
                   <div className="text-center py-16 bg-white rounded-2xl border border-border p-8 shadow-xs space-y-3 max-w-lg mx-auto my-8">
-                    <FolderOpen className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+                    <FolderOpen className="w-12 h-12 text-muted-foreground/40 mx-auto" strokeWidth={1.8} />
                     <h3 className="font-bold text-foreground text-base">No se encontraron términos</h3>
                     <p className="text-xs text-muted-foreground max-w-md mx-auto">
                       No hay términos que coincidan con la búsqueda o filtros seleccionados en este momento.
@@ -2049,7 +2428,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       }}
                       className="px-4 py-2 bg-muted text-foreground rounded-xl text-xs font-semibold hover:bg-muted/80 transition-all inline-flex items-center gap-1.5"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
+                      <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
                       Limpiar Filtros
                     </button>
                   </div>
@@ -2087,7 +2466,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   }}
                   className="p-2 hover:bg-muted rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" strokeWidth={1.8} />
                 </button>
               </div>
 
@@ -2132,7 +2511,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <label htmlFor="image-file-upload" className="cursor-pointer block">
                         {uploadForm.imageFile ? (
                           <div className="flex flex-col items-center gap-1">
-                            <ImageIcon className="w-6 h-6 text-emerald-600" />
+                            <ImageIcon className="w-6 h-6 text-emerald-600" strokeWidth={1.8} />
                             <p className="text-xs font-semibold text-foreground truncate max-w-[150px]">{uploadForm.imageFile.name}</p>
                             <span className="text-[10px] text-emerald-600 font-medium">Cambiar imagen</span>
                           </div>
@@ -2143,7 +2522,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-1 py-1">
-                            <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                            <ImageIcon className="w-6 h-6 text-muted-foreground" strokeWidth={1.8} />
                             <p className="text-xs font-medium text-foreground">Seleccionar imagen</p>
                             <p className="text-[10px] text-muted-foreground">PNG, JPG, WEBP</p>
                           </div>
@@ -2177,18 +2556,18 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <label htmlFor="audio-file-upload" className="cursor-pointer block">
                         {uploadForm.audioFile ? (
                           <div className="flex flex-col items-center gap-1">
-                            <Music className="w-6 h-6 text-purple-600" />
+                            <Music className="w-6 h-6 text-purple-600" strokeWidth={1.8} />
                             <p className="text-xs font-semibold text-foreground truncate max-w-[150px]">{uploadForm.audioFile.name}</p>
                             <span className="text-[10px] text-purple-600 font-medium">Cambiar audio</span>
                           </div>
                         ) : uploadForm.audioPreviewUrl ? (
                           <div className="flex flex-col items-center gap-1">
-                            <Music className="w-6 h-6 text-purple-600" />
+                            <Music className="w-6 h-6 text-purple-600" strokeWidth={1.8} />
                             <audio controls src={uploadForm.audioPreviewUrl} className="w-full h-6 mt-1" />
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-1 py-1">
-                            <Music className="w-6 h-6 text-muted-foreground" />
+                            <Music className="w-6 h-6 text-muted-foreground" strokeWidth={1.8} />
                             <p className="text-xs font-medium text-foreground">Seleccionar audio</p>
                             <p className="text-[10px] text-muted-foreground">MP3, WAV, OGG</p>
                           </div>
@@ -2198,10 +2577,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   </div>
                 </div>
 
-                {/* Asignatura y Programa */}
+                {/* Competencia Lingüística Evaluada y Programa SENA */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">Asignatura *</label>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Competencia Lingüística Evaluada *</label>
                     <select
                       required
                       value={uploadForm.subjectId}
@@ -2215,13 +2594,18 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">Programa SENA *</label>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Programa / Ficha SENA *</label>
                     <select
-                      disabled
-                      value="ADSO"
-                      className="w-full px-3 py-2 border border-border rounded-xl text-xs bg-slate-100 text-slate-700 font-medium cursor-not-allowed"
+                      value={uploadForm.program}
+                      onChange={e => setUploadForm({ ...uploadForm, program: e.target.value })}
+                      className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-background text-foreground cursor-pointer"
                     >
                       <option value="ADSO">ADSO — Análisis y Desarrollo de Software</option>
+                      <option value="Análisis de Datos">Análisis de Datos — Ficha 3411643</option>
+                      <option value="Mecánica Automotriz">Mecánica Automotriz — Ficha 3520681</option>
+                      {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("3411643") && !p.includes("3520681")).map(prog => (
+                        <option key={prog} value={prog}>{prog}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -2301,12 +2685,12 @@ function PermissionsEditor({ permissions, onSave, onCancel }: { permissions: Use
   const [edited, setEdited] = useState(permissions);
   const items: { key: keyof UserPermissions; label: string; description: string }[] = [
     { key: "canManageUsers",     label: "Gestionar Usuarios",    description: "Crear, editar y eliminar usuarios"     },
-    { key: "canManageDocuments", label: "Gestionar Documentos",  description: "Subir y eliminar documentos"           },
+    { key: "canManageDocuments", label: "Gestionar Diccionarios", description: "Subir y administrar términos técnicos" },
     { key: "canViewStatistics",  label: "Ver Estadísticas",      description: "Acceder a reportes y métricas"         },
     { key: "canGiveFeedback",    label: "Dar Retroalimentación", description: "Comentar en resultados"                },
     { key: "canTakeQuiz",        label: "Realizar Pruebas",      description: "Acceso a evaluaciones de inglés"       },
     { key: "canViewResults",     label: "Ver Resultados",        description: "Ver resultados de pruebas"             },
-    { key: "canManageSubjects",  label: "Gestionar Asignaturas", description: "Crear y editar asignaturas"            },
+    { key: "canManageSubjects",  label: "Gestionar Competencias", description: "Crear y editar competencias evaluadas" },
     { key: "canConfigureLevels", label: "Configurar Niveles",   description: "Ajustar rangos de evaluación"          },
   ];
   return (
@@ -2320,7 +2704,7 @@ function PermissionsEditor({ permissions, onSave, onCancel }: { permissions: Use
               <p className="text-sm text-muted-foreground">{perm.description}</p>
             </div>
             <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${edited[perm.key] ? "bg-sena-green text-white" : "bg-muted"}`}>
-              {edited[perm.key] && <Check className="w-4 h-4" />}
+              {edited[perm.key] && <Check className="w-4 h-4" strokeWidth={1.8} />}
             </div>
           </button>
         ))}

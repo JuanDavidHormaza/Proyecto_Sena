@@ -20,6 +20,7 @@ import {
   PenTool,
   FileText,
   Headphones,
+  Languages,
 } from "lucide-react";
 import * as api from "../services/api";
 import {
@@ -45,6 +46,7 @@ export function QuizPage() {
 
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(35);
+  const [hasStartedExam, setHasStartedExam] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerState, setAnswerState] = useState<AnswerState>("idle");
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -73,10 +75,22 @@ export function QuizPage() {
   const advanceTimerRef = useRef<any>(null);
 
   const userId = localStorage.getItem("userId") || "";
+  const userProgram = localStorage.getItem("userProgram") || "SENA";
 
   // Sincronizar estado del motor
   const refreshEngine = () => {
     setEngineState(engineRef.current.getSessionState());
+  };
+
+  const handleStartExam = () => {
+    quizStartedAtRef.current = Date.now();
+    setHasStartedExam(true);
+    setTimeLeft(35);
+    if (currentQuestion?.type === "listening") {
+      setTimeout(() => {
+        handlePlayAudioPrompt();
+      }, 400);
+    }
   };
 
   // Limpieza de grabaciones locales
@@ -144,7 +158,7 @@ export function QuizPage() {
     setAnswerState("idle");
     setSpeakingAttempts(0);
 
-    if (currentQuestion) {
+    if (currentQuestion && hasStartedExam) {
       console.log("Cargando recurso de examen:", {
         word: currentQuestion.wordId || (currentQuestion as any).word,
         type: currentQuestion.type,
@@ -154,7 +168,7 @@ export function QuizPage() {
         resolvedAudioUrl: api.getMediaUrl("dictionary-audios", currentQuestion.audio),
       });
 
-      // Autoplay automático para Listening al cargar la pregunta
+      // Autoplay automático para Listening al cargar la pregunta solo si el examen ya inició
       if (currentQuestion.type === "listening") {
         const autoPlayTimer = setTimeout(() => {
           handlePlayAudioPrompt();
@@ -162,10 +176,11 @@ export function QuizPage() {
         return () => clearTimeout(autoPlayTimer);
       }
     }
-  }, [currentQuestion?.uniqueKey]);
+  }, [currentQuestion?.uniqueKey, hasStartedExam]);
 
   // Temporizador por pregunta (se pausa mientras graba, escucha o revisa feedback de speaking)
   useEffect(() => {
+    if (!hasStartedExam) return;
     const isPaused = isRecording || isUploadingAudio || isEvaluatingSpeaking || isPlayingAudio || speakingEvaluation !== null;
     if (timeLeft > 0 && answerState === "idle" && !isPaused) {
       const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
@@ -173,7 +188,7 @@ export function QuizPage() {
     } else if (timeLeft === 0 && answerState === "idle" && !isPaused) {
       handleTimeout();
     }
-  }, [timeLeft, answerState, isRecording, isUploadingAudio, isEvaluatingSpeaking, isPlayingAudio, speakingEvaluation]);
+  }, [hasStartedExam, timeLeft, answerState, isRecording, isUploadingAudio, isEvaluatingSpeaking, isPlayingAudio, speakingEvaluation]);
 
   const handleTimeout = () => {
     if (!currentQuestion) return;
@@ -554,7 +569,7 @@ export function QuizPage() {
       speaking_score: summary.speakingScore,
       writing_score: summary.writingScore,
       level_scores: summary.levelScores,
-      feedback: summary.autoFeedback,
+      feedback: null,
       duration: summary.duration,
       process: {
         userAnswers: serializableAnswers,
@@ -665,8 +680,103 @@ export function QuizPage() {
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl text-center">
           <Loader2 className="w-12 h-12 text-sena-green animate-spin mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-800 mb-2">Preparando Examen Adaptativo</h2>
-          <p className="text-sm text-slate-600">Cargando preguntas y recursos del Diccionario Técnico ADSO...</p>
+          <p className="text-sm text-slate-600">Cargando preguntas y recursos del Diccionario Técnico SENA...</p>
         </div>
+      </div>
+    );
+  }
+
+  // ── Pantalla Previa Informativa (Instrucciones antes de iniciar el quiz) ──
+  if (!hasStartedExam) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sena-blue via-sena-blue-light to-sena-green flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl border border-white/20"
+        >
+          {/* Header */}
+          <div className="flex items-center gap-3.5 mb-6 pb-5 border-b border-slate-100">
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+            />
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-sena-green">Plataforma SENA</span>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                Evaluación Diagnóstica y Formativa de Inglés
+              </h1>
+            </div>
+          </div>
+
+          {/* Cards informativas */}
+          <div className="space-y-4 mb-6">
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Bienvenido a la prueba de nivel adaptativa de WorkLex. Antes de comenzar, por favor ten en cuenta las siguientes especificaciones técnicas e instrucciones pedagógicas:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                <Clock className="w-5 h-5 text-sena-blue flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+                <div className="text-xs">
+                  <p className="font-bold text-slate-800">Duración Estimada</p>
+                  <p className="text-slate-500">15 a 20 minutos (35s por pregunta con cuenta regresiva).</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                <Trophy className="w-5 h-5 text-sena-green flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+                <div className="text-xs">
+                  <p className="font-bold text-slate-800">Niveles Evaluados</p>
+                  <p className="text-slate-500">Evaluación progresiva MCER desde A1 hasta B2.</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                <Headphones className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+                <div className="text-xs">
+                  <p className="font-bold text-slate-800">Audio y Video</p>
+                  <p className="text-slate-500">Se requiere salida de audio para escuchar modelos y pronunciaciones.</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                <Mic className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+                <div className="text-xs">
+                  <p className="font-bold text-slate-800">Micrófono (Speaking)</p>
+                  <p className="text-slate-500">Podrás grabarte y escucharte antes de enviar tu evaluación oral.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+              <span>
+                <strong>Importante:</strong> Si inicias la prueba y decides abandonarla sin responder preguntas, se registrará formalmente como <strong>"Sin Nivel / No Presentado"</strong> para no alterar tus estadísticas.
+              </span>
+            </div>
+          </div>
+
+          {/* Botones de acción */}
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard")}
+              className="w-full sm:w-auto px-5 py-3.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition cursor-pointer"
+            >
+              Volver al Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={handleStartExam}
+              className="w-full flex-1 py-3.5 px-6 rounded-xl bg-sena-green hover:bg-sena-green/90 text-white font-bold text-sm shadow-lg shadow-sena-green/30 transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Comenzar Examen de Nivel</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -689,20 +799,25 @@ export function QuizPage() {
           className="flex items-center justify-between mb-6"
         >
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg bg-white p-1">
-              <img src="/worklex.png" alt="WorkLex" className="w-full h-full object-cover rounded-full" />
-            </div>
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-white/40 shadow-lg drop-shadow-xs flex-shrink-0"
+            />
             <div>
               <span className="text-white font-bold text-lg block leading-tight">WorkLex English Test</span>
               <span className="text-white/80 text-xs font-medium">Evaluación Progresiva CEFR A1 → B2</span>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setShowExitConfirm(true)}
-            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-            title="Salir del examen"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white/15 hover:bg-white/25 border border-white/25 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+            title="Salir del examen y consolidar progreso actual"
+            aria-label="Salir del examen"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 text-rose-300" />
+            <span className="hidden sm:inline">Salir del Examen</span>
           </button>
         </motion.div>
 
@@ -715,7 +830,7 @@ export function QuizPage() {
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               className="mb-6 rounded-2xl bg-white/95 backdrop-blur-md border border-sena-green p-4 text-center shadow-xl flex items-center justify-center gap-3"
             >
-              <Sparkles className="w-6 h-6 text-sena-green animate-bounce" />
+              <Sparkles className="w-6 h-6 text-sena-green animate-bounce" strokeWidth={1.8} />
               <span className="font-bold text-sena-blue text-base">{levelUpMessage}</span>
             </motion.div>
           )}
@@ -737,7 +852,7 @@ export function QuizPage() {
               </span>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/25 text-white text-xs font-semibold backdrop-blur-sm">
-              <Clock className={`w-3.5 h-3.5 ${timeLeft <= 10 ? "text-rose-400 animate-pulse" : "text-emerald-300"}`} />
+              <Clock className={`w-3.5 h-3.5 ${timeLeft <= 10 ? "text-rose-400 animate-pulse" : "text-emerald-300"}`} strokeWidth={1.8} />
               <span className={timeLeft <= 10 ? "text-rose-300 font-bold" : "text-white"}>{timeLeft}s</span>
             </div>
           </div>
@@ -767,19 +882,19 @@ export function QuizPage() {
                 <div className="flex items-center gap-2">
                   {currentQuestion.type === "listening" ? (
                     <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                      <Volume2 className="w-3.5 h-3.5" /> Comprensión Auditiva (Listening)
+                      <Volume2 className="w-3.5 h-3.5" strokeWidth={1.8} /> Comprensión Auditiva (Listening)
                     </span>
                   ) : currentQuestion.type === "speaking" ? (
                     <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                      <Mic className="w-3.5 h-3.5" /> Producción Oral (Speaking)
+                      <Mic className="w-3.5 h-3.5" strokeWidth={1.8} /> Producción Oral (Speaking)
                     </span>
                   ) : currentQuestion.type === "writing" ? (
                     <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                      <PenTool className="w-3.5 h-3.5" /> Expresión Escrita (Writing)
+                      <PenTool className="w-3.5 h-3.5" strokeWidth={1.8} /> Expresión Escrita (Writing)
                     </span>
                   ) : (
                     <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5" /> {currentQuestion.competency === "Reading" ? "Lectura Técnica (Reading)" : "Gramática y Léxico (Grammar)"}
+                      <FileText className="w-3.5 h-3.5" strokeWidth={1.8} /> {currentQuestion.competency === "Reading" ? "Lectura Técnica (Reading)" : "Gramática y Léxico (Grammar)"}
                     </span>
                   )}
                   <span className="text-xs text-muted-foreground font-medium">
@@ -789,7 +904,7 @@ export function QuizPage() {
 
                 <div className="flex items-center gap-1">
                   {getDifficultyStars().map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-warning text-warning" />
+                    <Star key={i} className="w-4 h-4 fill-warning text-warning" strokeWidth={1.8} />
                   ))}
                   <span className="text-xs text-muted-foreground ml-1 font-medium">
                     {currentQuestion.difficultyTier}
@@ -800,6 +915,31 @@ export function QuizPage() {
               <h2 className="text-xl lg:text-2xl font-bold text-foreground leading-relaxed mb-4">
                 {currentQuestion.question}
               </h2>
+
+              {/* Video Embebido si la pregunta contiene recurso audiovisual */}
+              {Boolean(currentQuestion.video || (currentQuestion as any).videoUrl) && (
+                <div className="mb-5 rounded-2xl overflow-hidden border border-slate-200 bg-black aspect-video max-h-72 w-full flex items-center justify-center shadow-md">
+                  {String(currentQuestion.video || (currentQuestion as any).videoUrl).includes("youtube.com") ||
+                  String(currentQuestion.video || (currentQuestion as any).videoUrl).includes("youtu.be") ? (
+                    <iframe
+                      src={String(currentQuestion.video || (currentQuestion as any).videoUrl).replace("watch?v=", "embed/")}
+                      title="Video embebido de evaluación"
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video
+                      controls
+                      src={api.resolveMediaUrl(
+                        currentQuestion.video || (currentQuestion as any).videoUrl,
+                        "dictionary-videos"
+                      )}
+                      className="w-full h-full max-h-72 object-contain"
+                    />
+                  )}
+                </div>
+              )}
 
               {/* En listening no mostrar prompt ni imagen para evitar revelar la respuesta antes de escuchar */}
               {currentQuestion.type !== "listening" && currentQuestion.prompt && (
@@ -814,7 +954,7 @@ export function QuizPage() {
                   <SafeImage
                     src={api.resolveMediaUrl(currentQuestion.image, "dictionary-images")}
                     alt="Ilustración técnica"
-                    fallbackText="ADSO"
+                    fallbackText="SENA"
                     showHoverZoom={false}
                     className="h-40 object-contain pointer-events-none select-none"
                     containerClassName="h-44 pointer-events-none select-none"
@@ -847,7 +987,7 @@ export function QuizPage() {
                         <span className="w-1.5 bg-white rounded-full animate-[pulse_0.5s_ease-in-out_infinite] h-3"></span>
                       </div>
                     ) : (
-                      <Volume2 className="w-9 h-9" />
+                      <Volume2 className="w-9 h-9" strokeWidth={1.8} />
                     )}
                   </motion.button>
                   <p className="text-xs text-slate-500 font-medium mt-3">
@@ -887,7 +1027,7 @@ export function QuizPage() {
               <div className="px-6 lg:px-8 pb-6 lg:pb-8">
                 {mediaError && (
                   <div className="mb-4 rounded-2xl bg-destructive/10 border border-destructive text-destructive px-4 py-3 text-sm flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
                     <span>{mediaError}</span>
                   </div>
                 )}
@@ -896,14 +1036,14 @@ export function QuizPage() {
                 <div className="mb-6 rounded-2xl border border-sena-blue/20 bg-gradient-to-r from-blue-50/70 to-slate-50 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                   <div className="flex items-center gap-3.5">
                     <div className="w-12 h-12 rounded-2xl bg-sena-blue text-white flex items-center justify-center shadow-md flex-shrink-0">
-                      <Volume2 className={`w-6 h-6 ${isPlayingAudio ? "animate-bounce" : ""}`} />
+                      <Volume2 className={`w-6 h-6 ${isPlayingAudio ? "animate-bounce" : ""}`} strokeWidth={1.8} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-sena-blue bg-sena-blue/10 px-2 py-0.5 rounded-full">
                           Modelo Nativo
                         </span>
-                        <span className="text-xs text-slate-500 font-medium">Pronunciación ADSO</span>
+                        <span className="text-xs text-slate-500 font-medium">Pronunciación {userProgram}</span>
                       </div>
                       <p className="font-bold text-slate-800 text-sm mt-0.5">
                         {currentQuestion.wordId ? `Término Técnico: "${currentQuestion.wordId}"` : "Escucha la pronunciación oficial"}
@@ -915,14 +1055,14 @@ export function QuizPage() {
                     type="button"
                     onClick={handlePlayAudioPrompt}
                     disabled={isPlayingAudio}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-sena-blue hover:bg-sena-blue/90 text-white rounded-xl text-sm font-semibold shadow-md transition disabled:opacity-50 flex-shrink-0"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-sena-blue hover:bg-sena-blue/90 text-white rounded-xl text-sm font-semibold shadow-md transition disabled:opacity-50 flex-shrink-0 cursor-pointer"
                   >
-                    <Volume2 className={`w-4 h-4 ${isPlayingAudio ? "animate-pulse" : ""}`} />
+                    <Volume2 className={`w-4 h-4 ${isPlayingAudio ? "animate-pulse" : ""}`} strokeWidth={1.8} />
                     <span>{isPlayingAudio ? "Reproduciendo modelo..." : "Escuchar Pronunciación Modelo"}</span>
                   </button>
                 </div>
 
-                {/* 2. Área de Grabación / Grabadora del Estudiante */}
+                {/* 2. Área de Grabación / Grabadora del Aprendiz */}
                 {!speakingEvaluation && (
                   <>
                     <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-slate-50/70 px-5 py-8 mb-5 text-center">
@@ -930,7 +1070,7 @@ export function QuizPage() {
                         type="button"
                         onClick={isRecording ? handleStopRecording : handleStartRecording}
                         disabled={isEvaluatingSpeaking}
-                        className={`relative h-20 w-20 rounded-full flex items-center justify-center text-white shadow-xl transition disabled:cursor-not-allowed disabled:bg-muted ${
+                        className={`relative h-20 w-20 rounded-full flex items-center justify-center text-white shadow-xl transition disabled:cursor-not-allowed disabled:bg-muted cursor-pointer ${
                           isRecording ? "bg-destructive" : "bg-sena-blue hover:bg-sena-blue/90"
                         }`}
                         animate={isRecording ? { scale: [1, 1.08, 1] } : { scale: 1 }}
@@ -944,7 +1084,7 @@ export function QuizPage() {
                             transition={{ duration: 1, repeat: Infinity }}
                           />
                         )}
-                        {isRecording ? <Square className="w-7 h-7 fill-current" /> : <Mic className="w-8 h-8" />}
+                        {isRecording ? <Square className="w-7 h-7 fill-current" strokeWidth={1.8} /> : <Mic className="w-8 h-8" strokeWidth={1.8} />}
                       </motion.button>
 
                       <div>
@@ -963,13 +1103,22 @@ export function QuizPage() {
                       </div>
                     </div>
 
-                    {/* Reproductor de vista previa si hay grabación */}
+                    {/* Reproductor de vista previa "Grabarse y escucharse" */}
                     {recordedAudioUrl && !isRecording && (
-                      <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-                          <span>🔊 Tu grabación:</span>
+                      <div className="mb-5 rounded-2xl border-2 border-emerald-500/30 bg-emerald-50/50 p-4 shadow-sm text-left">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <Headphones className="w-4 h-4 text-emerald-600" strokeWidth={1.8} />
+                            <span>Grabarse y Escucharse: Valida tu pronunciación antes de enviar</span>
+                          </p>
+                          <span className="text-[11px] font-semibold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200">
+                            Audio capturado
+                          </span>
+                        </div>
+                        <audio controls src={recordedAudioUrl} className="w-full h-10" />
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          Escúchate con atención. Si crees que puedes mejorar, pulsa "Volver a grabar". Si estás conforme, haz clic en "Evaluar Pronunciación".
                         </p>
-                        <audio controls src={recordedAudioUrl} className="w-full" />
                       </div>
                     )}
 
@@ -980,9 +1129,9 @@ export function QuizPage() {
                           type="button"
                           onClick={handleRetrySpeaking}
                           disabled={isEvaluatingSpeaking}
-                          className="w-full sm:w-auto px-5 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2"
+                          className="w-full sm:w-auto px-5 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer"
                         >
-                          <RefreshCw className="w-4 h-4" />
+                          <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
                           <span>Volver a grabar</span>
                         </button>
 
@@ -990,16 +1139,16 @@ export function QuizPage() {
                           type="button"
                           onClick={handleEvaluateSpeaking}
                           disabled={isEvaluatingSpeaking}
-                          className="w-full flex-1 bg-sena-blue hover:bg-sena-blue/90 text-white p-4 rounded-xl text-base font-semibold transition disabled:cursor-not-allowed disabled:bg-muted flex items-center justify-center gap-2 shadow-lg"
+                          className="w-full flex-1 bg-sena-blue hover:bg-sena-blue/90 text-white p-4 rounded-xl text-base font-semibold transition disabled:cursor-not-allowed disabled:bg-muted flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                         >
                           {isEvaluatingSpeaking ? (
                             <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.8} />
                               <span>Analizando fonética y pronunciación...</span>
                             </>
                           ) : (
                             <>
-                              <Sparkles className="w-5 h-5" />
+                              <Sparkles className="w-5 h-5" strokeWidth={1.8} />
                               <span>Evaluar Pronunciación (Motor STT)</span>
                             </>
                           )}
@@ -1111,7 +1260,7 @@ export function QuizPage() {
                     {speakingEvaluation.score < 70 && speakingAttempts < 3 ? (
                       <div className="space-y-3">
                         <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs font-medium flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" strokeWidth={1.8} />
                           <span>
                             Para avanzar a la siguiente pregunta debes alcanzar un mínimo del <strong>70% de precisión</strong>.
                             Escucha nuevamente el modelo y reintenta.
@@ -1122,18 +1271,18 @@ export function QuizPage() {
                           <button
                             type="button"
                             onClick={handlePlayAudioPrompt}
-                            className="w-full sm:w-auto px-5 py-3.5 bg-sena-blue/10 hover:bg-sena-blue/20 text-sena-blue rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2"
+                            className="w-full sm:w-auto px-5 py-3.5 bg-sena-blue/10 hover:bg-sena-blue/20 text-sena-blue rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer"
                           >
-                            <Volume2 className="w-4 h-4" />
+                            <Volume2 className="w-4 h-4" strokeWidth={1.8} />
                             <span>Reescuchar Modelo</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={handleRetrySpeaking}
-                            className="w-full flex-1 bg-sena-blue hover:bg-sena-blue/90 text-white p-3.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shadow-md"
+                            className="w-full flex-1 bg-sena-blue hover:bg-sena-blue/90 text-white p-3.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shadow-md cursor-pointer"
                           >
-                            <RefreshCw className="w-4 h-4" />
+                            <RefreshCw className="w-4 h-4" strokeWidth={1.8} />
                             <span>Reintentar Grabación (Intento {speakingAttempts + 1} de 3)</span>
                           </button>
                         </div>
@@ -1149,10 +1298,10 @@ export function QuizPage() {
                         <button
                           type="button"
                           onClick={handleSpeakingNext}
-                          className="w-full bg-sena-green hover:bg-sena-green/90 text-white p-4 rounded-xl text-base font-bold transition flex items-center justify-center gap-2 shadow-lg"
+                          className="w-full bg-sena-green hover:bg-sena-green/90 text-white p-4 rounded-xl text-base font-bold transition flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                         >
                           <span>Continuar a la siguiente pregunta</span>
-                          <ArrowRight className="w-5 h-5" />
+                          <ArrowRight className="w-5 h-5" strokeWidth={1.8} />
                         </button>
                       </div>
                     )}
@@ -1170,7 +1319,7 @@ export function QuizPage() {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-xs">
                   <div className="mb-3">
                     <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-md inline-flex items-center gap-1.5">
-                      <PenTool className="w-3.5 h-3.5 text-emerald-700" />
+                      <PenTool className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.8} />
                       Escribe el término técnico en inglés
                     </span>
                   </div>
@@ -1197,9 +1346,9 @@ export function QuizPage() {
                       type="button"
                       onClick={handleWritingComplete}
                       disabled={answerState !== "idle" || !writingAnswer.trim()}
-                      className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 flex-shrink-0"
+                      className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
                     >
-                      <Check className="w-4 h-4" />
+                      <Check className="w-4 h-4" strokeWidth={1.8} />
                       <span>Comprobar</span>
                     </button>
                   </div>
@@ -1250,12 +1399,12 @@ export function QuizPage() {
                 >
                   {answerState === "correct" ? (
                     <div className="flex items-center gap-3">
-                      <Trophy className="w-6 h-6 flex-shrink-0" />
+                      <Trophy className="w-6 h-6 flex-shrink-0" strokeWidth={1.8} />
                       <span className="text-base sm:text-lg font-bold">¡Respuesta Correcta! (+1 punto)</span>
                     </div>
                   ) : answerState === "submitted" ? (
                     <div className="flex items-center gap-3">
-                      <Check className="w-6 h-6 flex-shrink-0" />
+                      <Check className="w-6 h-6 flex-shrink-0" strokeWidth={1.8} />
                       <span className="text-base sm:text-lg font-bold">Respuesta guardada con éxito en el sistema.</span>
                     </div>
                   ) : (
@@ -1295,20 +1444,27 @@ export function QuizPage() {
             animate={{ scale: 1, opacity: 1 }}
             className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl text-center"
           >
+            <div className="w-12 h-12 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-6 h-6" strokeWidth={1.8} />
+            </div>
             <h3 className="text-xl font-bold text-foreground mb-2">¿Deseas salir del examen?</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Tu progreso actual se consolidará con las respuestas registradas hasta el momento.
+            <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+              {engineState.totalAnswered === 0
+                ? "Aún no has respondido preguntas. Si sales en este momento, la prueba se registrará explícitamente como 'Sin Nivel / No Presentado' para no alterar tus promedios ni asignarte un nivel incorrecto."
+                : `Has contestado ${engineState.totalAnswered} preguntas. Tu resultado se consolidará con las respuestas registradas hasta el momento.`}
             </p>
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={() => setShowExitConfirm(false)}
-                className="flex-1 py-3 px-4 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-semibold transition"
+                className="flex-1 py-3 px-4 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-semibold transition cursor-pointer"
               >
                 Continuar examen
               </button>
               <button
+                type="button"
                 onClick={() => finalizeExam()}
-                className="flex-1 py-3 px-4 bg-destructive hover:bg-destructive/90 text-white rounded-xl font-semibold transition"
+                className="flex-1 py-3 px-4 bg-destructive hover:bg-destructive/90 text-white rounded-xl font-semibold transition cursor-pointer"
               >
                 Finalizar y salir
               </button>

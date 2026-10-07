@@ -69,6 +69,7 @@ export interface UserAnswerRecord {
   definition?: string;
   image?: string;
   isDictionaryTerm?: boolean;
+  options?: string[];
 }
 
 export interface LevelStats {
@@ -92,7 +93,7 @@ export interface ExamSessionState {
 
 export interface ExamFinalSummary {
   finalScore: number;
-  finalLevel: CEFRLevel;
+  finalLevel: string;
   character: string;
   correctAnswers: number;
   totalQuestions: number;
@@ -501,6 +502,7 @@ export class ExamEngine {
       definition: q.definition,
       image: q.image,
       isDictionaryTerm: q.isDictionaryTerm,
+      options: q.options,
     };
 
     this.answers.push(record);
@@ -675,20 +677,30 @@ export class ExamEngine {
     // Ponderación global (0-100)
     const overallScore = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
 
-    // Nivel final alcanzado (el nivel más alto aprobado)
-    let finalLevel: CEFRLevel = "A1";
-    if (levelScores.B2 >= LEVEL_PASS_THRESHOLDS.B2) finalLevel = "B2";
-    else if (levelScores.B1 >= LEVEL_PASS_THRESHOLDS.B1) finalLevel = "B1";
-    else if (levelScores.A2 >= LEVEL_PASS_THRESHOLDS.A2) finalLevel = "A2";
-    else finalLevel = "A1";
+    // Nivel final alcanzado (no asignar A1 por defecto si no respondió o abandonó)
+    let finalLevel: string = "Sin Nivel";
+    if (totalAnswered === 0 || (correctCount === 0 && overallScore === 0)) {
+      finalLevel = "Sin Nivel";
+    } else if (levelScores.B2 >= LEVEL_PASS_THRESHOLDS.B2) {
+      finalLevel = "B2";
+    } else if (levelScores.B1 >= LEVEL_PASS_THRESHOLDS.B1) {
+      finalLevel = "B1";
+    } else if (levelScores.A2 >= LEVEL_PASS_THRESHOLDS.A2) {
+      finalLevel = "A2";
+    } else if (overallScore >= 20 || correctCount > 0) {
+      finalLevel = "A1";
+    } else {
+      finalLevel = "Sin Nivel";
+    }
 
-    const passed = overallScore >= LEVEL_PASS_THRESHOLDS[finalLevel];
+    const passed = finalLevel !== "Sin Nivel" && overallScore >= (LEVEL_PASS_THRESHOLDS[finalLevel as CEFRLevel] || 60);
 
     // Character descriptivo
-    let character = "Principiante";
+    let character = "No Presentado";
     if (finalLevel === "B2") character = "Experto";
     else if (finalLevel === "B1") character = "Avanzado";
     else if (finalLevel === "A2") character = "Intermedio";
+    else if (finalLevel === "A1") character = "Principiante";
 
     // Duración formateada MM:SS
     const mins = Math.floor(elapsedSeconds / 60);

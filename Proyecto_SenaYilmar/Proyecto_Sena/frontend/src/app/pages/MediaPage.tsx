@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
-import { Image, Video, X, Play, ChevronRight, Film, Camera, ZoomIn } from "lucide-react";
+import { Image, Video, X, Play, ChevronRight, Film, Camera, ZoomIn, Languages } from "lucide-react";
 import { useState } from "react";
 
 // ─── Datos de ejemplo ───────────────────────────────────────────────────────
@@ -103,9 +103,11 @@ export function MediaPage() {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="w-16 h-16 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
-                <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
-              </div>
+              <img
+                src="/worklex.png"
+                alt="WorkLex"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              />
               <div>
                 <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Plataforma SENA</p>
@@ -116,7 +118,7 @@ export function MediaPage() {
               className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-sena-blue text-white rounded-xl hover:bg-sena-blue-light transition-all duration-300 font-medium shadow-lg shadow-sena-blue/25"
             >
               Ingresar
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" strokeWidth={1.8} />
             </button>
           </motion.div>
         </div>
@@ -136,7 +138,7 @@ export function MediaPage() {
             className="text-center"
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-sena-green/10 text-sena-green rounded-full text-sm font-medium mb-6">
-              <Image className="w-4 h-4" />
+              <Image className="w-4 h-4" strokeWidth={1.8} />
               Galería Multimedia
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
@@ -161,7 +163,7 @@ export function MediaPage() {
             ].map((stat, i) => (
               <div key={i} className="flex items-center gap-3 bg-white rounded-2xl px-6 py-4 shadow-lg border border-border">
                 <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-sena-green" />
+                  <stat.icon className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{stat.value}</p>
@@ -195,7 +197,7 @@ export function MediaPage() {
                       : "bg-white text-muted-foreground border border-border hover:border-sena-green/40 hover:text-sena-green"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4" strokeWidth={1.8} />
                   {tab.label}
                 </button>
               );
@@ -215,7 +217,7 @@ export function MediaPage() {
                 className="flex items-center gap-3 mb-8"
               >
                 <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
-                  <Camera className="w-5 h-5 text-sena-green" />
+                  <Camera className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground">Imágenes</h3>
               </motion.div>
@@ -242,7 +244,7 @@ export function MediaPage() {
                     {/* Overlay al hover */}
                     <div className="absolute inset-0 bg-sena-green/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                       <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
-                        <ZoomIn className="w-6 h-6 text-sena-green" />
+                        <ZoomIn className="w-6 h-6 text-sena-green" strokeWidth={1.8} />
                       </div>
                     </div>
                     {/* Badge categoría */}
@@ -272,7 +274,7 @@ export function MediaPage() {
                 className="flex items-center gap-3 mb-8"
               >
                 <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                  <Video className="w-5 h-5 text-sena-blue" />
+                  <Video className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground">Videos</h3>
               </motion.div>
@@ -315,7 +317,7 @@ export function MediaPage() {
                             whileTap={{ scale: 0.95 }}
                             className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-2xl"
                           >
-                            <Play className="w-7 h-7 text-sena-blue fill-sena-blue ml-1" />
+                            <Play className="w-7 h-7 text-sena-blue fill-sena-blue ml-1" strokeWidth={1.8} />
                           </motion.div>
                         </div>
                         {/* Duración */}
@@ -381,7 +383,7 @@ export function MediaPage() {
                   onClick={() => setLightboxImage(null)}
                   className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" strokeWidth={1.8} />
                 </button>
               </div>
             </motion.div>
@@ -394,9 +396,11 @@ export function MediaPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg shadow-slate-900/15">
-                <img src="/worklex.png" alt="WorkLex logo" className="w-full h-full object-cover" />
-              </div>
+              <img
+                src="/worklex.png"
+                alt="WorkLex"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              />
               <div>
                 <p className="font-semibold text-foreground">English Level Test</p>
                 <p className="text-sm text-muted-foreground">SENA - 2026</p>

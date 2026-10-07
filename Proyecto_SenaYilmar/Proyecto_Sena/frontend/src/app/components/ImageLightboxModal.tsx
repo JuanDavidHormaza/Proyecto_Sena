@@ -41,7 +41,7 @@ export function ImageLightboxModal({
 
   const wordName = item.name || item.word || item.word_id || "Término Técnico";
   const level = (item.level || "A1").toUpperCase();
-  const asignatura = item.subjectId || item.competence || item.subjectName || "ADSO";
+  const competence = item.competence || item.subjectId || item.subjectName || "Speaking";
 
   // Badges por Nivel CEFR
   const levelColors: Record<string, string> = {
@@ -121,7 +121,7 @@ export function ImageLightboxModal({
           className="absolute -top-12 right-0 sm:right-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-full transition-all backdrop-blur-xs shadow-lg cursor-pointer"
           title="Cerrar visor (Esc)"
         >
-          <X className="w-6 h-6" />
+          <X className="w-6 h-6" strokeWidth={1.8} />
         </button>
 
         {/* Contenedor Central con la Imagen HD */}
@@ -141,10 +141,10 @@ export function ImageLightboxModal({
                 Nivel {level}
               </span>
               <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white/10 text-white/90 border border-white/15">
-                {asignatura}
+                {competence}
               </span>
               <span className="text-xs text-emerald-400 font-mono">
-                ADSO — SENA
+                {item.program || "ADSO — SENA"}
               </span>
             </div>
             <h3 className="text-2xl font-black text-white tracking-tight">{wordName}</h3>
@@ -174,7 +174,7 @@ export function ImageLightboxModal({
                 <span className="w-1 bg-white rounded-full animate-[pulse_0.5s_ease-in-out_infinite] h-2"></span>
               </div>
             ) : (
-              <Volume2 className="w-6 h-6" />
+              <Volume2 className="w-6 h-6" strokeWidth={1.8} />
             )}
           </button>
         </div>

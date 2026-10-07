@@ -159,7 +159,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-gradient-to-r from-sena-green/5 to-sena-blue/5">
             <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <FileText className="w-5 h-5 text-sena-green" />
+                <FileText className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
                 </div>
                 <div className="min-w-0">
                 <h2 className="font-bold text-foreground truncate text-lg">{doc.name}</h2>
@@ -168,7 +168,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-colors">
-                <X className="w-5 h-5 text-muted-foreground" />
+                <X className="w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
                 </button>
             </div>
             </div>
@@ -185,14 +185,14 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                     onClick={() => setZoom(z => Math.max(50, z - 10))}
                     className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                 >
-                    <ZoomOut className="w-4 h-4 text-muted-foreground" />
+                    <ZoomOut className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                 </button>
                 <span className="text-xs font-medium text-muted-foreground w-12 text-center">{zoom}%</span>
                 <button
                     onClick={() => setZoom(z => Math.min(200, z + 10))}
                     className="p-1.5 hover:bg-muted rounded-lg transition-colors"
                 >
-                <ZoomIn className="w-4 h-4 text-muted-foreground" />
+                <ZoomIn className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                 </button>
                 <div className="w-px h-4 bg-border mx-1" />
                 <button onClick={() => setZoom(100)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -201,7 +201,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                 </div>
             )}
 
-              {/* Visor */}
+            {/* Visor */}
             <div className="flex-1 overflow-auto flex items-start justify-center p-4">
                 {canPreview && doc.objectUrl ? (
                 <div
@@ -220,7 +220,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                   /* Placeholder cuando no hay preview */
                 <div className="flex flex-col items-center justify-center h-full text-center py-16 px-8">
                     <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center mb-6">
-                    <FileText className="w-12 h-12 text-muted-foreground" />
+                    <FileText className="w-12 h-12 text-muted-foreground" strokeWidth={1.8} />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
                     Vista previa no disponible
@@ -238,7 +238,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
               {/* Título del panel */}
             <div className="px-5 py-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-sena-green" />
+                <Sparkles className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
                 <h3 className="font-semibold text-foreground text-sm">Análisis del documento</h3>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">Generado por IA automáticamente</p>
@@ -264,7 +264,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                   /* ── Skeleton loading ── */
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 text-sena-green text-sm">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} />
                     <span className="font-medium">Analizando con IA...</span>
                     </div>
                     {[80, 100, 60, 90, 70].map((w, i) => (
@@ -293,7 +293,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                     {/* ── Descripción ── */}
                     <div>
                     <div className="flex items-center gap-2 mb-2">
-                        <AlignLeft className="w-4 h-4 text-muted-foreground" />
+                        <AlignLeft className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                         <h4 className="text-sm font-semibold text-foreground">Descripción</h4>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed bg-muted/30 rounded-xl p-3">
@@ -304,7 +304,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                     {/* ── Keywords ── */}
                     <div>
                     <div className="flex items-center gap-2 mb-3">
-                        <Hash className="w-4 h-4 text-muted-foreground" />
+                        <Hash className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                         <h4 className="text-sm font-semibold text-foreground">Palabras clave</h4>
                         <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full ml-auto">
                         {analysis.keywords.length}
@@ -320,7 +320,7 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                               transition={{ delay: i * 0.05 }}
                             className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border ${KW_COLORS[i % KW_COLORS.length]}`}
                             >
-                            <Tag className="w-2.5 h-2.5" />
+                            <Tag className="w-2.5 h-2.5" strokeWidth={1.8} />
                             {kw}
                             </motion.span>
                         ))}
@@ -333,11 +333,11 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
                     {/* ── Sugerencia educativa ── */}
                     <div className="bg-gradient-to-br from-sena-green/5 to-sena-blue/5 rounded-xl p-4 border border-sena-green/10">
                     <div className="flex items-center gap-2 mb-2">
-                        <BookOpen className="w-4 h-4 text-sena-green" />
+                        <BookOpen className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
                         <h4 className="text-xs font-semibold text-sena-green">Uso recomendado</h4>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                        Comparte este documento con estudiantes de nivel <strong>{analysis.level}</strong> para reforzar vocabulario y comprensión lectora en inglés.
+                        Comparte este documento con aprendices de nivel <strong>{analysis.level}</strong> para reforzar vocabulario y comprensión lectora en inglés.
                     </p>
                     </div>
                 </>
