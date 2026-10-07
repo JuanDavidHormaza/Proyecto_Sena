@@ -7,8 +7,8 @@ import { useAuth } from "../context/AuthContext";
 const ROLE_LABELS: Record<string, string> = {
   superadmin: "SuperAdministrador",
   admin: "Administrador",
-  teacher: "Docente",
-  student: "Estudiante",
+  teacher: "Instructor",
+  student: "Aprendiz",
 };
 
 function getInitials(name: string) {
@@ -49,10 +49,10 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className={`flex items-center gap-3 rounded-full transition-colors hover:bg-muted ${compact ? "p-1.5" : "p-2"}`}
+        className={`flex items-center gap-3 rounded-xl transition-colors hover:bg-muted ${compact ? "p-1.5" : "p-2"}`}
         aria-label="Abrir menu de usuario"
       >
-        <div className={`${compact ? "w-9 h-9" : "w-10 h-10"} ${accentClass} rounded-full flex items-center justify-center text-white font-medium`}>
+        <div className={`${compact ? "w-9 h-9" : "w-10 h-10"} ${accentClass} rounded-xl flex items-center justify-center text-white font-medium`}>
           {getInitials(userName)}
         </div>
         {!compact && (
@@ -71,7 +71,7 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-soft-lg border border-border py-2 z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-border py-2 z-50 overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-border">
               <p className="font-medium text-foreground truncate">{userName}</p>
@@ -79,34 +79,34 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
             </div>
             <button
               onClick={() => handleNavigate("/profile")}
-              className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-foreground"
+              className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-foreground cursor-pointer"
             >
-              <User className="w-4 h-4 text-muted-foreground" />
+              <User className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
               Mi Perfil
             </button>
             <button
               onClick={() => handleNavigate("/settings")}
-              className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-foreground"
+              className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-foreground cursor-pointer"
             >
-              <Settings className="w-4 h-4 text-muted-foreground" />
-              Configuracion
+              <Settings className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+              Configuración
             </button>
             {role === "teacher" && (
               <button
                 onClick={() => handleNavigate("/teacher/dictionaries")}
-                className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-foreground"
+                className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-foreground cursor-pointer"
               >
-                <BookOpen className="w-4 h-4 text-muted-foreground" />
+                <BookOpen className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                 Mis diccionarios
               </button>
             )}
             <div className="border-t border-border mt-2 pt-2">
               <button
                 onClick={handleLogout}
-                className="w-full px-4 py-2.5 text-left hover:bg-destructive/10 flex items-center gap-3 text-sm text-destructive"
+                className="w-full px-4 py-2.5 text-left hover:bg-destructive/10 flex items-center gap-3 text-sm text-destructive cursor-pointer"
               >
-                <LogOut className="w-4 h-4" />
-                Cerrar Sesion
+                <LogOut className="w-4 h-4" strokeWidth={1.8} />
+                Cerrar Sesión
               </button>
             </div>
           </motion.div>

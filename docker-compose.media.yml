@@ -1,52 +1,60 @@
+version: '3.8'
+
 services:
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # worklex_media (MinIO)
-  # Almacenamiento de objetos S3-compatible para TODO el contenido multimedia
-  # del diccionario (imágenes, audios, videos) y las grabaciones de speaking
-  # de los estudiantes. Reemplaza a Supabase Storage.
-  #
-  # Jerarquía dentro de cada bucket: {programa}/{ficha}/{archivo}
-  #   worklex-images  -> imágenes del diccionario
-  #   worklex-audios  -> audios del diccionario
-  #   worklex-videos  -> videos del diccionario
-  #   student-speaking -> grabaciones de pronunciación del quiz
-  # ─────────────────────────────────────────────────────────────────────────
-  worklex-media:
-
-    image: minio/minio:latest
-
-    container_name: worklex-media
-
-    restart: unless-stopped
-
-    env_file:
-      - .env
-
+  worklex_minio:
+    image: elestio/minio:latest
+    container_name: worklex_minio
     environment:
-      MINIO_ROOT_USER: ${MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
-
-    command: server /data --console-address ":9001"
-
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Admin123*}
     ports:
-      - "9000:9000"   # API S3
-      - "9001:9001"   # Consola web de administración
-
+      - "9000:9000"
+      - "9001:9001"
+    command: minio server /data --console-address ":9001"
     volumes:
-      - worklex_media_data:/data
+      - minio_data:/data
+    networks:
+      worklex_network:
+        aliases:
+          - minio
 
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
+  worklex_minio_provision:
+    image: worklex_provision:latest
+    container_name: worklex_minio_provision
+    depends_on:
+      - worklex_minio
+    volumes:
+      - ./minio-seed:/seed:ro
     networks:
       - worklex_network
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Esperando que MinIO arranque...';
+      sleep 5;
+      mc alias set localminio http://worklex_minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-Admin123*};
+
+      echo 'Creando buckets...';
+      mc mb --ignore-existing localminio/dictionary-audios;
+      mc mb --ignore-existing localminio/dictionary-images;
+      mc mb --ignore-existing localminio/dictionary-videos;
+      mc mb --ignore-existing localminio/exam-audios;
+      mc mb --ignore-existing localminio/exam-submissions;
+
+      echo 'Configurando lectura publica...';
+      mc anonymous set download localminio/dictionary-audios;
+      mc anonymous set download localminio/dictionary-images;
+      mc anonymous set download localminio/dictionary-videos;
+
+      echo 'Copiando archivos multimedia si existen...';
+      mc cp --recursive /seed/dictionary-audios/ localminio/dictionary-audios/ || true;
+      mc cp --recursive /seed/dictionary-images/ localminio/dictionary-images/ || true;
+
+      echo 'Aprovisionamiento completado con exito.';
+      exit 0;
+      "
 
 volumes:
-  worklex_media_data:
+  minio_data:
 
 networks:
   worklex_network:

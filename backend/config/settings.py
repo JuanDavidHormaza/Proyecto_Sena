@@ -9,16 +9,22 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-from dotenv import load_dotenv
+
 from pathlib import Path
 import os
-BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+
 
 
 print(f"Conectando a: {os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}")
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR.parent / '.env')
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    pass
 
 # Email (SMTP real)
 # Usa variables de entorno para no dejar credenciales en el repo.
@@ -50,6 +56,19 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# Permitir nombres de contenedor Docker con guiones bajos (ej. worklex_proxy, worklex_backend)
+import django.http.request
+_orig_validate_host = django.http.request.validate_host
+
+def _tolerant_validate_host(host, allowed_hosts):
+    if not host:
+        return False
+    if '*' in allowed_hosts or allowed_hosts == ['*']:
+        return True
+    return _orig_validate_host(host, allowed_hosts)
+
+django.http.request.validate_host = _tolerant_validate_host
+
 from datetime import timedelta
 
 REST_FRAMEWORK = {
@@ -59,8 +78,14 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'USER_ID_FIELD': 'user_id',   # ← campo en TU modelo User
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'user_id',
     'USER_ID_CLAIM': 'user_id',
 }
 
@@ -91,6 +116,18 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 ROOT_URLCONF = 'config.urls'
 
@@ -172,3 +209,22 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+ 
+# ─── MinIO / S3 Storage (100% interno en Docker) ─────────────────────────────
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'minio:9000')
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', os.getenv('MINIO_USER', 'admin'))
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', os.getenv('MINIO_PASSWORD', 'Admin123*'))
+MINIO_USE_SSL = os.getenv('MINIO_USE_SSL', 'false').lower() in ('1', 'true', 'yes')
+MINIO_PUBLIC_URL_PREFIX = '/api/media/'
+
+MINIO_BUCKETS = {
+    'DICTIONARY_IMAGES': 'dictionary-images',
+    'DICTIONARY_AUDIOS': 'dictionary-audios',
+    'DICTIONARY_VIDEOS': 'dictionary-videos',
+    'EXAM_AUDIOS': 'exam-audios',
+    'EXAM_SUBMISSIONS': 'exam-submissions',
+}
+
+# ─── ElevenLabs (Backend Only - Zero Leak) ───────────────────────────────────
+ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY', '')
+ELEVENLABS_VOICE_ID = os.getenv('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')

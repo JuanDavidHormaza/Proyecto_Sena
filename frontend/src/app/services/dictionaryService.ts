@@ -1,288 +1,126 @@
+import { uploadMediaFile } from "./api";
 import {
   DictionaryWord,
-  DictionaryGroup,
   CreateDictionaryWord,
-  UpdateDictionaryWord,
-} from "../../types/dictionary";
+} from "../types/dictionary";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_BASE = (() => {
+  if (typeof window !== 'undefined') {
+    return '/api';
+  }
+  return import.meta.env.VITE_API_URL || '/api';
+})();
 
-type DictionaryApiItem = Partial<DictionaryWord> & {
-  id: string | number;
-  name?: string;
-  wordId?: string;
-  subjectId?: string | null;
-  subjectName?: string;
-  imageUrl?: string;
-  audioUrl?: string;
-  videoUrl?: string;
-  program?: string;
-  ficha?: string;
-};
-
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem("accessToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-function normalizeDictionaryWord(item: DictionaryApiItem): DictionaryWord {
-  const subject = item.subject ?? item.subjectId ?? "";
-
-  return {
-    id: item.id,
-    word_id: item.word_id ?? item.wordId ?? item.name ?? "",
-    subject,
-    subject_name: item.subject_name ?? item.subjectName ?? subject,
-    definition: item.definition ?? "",
-    synonyms: item.synonyms ?? "",
-    image: item.image ?? item.imageUrl ?? "",
-    audio: item.audio ?? item.audioUrl ?? "",
-    video: item.video ?? item.videoUrl ?? "",
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
   };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
-/*=========================================================
-=            Obtener todas las palabras                  =
-=========================================================*/
+/*=========================================
+=            Obtener palabras             =
+=========================================*/
 
 export async function getDictionaryWords(): Promise<DictionaryWord[]> {
-  const response = await fetch(`${API_URL}/dictionary/`, {
+  const response = await fetch(`${API_BASE}/dictionary/`, {
     headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
-    throw new Error("No fue posible obtener el diccionario.");
+    throw new Error("Error obteniendo el diccionario");
   }
 
-  const data = await response.json();
-
-  return data.map((item: DictionaryApiItem) =>
-    normalizeDictionaryWord(item)
-  );
+  return await response.json();
 }
 
-/*=========================================================
-=      Obtener palabras de una asignatura               =
-=========================================================*/
-
-export async function getDictionaryWordsBySubject(
-  subject: string
-): Promise<DictionaryWord[]> {
-
-  const response = await fetch(
-    `${API_URL}/dictionary/?subject=${subject}`,
-    {
-      headers: getAuthHeaders(),
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("No fue posible obtener las palabras.");
-  }
-
-  const data = await response.json();
-
-  return data.map((item: DictionaryApiItem) =>
-    normalizeDictionaryWord(item)
-  );
-}
-
-/*=========================================================
-=      Agrupar diccionarios automáticamente             =
-=========================================================*/
-
-export async function getDictionaryGroups(): Promise<DictionaryGroup[]> {
-
-  const words = await getDictionaryWords();
-
-  const groups: Record<string, DictionaryGroup> = {};
-
-  words.forEach((word) => {
-
-    if (!groups[word.subject]) {
-
-      groups[word.subject] = {
-
-        subject: word.subject,
-
-        subject_name: word.subject_name || word.subject,
-
-        totalWords: 0,
-
-        totalImages: 0,
-
-        totalAudios: 0,
-
-        totalVideos: 0,
-
-        previewImage: "",
-
-        description: "",
-
-      };
-
-    }
-
-    groups[word.subject].totalWords++;
-
-    if (word.image) {
-
-      groups[word.subject].totalImages++;
-
-      if (!groups[word.subject].previewImage) {
-
-        groups[word.subject].previewImage = word.image;
-
-      }
-
-    }
-
-    if (word.audio) {
-
-      groups[word.subject].totalAudios++;
-
-    }
-
-    if (word.video) {
-
-      groups[word.subject].totalVideos++;
-
-    }
-
-    if (word.definition && !groups[word.subject].description) {
-
-      groups[word.subject].description = word.definition;
-
-    }
-
-  });
-
-  return Object.values(groups);
-
-}
-
-/*=========================================================
-=                Crear palabra                           =
-=========================================================*/
+/*=========================================
+=          Crear una palabra              =
+=========================================*/
 
 export async function createDictionaryWord(
-  data: CreateDictionaryWord
-): Promise<DictionaryWord> {
+  data: CreateDictionaryWord,
+  imageFile?: File,
+  audioFile?: File,
+  videoFile?: File
+) {
+  let image = "";
+  let audio = "";
+  let video = "";
 
-  const response = await fetch(`${API_URL}/dictionary/`, {
+  // Subida a MinIO 100% interna a través del proxy de Django
+  if (imageFile) {
+    const res = await uploadMediaFile(imageFile, "dictionary-images");
+    image = res.url || res.proxy_url;
+  }
 
+  if (audioFile) {
+    const res = await uploadMediaFile(audioFile, "dictionary-audios");
+    audio = res.url || res.proxy_url;
+  }
+
+  if (videoFile) {
+    const res = await uploadMediaFile(videoFile, "dictionary-videos");
+    video = res.url || res.proxy_url;
+  }
+
+  const response = await fetch(`${API_BASE}/dictionary/`, {
     method: "POST",
-
-    headers: {
-
-      "Content-Type": "application/json",
-      ...getAuthHeaders(),
-
-    },
-
-    body: JSON.stringify(data),
-
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      ...data,
+      word_id: data.word_id || (data as any).word,
+      image,
+      audio,
+      video,
+    }),
   });
 
   if (!response.ok) {
-
-    throw new Error("No fue posible crear la palabra.");
-
+    throw new Error("No se pudo crear la palabra en el diccionario.");
   }
 
-  return normalizeDictionaryWord(await response.json());
-
+  return await response.json();
 }
 
-/*=========================================================
-=              Actualizar palabra                        =
-=========================================================*/
+/*=========================================
+=          Actualizar palabra             =
+=========================================*/
 
 export async function updateDictionaryWord(
-  id: string | number,
-  data: UpdateDictionaryWord
-): Promise<DictionaryWord> {
-
-  const response = await fetch(`${API_URL}/dictionary/${id}/`, {
-
+  id: number | string,
+  data: Partial<CreateDictionaryWord>
+) {
+  const response = await fetch(`${API_BASE}/dictionary/${id}/`, {
     method: "PUT",
-
-    headers: {
-
-      "Content-Type": "application/json",
-      ...getAuthHeaders(),
-
-    },
-
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
-
   });
 
   if (!response.ok) {
-
-    throw new Error("No fue posible actualizar.");
-
+    throw new Error("No se pudo actualizar la palabra.");
   }
 
-  return normalizeDictionaryWord(await response.json());
-
+  return await response.json();
 }
 
-/*=========================================================
-=               Eliminar palabra                         =
-=========================================================*/
+/*=========================================
+=          Eliminar palabra               =
+=========================================*/
 
-export async function deleteDictionaryWord(
-  id: string | number
-): Promise<void> {
-
-  const response = await fetch(`${API_URL}/dictionary/${id}/`, {
-
+export async function deleteDictionaryWord(id: number | string) {
+  const response = await fetch(`${API_BASE}/dictionary/${id}/`, {
     method: "DELETE",
     headers: getAuthHeaders(),
-
   });
 
   if (!response.ok) {
-
-    throw new Error("No fue posible eliminar.");
-
+    throw new Error("No se pudo eliminar la palabra.");
   }
 
-}
-
-/*=========================================================
-=          Obtener estadísticas generales               =
-=========================================================*/
-
-export async function getDictionaryStats() {
-
-  const groups = await getDictionaryGroups();
-
-  return {
-
-    dictionaries: groups.length,
-
-    words: groups.reduce(
-      (sum, item) => sum + item.totalWords,
-      0
-    ),
-
-    images: groups.reduce(
-      (sum, item) => sum + item.totalImages,
-      0
-    ),
-
-    audios: groups.reduce(
-      (sum, item) => sum + item.totalAudios,
-      0
-    ),
-
-    videos: groups.reduce(
-      (sum, item) => sum + item.totalVideos,
-      0
-    ),
-
-  };
-
+  return true;
 }

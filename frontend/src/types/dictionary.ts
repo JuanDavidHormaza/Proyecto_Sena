@@ -1,39 +1,33 @@
-/*=========================================================
-=                Palabra del diccionario                  =
-=========================================================*/
-
 export interface DictionaryWord {
-  id: string | number;
+  id?: number;
 
-  word_id: string;
-
-  subject: string;
-
-  subject_name?: string;
+  word: string;
 
   definition: string;
 
-  synonyms: string;
+  category: string;
 
-  image: string;
+  level: string;
 
-  audio: string;
+  image?: string;
 
-  video: string;
+  audio?: string;
+
+  video?: string;
+
+  created_at?: string;
+
+  updated_at?: string;
 }
 
-/*=========================================================
-=             Crear palabra del diccionario              =
-=========================================================*/
-
 export interface CreateDictionaryWord {
-  word_id: string;
-
-  subject: string;
+  word: string;
 
   definition: string;
 
-  synonyms: string;
+  category: string;
+
+  level: string;
 
   image?: string;
 
@@ -42,46 +36,18 @@ export interface CreateDictionaryWord {
   video?: string;
 }
 
-/*=========================================================
-=              Actualizar palabra                        =
-=========================================================*/
-
 export interface UpdateDictionaryWord {
-  word_id?: string;
-
-  subject?: string;
+  word?: string;
 
   definition?: string;
 
-  synonyms?: string;
+  category?: string;
+
+  level?: string;
 
   image?: string;
 
   audio?: string;
 
   video?: string;
-}
-
-/*=========================================================
-=             Carpeta del diccionario                    =
-=========================================================*/
-
-export interface DictionaryGroup {
-
-  subject: string;
-
-  subject_name: string;
-
-  totalWords: number;
-
-  totalImages: number;
-
-  totalAudios: number;
-
-  totalVideos: number;
-
-  previewImage?: string;
-
-  description?: string;
-
 }

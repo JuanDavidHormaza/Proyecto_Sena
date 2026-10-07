@@ -7,27 +7,35 @@ def create_superadmin(apps, schema_editor):
     User = apps.get_model('users', 'User')
 
     email = 'superadmin@worklex.com'
+    doc_num = '0000000000'
 
-    if Person.objects.filter(email=email).exists():
-        return
+    person = Person.objects.filter(doc_num=doc_num).first()
+    if not person:
+        person = Person.objects.filter(email=email).first()
 
-    person = Person.objects.create(
-        email=email,
-        password=make_password('SuperAdmin123*'),
-        doc_type='CC',
-        doc_num='0000000000',
-        first_name='Super',
-        last_name='Admin',
-        phone_num=None,
-        status='ACTIVO',
-    )
+    if person:
+        person.email = email
+        person.status = 'ACTIVO'
+        person.save()
+    else:
+        person = Person.objects.create(
+            email=email,
+            password=make_password('SuperAdmin123*'),
+            doc_type='CC',
+            doc_num=doc_num,
+            first_name='Super',
+            last_name='Admin',
+            phone_num=None,
+            status='ACTIVO',
+        )
 
-    User.objects.create(
-        person=person,
-        role_id='SUPERADMIN',
-        status='EN_FORMACION',
-        mfa='',
-    )
+    if not User.objects.filter(person=person, role_id='SUPERADMIN').exists():
+        User.objects.create(
+            person=person,
+            role_id='SUPERADMIN',
+            status='EN_FORMACION',
+            mfa='',
+        )
 
 
 def reverse_superadmin(apps, schema_editor):

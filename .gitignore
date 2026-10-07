@@ -1,18 +1,44 @@
 # Python
 venv/
+.venv/
+env/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Django
 db.sqlite3
+*.tar.gz
+media_source/
+staticfiles/
 
 # Node
 node_modules/
 dist/
+build/
+.next/
 
-# Env
+# Env & Secrets
 .env
+*.env.local
 
-# OS
+# Archives & Large files
+*.zip
+**/*.zip
+backend/*.zip
+backend/**/*.zip
+
+# Logs
+*.log
+logs/
+
+# Docker volumes
+postgres_data/
+minio_data/
+
+# OS & IDE
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/

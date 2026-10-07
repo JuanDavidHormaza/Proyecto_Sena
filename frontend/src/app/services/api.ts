@@ -1,6 +1,10 @@
-// ─── Configuracion Base de la API ────────────────────────────────────────────
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE = (() => {
+  if (typeof window !== 'undefined') {
+    // Si corre en Vite (5173) o Nginx (80/443/custom), usar ruta relativa '/api' para evitar fallos de CORS y accesos móviles
+    return '/api';
+  }
+  return import.meta.env.VITE_API_URL || '/api';
+})();
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -19,10 +23,15 @@ export interface ApiUser {
   permissions: UserPermissions;
   docType?: string;
   program?: string | null;
+  enrolledPrograms?: string[];
+  availableRoles?: string[];
+  isDualRole?: boolean;
   docNum?: string;
   phoneNum?: number;
+  country?: string;
   firstName?: string;
   lastName?: string;
+  createdAt?: string;
 }
 
 export interface UserPermissions {
@@ -49,8 +58,10 @@ export interface RegisterData {
   first_name: string;
   last_name: string;
   phone_num?: number;
+  country?: string;
   program?: string;
   role_id?: 'SUPERADMIN' | 'ADMIN' | 'APRENDIZ' | 'MONITOR' | 'INSTRUCTOR';
+  is_alternate_program?: boolean;
 }
 
 export interface ApiSubject {
@@ -77,6 +88,8 @@ export interface ApiDocument {
   audioUrl?: string;
   videoUrl?: string;
   imageUrl?: string;
+  level?: string;
+  competence?: string;
 }
 
 export interface ApiTestResult {
@@ -92,10 +105,6 @@ export interface ApiTestResult {
   feedback?: string;
   duration?: string;
   completedAt: string;
-  passed?: boolean;
-  threshold?: number;
-  breakdown?: any;
-  auto_feedback?: string;
   process?: {
     answers?: Array<{
       questionId: number;
@@ -117,18 +126,6 @@ export interface ApiTestResult {
       audioUrl: string;
       category: string;
     }>;
-    userAnswers?: Array<{
-      questionId: number;
-      question: string;
-      difficulty?: string;
-      userAnswer: number;
-      correctAnswer: number;
-      isCorrect: boolean;
-      category: string;
-      audioUrl?: string;
-      writingAnswer?: string;
-      pronunciationEvaluation?: any;
-    }>;
   };
   answers: Array<{
     questionId: number;
@@ -138,15 +135,6 @@ export interface ApiTestResult {
     isCorrect: boolean;
     category: string;
   }>;
-}
-
-export interface ApiTrainingGroup {
-  id: string;
-  ficha: string;
-  program: string;
-  teachers: ApiUser[];
-  students: ApiUser[];
-  createdAt?: string | null;
 }
 
 // ─── Utilidades ──────────────────────────────────────────────────────────────
@@ -162,7 +150,7 @@ class ApiError extends Error {
 }
 
 function getAuthHeaders(includeJsonContentType = true): HeadersInit {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
   const headers: HeadersInit = {};
 
   if (includeJsonContentType) {
@@ -176,9 +164,86 @@ function getAuthHeaders(includeJsonContentType = true): HeadersInit {
   return headers;
 }
 
+function extractErrorMessage(data: any, status: number): string {
+  if (data) {
+    if (typeof data === 'string' && data.trim()) return data;
+    if (data.error && typeof data.error === 'string' && data.error.trim()) return data.error;
+    if (data.detail && typeof data.detail === 'string' && data.detail.trim()) return data.detail;
+    if (data.message && typeof data.message === 'string' && data.message.trim()) return data.message;
+
+    // DRF non_field_errors
+    if (Array.isArray(data.non_field_errors) && data.non_field_errors.length > 0) {
+      return String(data.non_field_errors[0]);
+    }
+
+    // DRF field validation errors (e.g. { email: ["..."], password: ["..."] })
+    if (typeof data === 'object' && !Array.isArray(data)) {
+      const keys = Object.keys(data);
+      if (keys.length > 0) {
+        const firstKey = keys[0];
+        const val = data[firstKey];
+        if (Array.isArray(val) && val.length > 0) {
+          const fieldNames: Record<string, string> = {
+            email: 'Correo electrónico',
+            password: 'Contraseña',
+            first_name: 'Nombre',
+            last_name: 'Apellidos',
+            doc_num: 'Número de documento',
+            doc_type: 'Tipo de documento',
+            phone_num: 'Teléfono',
+            country: 'País',
+          };
+          const fieldName = fieldNames[firstKey] || firstKey;
+          return `${fieldName}: ${val[0]}`;
+        }
+        if (typeof val === 'string') {
+          return `${firstKey}: ${val}`;
+        }
+      }
+    }
+  }
+
+  // Fallback según código de estado HTTP
+  switch (status) {
+    case 400:
+      return 'Datos de solicitud inválidos. Por favor verifica la información ingresada.';
+    case 401:
+      return 'Credenciales incorrectas o sesión expirada.';
+    case 403:
+      return 'Acceso denegado o permisos insuficientes.';
+    case 404:
+      return 'El recurso solicitado no fue encontrado en el servidor.';
+    case 409:
+      return 'Conflicto: El registro ya existe en el sistema.';
+    case 429:
+      return 'Demasiadas solicitudes. Por favor espera unos momentos antes de reintentar.';
+    case 502:
+    case 503:
+    case 504:
+      return 'El servicio no está disponible temporalmente. Intente nuevamente en unos segundos.';
+    default:
+      if (status >= 500) {
+        return 'Error interno del servidor. Por favor contacta al soporte técnico.';
+      }
+      return 'Error al procesar la solicitud.';
+  }
+}
+
+export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (err: any) {
+    console.error('Error de red al consultar API:', err);
+    throw new ApiError(
+      'No se pudo conectar con el servidor. Verifica que los servicios estén activos y tu conexión de red.',
+      0
+    );
+  }
+}
+
 export async function post<T = any>(path: string, body: BodyInit): Promise<T> {
   const isFormData = body instanceof FormData;
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await safeFetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: getAuthHeaders(!isFormData),
     body,
@@ -189,19 +254,35 @@ export async function post<T = any>(path: string, body: BodyInit): Promise<T> {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Error de conexion' }));
-    console.log("HANDLE RESPONSE ERROR:", error, "STATUS:", response.status);
-    
-    // Solo intentar refresh si hay token guardado (no en login)
-    if (response.status === 401 && localStorage.getItem('accessToken')) {
+    let rawError: any = null;
+    try {
+      rawError = await response.json();
+    } catch {
+      rawError = null;
+    }
+
+    const message = extractErrorMessage(rawError, response.status);
+    console.warn("API Error Response:", { status: response.status, url: response.url, message, rawError });
+
+    // Solo intentar refresh si hay token guardado y no es un endpoint de login/registro
+    const isAuthEndpoint = response.url && (
+      response.url.includes("/auth/login") ||
+      response.url.includes("/auth/register") ||
+      response.url.includes("/auth/check-document") ||
+      response.url.includes("/auth/verify-otp")
+    );
+    if (response.status === 401 && localStorage.getItem("accessToken") && !isAuthEndpoint) {
       const refreshed = await refreshToken();
       if (!refreshed) {
-        localStorage.clear();
-        window.location.href = '/login';
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/register" && window.location.pathname !== "/") {
+          window.location.href = "/login";
+        }
       }
     }
-    
-    throw new ApiError(error.error || error.detail || 'Error en la peticion', response.status);
+
+    throw new ApiError(message, response.status);
   }
 
   return response.json();
@@ -213,7 +294,7 @@ async function refreshToken(): Promise<boolean> {
   if (!refresh) return false;
   
   try {
-    const response = await fetch(`${API_BASE}/auth/refresh/`, {
+    const response = await safeFetch(`${API_BASE}/auth/refresh/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),
@@ -232,7 +313,7 @@ async function refreshToken(): Promise<boolean> {
 // ─── Auth API ────────────────────────────────────────────────────────────────
 
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/auth/login/`, {
+  const response = await safeFetch(`${API_BASE}/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -242,7 +323,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
 }
 
 export async function register(data: RegisterData): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/auth/register/`, {
+  const response = await safeFetch(`${API_BASE}/auth/register/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -252,7 +333,7 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
 }
 
 export async function getMe(): Promise<ApiUser> {
-  const response = await fetch(`${API_BASE}/auth/me/`, {
+  const response = await safeFetch(`${API_BASE}/auth/me/`, {
     headers: getAuthHeaders(),
   });
   
@@ -262,7 +343,7 @@ export async function getMe(): Promise<ApiUser> {
 // ─── Acceso privilegiado sin JWT (sesión) ─────────────────────────────
 
 export async function privilegedLogin(credentials: LoginCredentials): Promise<{ user: ApiUser }> {
-  const response = await fetch(`${API_BASE}/auth/privileged-login/`, {
+  const response = await safeFetch(`${API_BASE}/auth/privileged-login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -273,7 +354,7 @@ export async function privilegedLogin(credentials: LoginCredentials): Promise<{ 
 }
 
 export async function privilegedMe(): Promise<{ user: ApiUser }> {
-  const response = await fetch(`${API_BASE}/auth/privileged-me/`, {
+  const response = await safeFetch(`${API_BASE}/auth/privileged-me/`, {
     method: 'GET',
   });
 
@@ -375,51 +456,56 @@ export async function deleteSubject(subjectId: string): Promise<void> {
 
 // ─── Documents (Dictionary) API ──────────────────────────────────────────────
 
-export async function getDocuments(): Promise<ApiDocument[]> {
-  const response = await fetch(`${API_BASE}/dictionary/`, {
+export interface MediaUploadResponse {
+  file_key: string;
+  bucket: string;
+  proxy_url: string;
+  url: string;
+  size: number;
+  content_type: string;
+}
+
+export async function getDocuments(params?: {
+  subject?: string;
+  level?: string;
+  competence?: string;
+  search?: string;
+  program?: string;
+  fichaId?: string;
+}): Promise<ApiDocument[]> {
+  const query = new URLSearchParams();
+  if (params?.subject && params.subject !== 'all') query.append('subject', params.subject);
+  if (params?.level && params.level !== 'all') query.append('level', params.level);
+  if (params?.competence && params.competence !== 'all') query.append('competence', params.competence);
+  if (params?.search && params.search.trim()) query.append('search', params.search.trim());
+  if (params?.program && params.program !== 'all') query.append('program', params.program);
+  if (params?.fichaId && params.fichaId !== 'all') query.append('fichaId', params.fichaId);
+
+  const qs = query.toString();
+  const url = `${API_BASE}/dictionary/${qs ? `?${qs}` : ''}`;
+  const response = await fetch(url, {
     headers: getAuthHeaders(),
   });
   
   return handleResponse<ApiDocument[]>(response);
 }
 
-export async function createDocument(docData: Partial<ApiDocument> & { subjectId?: string; ficha?: string }): Promise<ApiDocument> {
-  // El backend (DigitalDictionary) espera claves en snake_case y el FK
-  // de la asignatura bajo la llave "subject". Aqui traducimos lo que
-  // envia el formulario del frontend (camelCase) a ese formato.
-  
-  const payload = {
-  word_id: docData.wordId ?? docData.name,
-
-  name: docData.name,
-
-  subject: docData.subjectId,
-
-  
-definition: docData.definition,
-
-  synonyms: docData.synonyms,
-
-  image: docData.imageUrl,
-
-  audio: docData.audioUrl,
-
-  video: docData.videoUrl,
-
-  program: docData.program,
-
-  ficha: docData.ficha,
-};
-console.log("IMAGE =>", payload.image);
-console.log("AUDIO =>", payload.audio);
-console.log("VIDEO =>", payload.video);
-console.log(payload);
+export async function createDocument(docData: Partial<ApiDocument>): Promise<ApiDocument> {
   const response = await fetch(`${API_BASE}/dictionary/`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+    body: JSON.stringify(docData),
   });
   
+  return handleResponse<ApiDocument>(response);
+}
+
+export async function updateDocument(docId: string, docData: Partial<ApiDocument>): Promise<ApiDocument> {
+  const response = await fetch(`${API_BASE}/dictionary/${docId}/`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(docData),
+  });
   return handleResponse<ApiDocument>(response);
 }
 
@@ -434,6 +520,29 @@ export async function deleteDocument(docId: string): Promise<void> {
   }
 }
 
+export async function uploadMediaFile(
+  file: File,
+  bucket: 'dictionary-images' | 'dictionary-audios' | 'dictionary-videos' | 'exam-submissions' = 'dictionary-images'
+): Promise<MediaUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('bucket', bucket);
+
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}/media/upload/`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  return handleResponse<MediaUploadResponse>(response);
+}
+
 // ─── Test Results API ────────────────────────────────────────────────────────
 
 export async function getTestResults(userId?: string): Promise<ApiTestResult[]> {
@@ -443,35 +552,6 @@ export async function getTestResults(userId?: string): Promise<ApiTestResult[]> 
   });
   
   return handleResponse<ApiTestResult[]>(response);
-}
-
-export async function getGroups(): Promise<ApiTrainingGroup[]> {
-  const response = await fetch(`${API_BASE}/groups/`, { headers: getAuthHeaders() });
-  return handleResponse<ApiTrainingGroup[]>(response);
-}
-
-export async function getAvailableGroupStudents(program: string, groupId?: string): Promise<ApiUser[]> {
-  const query = new URLSearchParams({ program });
-  if (groupId) query.set('group_id', groupId);
-  const response = await fetch(`${API_BASE}/groups/available-students/?${query}`, { headers: getAuthHeaders() });
-  return handleResponse<ApiUser[]>(response);
-}
-
-export async function getAvailableGroupTeachers(): Promise<ApiUser[]> {
-  const response = await fetch(`${API_BASE}/groups/available-teachers/`, { headers: getAuthHeaders() });
-  return handleResponse<ApiUser[]>(response);
-}
-
-export async function saveGroup(data: { ficha: string; program: string; teacher_ids: string[]; student_ids: string[] }, groupId?: string): Promise<ApiTrainingGroup> {
-  const response = await fetch(`${API_BASE}/groups/${groupId ? `${groupId}/` : ''}`, {
-    method: groupId ? 'PUT' : 'POST', headers: getAuthHeaders(), body: JSON.stringify(data),
-  });
-  return handleResponse<ApiTrainingGroup>(response);
-}
-
-export async function deleteGroup(groupId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/groups/${groupId}/`, { method: 'DELETE', headers: getAuthHeaders() });
-  if (!response.ok) throw new ApiError('Error al eliminar la ficha', response.status);
 }
 
 export async function createTestResult(data: any): Promise<ApiTestResult> {
@@ -494,63 +574,10 @@ export async function addFeedback(resultId: string, feedback: string): Promise<{
   return handleResponse<{ feedback: string }>(response);
 }
 
-export async function evaluatePronunciation(
-  audioBlob: Blob,
-  expectedText: string,
-  storagePath?: string,
-  level?: string,
-): Promise<any> {
-  const formData = new FormData();
-  formData.append("audio", audioBlob, "response.webm");
-  formData.append("expected_text", expectedText);
-  if (storagePath) {
-    formData.append("storage_path", storagePath);
-  }
-  if (level) {
-    formData.append("level", level);
-  }
-
-
-  const token = localStorage.getItem("accessToken");
-  const response = await fetch(`${API_BASE}/quiz/evaluate-pronunciation/`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-  });
-
-  return handleResponse<any>(response);
-}
-
-export async function getStudentAudios(userId: string, level?: string): Promise<any> {
-  const params = new URLSearchParams({ user_id: userId });
-  if (level) params.set("level", level);
-
-  const token = localStorage.getItem("accessToken");
-  const response = await fetch(`${API_BASE}/quiz/student-audios/?${params}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-
-  return handleResponse<any>(response);
-}
-
-export async function fetchQuizQuestions(level: string, count = 5, program?: string): Promise<any> {
-  const token = localStorage.getItem("accessToken");
-  const params = new URLSearchParams({ level, count: String(count) });
-  // El backend ya resuelve el programa del usuario autenticado si no se
-  // envía, pero lo pasamos explícito cuando lo tenemos para asegurar que
-  // el quiz siempre use el diccionario del programa correcto.
-  if (program) params.set("program", program);
-  const response = await fetch(`${API_BASE}/quiz/questions/?${params.toString()}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-
-  return handleResponse<any>(response);
-}
-
 // ─── Ranking / Leaderboard API ───────────────────────────────────────────────
 
 export async function getRanking(): Promise<any[]> {
-  const response = await fetch(`${API_BASE}/ranking/`, {
+  const response = await safeFetch(`${API_BASE}/ranking/`, {
     headers: getAuthHeaders(),
   });
 
@@ -559,21 +586,13 @@ export async function getRanking(): Promise<any[]> {
 export async function requestLogin(
   email: string,
   password: string
-): Promise<{
-  mfa_required: boolean;
-  email?: string;
-  // Cuando el rol es privilegiado (docente/admin/superadmin) el backend
-  // devuelve directamente los tokens sin exigir OTP.
-  access?: string;
-  refresh?: string;
-  user?: ApiUser;
-}> {
-  const response = await fetch(`${API_BASE}/auth/login/`, {
+): Promise<{ mfa_required: boolean; email: string }> {
+  const response = await safeFetch(`${API_BASE}/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  return handleResponse(response);
+  return handleResponse<{ mfa_required: boolean; email: string }>(response);
 }
  
 /**
@@ -583,7 +602,7 @@ export async function verifyLoginOTP(
   email: string,
   code: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/auth/verify-otp/`, {
+  const response = await safeFetch(`${API_BASE}/auth/verify-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code }),
@@ -597,7 +616,7 @@ export async function verifyLoginOTP(
 export async function resendLoginOTP(
   email: string
 ): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE}/auth/resend-otp/`, {
+  const response = await safeFetch(`${API_BASE}/auth/resend-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -614,7 +633,7 @@ export async function resendLoginOTP(
 export async function registerSendOTP(
   data: RegisterData
 ): Promise<{ message: string; email: string }> {
-  const response = await fetch(`${API_BASE}/auth/register-send-otp/`, {
+  const response = await safeFetch(`${API_BASE}/auth/register-send-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -629,12 +648,370 @@ export async function registerVerifyOTP(
   email: string,
   code: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/auth/register-verify-otp/`, {
+  const response = await safeFetch(`${API_BASE}/auth/register-verify-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code }),
   });
   return handleResponse<AuthResponse>(response);
+}
+
+export interface CheckDocumentResponse {
+  exists: boolean;
+  personId?: number;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNum?: number;
+  country?: string;
+  docType?: string;
+  docNum?: string;
+  enrolledPrograms?: string[];
+}
+
+export async function checkDocument(docType: string, docNum: string): Promise<CheckDocumentResponse> {
+  const response = await safeFetch(`${API_BASE}/auth/check-document/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ doc_type: docType, doc_num: docNum }),
+  });
+  return handleResponse<CheckDocumentResponse>(response);
+}
+
+export interface CheckEmailResponse {
+  exists: boolean;
+  email: string;
+}
+
+export async function checkEmail(email: string): Promise<CheckEmailResponse> {
+  const response = await safeFetch(`${API_BASE}/auth/check-email/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+  });
+  return handleResponse<CheckEmailResponse>(response);
+}
+
+export async function switchProgram(program: string): Promise<ApiUser> {
+  const response = await safeFetch(`${API_BASE}/users/switch-program/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ program }),
+  });
+  return handleResponse<ApiUser>(response);
+}
+
+export async function enrollFicha(data: string | { ficha: string; program?: string }): Promise<ApiUser> {
+  const payload = typeof data === 'string' ? { ficha: data } : data;
+  const response = await safeFetch(`${API_BASE}/users/enroll-ficha/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<ApiUser>(response);
+}
+
+export async function switchRole(role?: string): Promise<ApiUser> {
+  const response = await safeFetch(`${API_BASE}/users/switch-role/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ role }),
+  });
+  return handleResponse<ApiUser>(response);
+}
+
+// ── Solicitudes de Ficha Alterna (Multi-programa SENA) ─────────────────────
+
+export interface ApiFichaRequest {
+  request_id: number;
+  user: number;
+  person: number;
+  learner_name: string;
+  learner_email: string;
+  current_program: string;
+  ficha_code: string;
+  program_name: string;
+  status: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+  admin_notes?: string;
+  created_at: string;
+  reviewed_at?: string | null;
+  reviewed_by?: number | null;
+  reviewed_by_name?: string | null;
+}
+
+export async function getFichaRequests(): Promise<ApiFichaRequest[]> {
+  const response = await safeFetch(`${API_BASE}/ficha-requests/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<ApiFichaRequest[]>(response);
+}
+
+export async function createFichaRequest(ficha_code: string, program?: string): Promise<ApiFichaRequest> {
+  const response = await safeFetch(`${API_BASE}/ficha-requests/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ ficha_code, program, program_name: program }),
+  });
+  return handleResponse<ApiFichaRequest>(response);
+}
+
+export async function approveFichaRequest(requestId: number): Promise<ApiFichaRequest> {
+  const response = await safeFetch(`${API_BASE}/ficha-requests/${requestId}/approve/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<ApiFichaRequest>(response);
+}
+
+export async function rejectFichaRequest(requestId: number, notes?: string): Promise<ApiFichaRequest> {
+  const response = await safeFetch(`${API_BASE}/ficha-requests/${requestId}/reject/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ notes }),
+  });
+  return handleResponse<ApiFichaRequest>(response);
+}
+
+// ─── Exam Multimedia (Speaking & ElevenLabs TTS) ─────────────────────────────
+
+export interface SpeakingUploadResponse {
+  audio_url: string;
+  file_key: string;
+  bucket: string;
+  status: string;
+}
+
+export interface TTSResponse {
+  audio_url: string | null;
+  cached: boolean;
+  fallback?: string;
+  error?: string;
+}
+
+export function getMediaUrl(bucket: string, fileKey?: string): string {
+  if (!fileKey) return '';
+
+  let clean = fileKey.trim();
+
+  // URLs externas absolutas (CDNs o servicios externos)
+  if ((clean.startsWith('http://') || clean.startsWith('https://')) && !clean.includes(':9000/')) {
+    return clean;
+  }
+
+  // Si contiene referencia a puerto 9000 o MinIO interno, extraer la ruta
+  if (clean.includes(':9000/')) {
+    const afterPort = clean.split(':9000/')[1] || '';
+    clean = afterPort.startsWith('/') ? afterPort : `/${afterPort}`;
+  }
+
+  // Quitar prefijos conocidos para normalizar a la clave limpia
+  const knownBuckets = ['dictionary-images', 'dictionary-audios', 'dictionary-videos', 'exam-audios', 'exam-submissions'];
+  for (const b of knownBuckets) {
+    clean = clean.replace(new RegExp(`^/?api/media/${b}/`, 'i'), '');
+    clean = clean.replace(new RegExp(`^/?${b}/`, 'i'), '');
+  }
+  clean = clean.replace(/^\/+/, '');
+
+  return `/api/media/${bucket}/${clean}`;
+}
+
+export function resolveMediaUrl(pathOrUrl?: string, defaultBucket: string = 'dictionary-images'): string {
+  if (!pathOrUrl) return '';
+
+  let clean = pathOrUrl.trim();
+
+  // URLs externas válidas (ej. CDNs o Unsplash sin puerto 9000)
+  if ((clean.startsWith('http://') || clean.startsWith('https://')) && !clean.includes(':9000/')) {
+    return clean;
+  }
+
+  // Si contiene referencia a puerto 9000 o MinIO interno
+  if (clean.includes(':9000/')) {
+    const afterPort = clean.split(':9000/')[1] || '';
+    clean = afterPort.startsWith('/') ? afterPort : `/${afterPort}`;
+  }
+
+  // Rutas que ya apuntan a /api/media/...
+  if (clean.startsWith('/api/media/')) {
+    return clean;
+  }
+  if (clean.startsWith('api/media/')) {
+    return `/${clean}`;
+  }
+
+  // Si viene con bucket conocido
+  const knownBuckets = ['dictionary-images', 'dictionary-audios', 'dictionary-videos', 'exam-audios', 'exam-submissions'];
+  for (const b of knownBuckets) {
+    if (clean.startsWith(`${b}/`)) {
+      return `/api/media/${clean}`;
+    }
+    if (clean.startsWith(`/${b}/`)) {
+      return `/api/media${clean}`;
+    }
+  }
+
+  // Si es solo la clave del archivo (ej. 'input.png' o 'code.mp3')
+  const pureKey = clean.replace(/^\/+/, '');
+  let bucket = defaultBucket;
+  if (pureKey.endsWith('.mp3') || pureKey.endsWith('.wav') || pureKey.endsWith('.ogg')) {
+    bucket = 'dictionary-audios';
+  } else if (pureKey.endsWith('.mp4') || pureKey.endsWith('.webm')) {
+    bucket = 'dictionary-videos';
+  } else if (pureKey.endsWith('.png') || pureKey.endsWith('.jpg') || pureKey.endsWith('.jpeg') || pureKey.endsWith('.webp') || pureKey.endsWith('.svg')) {
+    bucket = 'dictionary-images';
+  }
+  return `/api/media/${bucket}/${pureKey}`;
+}
+
+export async function uploadSpeakingAudio(
+  audioBlob: Blob,
+  questionId: number | string,
+  level: string,
+  userId?: string
+): Promise<SpeakingUploadResponse> {
+  const formData = new FormData();
+  formData.append('audio', audioBlob, `speaking_q${questionId}.webm`);
+  formData.append('question_id', String(questionId));
+  formData.append('level', level);
+  if (userId) {
+    formData.append('user_id', userId);
+  }
+
+  const token = localStorage.getItem('accessToken');
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}/exam/speaking/`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  return handleResponse<SpeakingUploadResponse>(response);
+}
+
+export interface SpeakingEvaluationResponse {
+  success: boolean;
+  score: number;
+  transcription: string;
+  target: string;
+  ipa?: string;
+  is_correct: boolean;
+  feedback: string;
+  phonetic_tips?: string;
+  audio_url?: string;
+}
+
+export async function evaluateSpeakingAudio(
+  audioBlob: Blob,
+  targetWord: string,
+  questionId?: number | string,
+  level?: string,
+  transcript?: string
+): Promise<SpeakingEvaluationResponse> {
+  const formData = new FormData();
+  formData.append('audio', audioBlob, `speaking_${questionId || 'eval'}.webm`);
+  formData.append('target_word', targetWord);
+  if (questionId) formData.append('question_id', String(questionId));
+  if (level) formData.append('level', level);
+  if (transcript) formData.append('transcript', transcript);
+
+  const token = localStorage.getItem('accessToken');
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}/exam/evaluate-speaking/`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  return handleResponse<SpeakingEvaluationResponse>(response);
+}
+
+export async function generateExamTTS(
+  text: string,
+  questionId?: number | string
+): Promise<TTSResponse> {
+  const response = await fetch(`${API_BASE}/exam/tts/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ text, question_id: questionId }),
+  });
+
+  return handleResponse<TTSResponse>(response);
+}
+
+// ─── Motor de Examen Adaptativo Dinámico (Diccionario ADSO) ──────────────────
+
+export interface AdaptiveExamStartResponse {
+  session_id: string;
+  user_id?: string | number;
+  current_level: string;
+  unlocked_levels: string[];
+  difficulty: number;
+  difficulty_tier: string;
+  first_question: any;
+  dictionary_questions_count: number;
+  questions: any[];
+  message: string;
+}
+
+export async function startAdaptiveExam(userId?: string | number): Promise<AdaptiveExamStartResponse> {
+  const token = localStorage.getItem('accessToken');
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}/exam/start/`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ user_id: userId }),
+  });
+
+  return handleResponse<AdaptiveExamStartResponse>(response);
+}
+
+export async function getAdaptiveBank(params?: { level?: string; competence?: string }): Promise<{
+  total: number;
+  level: string;
+  competence: string;
+  questions: any[];
+}> {
+  const query = new URLSearchParams();
+  if (params?.level && params.level !== 'all') query.append('level', params.level);
+  if (params?.competence && params.competence !== 'all') query.append('competence', params.competence);
+
+  const qs = query.toString();
+  const url = `${API_BASE}/exam/adaptive-bank/${qs ? `?${qs}` : ''}`;
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+
+  return handleResponse<{ total: number; level: string; competence: string; questions: any[] }>(response);
+}
+
+export async function evaluateAdaptiveStep(
+  currentLevel: string,
+  answers: any[]
+): Promise<{
+  action: 'next_question' | 'level_up' | 'exam_completed';
+  next_level: string;
+  message: string;
+  percentage: number;
+  passed: boolean;
+}> {
+  const response = await fetch(`${API_BASE}/exam/evaluate-step/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ current_level: currentLevel, answers }),
+  });
+
+  return handleResponse(response);
 }
 
 // ─── Export para compatibilidad ──────────────────────────────────────────────
@@ -654,17 +1031,36 @@ export const api = {
   deleteSubject,
   getDocuments,
   createDocument,
+  updateDocument,
   deleteDocument,
   getTestResults,
-  getGroups,
-  getAvailableGroupStudents,
-  getAvailableGroupTeachers,
-  saveGroup,
-  deleteGroup,
   createTestResult,
   addFeedback,
   getRanking,
   post,
+  enrollFicha,
+  switchProgram,
+  switchRole,
+  uploadSpeakingAudio,
+  evaluateSpeakingAudio,
+  uploadMediaFile,
+  generateExamTTS,
+  resolveMediaUrl,
+  getMediaUrl,
+  startAdaptiveExam,
+  getAdaptiveBank,
+  evaluateAdaptiveStep,
+  getFichaRequests,
+  createFichaRequest,
+  approveFichaRequest,
+  rejectFichaRequest,
+  requestLogin,
+  verifyLoginOTP,
+  resendLoginOTP,
+  registerSendOTP,
+  registerVerifyOTP,
+  checkDocument,
+  checkEmail,
 };
 
 export default api;

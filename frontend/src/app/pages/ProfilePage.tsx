@@ -1,18 +1,21 @@
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft, Award, BadgeCheck, BookOpen, ClipboardList, Mail,
-  Phone, Shield, User, UserRound
+  Phone, Shield, UserRound, Globe, Calendar, RefreshCw, CheckCircle2,
+  GraduationCap, Plus, AlertCircle, Sparkles, Loader2
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
-import { IconBadge } from "../components/ui/icon-badge";
+import * as api from "../services/api";
+import { useToast } from "../components/Toast";
 
 const ROLE_LABELS: Record<string, string> = {
   superadmin: "SuperAdministrador",
   admin: "Administrador",
-  teacher: "Docente",
-  student: "Estudiante",
+  teacher: "Instructor SENA",
+  student: "Aprendiz SENA",
 };
 
 const ROLE_DASHBOARDS: Record<string, string> = {
@@ -25,8 +28,8 @@ const ROLE_DASHBOARDS: Record<string, string> = {
 const PERMISSIONS: Array<{ key: string; label: string }> = [
   { key: "canManageUsers", label: "Gestionar usuarios" },
   { key: "canManageDocuments", label: "Gestionar documentos" },
-  { key: "canViewStatistics", label: "Ver estadisticas" },
-  { key: "canGiveFeedback", label: "Dar retroalimentacion" },
+  { key: "canViewStatistics", label: "Ver estadísticas" },
+  { key: "canGiveFeedback", label: "Dar retroalimentación" },
   { key: "canTakeQuiz", label: "Realizar pruebas" },
   { key: "canViewResults", label: "Ver resultados" },
   { key: "canManageSubjects", label: "Gestionar asignaturas" },
@@ -40,9 +43,51 @@ function getInitials(name: string) {
   return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
 }
 
+function formatDate(dateString?: string): string {
+  if (!dateString) return "No registrada";
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    return d.toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return dateString;
+  }
+}
+
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const toast = useToast();
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
+  const [isSwitchingProgram, setIsSwitchingProgram] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+
+  // Estado para solicitudes de vinculación a programa alterno
+  const [newFichaInput, setNewFichaInput] = useState("");
+  const [newProgramInput, setNewProgramInput] = useState("Análisis y Desarrollo de Software (ADSO)");
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [enrollSuccess, setEnrollSuccess] = useState("");
+  const [enrollError, setEnrollError] = useState("");
+  const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
+
+  const loadRequests = async () => {
+    try {
+      const res = await api.getFichaRequests();
+      if (Array.isArray(res)) setFichaRequests(res);
+    } catch (e) {
+      console.warn("No se pudieron cargar solicitudes:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
 
   const name = user?.name || localStorage.getItem("userName") || "Usuario";
   const role = user?.role || localStorage.getItem("userRole") || "student";
@@ -56,6 +101,86 @@ export function ProfilePage() {
   const totalQuestions = Number(localStorage.getItem("totalQuestions") || "0");
   const currentLevel = localStorage.getItem("quizLevel") || (totalQuestions > 0 ? "Registrado" : "Sin nivel");
 
+  const enrolledPrograms = user?.enrolledPrograms && user.enrolledPrograms.length > 0
+    ? user.enrolledPrograms
+    : program ? [program] : [];
+
+  // Separación estricta de roles: El entorno del aprendiz NO contiene botones de cambio de rol
+  const canSwitchRole = !isStudent && Boolean(
+    user?.isDualRole ||
+    (user?.availableRoles && user.availableRoles.length > 1) ||
+    role === "teacher"
+  );
+
+  const handleRoleSwitch = async () => {
+    if (isStudent) return;
+    setIsSwitchingRole(true);
+    setFeedbackMsg("");
+    try {
+      const nextRole = "APRENDIZ";
+      const updated = await api.switchRole(nextRole);
+      updateUser(updated);
+      setFeedbackMsg(`Rol cambiado con éxito a ${ROLE_LABELS[updated.role] || updated.role}`);
+      setTimeout(() => {
+        const dest = ROLE_DASHBOARDS[updated.role] || "/dashboard";
+        navigate(dest);
+      }, 1000);
+    } catch (err: any) {
+      setFeedbackMsg(err?.message || "No fue posible alternar el rol.");
+    } finally {
+      setIsSwitchingRole(false);
+    }
+  };
+
+  const handleProgramSwitch = async (targetProg: string) => {
+    if (targetProg === program) return;
+    setIsSwitchingProgram(true);
+    setFeedbackMsg("");
+    try {
+      const updated = await api.switchProgram(targetProg);
+      updateUser(updated);
+      setFeedbackMsg(`Programa activo actualizado a: ${targetProg}`);
+    } catch (err: any) {
+      setFeedbackMsg(err?.message || "No se pudo cambiar el programa.");
+    } finally {
+      setIsSwitchingProgram(false);
+    }
+  };
+
+  const handleRequestFicha = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = newFichaInput.trim();
+    if (!clean) return;
+    setIsEnrolling(true);
+    setEnrollError("");
+    setEnrollSuccess("");
+    try {
+      if (enrolledPrograms.length === 0) {
+        const updated = await api.enrollFicha({ ficha: clean, program: newProgramInput });
+        updateUser(updated);
+        const fullProg = updated.program || `${newProgramInput} - Ficha ${clean}`;
+        localStorage.setItem("userProgram", fullProg);
+        const msg = `Ficha ${clean} vinculada exitosamente al programa ${newProgramInput}.`;
+        setEnrollSuccess(msg);
+        toast.success(msg, "Ficha Vinculada");
+        setNewFichaInput("");
+      } else {
+        const req = await api.createFichaRequest(clean, newProgramInput);
+        const msg = "Solicitud enviada correctamente. El Administrador validará tu vinculación.";
+        setEnrollSuccess(msg);
+        toast.success(msg, "Solicitud Registrada");
+        setNewFichaInput("");
+        await loadRequests();
+      }
+    } catch (err: any) {
+      const errMsg = err?.message || "No se pudo registrar la solicitud de ficha.";
+      setEnrollError(errMsg);
+      toast.error(errMsg, "Error de Solicitud");
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 bg-white/80 backdrop-blur-lg border-b border-border z-40">
@@ -63,9 +188,9 @@ export function ProfilePage() {
           <div className="flex items-center justify-between gap-4">
             <button
               onClick={() => navigate(ROLE_DASHBOARDS[role] || "/dashboard")}
-              className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" strokeWidth={1.8} />
               <span className="hidden sm:inline">Volver</span>
             </button>
             <UserAccountMenu accent={role === "teacher" ? "blue" : role === "superadmin" ? "purple" : "green"} />
@@ -74,44 +199,85 @@ export function ProfilePage() {
       </header>
 
       <main className="container mx-auto px-4 lg:px-8 py-8">
+        {/* Banner de retroalimentación de cambio */}
+        {feedbackMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-sena-green/10 border border-sena-green/30 rounded-xl flex items-center gap-3 text-sena-green text-sm font-medium"
+          >
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
+            <span>{feedbackMsg}</span>
+          </motion.div>
+        )}
+
         <motion.section
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          className="surface-card overflow-hidden mb-6"
+          className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden mb-6"
         >
           <div className="bg-gradient-to-r from-sena-green to-sena-blue p-6 lg:p-8 text-white">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-              <div className="w-24 h-24 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-4xl font-bold shadow-lg">
-                {getInitials(name)}
-              </div>
-              <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-3">
-                  <BadgeCheck className="w-4 h-4" />
-                  {mainBadgeLabel}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                <div className="w-24 h-24 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-4xl font-bold shadow-lg">
+                  {getInitials(name)}
                 </div>
-                <h1 className="text-2xl lg:text-3xl font-bold truncate">{name}</h1>
-                <p className="text-white/80">{subtitle}</p>
+                <div className="min-w-0">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-3">
+                    <BadgeCheck className="w-4 h-4" strokeWidth={1.8} />
+                    {mainBadgeLabel}
+                  </div>
+                  <h1 className="text-2xl lg:text-3xl font-bold truncate">{name}</h1>
+                  <p className="text-white/80">{subtitle}</p>
+                </div>
               </div>
+
+              {/* Botón de cambio de Rol dual */}
+              {canSwitchRole && (
+                <div className="self-start sm:self-center">
+                  <button
+                    onClick={handleRoleSwitch}
+                    disabled={isSwitchingRole}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-sena-blue rounded-xl font-semibold hover:bg-white/90 shadow-md transition-all disabled:opacity-60"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isSwitchingRole ? "animate-spin" : ""}`} strokeWidth={1.8} />
+                    <span>
+                      {isSwitchingRole
+                        ? "Cambiando rol..."
+                        : role === "student"
+                        ? "Cambiar a Instructor"
+                        : "Cambiar a Aprendiz"}
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
+          <div className="grid md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border">
             <div className="p-5 flex items-center gap-3">
-              <Mail className="w-5 h-5 text-sena-blue" />
+              <Mail className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Correo</p>
                 <p className="font-medium text-foreground truncate">{user?.email || "Sin correo"}</p>
               </div>
             </div>
             <div className="p-5 flex items-center gap-3">
-              <Phone className="w-5 h-5 text-sena-green" />
+              <Phone className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
               <div>
-                <p className="text-xs text-muted-foreground">Telefono</p>
+                <p className="text-xs text-muted-foreground">Teléfono</p>
                 <p className="font-medium text-foreground">{user?.phoneNum || "No registrado"}</p>
               </div>
             </div>
             <div className="p-5 flex items-center gap-3">
-              <Shield className="w-5 h-5 text-warning" />
+              <Globe className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+              <div>
+                <p className="text-xs text-muted-foreground">País de origen</p>
+                <p className="font-medium text-foreground">{user?.country || "Colombia"}</p>
+              </div>
+            </div>
+            <div className="p-5 flex items-center gap-3">
+              <Shield className="w-5 h-5 text-warning" strokeWidth={1.8} />
               <div>
                 <p className="text-xs text-muted-foreground">Estado</p>
                 <p className="font-medium text-foreground">{user?.status === "active" ? "Activo" : "Inactivo"}</p>
@@ -121,43 +287,246 @@ export function ProfilePage() {
         </motion.section>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${isStudent ? "lg:col-span-2" : "lg:col-span-3"} surface-card p-6`}>
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${isStudent ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-2xl border border-border shadow-sm p-6`}>
             <div className="flex items-center gap-3 mb-5">
-              <IconBadge tone="green" size="md">
-                <UserRound />
-              </IconBadge>
+              <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
+                <UserRound className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
+              </div>
               <div>
-                <h2 className="font-semibold text-foreground">Informacion personal</h2>
-                <p className="text-sm text-muted-foreground">Datos principales de la cuenta</p>
+                <h2 className="font-semibold text-foreground">Información personal</h2>
+                <p className="text-sm text-muted-foreground">Datos registrados en el sistema SENA</p>
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               {[
                 ["Nombres", user?.firstName || name.split(" ")[0] || "No registrado"],
                 ["Apellidos", user?.lastName || name.split(" ").slice(1).join(" ") || "No registrado"],
-                ["Programa SENA", program || "No registrado"],
                 ["Tipo de documento", user?.docType || "No registrado"],
-                ["Numero de documento", user?.docNum || "No registrado"],
+                ["Número de documento", user?.docNum || "No registrado"],
+                ["País", user?.country || "Colombia"],
+                ["Rol en plataforma", roleLabel],
+                ["Programa SENA activo", program || "No registrado"],
+                ["Fecha de creación de la cuenta", formatDate(user?.createdAt)],
               ].map(([label, value]) => (
-                <div key={label} className="p-4 bg-muted/50 rounded-2xl">
+                <div key={label} className="p-4 bg-muted/50 rounded-xl">
                   <p className="text-xs text-muted-foreground mb-1">{label}</p>
                   <p className="font-medium text-foreground">{value}</p>
                 </div>
               ))}
             </div>
+
+            {/* ─── Apartado: Mis Fichas / Programas de Formación (Arquitectura Multiprograma SENA) ─── */}
+            <div className="mt-6 pt-6 border-t border-border">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+                  <h3 className="text-base font-bold text-foreground">Mis Fichas / Programas de Formación</h3>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sena-green/10 text-sena-green border border-sena-green/20">
+                  {enrolledPrograms.length} {enrolledPrograms.length === 1 ? "Ficha registrada" : "Fichas matriculadas"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Administra tus programas activos. Las fichas vinculadas aquí son las que estarán disponibles en el selector del panel y en el modal de diccionarios técnicos:
+              </p>
+
+              {/* Lista de Fichas Matriculadas */}
+              <div className="grid sm:grid-cols-2 gap-3 mb-5">
+                {enrolledPrograms.map((progItem) => {
+                  const isActive = progItem === program;
+                  return (
+                    <div
+                      key={progItem}
+                      className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                        isActive
+                          ? "bg-sena-green/10 border-sena-green text-foreground shadow-xs"
+                          : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/60"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold truncate text-foreground">{progItem}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isActive ? "✓ Ficha activa seleccionada" : "Matriculado"}
+                        </p>
+                      </div>
+                      {!isActive && (
+                        <button
+                          type="button"
+                          onClick={() => handleProgramSwitch(progItem)}
+                          disabled={isSwitchingProgram}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sena-blue text-white hover:bg-sena-blue/90 transition-all flex-shrink-0 cursor-pointer"
+                        >
+                          Activar
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Formulario de Vinculación de Ficha (Inicial o Multiprograma) */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl mb-4">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
+                  {enrolledPrograms.length === 0 ? "Vincular Ficha y Programa de Formación" : "Solicitar Vinculación a Programa Alterno"}
+                </h4>
+                <p className="text-xs text-slate-600 mb-3">
+                  {enrolledPrograms.length === 0
+                    ? "Ingresa el código numérico de tu ficha y selecciona el programa de formación para habilitar tu entorno:"
+                    : "Ingresa el código numérico de la ficha que cursas adicionalmente para revisión y aprobación del Administrador:"}
+                </p>
+
+                {enrollSuccess && (
+                  <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" strokeWidth={1.8} />
+                    <span>{enrollSuccess}</span>
+                  </div>
+                )}
+
+                {enrollError && (
+                  <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" strokeWidth={1.8} />
+                    <span>{enrollError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleRequestFicha} className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1 uppercase tracking-wider">
+                        Número / Código de Ficha
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={newFichaInput}
+                        onChange={(e) => setNewFichaInput(e.target.value.replace(/\D/g, ""))}
+                        placeholder="Ej: 3520681, 3411643..."
+                        className="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/40 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1 uppercase tracking-wider">
+                        Programa de Formación
+                      </label>
+                      <select
+                        value={newProgramInput}
+                        onChange={(e) => setNewProgramInput(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/40 font-medium"
+                      >
+                        <option value="Análisis y Desarrollo de Software (ADSO)">Análisis y Desarrollo de Software (ADSO)</option>
+                        <option value="Análisis de Datos">Análisis de Datos</option>
+                        <option value="Mecánica Industrial">Mecánica Industrial</option>
+                        <option value="Redes y Telecomunicaciones">Redes y Telecomunicaciones</option>
+                        <option value="Producción Multimedia">Producción Multimedia</option>
+                        <option value="Seguridad Informática">Seguridad Informática</option>
+                        <option value="Automatización Industrial">Automatización Industrial</option>
+                        <option value="Gestión Empresarial">Gestión Empresarial</option>
+                        <option value="Diseño Gráfico">Diseño Gráfico</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isEnrolling || !newFichaInput.trim()}
+                      className="px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 flex-shrink-0 cursor-pointer"
+                    >
+                      {isEnrolling ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.8} />
+                          <span>Procesando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" strokeWidth={1.8} />
+                          <span>{enrolledPrograms.length === 0 ? "Vincular Ficha y Programa" : "Enviar Solicitud"}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Sugerencias Rápidas de Fichas Oficiales */}
+                <div className="mt-3 pt-2.5 border-t border-slate-200/70 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-700">Fichas sugeridas:</span>
+                  {[
+                    { label: "Mecánica (3520681)", val: "3520681", prog: "Mecánica Industrial" },
+                    { label: "Análisis de Datos (3411643)", val: "3411643", prog: "Análisis de Datos" },
+                    { label: "Desarrollo Software (2670142)", val: "2670142", prog: "Análisis y Desarrollo de Software (ADSO)" },
+                  ].map((sug) => (
+                    <button
+                      key={sug.val}
+                      type="button"
+                      onClick={() => {
+                        setNewFichaInput(sug.val);
+                        setNewProgramInput(sug.prog);
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-white border border-slate-200 hover:border-emerald-400 hover:text-emerald-700 transition-colors text-[10px] font-semibold cursor-pointer"
+                    >
+                      + {sug.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Lista de Solicitudes */}
+              {fichaRequests.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Estado de solicitudes:</h5>
+                  <div className="space-y-2">
+                    {fichaRequests.map((req) => (
+                      <div
+                        key={req.request_id}
+                        className="p-3 bg-white border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xs text-foreground">Ficha {req.ficha_code}</span>
+                            <span className="text-xs text-muted-foreground">• {req.program_name}</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            Fecha: {new Date(req.created_at).toLocaleDateString("es-CO")}
+                            {req.admin_notes && ` — Nota: ${req.admin_notes}`}
+                          </p>
+                        </div>
+                        <div>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                              req.status === "APROBADA"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : req.status === "RECHAZADA"
+                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}
+                          >
+                            {req.status === "APROBADA"
+                              ? "Aprobada"
+                              : req.status === "RECHAZADA"
+                              ? "Rechazada"
+                              : "Pendiente"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </motion.div>
 
           {isStudent && (
-            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="surface-card p-6">
+            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl border border-border shadow-sm p-6">
               <div className="flex items-center gap-3 mb-5">
-                <IconBadge tone="blue" size="md">
-                  <ClipboardList />
-                </IconBadge>
-                <h2 className="font-semibold text-foreground">Resumen</h2>
+                <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+                </div>
+                <h2 className="font-semibold text-foreground">Resumen de Pruebas</h2>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Ultima puntuacion</span>
+                  <span className="text-sm text-muted-foreground">Última puntuación</span>
                   <span className="font-bold text-foreground">{lastScore}%</span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -168,16 +537,20 @@ export function ProfilePage() {
                   <span className="text-sm text-muted-foreground">Preguntas registradas</span>
                   <span className="font-bold text-foreground">{totalQuestions}</span>
                 </div>
+                <div className="pt-4 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+                  <span>Miembro desde: {formatDate(user?.createdAt)}</span>
+                </div>
               </div>
             </motion.div>
           )}
         </div>
 
-        <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-6 surface-card p-6">
+        <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-6 bg-white rounded-2xl border border-border shadow-sm p-6">
           <div className="flex items-center gap-3 mb-5">
-            <IconBadge tone="yellow" size="md">
-              <Award />
-            </IconBadge>
+            <div className="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
+              <Award className="w-5 h-5 text-warning" strokeWidth={1.8} />
+            </div>
             <div>
               <h2 className="font-semibold text-foreground">Permisos activos</h2>
               <p className="text-sm text-muted-foreground">Accesos disponibles para este usuario</p>
@@ -185,8 +558,8 @@ export function ProfilePage() {
           </div>
           <div className="flex flex-wrap gap-2">
             {(activePermissions.length > 0 ? activePermissions : [{ key: "default", label: "Sin permisos asignados" }]).map((permission) => (
-              <span key={permission.key} className="inline-flex items-center gap-2 px-3 py-2 bg-muted rounded-full text-sm text-foreground">
-                <BookOpen className="w-4 h-4 text-sena-green" />
+              <span key={permission.key} className="inline-flex items-center gap-2 px-3 py-2 bg-muted rounded-xl text-sm text-foreground">
+                <BookOpen className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
                 {permission.label}
               </span>
             ))}

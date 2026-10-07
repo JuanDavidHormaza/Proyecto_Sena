@@ -43,3 +43,26 @@ class CustomJWTAuthentication(JWTAuthentication):
             raise InvalidToken('Usuario no encontrado')
 
         return AuthenticatedUser(user)
+
+
+class OptionalJWTAuthentication(CustomJWTAuthentication):
+    """
+    Autenticación JWT opcional:
+    - Si el token es válido, autentica al usuario.
+    - Si no hay token, o el token es inválido/expirado, retorna None sin fallar con 401.
+    """
+    def authenticate(self, request):
+        header = self.get_header(request)
+        if header is None:
+            return None
+
+        raw_token = self.get_raw_token(header)
+        if raw_token is None:
+            return None
+
+        try:
+            validated_token = self.get_validated_token(raw_token)
+            return self.get_user(validated_token), validated_token
+        except Exception:
+            return None
+

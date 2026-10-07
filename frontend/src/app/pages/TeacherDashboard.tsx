@@ -4,15 +4,18 @@ import { useNavigate } from "react-router";
 import { 
   Search, Eye, MessageSquare, CheckCircle, XCircle,
   Users, BarChart3, TrendingUp, Send, X, Clock,
-  Filter, Volume2, Headphones, Play, Download
+  Filter,
+  Languages,
 } from "lucide-react";
-import { TestResult, User } from "../data/users";
+import { mockTestResults, TestResult, mockUsers, User } from "../data/users";
 import * as api from "../services/api";
 import { UserAccountMenu } from "../components/UserAccountMenu";
-import { BrandLogo } from "../components/BrandLogo";
-import { IconBadge } from "../components/ui/icon-badge";
-import { StatCard } from "../components/ui/stat-card";
 import { useAuth } from "../context/AuthContext";
+import { toast } from "../components/Toast";
+
+function normalizeText(value?: string | null) {
+  return (value || "").trim().toLowerCase();
+}
 
 export function TeacherDashboard() {
   const navigate = useNavigate();
@@ -24,11 +27,9 @@ export function TeacherDashboard() {
   const [filterLevel, setFilterLevel] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<User[]>([]);
-  const [studentAudios, setStudentAudios] = useState<Record<string, any[]>>({});
-  const [audiosLoading, setAudiosLoading] = useState(false);
-  const [selectedAudioLevel, setSelectedAudioLevel] = useState<string>("A1");
 
-  const teacherName = user?.name || localStorage.getItem("userName") || "Docente";
+  const teacherName = user?.name || localStorage.getItem("userName") || "Instructor";
+  const teacherProgram = user?.program || localStorage.getItem("userProgram") || "";
 
   // Cargar datos desde API
   const loadDataFromApi = async () => {
@@ -52,7 +53,7 @@ export function TeacherDashboard() {
         feedback: r.feedback,
         completedAt: r.completedAt,
         duration: r.duration,
-        answers: r.answers || [],
+        answers: r.answers || (r.process as any)?.answers || (r.process as any)?.userAnswers || [],
       }));
       
       // Convertir estudiantes de API
@@ -71,9 +72,9 @@ export function TeacherDashboard() {
       setResults(convertedResults);
       setStudents(convertedStudents);
     } catch (error) {
-      console.error("No fue posible cargar los grupos del docente", error);
-      setResults([]);
-      setStudents([]);
+      console.log("[v0] Failed to load from API, using mock data", error);
+      setResults(mockTestResults);
+      setStudents(mockUsers.filter(u => u.role === 'student'));
     }
     setIsLoading(false);
   };
@@ -90,10 +91,11 @@ export function TeacherDashboard() {
   const handleSaveFeedback = async () => {
     if (selectedResult) {
       try {
-        // Intentar guardar en API
         await api.addFeedback(selectedResult.id, feedback);
+        toast.success("Retroalimentación guardada con éxito");
       } catch (error) {
         console.log("[v0] Failed to save feedback to API", error);
+        toast.error("No se pudo guardar la retroalimentación en el servidor");
       }
       
       // Actualizar estado local
@@ -106,14 +108,20 @@ export function TeacherDashboard() {
     }
   };
 
+  const teacherProgramKey = normalizeText(teacherProgram);
+
   const filteredResults = results.filter(r => {
+    const student = students.find(s => s.id === r.userId);
+    const resultProgram = r.studentProgram || student?.program || "";
+    const matchesProgram = !teacherProgramKey || normalizeText(resultProgram) === teacherProgramKey;
     const matchesSearch = r.userName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLevel = filterLevel === "all" || r.level.startsWith(filterLevel);
-    return matchesSearch && matchesLevel;
+    return matchesProgram && matchesSearch && matchesLevel;
   });
 
-  // La API ya devuelve exclusivamente aprendices de las fichas del docente.
-  const programStudents = students;
+  const programStudents = teacherProgram
+    ? students.filter(student => normalizeText(student.program) === teacherProgramKey)
+    : students;
 
   // Group results by student
   const studentResults = filteredResults.reduce((acc, result) => {
@@ -159,8 +167,8 @@ export function TeacherDashboard() {
 
   const levelDistribution = {
     basic: filteredResults.filter(r => r.level.startsWith('A')).length,
-    intermediate: filteredResults.filter(r => r.level === 'B1').length,
-    advanced: filteredResults.filter(r => r.level === 'B2').length,
+    intermediate: filteredResults.filter(r => r.level.startsWith('B')).length,
+    advanced: filteredResults.filter(r => r.level.startsWith('C')).length,
   };
   const totalFilteredTests = filteredResults.length || 1;
 
@@ -171,10 +179,14 @@ export function TeacherDashboard() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <BrandLogo height="h-12" />
+              <img
+                src="/worklex.png"
+                alt="WorkLex"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              />
               <div className="hidden sm:block">
                 <h1 className="font-semibold text-foreground">English Level Test</h1>
-                <p className="text-xs text-muted-foreground">Panel de Docente</p>
+                <p className="text-xs text-muted-foreground">Panel de Instructor</p>
               </div>
             </div>
 
@@ -195,19 +207,31 @@ export function TeacherDashboard() {
             Bienvenido, {teacherName.split(' ')[0]}
           </h2>
           <p className="text-muted-foreground">
-            Revisa el progreso de los estudiantes de tus fichas y brinda retroalimentación personalizada
+            Revisa el progreso de tus aprendices{teacherProgram ? ` de ${teacherProgram}` : ''} y brinda retroalimentación personalizada
           </p>
         </motion.div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Estudiantes", value: stats.totalStudents, icon: Users, tone: "blue" as const },
-            { label: "Pruebas Realizadas", value: stats.totalTests, icon: BarChart3, tone: "green" as const },
-            { label: "Promedio General", value: `${stats.averageScore}%`, icon: TrendingUp, tone: "yellow" as const },
-            { label: "Retroalimentaciones", value: stats.feedbackGiven, icon: MessageSquare, tone: "red" as const },
+            { label: "Aprendices", value: stats.totalStudents, icon: Users, color: "sena-blue" },
+            { label: "Pruebas Realizadas", value: stats.totalTests, icon: BarChart3, color: "sena-green" },
+            { label: "Promedio General", value: `${stats.averageScore}%`, icon: TrendingUp, color: "warning" },
+            { label: "Retroalimentaciones", value: stats.feedbackGiven, icon: MessageSquare, color: "destructive" },
           ].map((stat, index) => (
-            <StatCard key={index} label={stat.label} value={stat.value} icon={stat.icon} tone={stat.tone} delay={index * 0.1} />
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-white rounded-2xl p-5 border border-border shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer"
+            >
+              <div className={`w-11 h-11 bg-${stat.color}/10 rounded-xl flex items-center justify-center mb-3`}>
+                <stat.icon className={`w-5 h-5 text-${stat.color}`} strokeWidth={1.8} />
+              </div>
+              <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+            </motion.div>
           ))}
         </div>
 
@@ -216,24 +240,24 @@ export function TeacherDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="surface-card p-6 mb-8"
+          className="bg-white rounded-2xl p-6 border border-border shadow-sm mb-8"
         >
           <h3 className="font-semibold text-foreground mb-4">Distribucion por Nivel</h3>
           <div className="grid grid-cols-3 gap-4">
             {[
               { label: "Basico (A1-A2)", value: levelDistribution.basic, color: "#E21B3C", percentage: (levelDistribution.basic / totalFilteredTests) * 100 },
-              { label: "Intermedio (B1)", value: levelDistribution.intermediate, color: "#D89E00", percentage: (levelDistribution.intermediate / totalFilteredTests) * 100 },
-              { label: "Avanzado (B2)", value: levelDistribution.advanced, color: "#39A900", percentage: (levelDistribution.advanced / totalFilteredTests) * 100 },
+              { label: "Intermedio (B1-B2)", value: levelDistribution.intermediate, color: "#D89E00", percentage: (levelDistribution.intermediate / totalFilteredTests) * 100 },
+              { label: "Avanzado (C1-C2)", value: levelDistribution.advanced, color: "#39A900", percentage: (levelDistribution.advanced / totalFilteredTests) * 100 },
             ].map((level, index) => (
               <div key={index} className="text-center">
                 <div 
-                  className="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white text-xl font-bold mb-2"
+                  className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-white text-xl font-bold mb-2"
                   style={{ backgroundColor: level.color }}
                 >
                   {level.value}
                 </div>
                 <p className="text-sm font-medium text-foreground">{level.label}</p>
-                <p className="text-xs text-muted-foreground">{level.percentage.toFixed(0)}% del total</p>
+                <p className="text-xs text-muted-foreground">{level.percentage.toFixed(0)}%</p>
               </div>
             ))}
           </div>
@@ -247,26 +271,26 @@ export function TeacherDashboard() {
           className="flex flex-col sm:flex-row gap-4 mb-6"
         >
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
             <input
               type="text"
-              placeholder="Buscar estudiante..."
+              placeholder="Buscar aprendiz..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-blue/40"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50"
             />
           </div>
           <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
             <select
               value={filterLevel}
               onChange={(e) => setFilterLevel(e.target.value)}
-              className="pl-12 pr-8 py-3 bg-white border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-blue/40 appearance-none cursor-pointer"
+              className="pl-12 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50 appearance-none cursor-pointer"
             >
               <option value="all">Todos los niveles</option>
               <option value="A">Basico (A1-A2)</option>
-              <option value="B1">Intermedio (B1)</option>
-              <option value="B2">Avanzado (B2)</option>
+              <option value="B">Intermedio (B1-B2)</option>
+              <option value="C">Avanzado (C1-C2)</option>
             </select>
           </div>
         </motion.div>
@@ -276,7 +300,7 @@ export function TeacherDashboard() {
           {studentEntries.map(([userId, userResults], index) => {
             const student = students.find(s => s.id === userId);
             const latestResult = userResults[0];
-            const studentName = student?.name || latestResult?.userName || "Estudiante";
+            const studentName = student?.name || latestResult?.userName || "Aprendiz";
             const studentProgram = student?.program || latestResult?.studentProgram || "Programa SENA";
             const avgScore = userResults.length
               ? Math.round(userResults.reduce((acc, r) => acc + r.score, 0) / userResults.length)
@@ -288,13 +312,13 @@ export function TeacherDashboard() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
-                className="surface-card overflow-hidden"
+                className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden"
               >
                 {/* Student Header */}
-                <div className="p-5 border-b border-border/60 bg-muted/30">
+                <div className="p-5 border-b border-border bg-muted/30">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-sena-green rounded-full flex items-center justify-center text-white font-medium text-lg">
+                      <div className="w-12 h-12 bg-sena-green rounded-xl flex items-center justify-center text-white font-medium text-lg">
                         {studentName.charAt(0)}
                       </div>
                       <div>
@@ -311,7 +335,7 @@ export function TeacherDashboard() {
                           avgScore >= 80 ? 'text-sena-green' : avgScore >= 60 ? 'text-warning' : 'text-destructive'
                         }`}>{avgScore}%</p>
                       </div>
-                      <div className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                      <div className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
                         latestResult?.level?.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
                         latestResult?.level?.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
                         'bg-warning/10 text-warning'
@@ -327,7 +351,7 @@ export function TeacherDashboard() {
                   <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-border/60">
+                      <tr className="border-b border-border">
                         <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Fecha</th>
                         <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Puntuacion</th>
                         <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Nivel</th>
@@ -339,7 +363,7 @@ export function TeacherDashboard() {
                     </thead>
                     <tbody>
                       {userResults.map((result) => (
-                        <tr key={result.id} className="border-b border-border/60 last:border-0 hover:bg-muted/30 transition-colors">
+                        <tr key={result.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="py-4 px-5 text-sm">
                             {new Date(result.completedAt).toLocaleDateString('es-ES', { 
                               day: 'numeric', month: 'short', year: 'numeric' 
@@ -354,7 +378,7 @@ export function TeacherDashboard() {
                             </span>
                           </td>
                           <td className="py-4 px-5">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
                               result.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
                               result.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
                               'bg-warning/10 text-warning'
@@ -367,23 +391,23 @@ export function TeacherDashboard() {
                           </td>
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Clock className="w-4 h-4" />
+                              <Clock className="w-4 h-4" strokeWidth={1.8} />
                               {result.duration || '~9:00'}
                             </div>
                           </td>
                           <td className="py-4 px-5">
                             {result.feedback ? (
-                              <CheckCircle className="w-5 h-5 text-sena-green" />
+                              <CheckCircle className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
                             ) : (
-                              <XCircle className="w-5 h-5 text-muted-foreground/40" />
+                              <XCircle className="w-5 h-5 text-muted-foreground/40" strokeWidth={1.8} />
                             )}
                           </td>
                           <td className="py-4 px-5">
                             <button
                               onClick={() => handleViewDetails(result)}
-                              className="flex items-center gap-2 px-4 py-2 bg-sena-blue text-white rounded-full hover:bg-sena-blue-light transition-colors text-sm font-medium"
+                              className="flex items-center gap-2 px-4 py-2 bg-sena-blue text-white rounded-lg hover:bg-sena-blue-light transition-colors text-sm font-medium"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye className="w-4 h-4" strokeWidth={1.8} />
                               Revisar
                             </button>
                           </td>
@@ -403,8 +427,8 @@ export function TeacherDashboard() {
         </div>
 
         {studentEntries.length === 0 && (
-          <div className="text-center py-16 surface-card">
-            <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+          <div className="text-center py-16 bg-white rounded-2xl border border-border">
+            <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" strokeWidth={1.8} />
             <h3 className="text-lg font-semibold text-foreground mb-2">No hay resultados</h3>
             <p className="text-muted-foreground">No se encontraron pruebas que coincidan con tu busqueda</p>
           </div>
@@ -419,7 +443,7 @@ export function TeacherDashboard() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl w-full max-w-2xl my-8 shadow-2xl"
+              className="bg-white rounded-2xl w-full max-w-2xl my-8 shadow-2xl"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-border">
@@ -429,27 +453,27 @@ export function TeacherDashboard() {
                 </div>
                 <button
                   onClick={() => { setSelectedResult(null); setFeedback(""); }}
-                  className="p-2 hover:bg-muted rounded-full transition-colors"
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" strokeWidth={1.8} />
                 </button>
               </div>
 
               <div className="p-6 space-y-6">
                 {/* Summary Stats */}
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-muted/50 rounded-2xl p-4 text-center">
+                  <div className="bg-muted/50 rounded-xl p-4 text-center">
                     <p className="text-sm text-muted-foreground mb-1">Puntuacion</p>
                     <p className={`text-3xl font-bold ${
                       selectedResult.score >= 80 ? 'text-sena-green' :
                       selectedResult.score >= 60 ? 'text-warning' : 'text-destructive'
                     }`}>{selectedResult.score}%</p>
                   </div>
-                  <div className="bg-muted/50 rounded-2xl p-4 text-center">
+                  <div className="bg-muted/50 rounded-xl p-4 text-center">
                     <p className="text-sm text-muted-foreground mb-1">Nivel</p>
                     <p className="text-3xl font-bold text-foreground">{selectedResult.level}</p>
                   </div>
-                  <div className="bg-muted/50 rounded-2xl p-4 text-center">
+                  <div className="bg-muted/50 rounded-xl p-4 text-center">
                     <p className="text-sm text-muted-foreground mb-1">Correctas</p>
                     <p className="text-3xl font-bold text-foreground">
                       {selectedResult.correctAnswers}/{selectedResult.totalQuestions}
@@ -457,100 +481,85 @@ export function TeacherDashboard() {
                   </div>
                 </div>
 
-                {/* Student Speaking Audios */}
+                {/* Question-by-Question Pedagogical Audit */}
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <IconBadge tone="blue-soft" size="sm" className="bg-purple-100 text-purple-600">
-                      <Headphones size={16} />
-                    </IconBadge>
-                    <h4 className="font-semibold text-foreground">Audios de Speaking del Estudiante</h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-foreground">Auditoría Pedagógica de Preguntas</h4>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedResult.answers?.length || selectedResult.totalQuestions || 0} reactivos auditados
+                    </span>
                   </div>
 
-                  {/* Level tabs: A1, A2, B1, B2 */}
-                  <div className="flex gap-2 mb-3">
-                    {["A1", "A2", "B1", "B2"].map((level) => {
-                      const levelAudios = studentAudios[level] || [];
-                      const count = levelAudios.length;
-                      return (
-                        <button
-                          key={level}
-                          onClick={async () => {
-                            setSelectedAudioLevel(level);
-                            setAudiosLoading(true);
-                            try {
-                              const data = await api.getStudentAudios(selectedResult.userId, level);
-                              setStudentAudios(data.audios || {});
-                            } catch (err) {
-                              console.error("Error loading student audios:", err);
-                            }
-                            setAudiosLoading(false);
-                          }}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                            selectedAudioLevel === level
-                              ? 'bg-purple-700 text-white'
-                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                  {selectedResult.answers && selectedResult.answers.length > 0 ? (
+                    <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                      {selectedResult.answers.map((ans, idx) => (
+                        <div
+                          key={ans.questionId || idx}
+                          className={`p-3.5 rounded-xl border text-xs transition-colors ${
+                            ans.isCorrect
+                              ? "bg-emerald-50/60 border-emerald-200 text-emerald-950"
+                              : "bg-red-50/60 border-red-200 text-red-950"
                           }`}
                         >
-                          <Volume2 className="w-3.5 h-3.5" />
-                          {level} {count > 0 && `(${count})`}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Audio list for selected level */}
-                  <div className="bg-purple-50/50 rounded-2xl p-4 border border-purple-100">
-                    {audiosLoading ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Cargando audios...</p>
-                    ) : (studentAudios[selectedAudioLevel] || []).length > 0 ? (
-                      <div className="space-y-2">
-                        {(studentAudios[selectedAudioLevel] || []).map((audio: any, idx: number) => (
-                          <div key={idx} className="flex items-center gap-3 bg-white rounded-xl p-3 border border-purple-100">
-                            <Play className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                            <audio controls src={audio.url} className="flex-1 h-8" preload="none">
-                              Tu navegador no soporta audio.
-                            </audio>
-                            <a
-                              href={audio.url}
-                              download={audio.filename}
-                              className="p-2 hover:bg-purple-100 rounded-full text-purple-600 transition-colors"
-                              title="Descargar audio"
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <span className="font-semibold text-slate-800">
+                              {idx + 1}. {ans.question}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${
+                                ans.isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                              }`}
                             >
-                              <Download className="w-4 h-4" />
-                            </a>
+                              {ans.isCorrect ? "Correcto" : "Incorrecto"}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <Volume2 className="w-8 h-8 text-purple-300 mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          No hay audios de speaking para el nivel {selectedAudioLevel}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Selecciona un nivel para cargar los audios
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-600 mt-1">
+                            <p>
+                              <strong className="text-slate-700">Respuesta del aprendiz:</strong>{" "}
+                              Opción {(ans.userAnswer !== undefined && ans.userAnswer !== null) ? Number(ans.userAnswer) + 1 : "Sin responder"}
+                            </p>
+                            <p>
+                              <strong className="text-emerald-700">Respuesta correcta:</strong>{" "}
+                              Opción {(ans.correctAnswer !== undefined && ans.correctAnswer !== null) ? Number(ans.correctAnswer) + 1 : "N/A"}
+                            </p>
+                          </div>
+                          {ans.category && (
+                            <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                              Competencia: {ans.category}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="p-4 bg-muted/40 rounded-xl text-center text-xs text-muted-foreground border border-dashed border-border">
+                      No hay desglose individual de reactivos disponible para este intento.
+                    </p>
+                  )}
                 </div>
 
                 {/* Feedback Section */}
                 <div>
                   <label className="flex items-center gap-2 font-semibold text-foreground mb-3">
-                    <MessageSquare className="w-5 h-5 text-sena-blue" />
-                    Retroalimentacion para el estudiante
+                    <MessageSquare className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+                    Retroalimentación para el aprendiz
                   </label>
                   <textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     rows={4}
-                    placeholder="Escribe tus comentarios y recomendaciones para el estudiante..."
-                    className="w-full px-4 py-3 bg-muted/50 border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-sena-blue/40 resize-none"
+                    placeholder="Escribe tus comentarios y recomendaciones pedagógicas para el aprendiz..."
+                    className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50 resize-none"
                   />
-                  {selectedResult.feedback && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Ultima retroalimentacion guardada
+                  {selectedResult.feedback ? (
+                    <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+                      <CheckCircle className="w-3.5 h-3.5 text-sena-green shrink-0" />
+                      <span>Última retroalimentación guardada: "{selectedResult.feedback}"</span>
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>Pendiente de retroalimentación por parte del instructor asignado.</span>
                     </p>
                   )}
                 </div>
@@ -560,14 +569,14 @@ export function TeacherDashboard() {
               <div className="flex gap-3 p-6 border-t border-border">
                 <button
                   onClick={handleSaveFeedback}
-                  className="flex-1 flex items-center justify-center gap-2 bg-sena-green text-white py-3 rounded-full hover:bg-sena-green-dark transition-all font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 bg-sena-green text-white py-3 rounded-xl hover:bg-sena-green-dark transition-all font-medium cursor-pointer"
                 >
-                  <Send className="w-5 h-5" />
-                  Enviar Retroalimentacion
+                  <Send className="w-5 h-5" strokeWidth={1.8} />
+                  Enviar Retroalimentación
                 </button>
                 <button
                   onClick={() => { setSelectedResult(null); setFeedback(""); }}
-                  className="flex-1 bg-muted text-muted-foreground py-3 rounded-full hover:bg-muted/80 transition-all font-medium"
+                  className="flex-1 bg-muted text-muted-foreground py-3 rounded-xl hover:bg-muted/80 transition-all font-medium cursor-pointer"
                 >
                   Cerrar
                 </button>
