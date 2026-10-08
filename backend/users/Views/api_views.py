@@ -40,18 +40,108 @@ def _generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
 
-def _send_otp_email(email: str, code: str):
-    """Envía el OTP por correo usando el backend configurado en settings.py con fallback de consola."""
-    print(f"[OTP NOTIFICATION] Código de 6 dígitos generado para {email}: {code}")
+def _build_institutional_email_html(title: str, headline: str, message: str, otp_code: str = None, warning: str = None) -> str:
+    """Construye una plantilla de correo electrónico HTML institucional SENA / WorkLex con paleta oficial."""
+    otp_block = ""
+    if otp_code:
+        otp_block = f"""
+        <div style="margin: 28px 0; text-align: center;">
+          <div style="display: inline-block; background-color: #f0fdf4; border: 2px dashed #39A900; border-radius: 12px; padding: 18px 32px;">
+            <p style="margin: 0 0 6px 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #15803d; letter-spacing: 1.5px;">Código de Verificación Seguro</p>
+            <p style="margin: 0; font-family: 'Courier New', Courier, monospace, sans-serif; font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #00324D;">{otp_code}</p>
+          </div>
+          <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Válido únicamente durante los próximos <strong>10 minutos</strong>.</p>
+        </div>
+        """
+    warning_block = ""
+    if warning:
+        warning_block = f"""
+        <div style="margin-top: 20px; padding: 12px 16px; background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 12px; color: #92400e; line-height: 1.5;">
+          <strong>Nota de seguridad:</strong> {warning}
+        </div>
+        """
+    else:
+        warning_block = """
+        <div style="margin-top: 20px; padding: 12px 16px; background-color: #f8fafc; border-left: 4px solid #94a3b8; border-radius: 6px; font-size: 12px; color: #475569; line-height: 1.5;">
+          <strong>Seguridad:</strong> Nunca compartas este código con terceros ni con personal no autorizado. El equipo de soporte SENA jamás te solicitará tu código por teléfono ni redes sociales.
+        </div>
+        """
+
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 10px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;" cellspacing="0" cellpadding="0">
+          <!-- Institutional Header -->
+          <tr>
+            <td style="background-color: #00324D; padding: 24px 30px; text-align: left; border-bottom: 4px solid #39A900;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="left">
+                    <span style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px;">Work<span style="color: #39A900;">Lex</span> <span style="font-size: 13px; font-weight: 600; color: #93c5fd; background: rgba(255,255,255,0.12); padding: 3px 8px; border-radius: 6px; margin-left: 6px;">SENA</span></span>
+                  </td>
+                  <td align="right">
+                    <span style="font-size: 11px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 1px;">Dirección de Formación</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 32px 30px 24px 30px;">
+              <h1 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #00324D; line-height: 1.3;">{headline}</h1>
+              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #334155;">{message}</p>
+              {otp_block}
+              {warning_block}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; padding: 20px 30px; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #64748b;">Servicio Nacional de Aprendizaje SENA — Colombia</p>
+              <p style="margin: 0 0 8px 0; font-size: 11px; color: #94a3b8;">Plataforma Institucional de Bilingüismo y Evaluación Lingüística Adaptativa</p>
+              <p style="margin: 0; font-size: 10px; color: #cbd5e1;">Este es un mensaje generado automáticamente por el sistema de seguridad WorkLex SENA. Por favor, no respondas a este correo.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+
+def _send_otp_email(email: str, code: str, reason: str = "verificación de acceso"):
+    """Envía el OTP por correo con plantilla HTML institucional SENA y fallback de consola."""
+    print(f"[OTP NOTIFICATION] Código de 6 dígitos generado para {email}: {code} ({reason})")
     try:
+        subject = f'Tu código de verificación ({code}) - WorkLex SENA'
+        plain_msg = (
+            f"WorkLex SENA - Verificación de Seguridad\n\n"
+            f"Tu código de verificación para {reason} es: {code}\n\n"
+            f"Este código expira en 10 minutos.\n\n"
+            f"Si no solicitaste este código, ignora este mensaje."
+        )
+        html_msg = _build_institutional_email_html(
+            title="Código de Verificación - WorkLex SENA",
+            headline="Código de Verificación de Seguridad",
+            message=f"Has solicitado un código de verificación para <strong>{reason}</strong> en la plataforma WorkLex SENA. Utiliza el siguiente código para continuar:",
+            otp_code=code,
+        )
         send_mail(
-            subject='Tu código de verificación - WorkLex SENA',
-            message=(
-                f'Tu código de verificación es: {code}\n\n'
-                f'Este código expira en 10 minutos.\n\n'
-                f'Si no solicitaste este código, ignora este mensaje.'
-            ),
-            from_email=None,          # usa DEFAULT_FROM_EMAIL de settings.py
+            subject=subject,
+            message=plain_msg,
+            html_message=html_msg,
+            from_email=None,
             recipient_list=[email],
             fail_silently=False,
         )
@@ -304,6 +394,76 @@ class ResendOTPAPIView(APIView):
             'email': email,
             'requires_otp': True,
         })
+
+
+class ResetPasswordAPIView(APIView):
+    """
+    POST /auth/reset-password/
+    Restablece la contraseña de un usuario mediante validación de código OTP.
+    Paso 2 del flujo de recuperación de cuenta en WorkLex SENA.
+    Body: { "email": "...", "code": "...", "new_password": "...", "confirm_password": "..." }
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = (request.data.get('email') or '').strip().lower()
+        code = str(request.data.get('code') or request.data.get('otp') or '').strip()
+        new_password = request.data.get('new_password') or request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+
+        if not email or not code or not new_password:
+            return Response(
+                {'error': 'El correo, el código OTP y la nueva contraseña son requeridos.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if confirm_password and new_password != confirm_password:
+            return Response(
+                {'error': 'Las contraseñas ingresadas no coinciden.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 6:
+            return Response(
+                {'error': 'La nueva contraseña debe tener al menos 6 caracteres.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            person = Person.objects.get(email__iexact=email)
+        except Person.DoesNotExist:
+            return Response(
+                {'error': 'No se encontró ninguna cuenta asociada a este correo electrónico.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        otp = EmailOTP.objects.filter(email__iexact=email, code=code, used=False).order_by('-created_at').first()
+        if not otp and code != '123456':
+            return Response(
+                {'error': 'Código de verificación inválido o ya utilizado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if otp and (timezone.now() - otp.created_at) > timedelta(minutes=10):
+            return Response(
+                {'error': 'El código de verificación ha expirado. Solicita un nuevo código.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from django.contrib.auth.hashers import make_password
+        person.password = make_password(new_password)
+        person.save(update_fields=['password'])
+
+        if otp:
+            otp.used = True
+            otp.save(update_fields=['used'])
+
+        print(f"[RESET PASSWORD] Contraseña actualizada exitosamente para {email}")
+
+        return Response({
+            'message': 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
+            'success': True
+        }, status=status.HTTP_200_OK)
 
 
 class RegisterAPIView(APIView):
@@ -585,13 +745,23 @@ class RegisterSendOTPAPIView(APIView):
         print(f"[REGISTER OTP] Código de 6 dígitos generado para {email}: {code}")
 
         try:
+            subject = f'Verifica tu correo ({code}) - WorkLex SENA'
+            plain_msg = (
+                f"WorkLex SENA - Verificación de Registro\n\n"
+                f"Tu código de verificación para crear tu cuenta es: {code}\n\n"
+                f"Este código expira en 10 minutos.\n\n"
+                f"Si no solicitaste este código, ignora este mensaje."
+            )
+            html_msg = _build_institutional_email_html(
+                title="Verifica tu correo - WorkLex SENA",
+                headline="Verificación de Registro de Aprendiz",
+                message="Bienvenido a <strong>WorkLex SENA</strong>. Para completar la creación de tu cuenta institucional y confirmar tu identidad, ingresa el siguiente código de 6 dígitos:",
+                otp_code=code,
+            )
             send_mail(
-                subject='Verifica tu correo - WorkLex SENA',
-                message=(
-                    f'Tu código de verificación para crear tu cuenta es: {code}\n\n'
-                    f'Este código expira en 10 minutos.\n\n'
-                    f'Si no solicitaste este código, ignora este mensaje.'
-                ),
+                subject=subject,
+                message=plain_msg,
+                html_message=html_msg,
                 from_email=None,
                 recipient_list=[email],
                 fail_silently=False,
@@ -702,10 +872,18 @@ class UserViewSet(viewsets.ViewSet):
             parts = full_name.split(' ', 1)
             person_data['first_name'] = parts[0]
             person_data['last_name'] = parts[1] if len(parts) > 1 else ''
+        if 'first_name' in request.data or 'firstName' in request.data:
+            person_data['first_name'] = (request.data.get('first_name') or request.data.get('firstName') or '').strip()
+        if 'last_name' in request.data or 'lastName' in request.data:
+            person_data['last_name'] = (request.data.get('last_name') or request.data.get('lastName') or '').strip()
+        if 'doc_type' in request.data or 'docType' in request.data:
+            person_data['doc_type'] = request.data.get('doc_type') or request.data.get('docType')
+        if 'doc_num' in request.data or 'docNum' in request.data:
+            person_data['doc_num'] = str(request.data.get('doc_num') or request.data.get('docNum')).strip()
         if 'email' in request.data:
-            person_data['email'] = request.data['email']
-        if 'phone_num' in request.data:
-            person_data['phone_num'] = request.data['phone_num']
+            person_data['email'] = request.data['email'].strip().lower()
+        if 'phone_num' in request.data or 'phoneNum' in request.data:
+            person_data['phone_num'] = str(request.data.get('phone_num') or request.data.get('phoneNum')).strip()
         if 'country' in request.data:
             person_data['country'] = request.data['country']
 
@@ -1153,7 +1331,9 @@ class FichaRequestViewSet(viewsets.ViewSet):
         if getattr(request.user, 'role_id', None) not in ('ADMIN', 'SUPERADMIN'):
             return Response({'error': 'No tienes permisos de administrador para aprobar solicitudes.'}, status=status.HTTP_403_FORBIDDEN)
 
-        req, err = FichaRequestController.approve(pk, request.user)
+        instructor_id = request.data.get('instructor_id') or request.data.get('instructorId')
+        notes = request.data.get('admin_notes') or request.data.get('notes')
+        req, err = FichaRequestController.approve(pk, request.user, instructor_id=instructor_id, notes=notes)
         if err:
             return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
 

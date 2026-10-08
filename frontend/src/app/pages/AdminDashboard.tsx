@@ -21,6 +21,7 @@ import {
 import * as api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
+import { toast } from "../components/Toast";
 import {
   AreaChart, Area, BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -651,13 +652,30 @@ export function AdminDashboard() {
   const [showEditDataModal, setShowEditDataModal] = useState(false);
   const [editUserData, setEditUserData] = useState({ id: "", name: "", email: "", phone_num: "", role: "", program: "" });
 
-  const handleApproveFichaRequest = async (requestId: number) => {
-    setProcessingRequestId(requestId);
+  // Modal para aprobar solicitud de ficha con asignación de instructor
+  const [approveModalRequest, setApproveModalRequest] = useState<api.ApiFichaRequest | null>(null);
+  const [selectedInstructorId, setSelectedInstructorId] = useState<string>("");
+  const [approvalNotes, setApprovalNotes] = useState<string>("");
+
+  const handleOpenApproveModal = (req: api.ApiFichaRequest) => {
+    setApproveModalRequest(req);
+    setSelectedInstructorId("");
+    setApprovalNotes("");
+  };
+
+  const handleConfirmApproveFichaRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!approveModalRequest) return;
+    setProcessingRequestId(approveModalRequest.request_id);
     try {
-      await api.approveFichaRequest(requestId);
+      await api.approveFichaRequest(approveModalRequest.request_id, selectedInstructorId || undefined, approvalNotes);
       await loadDataFromApi();
+      setApproveModalRequest(null);
+      setSelectedInstructorId("");
+      setApprovalNotes("");
+      toast.success("Solicitud aprobada y ficha vinculada al aprendiz con éxito");
     } catch (err: any) {
-      alert(err?.message || "Error al aprobar solicitud de ficha");
+      toast.error(err?.message || "Error al aprobar solicitud de ficha");
     } finally {
       setProcessingRequestId(null);
     }
@@ -1664,9 +1682,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                   <button
                                     type="button"
                                     disabled={processingRequestId === req.request_id}
-                                    onClick={() => handleApproveFichaRequest(req.request_id)}
+                                    onClick={() => handleOpenApproveModal(req)}
                                     className="px-3 py-1 bg-sena-green hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs flex items-center gap-1 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                                    title="Aprobar vinculación del aprendiz a esta ficha"
+                                    title="Aprobar vinculación del aprendiz y asignar instructor"
                                   >
                                     <Check className="w-3.5 h-3.5" strokeWidth={2} />
                                     <span>Aprobar</span>
@@ -2250,6 +2268,120 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     </div>
   )}
 </AnimatePresence>
+
+      {/* ══ Modal: Aprobar Vinculación y Asignar Instructor ══ */}
+      <AnimatePresence>
+        {approveModalRequest && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl border border-border"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-sena-green/10 text-sena-green flex items-center justify-center">
+                    <GraduationCap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">Aprobar Solicitud de Ficha</h3>
+                    <p className="text-xs text-muted-foreground">Confirmación de vinculación y asignación de instructor</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setApproveModalRequest(null)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" strokeWidth={1.8} />
+                </button>
+              </div>
+
+              <div className="bg-muted/40 rounded-xl p-4 mb-4 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-medium">Aprendiz:</span>
+                  <span className="font-bold text-foreground">{approveModalRequest.learner_name} ({approveModalRequest.learner_email})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-medium">Ficha a vincular:</span>
+                  <span className="font-bold text-sena-blue">{approveModalRequest.ficha_code}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-medium">Programa de Formación:</span>
+                  <span className="font-semibold text-foreground text-right">{approveModalRequest.program_name}</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleConfirmApproveFichaRequest} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                    Instructor Asignado a la Ficha
+                  </label>
+                  <select
+                    value={selectedInstructorId}
+                    onChange={(e) => setSelectedInstructorId(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                  >
+                    <option value="">-- Sin instructor específico asignado --</option>
+                    {users
+                      .filter((u) => u.role === "teacher")
+                      .map((instructor) => (
+                        <option key={instructor.id} value={instructor.id}>
+                          {instructor.name} — {instructor.email} {instructor.program ? `(${instructor.program})` : ""}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Selecciona el instructor que acompañará pedagógicamente esta ficha y evaluará al aprendiz.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                    Observaciones o Notas de Aprobación (Opcional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={approvalNotes}
+                    onChange={(e) => setApprovalNotes(e.target.value)}
+                    placeholder="Ej. Matrícula y ficha validadas satisfactoriamente en SofiaPlus."
+                    className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 resize-none"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setApproveModalRequest(null)}
+                    disabled={processingRequestId !== null}
+                    className="px-4 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={processingRequestId !== null}
+                    className="px-5 py-2 text-xs font-semibold rounded-xl bg-sena-green hover:bg-emerald-700 text-white transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {processingRequestId ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Aprobando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Confirmar Aprobación</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ══ Modal: Nueva Competencia Lingüística ══ */}
       <AnimatePresence>

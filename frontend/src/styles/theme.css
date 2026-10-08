@@ -230,17 +230,53 @@
   }
 }
 
-/* ─── Reglas de Accesibilidad Visual Universal ─── */
+/* ─── Reglas de Accesibilidad Visual Universal (WCAG AAA) ─── */
 :root.high-contrast {
-  --background: #050505;
-  --foreground: #ffffff;
-  --card: #121212;
-  --card-foreground: #ffffff;
-  --muted: #242424;
-  --muted-foreground: #f0f0f0;
-  --border: #555555;
-  --sena-green: #00e676;
-  --sena-blue: #40c4ff;
+  --background: #090D16;
+  --foreground: #FFFFFF;
+  --card: #0F172A;
+  --card-foreground: #FFFFFF;
+  --popover: #0F172A;
+  --popover-foreground: #FFFFFF;
+  --primary: #00E676;
+  --primary-foreground: #000000;
+  --secondary: #38BDF8;
+  --secondary-foreground: #000000;
+  --muted: #1E293B;
+  --muted-foreground: #E2E8F0;
+  --accent: #132E27;
+  --accent-foreground: #FFFFFF;
+  --border: #475569;
+  --input: #1E293B;
+  --input-background: #0F172A;
+  --ring: #00E676;
+  --sena-green: #00E676;
+  --sena-green-dark: #00C853;
+  --sena-green-light: #69F0AE;
+  --sena-blue: #38BDF8;
+  --sena-blue-light: #7DD3FC;
+  --destructive: #FF5252;
+  --destructive-foreground: #000000;
+  --warning: #FFD600;
+  --warning-foreground: #000000;
+}
+
+:root.high-contrast body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+:root.high-contrast .bg-white {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+:root.high-contrast .border-border {
+  border-color: var(--border) !important;
+}
+
+:root.high-contrast .text-muted-foreground {
+  color: var(--muted-foreground) !important;
 }
 
 :root.clean-reading {

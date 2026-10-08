@@ -302,7 +302,7 @@ class PersonController:
         except Person.DoesNotExist:
             return None, 'Persona no encontrada'
 
-        for field in ('email', 'doc_type', 'doc_num', 'first_name', 'last_name', 'phone_num', 'status'):
+        for field in ('email', 'doc_type', 'doc_num', 'first_name', 'last_name', 'phone_num', 'country', 'status'):
             if field in data:
                 setattr(person, field, data[field])
 
@@ -1049,7 +1049,7 @@ class FichaRequestController:
         return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person').filter(person=user.person)
 
     @staticmethod
-    def approve(request_id, admin_user):
+    def approve(request_id, admin_user, instructor_id=None, notes=None):
         try:
             req = FichaRequest.objects.select_related('person', 'user').get(pk=request_id)
         except FichaRequest.DoesNotExist:
@@ -1062,7 +1062,23 @@ class FichaRequestController:
         req.status = 'APROBADA'
         req.reviewed_at = timezone.now()
         req.reviewed_by = real_admin
-        req.save(update_fields=['status', 'reviewed_at', 'reviewed_by'])
+
+        update_fields = ['status', 'reviewed_at', 'reviewed_by']
+
+        # Asociar instructor si fue seleccionado
+        if instructor_id:
+            try:
+                instructor_user = User.objects.select_related('person').get(pk=instructor_id)
+                inst_name = f"{instructor_user.person.first_name} {instructor_user.person.last_name}"
+                req.admin_notes = f"Instructor asignado: {inst_name}. {notes or ''}".strip()
+                update_fields.append('admin_notes')
+            except Exception as e:
+                print(f"[FICHA APPROVE] Error asociando instructor {instructor_id}: {e}")
+        elif notes:
+            req.admin_notes = notes
+            update_fields.append('admin_notes')
+
+        req.save(update_fields=update_fields)
 
         # Vincular programa al aprendiz creando/actualizando el User para esa persona
         if not User.objects.filter(person=req.person, program=req.program_name).exists():

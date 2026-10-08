@@ -33,10 +33,29 @@ import {
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { getLevelFromScore } from "../data/questionsA1";
+import { questions } from "../data";
 import * as api from "../services/api";
 import { resolveMediaUrl } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
+
+const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
+  if (!raw) return "Reading";
+  const lower = raw.trim().toLowerCase();
+  if (lower.includes("listen") || lower.includes("escucha") || lower.includes("audio")) return "Listening";
+  if (lower.includes("speak") || lower.includes("habla") || lower.includes("pronun") || lower.includes("oral")) return "Speaking";
+  if (lower.includes("writ") || lower.includes("escrit") || lower.includes("redac")) return "Writing";
+  return "Reading";
+};
+
+const resolveItemOptions = (item: any): string[] => {
+  if (Array.isArray(item.options) && item.options.length > 0) return item.options;
+  const match = questions.find(
+    (q) => q.id === item.questionId || (q.question && item.question && q.question.trim().toLowerCase() === item.question.trim().toLowerCase())
+  );
+  if (match && Array.isArray(match.options)) return match.options;
+  return [];
+};
 
 type ResultAnswer = {
   questionId: number;
@@ -230,13 +249,13 @@ export function ResultsPage() {
     };
   });
 
-  // Competency scores calculation or fallback (5 competencias CEFR)
+  // Competency scores calculation (4 macro-habilidades oficiales CEFR)
   const rawCompScores: Record<string, number> = resultsState?.competencyScores ?? lastTestSummary?.competencyScores ?? {};
-  const competencies = ["Grammar", "Reading", "Writing", "Speaking", "Listening"] as const;
+  const competencies = ["Reading", "Listening", "Writing", "Speaking"] as const;
   const compPerformance = competencies.map((comp) => {
-    const compAnswers = answers.filter((a) => (a.competency || "").toLowerCase() === comp.toLowerCase());
+    const compAnswers = answers.filter((a) => normalizeCompetency(a.competency || a.category) === comp);
     const count = compAnswers.length;
-    let score = rawCompScores[comp] ?? 0;
+    let score = rawCompScores[comp] ?? (comp === "Reading" && rawCompScores["Grammar"] ? rawCompScores["Grammar"] : 0);
     if (count > 0) {
       const sum = compAnswers.reduce((acc, curr) => acc + (curr.scoreAwarded !== undefined ? curr.scoreAwarded : (curr.isCorrect ? 100 : 0)), 0);
       score = Math.round(sum / count);
@@ -483,10 +502,9 @@ export function ResultsPage() {
             <h3 className="font-semibold text-lg text-foreground">Desempeño por Competencias Lingüísticas</h3>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {compPerformance.map((comp) => {
               const icons: Record<string, any> = {
-                Grammar: BookOpen,
                 Reading: FileCheck,
                 Writing: PenTool,
                 Speaking: Mic,
@@ -1041,7 +1059,7 @@ export function ResultsPage() {
                           <XCircle className="w-5 h-5 text-destructive flex-shrink-0" strokeWidth={1.8} />
                         )}
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white border border-border">
-                          {item.level || "CEFR"} • {item.competency || item.category}
+                          {item.level || "CEFR"} • {normalizeCompetency(item.competency || item.category)}
                         </span>
                       </div>
                       <span className="text-xs font-medium text-muted-foreground">
@@ -1051,58 +1069,84 @@ export function ResultsPage() {
 
                     <p className="text-sm font-medium text-foreground mb-2">{item.question}</p>
 
-                    {/* Desglose de Opciones y Justificación Pedagógica para Selección Múltiple y Listening */}
-                    {item.options && item.options.length > 0 && (
-                      <div className="space-y-2 mt-2 mb-2">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                          {item.options.map((opt, optIdx) => {
-                            const isChosen = item.userAnswer === optIdx;
-                            const isAnswerCorrect = item.correctAnswer === optIdx;
-                            let style = "bg-muted/40 border-border text-muted-foreground";
-                            if (isAnswerCorrect) {
-                              style = "bg-emerald-50 border-emerald-400 text-emerald-900 font-semibold";
-                            } else if (isChosen && !item.isCorrect) {
-                              style = "bg-rose-50 border-rose-400 text-rose-900 font-semibold";
-                            }
-                            return (
-                              <div
-                                key={optIdx}
-                                className={`p-2.5 rounded-lg border flex items-center justify-between gap-2 ${style}`}
-                              >
-                                <span className="truncate">
-                                  <strong>{String.fromCharCode(65 + optIdx)}.</strong> {opt}
-                                </span>
-                                {isAnswerCorrect && (
-                                  <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold flex-shrink-0">
-                                    Respuesta Correcta
-                                  </span>
-                                )}
-                                {isChosen && !isAnswerCorrect && (
-                                  <span className="text-[10px] bg-rose-600 text-white px-1.5 py-0.5 rounded font-bold flex-shrink-0">
-                                    Tu Selección
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                    {(() => {
+                      const itemOpts = resolveItemOptions(item);
+                      const userAnsText = item.writingAnswer || (itemOpts[item.userAnswer ?? -1] ?? (item.userAnswer !== undefined && item.userAnswer !== null ? `Opción ${item.userAnswer + 1}` : "Sin responder"));
+                      const correctAnsText = itemOpts[item.correctAnswer ?? -1] ?? (item.correctAnswer !== undefined && item.correctAnswer !== null ? `Opción ${item.correctAnswer + 1}` : "N/A");
 
-                        {/* Justificación pedagógica / Razón técnica */}
-                        <div className="p-3 bg-white/90 rounded-xl border border-slate-200 text-xs mt-2">
-                          <p className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
-                            <Sparkles className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
-                            <span>Justificación Pedagógica:</span>
-                          </p>
-                          <p className="text-slate-600 leading-relaxed">
-                            {item.definition
-                              ? `Concepto técnico evaluado: "${item.definition}". La opción correcta se ajusta con exactitud a esta definición técnica.`
-                              : item.isCorrect
-                              ? "¡Excelente! La opción que seleccionaste satisface las reglas morfosintácticas y la convención técnica esperada por el estándar internacional de inglés SENA."
-                              : `La opción seleccionada no cumple con la regla o contexto requerido. La opción correcta es "${item.options[item.correctAnswer ?? 0]}" por precisión conceptual y coherencia gramatical.`}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                      return (
+                        <>
+                          {/* Desglose Semántico de Respuesta Seleccionada vs Correcta */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-white/90 p-3 rounded-xl border border-slate-200 mt-2 mb-2">
+                            <div>
+                              <span className="font-bold text-slate-700">Tu respuesta:</span>{" "}
+                              <span className={item.isCorrect ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                                {userAnsText}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-bold text-emerald-800">Respuesta correcta:</span>{" "}
+                              <span className="text-emerald-700 font-semibold">
+                                {correctAnsText}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Desglose de Opciones y Justificación Pedagógica para Selección Múltiple y Listening */}
+                          {itemOpts && itemOpts.length > 0 && (
+                            <div className="space-y-2 mt-2 mb-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                {itemOpts.map((opt, optIdx) => {
+                                  const isChosen = item.userAnswer === optIdx;
+                                  const isAnswerCorrect = item.correctAnswer === optIdx;
+                                  let style = "bg-muted/40 border-border text-muted-foreground";
+                                  if (isAnswerCorrect) {
+                                    style = "bg-emerald-50 border-emerald-400 text-emerald-900 font-semibold";
+                                  } else if (isChosen && !item.isCorrect) {
+                                    style = "bg-rose-50 border-rose-400 text-rose-900 font-semibold";
+                                  }
+                                  return (
+                                    <div
+                                      key={optIdx}
+                                      className={`p-2.5 rounded-lg border flex items-center justify-between gap-2 ${style}`}
+                                    >
+                                      <span className="truncate">
+                                        <strong>{String.fromCharCode(65 + optIdx)}.</strong> {opt}
+                                      </span>
+                                      {isAnswerCorrect && (
+                                        <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                                          Respuesta Correcta
+                                        </span>
+                                      )}
+                                      {isChosen && !isAnswerCorrect && (
+                                        <span className="text-[10px] bg-rose-600 text-white px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                                          Tu Selección
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Justificación pedagógica / Razón técnica */}
+                              <div className="p-3 bg-white/90 rounded-xl border border-slate-200 text-xs mt-2">
+                                <p className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
+                                  <Sparkles className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
+                                  <span>Justificación Pedagógica:</span>
+                                </p>
+                                <p className="text-slate-600 leading-relaxed">
+                                  {item.definition
+                                    ? `Concepto técnico evaluado: "${item.definition}". La opción correcta se ajusta con exactitud a esta definición técnica.`
+                                    : item.isCorrect
+                                    ? "¡Excelente! La opción que seleccionaste satisface las reglas morfosintácticas y la convención técnica esperada por el estándar internacional de inglés SENA."
+                                    : `La opción seleccionada no cumple con la regla o contexto requerido. La opción correcta es "${itemOpts[item.correctAnswer ?? 0] || 'la indicada'}" por precisión conceptual y coherencia gramatical.`}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
 
                     {item.writingAnswer && (
                       <div className="p-3 bg-white rounded-lg border border-border text-xs mb-2">

@@ -32,6 +32,12 @@ import { SafeImage } from "../components/SafeImage";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
 
+function formatQuizTimer(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 export function QuizPage() {
   const navigate = useNavigate();
 
@@ -851,9 +857,21 @@ export function QuizPage() {
                 Pregunta {engineState.currentQuestionIndexInLevel + 1} de 6
               </span>
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/25 text-white text-xs font-semibold backdrop-blur-sm">
-              <Clock className={`w-3.5 h-3.5 ${timeLeft <= 10 ? "text-rose-400 animate-pulse" : "text-emerald-300"}`} strokeWidth={1.8} />
-              <span className={timeLeft <= 10 ? "text-rose-300 font-bold" : "text-white"}>{timeLeft}s</span>
+            <div
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border backdrop-blur-md transition-all ${
+                timeLeft <= 10
+                  ? "bg-rose-500/25 border-rose-400/60 text-rose-200 animate-pulse shadow-md shadow-rose-950/20"
+                  : "bg-black/35 border-white/20 text-white"
+              }`}
+              title="Tiempo restante para esta pregunta"
+            >
+              <Clock
+                className={`w-4 h-4 sm:w-5 sm:h-5 ${timeLeft <= 10 ? "text-rose-400" : "text-emerald-300"}`}
+                strokeWidth={2}
+              />
+              <span className="font-mono text-base sm:text-lg font-black tracking-wider">
+                {formatQuizTimer(timeLeft)}
+              </span>
             </div>
           </div>
           <div className="h-2 bg-black/20 rounded-full overflow-hidden">

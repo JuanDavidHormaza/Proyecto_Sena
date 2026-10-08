@@ -10,6 +10,8 @@ import {
   RefreshCw,
   ShieldCheck,
   Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import * as api from "../services/api";
 import { useToast } from "../components/Toast";
@@ -21,6 +23,10 @@ export function RecoverAccountPage() {
   const [step, setStep] = useState<"email" | "otp" | "success">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -107,24 +113,41 @@ export function RecoverAccountPage() {
     document.getElementById(`otp-input-${targetIdx}`)?.focus();
   };
 
-  // ── Validar OTP de recuperación ─────────────────────────────────────────
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  // ── Validar OTP y Actualizar Contraseña (Paso 2) ─────────────────────────
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     const code = otp.join("");
     if (code.length < 6) {
-      setError("Por favor ingresa los 6 dígitos del código.");
+      setError("Por favor ingresa los 6 dígitos del código de seguridad.");
       toast.warning("Debes completar los 6 dígitos del código de verificación.");
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setError("La nueva contraseña debe tener al menos 6 caracteres.");
+      toast.warning("La nueva contraseña debe tener mínimo 6 caracteres.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Las contraseñas no coinciden. Por favor verifica.");
+      toast.warning("Las contraseñas ingresadas no coinciden.");
       return;
     }
 
     setIsLoading(true);
     try {
-      await api.verifyLoginOTP({ email, code });
-      toast.success("Identidad verificada exitosamente. Tu cuenta está segura.", "Verificación Exitosa");
+      await api.resetPassword({
+        email,
+        code,
+        newPassword,
+        confirmPassword,
+      });
+      toast.success("Tu contraseña ha sido actualizada con éxito.", "Contraseña Restablecida");
       setStep("success");
     } catch (err: any) {
-      const msg = err?.message || "Código incorrecto o expirado. Solicita un nuevo código.";
+      const msg = err?.message || "Código incorrecto o no se pudo actualizar la contraseña.";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -265,42 +288,97 @@ export function RecoverAccountPage() {
                     <KeyRound className="w-6 h-6" strokeWidth={1.8} />
                   </div>
                   <h2 className="text-xl font-extrabold text-foreground tracking-tight mb-1">
-                    Verificación de Seguridad
+                    Código de Seguridad y Nueva Contraseña
                   </h2>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Hemos enviado un código seguro de 6 dígitos a <span className="font-bold text-foreground">{email}</span>. Ingrésalo a continuación:
+                    Hemos enviado un código de 6 dígitos a <span className="font-bold text-foreground">{email}</span>. Ingrésalo y establece tu nueva clave:
                   </p>
                 </div>
 
-                <form onSubmit={handleVerifyOtp} className="space-y-5">
-                  <div className="flex justify-between gap-2 onPaste={handleOtpPaste}">
-                    {otp.map((digit, idx) => (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5 text-left">
+                      Código OTP de 6 dígitos *
+                    </label>
+                    <div className="flex justify-between gap-1.5 sm:gap-2">
+                      {otp.map((digit, idx) => (
+                        <input
+                          key={idx}
+                          id={`otp-input-${idx}`}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          onChange={(e) => handleOtpChange(idx, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                          onPaste={handleOtpPaste}
+                          className="w-10 sm:w-12 h-12 sm:h-14 text-center text-lg sm:text-xl font-bold font-mono border border-input rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5 text-left">
+                      Nueva Contraseña *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                       <input
-                        key={idx}
-                        id={`otp-input-${idx}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        onPaste={handleOtpPaste}
-                        className="w-12 h-14 text-center text-xl font-bold font-mono border border-input rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all"
+                        type={showNewPassword ? "text" : "password"}
+                        required
+                        minLength={6}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        className="w-full pl-10 pr-10 py-2.5 sm:py-3 text-sm border border-input rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all"
                       />
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5 text-left">
+                      Confirmar Nueva Contraseña *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        required
+                        minLength={6}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Repite la nueva contraseña"
+                        className="w-full pl-10 pr-10 py-2.5 sm:py-3 text-sm border border-input rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <button
                     type="submit"
-                    disabled={isLoading || otp.join("").length < 6}
-                    className="w-full bg-sena-green hover:bg-sena-green/90 text-white py-3.5 rounded-xl font-bold transition-all shadow-md shadow-sena-green/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm"
+                    disabled={isLoading || otp.join("").length < 6 || !newPassword || !confirmPassword}
+                    className="w-full bg-sena-green hover:bg-sena-green/90 text-white py-3.5 rounded-xl font-bold transition-all shadow-md shadow-sena-green/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm mt-3"
                   >
                     {isLoading ? (
-                      <span>Verificando...</span>
+                      <span>Restableciendo contraseña...</span>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" strokeWidth={1.8} />
-                        <span>Validar Código</span>
+                        <span>Restablecer Contraseña e Iniciar Sesión</span>
                       </>
                     )}
                   </button>
@@ -332,16 +410,16 @@ export function RecoverAccountPage() {
                 <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4">
                   <CheckCircle2 className="w-9 h-9" strokeWidth={2} />
                 </div>
-                <h3 className="text-xl font-extrabold text-foreground mb-2">¡Acceso Verificado!</h3>
+                <h3 className="text-xl font-extrabold text-foreground mb-2">¡Contraseña Actualizada!</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-6">
-                  Tu identidad como usuario de WorkLex SENA ha sido confirmada con éxito. Ya puedes ingresar a tu entorno institucional.
+                  Tu contraseña institucional ha sido actualizada correctamente en el sistema. Ya puedes iniciar sesión con tus nuevas credenciales.
                 </p>
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-xl font-bold transition-all shadow-md cursor-pointer text-sm"
+                  className="w-full bg-sena-green hover:bg-sena-green/90 text-white py-3.5 rounded-xl font-bold transition-all shadow-md cursor-pointer text-sm"
                 >
-                  Ir al Inicio de Sesión
+                  Iniciar Sesión Ahora
                 </button>
               </motion.div>
             )}

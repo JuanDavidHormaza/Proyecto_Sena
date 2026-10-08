@@ -13,6 +13,12 @@ services:
     command: minio server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       worklex_network:
         aliases:
@@ -22,7 +28,8 @@ services:
     image: worklex_provision:latest
     container_name: worklex_minio_provision
     depends_on:
-      - worklex_minio
+      worklex_minio:
+        condition: service_healthy
     volumes:
       - ./minio-seed:/seed:ro
     networks:
