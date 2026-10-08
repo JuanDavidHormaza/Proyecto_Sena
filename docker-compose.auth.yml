@@ -9,7 +9,7 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_USER:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD:-Admin123*}
       KC_PROXY: "edge"
-      KC_HOSTNAME: ${PUBLIC_IP:-203.161.47.73}
+      KC_HOSTNAME: ${SERVER_IP:-${PUBLIC_IP:-localhost}}
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
       JAVA_OPTS_APPEND: "-Xms128m -Xmx384m -XX:+UseG1GC"
