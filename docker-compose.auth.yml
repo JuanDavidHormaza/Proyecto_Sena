@@ -1,18 +1,29 @@
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    image: quay.io/keycloak/keycloak:24.0.5
     container_name: worklex_auth
+    profiles:
+      - auth
 
     environment:
-      KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
-      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-Admin123*}
       KEYCLOAK_ADMIN: ${KEYCLOAK_USER:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD:-Admin123*}
+      KC_PROXY: "edge"
+      KC_HOSTNAME: ${PUBLIC_IP:-203.161.47.73}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      JAVA_OPTS_APPEND: "-Xms128m -Xmx384m -XX:+UseG1GC"
 
-    command: start-dev
+    command: start-dev --http-port=8080
 
     ports:
       - "8080:8080"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 450M
 
     networks:
       - worklex_network

@@ -1,7 +1,9 @@
 services:
   vault:
-    image: hashicorp/vault:latest
+    image: hashicorp/vault:1.15.6
     container_name: worklex_vault
+    profiles:
+      - vault
 
     ports:
       - "8200:8200"
@@ -15,6 +17,12 @@ services:
       - ./logs:/vault/logs
 
     command: vault server -config=/vault/config/vault.hcl
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 128M
 
     networks:
       - worklex_network

@@ -52,6 +52,12 @@ services:
       timeout: 10s
       retries: 5
 
+    deploy:
+      resources:
+        limits:
+          cpus: '0.60'
+          memory: 384M
+
     networks:
       - worklex_network
 
@@ -72,6 +78,7 @@ services:
 
     environment:
       - BACKEND_URL=http://worklex_backend:8000
+      - NODE_OPTIONS=--max-old-space-size=256
 
     volumes:
       - ./frontend:/app
@@ -89,6 +96,12 @@ services:
       timeout: 10s
       retries: 5
 
+    deploy:
+      resources:
+        limits:
+          cpus: '0.40'
+          memory: 300M
+
     networks:
       - worklex_network
 
@@ -101,6 +114,12 @@ services:
     depends_on:
       - worklex_backend
       - worklex_frontend
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 200M
 
     networks:
       - worklex_network
