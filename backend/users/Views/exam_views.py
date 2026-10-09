@@ -7,6 +7,7 @@ import uuid
 import logging
 import difflib
 import re
+import random
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
@@ -150,9 +151,11 @@ class ExamStartAPIView(APIView):
         if request.user and request.user.is_authenticated:
             user_id = getattr(request.user, 'user_id', request.user.pk)
 
-        # Generar preguntas dinámicas desde el diccionario
+        # Generar preguntas dinámicas desde el diccionario en orden aleatorio
         dictionary_questions = ExamEngineService.generate_questions_from_dictionary()
+        random.shuffle(dictionary_questions)
         a1_questions = [q for q in dictionary_questions if q.get('level') == 'A1']
+        random.shuffle(a1_questions)
 
         first_question = a1_questions[0] if a1_questions else (dictionary_questions[0] if dictionary_questions else None)
 
@@ -273,7 +276,7 @@ class ExamEvaluateSpeakingAPIView(APIView):
 
     def post(self, request):
         try:
-            audio_file = request.FILES.get('audio') or request.FILES.get('file')
+            audio_file = request.FILES.get('audio') or request.FILES.get('file') or request.FILES.get('audio_file')
             target_word = (
                 request.data.get('target_word') or
                 request.data.get('target') or
@@ -311,10 +314,16 @@ class ExamEvaluateSpeakingAPIView(APIView):
                 timestamp = int(time.time())
                 random_suffix = uuid.uuid4().hex[:8]
                 ext = '.webm'
-                if audio_file.content_type == 'audio/wav' or audio_file.name.endswith('.wav'):
+                ct = (getattr(audio_file, 'content_type', '') or '').lower()
+                fname = (getattr(audio_file, 'name', '') or '').lower()
+                if 'wav' in ct or fname.endswith('.wav'):
                     ext = '.wav'
-                elif audio_file.content_type == 'audio/mp3' or audio_file.name.endswith('.mp3'):
+                elif 'mp3' in ct or fname.endswith('.mp3'):
                     ext = '.mp3'
+                elif 'ogg' in ct or fname.endswith('.ogg'):
+                    ext = '.ogg'
+                elif 'm4a' in ct or fname.endswith('.m4a') or 'mp4' in ct:
+                    ext = '.m4a'
                 
                 file_key = f"spk_eval_u{user_id}_{timestamp}_{random_suffix}{ext}"
                 bucket_name = StorageService.BUCKETS.get('EXAM_SUBMISSIONS', 'exam-submissions')

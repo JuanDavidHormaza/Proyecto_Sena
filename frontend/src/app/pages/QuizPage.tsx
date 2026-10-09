@@ -988,25 +988,27 @@ export function QuizPage() {
                 </div>
               )}
 
-              {/* En listening no mostrar prompt ni imagen para evitar revelar la respuesta antes de escuchar */}
-              {currentQuestion.type !== "listening" && currentQuestion.prompt && (
-                <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl mb-5">
-                  {currentQuestion.prompt}
-                </p>
-              )}
-
-              {/* La imagen solo debe aparecer cuando la pregunta realmente lo requiera (Speaking o identificación visual) */}
-              {currentQuestion.type === "speaking" && currentQuestion.image && (
-                <div className="mb-5 rounded-2xl overflow-hidden border border-slate-200 h-44 bg-slate-50 flex items-center justify-center shadow-inner pointer-events-none select-none">
-                  <SafeImage
-                    src={api.resolveMediaUrl(currentQuestion.image, "dictionary-images")}
-                    alt="Ilustración técnica"
-                    fallbackText="SENA"
-                    showHoverZoom={false}
-                    className="h-40 object-contain pointer-events-none select-none"
-                    containerClassName="h-44 pointer-events-none select-none"
-                  />
+              {/* Presentación sobria y limpia de la pregunta técnica */}
+              {currentQuestion.type === "speaking" ? (
+                <div className="mb-6 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-slate-50 border border-emerald-200/80 p-5 shadow-xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full">
+                      Término Técnico Objetivo
+                    </span>
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+                    {currentQuestion.wordId || (currentQuestion.prompt?.split('—')[0]?.replace(/["']/g, '').trim()) || "Technical Term"}
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+                    {currentQuestion.definition || (currentQuestion.prompt?.split('—')[1]?.trim()) || currentQuestion.prompt}
+                  </p>
                 </div>
+              ) : (
+                currentQuestion.type !== "listening" && currentQuestion.prompt && (
+                  <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl mb-5">
+                    {currentQuestion.prompt}
+                  </p>
+                )
               )}
             </div>
 
@@ -1090,7 +1092,7 @@ export function QuizPage() {
                         <span className="text-xs font-bold uppercase tracking-wider text-sena-blue bg-sena-blue/10 px-2 py-0.5 rounded-full">
                           Modelo Nativo
                         </span>
-                        <span className="text-xs text-slate-500 font-medium">Pronunciación {userProgram}</span>
+                        <span className="text-xs text-slate-500 font-medium">Audio Oficial</span>
                       </div>
                       <p className="font-bold text-slate-800 text-sm mt-0.5">
                         {currentQuestion.wordId ? `Término Técnico: "${currentQuestion.wordId}"` : "Escucha la pronunciación oficial"}
