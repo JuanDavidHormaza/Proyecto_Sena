@@ -73,13 +73,33 @@ class StorageService:
             logger.error("boto3 no está instalado en el entorno de Python.")
             raise StorageUnavailableError("El cliente boto3 no está disponible en el backend.")
 
-        endpoint = getattr(settings, 'MINIO_ENDPOINT', 'minio:9000')
+        raw_endpoint = str(getattr(settings, 'MINIO_ENDPOINT', 'minio:9000') or '').strip().strip('\'"')
+        # Eliminar cualquier retorno de carro (\r, \n) o espacios accidentales comunes en .env de Windows/Linux
+        raw_endpoint = "".join(raw_endpoint.split())
+        if not raw_endpoint:
+            raw_endpoint = 'minio:9000'
+
         use_ssl = getattr(settings, 'MINIO_USE_SSL', False)
-        if str(endpoint).startswith(('http://', 'https://')):
-            endpoint_url = str(endpoint)
+
+        # Parsear protocolo y host:puerto
+        if raw_endpoint.startswith(('http://', 'https://')):
+            from urllib.parse import urlparse
+            parsed = urlparse(raw_endpoint)
+            protocol = parsed.scheme or ('https' if use_ssl else 'http')
+            host_port = parsed.netloc or parsed.path
         else:
             protocol = 'https' if use_ssl else 'http'
-            endpoint_url = f"{protocol}://{endpoint}"
+            host_port = raw_endpoint
+
+        host_port = host_port.strip('/')
+
+        # En la red docker 'worklex_network', 'worklex_minio' tiene el alias DNS 'minio'.
+        # Los guiones bajos ('_') violan el estándar DNS RFC 1123 y son rechazados por botocore
+        # como "Invalid endpoint: http://worklex_minio:9000". Sanitizamos hacia el alias RFC válido:
+        if 'worklex_minio' in host_port:
+            host_port = host_port.replace('worklex_minio', 'minio')
+
+        endpoint_url = f"{protocol}://{host_port}"
 
         access_key = getattr(settings, 'MINIO_ACCESS_KEY', 'admin')
         secret_key = getattr(settings, 'MINIO_SECRET_KEY', 'Admin123*')
@@ -92,6 +112,7 @@ class StorageService:
                 aws_secret_access_key=secret_key,
                 config=Config(
                     signature_version='s3v4',
+                    s3={'addressing_style': 'path'},
                     connect_timeout=3,
                     read_timeout=10,
                     retries={'max_attempts': 2}
@@ -100,8 +121,8 @@ class StorageService:
             )
             return cls._client
         except Exception as e:
-            logger.error(f"Error inicializando cliente S3 MinIO: {e}")
-            raise StorageUnavailableError(f"No fue posible conectar con MinIO: {e}")
+            logger.error(f"Error inicializando cliente S3 MinIO ({endpoint_url}): {e}")
+            raise StorageUnavailableError(f"No fue posible conectar con MinIO ({endpoint_url}): {e}")
 
     @classmethod
     def ensure_bucket_exists(cls, bucket_name: str) -> bool:
