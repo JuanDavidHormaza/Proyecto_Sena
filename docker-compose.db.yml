@@ -2,7 +2,7 @@ services:
 
   worklex_persistencia:
 
-    image: postgres:16
+    image: postgres:16-alpine
 
     container_name: worklex_persistencia
 
@@ -12,21 +12,19 @@ services:
       - .env
 
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-SENA}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Admin123*}
 
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
 
     volumes:
-
       # Persistencia de datos
       - worklex_data:/var/lib/postgresql/data
 
       # Scripts automáticos de inicialización y carga de vocabulario ADSO
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
-      - ./postgres/init/02_seed_adso.sql:/docker-entrypoint-initdb.d/02_seed_adso.sql:ro
 
       # Configuración personalizada
       - ./postgres/conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
@@ -34,13 +32,10 @@ services:
 
     command: >
       postgres
-      
       -c config_file=/etc/postgresql/postgresql.conf
-  
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-SENA}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -53,10 +48,13 @@ services:
         limits:
           cpus: '0.50'
           memory: 384M
+        reservations:
+          memory: 128M
 
 volumes:
   worklex_data:
 
 networks:
   worklex_network:
-    external: true
+    name: worklex_network
+    driver: bridge

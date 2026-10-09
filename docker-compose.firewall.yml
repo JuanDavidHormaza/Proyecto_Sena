@@ -19,4 +19,5 @@ services:
 
 networks:
   worklex_network:
-    external: true
+    name: worklex_network
+    driver: bridge

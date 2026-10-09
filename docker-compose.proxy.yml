@@ -107,12 +107,8 @@ services:
           cpus: '0.10'
           memory: 64M
 
-#volumes:
-
-# Preparado para futuras expansiones
-#    worklex_logs:
-
 networks:
 
   worklex_network:
-    external: true
+    name: worklex_network
+    driver: bridge
