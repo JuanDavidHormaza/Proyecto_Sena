@@ -27,10 +27,11 @@ export interface ApiUser {
   availableRoles?: string[];
   isDualRole?: boolean;
   docNum?: string;
-  phoneNum?: number;
+  phoneNum?: string | number;
   country?: string;
   firstName?: string;
   lastName?: string;
+  avatar?: string;
   createdAt?: string;
 }
 
@@ -756,12 +757,22 @@ export async function createFichaRequest(ficha_code: string, program?: string): 
   return handleResponse<ApiFichaRequest>(response);
 }
 
-export async function approveFichaRequest(requestId: number): Promise<ApiFichaRequest> {
+export async function approveFichaRequest(requestId: number, instructorId?: string, notes?: string): Promise<ApiFichaRequest> {
   const response = await safeFetch(`${API_BASE}/ficha-requests/${requestId}/approve/`, {
     method: 'POST',
     headers: getAuthHeaders(),
+    body: JSON.stringify({ instructor_id: instructorId, notes }),
   });
   return handleResponse<ApiFichaRequest>(response);
+}
+
+export async function resetPassword(data: { email: string; code: string; new_password: string; confirm_password?: string }): Promise<{ message: string; success: boolean }> {
+  const response = await safeFetch(`${API_BASE}/auth/reset-password/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<{ message: string; success: boolean }>(response);
 }
 
 export async function rejectFichaRequest(requestId: number, notes?: string): Promise<ApiFichaRequest> {
@@ -1061,6 +1072,7 @@ export const api = {
   registerVerifyOTP,
   checkDocument,
   checkEmail,
+  resetPassword,
 };
 
 export default api;

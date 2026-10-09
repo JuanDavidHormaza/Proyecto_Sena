@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import {
   ArrowLeft, Award, BadgeCheck, BookOpen, ClipboardList, Mail,
   Phone, Shield, UserRound, Globe, Calendar, RefreshCw, CheckCircle2,
-  GraduationCap, Plus, AlertCircle, Sparkles, Loader2
+  GraduationCap, Plus, AlertCircle, Sparkles, Loader2, Edit3, X, Save
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -67,6 +67,61 @@ export function ProfilePage() {
   const [isSwitchingRole, setIsSwitchingRole] = useState(false);
   const [isSwitchingProgram, setIsSwitchingProgram] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState("");
+
+  // Estado para edición completa de perfil
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    docType: "CC",
+    docNum: "",
+    email: "",
+    phoneNum: "",
+    avatar: "",
+  });
+
+  useEffect(() => {
+    if (user) {
+      setEditForm({
+        firstName: user.firstName || (user.name ? user.name.split(" ")[0] : ""),
+        lastName: user.lastName || (user.name ? user.name.split(" ").slice(1).join(" ") : ""),
+        docType: user.docType || "CC",
+        docNum: user.docNum || "",
+        email: user.email || "",
+        phoneNum: user.phoneNum ? String(user.phoneNum) : "",
+        avatar: user.avatar || "",
+      });
+    }
+  }, [user]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+    setIsSavingProfile(true);
+    try {
+      const payload: Partial<api.ApiUser> = {
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
+        name: `${editForm.firstName.trim()} ${editForm.lastName.trim()}`.trim(),
+        docType: editForm.docType,
+        docNum: editForm.docNum.trim(),
+        email: editForm.email.trim().toLowerCase(),
+        phoneNum: editForm.phoneNum.trim(),
+        avatar: editForm.avatar,
+      };
+      const updated = await api.updateUser(user.id, payload);
+      updateUser(updated);
+      localStorage.setItem("userName", updated.name);
+      localStorage.setItem("userEmail", updated.email);
+      toast.success("Perfil institucional actualizado con éxito en la plataforma.", "Cambios Guardados");
+      setShowEditModal(false);
+    } catch (err: any) {
+      toast.error(err?.message || "No se pudo actualizar la información de perfil.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // Estado para solicitudes de vinculación a programa alterno
   const [newFichaInput, setNewFichaInput] = useState("");
@@ -219,8 +274,12 @@ export function ProfilePage() {
           <div className="bg-gradient-to-r from-sena-green to-sena-blue p-6 lg:p-8 text-white">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
               <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-                <div className="w-24 h-24 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-4xl font-bold shadow-lg">
-                  {getInitials(name)}
+                <div className="w-24 h-24 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-4xl font-bold shadow-lg overflow-hidden">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={name} className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(name)
+                  )}
                 </div>
                 <div className="min-w-0">
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-3">
@@ -232,13 +291,23 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              {/* Botón de cambio de Rol dual */}
-              {canSwitchRole && (
-                <div className="self-start sm:self-center">
+              {/* Botones de acción en encabezado */}
+              <div className="flex flex-wrap items-center gap-3 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-sena-blue hover:bg-white/90 rounded-xl font-semibold shadow-md transition-all cursor-pointer"
+                >
+                  <Edit3 className="w-4 h-4 text-sena-green" strokeWidth={2} />
+                  <span>Editar Perfil</span>
+                </button>
+
+                {/* Botón de cambio de Rol dual */}
+                {canSwitchRole && (
                   <button
                     onClick={handleRoleSwitch}
                     disabled={isSwitchingRole}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-sena-blue rounded-xl font-semibold hover:bg-white/90 shadow-md transition-all disabled:opacity-60"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/15 text-white border border-white/30 rounded-xl font-semibold hover:bg-white/25 shadow-md transition-all disabled:opacity-60 cursor-pointer"
                   >
                     <RefreshCw className={`w-4 h-4 ${isSwitchingRole ? "animate-spin" : ""}`} strokeWidth={1.8} />
                     <span>
@@ -249,8 +318,8 @@ export function ProfilePage() {
                         : "Cambiar a Aprendiz"}
                     </span>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
@@ -288,14 +357,24 @@ export function ProfilePage() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${isStudent ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-2xl border border-border shadow-sm p-6`}>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
-                <UserRound className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
+            <div className="flex items-center justify-between gap-4 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-sena-green/10 rounded-xl flex items-center justify-center">
+                  <UserRound className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-foreground">Información personal</h2>
+                  <p className="text-sm text-muted-foreground">Datos registrados en el sistema SENA</p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-semibold text-foreground">Información personal</h2>
-                <p className="text-sm text-muted-foreground">Datos registrados en el sistema SENA</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-sena-green/10 text-sena-green hover:bg-sena-green/20 border border-sena-green/20 transition-all cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Editar</span>
+              </button>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               {[
@@ -546,26 +625,202 @@ export function ProfilePage() {
           )}
         </div>
 
-        <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-6 bg-white rounded-2xl border border-border shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
-              <Award className="w-5 h-5 text-warning" strokeWidth={1.8} />
-            </div>
-            <div>
-              <h2 className="font-semibold text-foreground">Permisos activos</h2>
-              <p className="text-sm text-muted-foreground">Accesos disponibles para este usuario</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(activePermissions.length > 0 ? activePermissions : [{ key: "default", label: "Sin permisos asignados" }]).map((permission) => (
-              <span key={permission.key} className="inline-flex items-center gap-2 px-3 py-2 bg-muted rounded-xl text-sm text-foreground">
-                <BookOpen className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
-                {permission.label}
-              </span>
-            ))}
-          </div>
-        </motion.section>
       </main>
+
+      {/* ─── Modal de Edición de Perfil ─── */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-border my-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-border mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sena-green/10 flex items-center justify-center text-sena-green">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Editar Perfil Institucional</h3>
+                  <p className="text-xs text-muted-foreground">Actualiza tus datos registrados en la plataforma SENA</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              {/* Selector / Previsualización de Avatar */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Avatar / Foto de Perfil
+                </label>
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="w-16 h-16 rounded-2xl bg-sena-green/10 border-2 border-sena-green/30 flex items-center justify-center overflow-hidden flex-shrink-0 text-xl font-bold text-sena-green">
+                    {editForm.avatar ? (
+                      <img src={editForm.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(`${editForm.firstName} ${editForm.lastName}` || name)
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="url"
+                      placeholder="URL de foto o avatar (https://...)"
+                      value={editForm.avatar}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, avatar: e.target.value }))}
+                      className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-muted/30"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Pega la URL de tu imagen o selecciona uno de los avatares predeterminados:
+                    </p>
+                  </div>
+                </div>
+                {/* Avatares rápidos */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {[
+                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+                  ].map((presetUrl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setEditForm((prev) => ({ ...prev, avatar: presetUrl }))}
+                      className={`w-9 h-9 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                        editForm.avatar === presetUrl ? "border-sena-green scale-110 shadow-sm" : "border-transparent opacity-75 hover:opacity-100"
+                      }`}
+                    >
+                      <img src={presetUrl} alt={`Avatar ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                  {editForm.avatar && (
+                    <button
+                      type="button"
+                      onClick={() => setEditForm((prev) => ({ ...prev, avatar: "" }))}
+                      className="px-2 py-1 text-[11px] text-muted-foreground hover:text-rose-600 rounded-lg border border-border hover:border-rose-300 transition-colors cursor-pointer"
+                    >
+                      Quitar foto
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Nombres y Apellidos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">Nombres *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.firstName}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    placeholder="Ej. Juan David"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">Apellidos *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.lastName}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    placeholder="Ej. Hormaza"
+                  />
+                </div>
+              </div>
+
+              {/* Documento */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">Tipo Documento</label>
+                  <select
+                    value={editForm.docType}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, docType: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white"
+                  >
+                    <option value="CC">Cédula de Ciudadanía (CC)</option>
+                    <option value="TI">Tarjeta de Identidad (TI)</option>
+                    <option value="CE">Cédula de Extranjería (CE)</option>
+                    <option value="PEP">Permiso Especial (PEP)</option>
+                    <option value="PASAPORTE">Pasaporte</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-foreground mb-1">Número de Documento *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.docNum}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, docNum: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    placeholder="Ej. 1000123456"
+                  />
+                </div>
+              </div>
+
+              {/* Correo y Teléfono */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">Correo Electrónico *</label>
+                  <input
+                    type="email"
+                    required
+                    value={editForm.email}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    placeholder="usuario@misena.edu.co"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">Teléfono</label>
+                  <input
+                    type="tel"
+                    value={editForm.phoneNum}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, phoneNum: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    placeholder="Ej. 3101234567"
+                  />
+                </div>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-border mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  disabled={isSavingProfile}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-sena-green text-white hover:bg-sena-green/90 transition-all shadow-sm disabled:opacity-60 cursor-pointer"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Guardar Cambios</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

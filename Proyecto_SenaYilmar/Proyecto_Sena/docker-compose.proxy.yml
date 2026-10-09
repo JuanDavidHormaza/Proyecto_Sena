@@ -65,12 +65,21 @@ services:
         max-size: "50m"
         max-file: "5"
 
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 200M
+
   worklex_certbot:
 
-    image: certbot/certbot
+    image: certbot/certbot:v2.11.0
 
     container_name: worklex_certbot
-    
+
+    profiles:
+      - ssl
+
     entrypoint: ["sh", "-c"]
     command: >
       "while :; do
@@ -92,12 +101,14 @@ services:
     networks:
       - worklex_network
 
-#volumes:
-
-# Preparado para futuras expansiones
-#    worklex_logs:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 64M
 
 networks:
 
   worklex_network:
-    external: true
+    name: worklex_network
+    driver: bridge

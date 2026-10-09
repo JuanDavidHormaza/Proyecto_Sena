@@ -15,7 +15,7 @@ import { questionsB1 } from "../data/questionsB1";
 import { questionsB2 } from "../data/questionsB2";
 
 export type CEFRLevel = "A1" | "A2" | "B1" | "B2";
-export type Competency = "Grammar" | "Reading" | "Writing" | "Speaking" | "Listening";
+export type Competency = "Reading" | "Writing" | "Speaking" | "Listening";
 export type DifficultyTier = "Easy" | "Medium" | "Hard";
 export type QuestionType = "multiple" | "writing" | "speaking" | "listening";
 
@@ -135,7 +135,7 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
         id: dq.id || 9000 + idx,
         uniqueKey: dq.uniqueKey || `DICT-${dq.level || 'A1'}-${dq.id || idx}`,
         level: (dq.level || 'A1') as CEFRLevel,
-        competency: (dq.competency || 'Grammar') as Competency,
+        competency: (dq.competency && dq.competency !== 'Grammar' ? dq.competency : 'Reading') as Competency,
         type: (dq.type || 'multiple') as QuestionType,
         question: dq.question,
         prompt: dq.prompt,
@@ -161,7 +161,7 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
       id: q.id,
       uniqueKey: `A1-${q.id}-${idx}`,
       level: "A1",
-      competency: q.category.includes("QA") || q.category.includes("Design") ? "Reading" : "Grammar",
+      competency: "Reading",
       type: "multiple",
       question: q.question,
       options: q.options || [],
@@ -176,9 +176,8 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
   questionsA2.forEach((q, idx) => {
     const diff = (q as any).points ? 4 : 3;
     const cat = q.category || "General";
-    let comp: Competency = "Grammar";
+    let comp: Competency = "Reading";
     if (q.skill === "reading" || cat.includes("Reading")) comp = "Reading";
-    else if (q.skill === "vocabulary" || cat.includes("Vocabulary")) comp = "Grammar";
 
     bank.push({
       id: q.id,
@@ -198,7 +197,7 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
   // 3. Preguntas B1 (Intermedio, Software, Networking, Writing y Speaking)
   questionsB1.forEach((q, idx) => {
     const diff = q.difficulty || 5;
-    let comp: Competency = "Grammar";
+    let comp: Competency = "Reading";
     if (q.skill === "reading" || q.category.includes("Reading")) comp = "Reading";
     if (q.type === "writing") comp = "Writing";
     if (q.type === "speaking") comp = "Speaking";
@@ -246,7 +245,7 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
   // 4. Preguntas B2 (Avanzado, Arquitectura, Writing Incident Report y Speaking Cybersecurity)
   questionsB2.forEach((q, idx) => {
     const diff = q.difficulty || 8;
-    let comp: Competency = "Grammar";
+    let comp: Competency = "Reading";
     if (q.skill === "reading" || q.category.includes("Cybersecurity") || q.category.includes("Architecture")) {
       comp = "Reading";
     }
@@ -418,15 +417,13 @@ export class ExamEngine {
 
     const selected: UnifiedQuestion[] = [];
 
-    // Priorizar variedad de competencias desde el Diccionario ADSO (las 4 modalidades)
-    const dictGrammar = dictPool.filter((q) => q.competency === "Grammar");
-    const dictReading = dictPool.filter((q) => q.competency === "Reading");
-    const dictWriting = dictPool.filter((q) => q.type === "writing");
-    const dictSpeaking = dictPool.filter((q) => q.type === "speaking");
+    // Priorizar variedad de competencias desde el Diccionario ADSO (las 4 macro-habilidades)
     const dictListening = dictPool.filter((q) => q.competency === "Listening");
+    const dictSpeaking = dictPool.filter((q) => q.type === "speaking" || q.competency === "Speaking");
+    const dictWriting = dictPool.filter((q) => q.type === "writing" || q.competency === "Writing");
+    const dictReading = dictPool.filter((q) => q.competency === "Reading");
 
     if (dictListening.length > 0) selected.push(dictListening[0]);
-    if (dictGrammar.length > 0) selected.push(dictGrammar[0]);
     if (dictSpeaking.length > 0) selected.push(dictSpeaking[0]);
     if (dictWriting.length > 0) selected.push(dictWriting[0]);
     if (dictReading.length > 0 && !selected.some((s) => s.uniqueKey === dictReading[0].uniqueKey)) {
@@ -658,15 +655,14 @@ export class ExamEngine {
       }
     });
 
-    // Calcular puntajes por competencia
+    // Calcular puntajes por competencia (4 macro-habilidades oficiales)
     const compScores: Record<Competency, number> = {
-      Grammar: 0,
       Reading: 0,
       Writing: 0,
       Speaking: 0,
       Listening: 0,
     };
-    (["Grammar", "Reading", "Writing", "Speaking", "Listening"] as Competency[]).forEach((c) => {
+    (["Reading", "Writing", "Speaking", "Listening"] as Competency[]).forEach((c) => {
       const cAnswers = this.answers.filter((a) => a.competency === c);
       if (cAnswers.length > 0) {
         const sum = cAnswers.reduce((acc, curr) => acc + curr.scoreAwarded, 0);
@@ -741,7 +737,7 @@ export class ExamEngine {
     // Feedback automático
     const feedbackLines = [
       `Resultado global: ${overallScore}% en nivel CEFR ${finalLevel} (${character}).`,
-      `Competencias: Gramática ${compScores.Grammar}%, Lectura ${compScores.Reading}%, Escritura ${compScores.Writing}%, Habla ${compScores.Speaking}%, Escucha ${compScores.Listening}%.`,
+      `Competencias: Lectura ${compScores.Reading}%, Escritura ${compScores.Writing}%, Habla ${compScores.Speaking}%, Escucha ${compScores.Listening}%.`,
       `Términos técnicos ADSO dominados: ${masteredTerms.length}.`,
     ];
     if (reinforceTerms.length > 0) {

@@ -8,7 +8,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from .Views.api_views import (
     LoginAPIView, RegisterAPIView, MeAPIView,
-    VerifyOTPAPIView, ResendOTPAPIView, CustomTokenRefreshView,
+    VerifyOTPAPIView, ResendOTPAPIView, ResetPasswordAPIView, CustomTokenRefreshView,
     RegisterSendOTPAPIView, RegisterVerifyOTPAPIView,
     CheckDocumentAPIView, CheckEmailAPIView,
     PrivilegedLoginAPIView, PrivilegedMeAPIView,
@@ -35,12 +35,14 @@ router.register(r'ficha-requests', FichaRequestViewSet,      basename='ficha-req
 
 urlpatterns = [
     # ── Autenticación (login) con MFA ──────────────────────────────────
-    path('auth/login/',       LoginAPIView.as_view(),      name='login-slash'),
-    path('auth/login',        LoginAPIView.as_view(),      name='login'),
-    path('auth/verify-otp/',  VerifyOTPAPIView.as_view(),  name='verify-otp-slash'),
-    path('auth/verify-otp',   VerifyOTPAPIView.as_view(),  name='verify-otp'),
-    path('auth/resend-otp/',  ResendOTPAPIView.as_view(),  name='resend-otp-slash'),
-    path('auth/resend-otp',   ResendOTPAPIView.as_view(),  name='resend-otp'),
+    path('auth/login/',          LoginAPIView.as_view(),         name='login-slash'),
+    path('auth/login',           LoginAPIView.as_view(),         name='login'),
+    path('auth/verify-otp/',     VerifyOTPAPIView.as_view(),     name='verify-otp-slash'),
+    path('auth/verify-otp',      VerifyOTPAPIView.as_view(),     name='verify-otp'),
+    path('auth/resend-otp/',     ResendOTPAPIView.as_view(),     name='resend-otp-slash'),
+    path('auth/resend-otp',      ResendOTPAPIView.as_view(),     name='resend-otp'),
+    path('auth/reset-password/', ResetPasswordAPIView.as_view(), name='reset-password-slash'),
+    path('auth/reset-password',  ResetPasswordAPIView.as_view(), name='reset-password'),
 
     # ── Registro con verificación de correo ────────────────────────────
     # Paso 1: valida datos + dominio y envía OTP al correo (NO crea cuenta aún)

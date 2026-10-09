@@ -52,8 +52,12 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
         className={`flex items-center gap-3 rounded-xl transition-colors hover:bg-muted ${compact ? "p-1.5" : "p-2"}`}
         aria-label="Abrir menu de usuario"
       >
-        <div className={`${compact ? "w-9 h-9" : "w-10 h-10"} ${accentClass} rounded-xl flex items-center justify-center text-white font-medium`}>
-          {getInitials(userName)}
+        <div className={`${compact ? "w-9 h-9" : "w-10 h-10"} ${accentClass} rounded-xl flex items-center justify-center text-white font-medium overflow-hidden`}>
+          {user?.avatar ? (
+            <img src={user.avatar} alt={userName} className="w-full h-full object-cover" />
+          ) : (
+            getInitials(userName)
+          )}
         </div>
         {!compact && (
           <div className="hidden sm:block text-left min-w-0">

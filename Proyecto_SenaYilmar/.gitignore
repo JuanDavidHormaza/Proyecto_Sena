@@ -1,0 +1,66 @@
+# Node
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+.next/
+**/frontend_node_modules/
+
+# Python & Django
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+venv/
+**/venv/
+.venv/
+**/.venv/
+env/
+**/env/
+*.tar.gz
+media_source/
+db.sqlite3
+
+# Environment & Secrets
+.env
+.env.*
+*.env
+*.env.local
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# SSL & Certificados
+certbot/
+**/certbot/
+certbot/conf/
+certbot/www/
+
+# Logs & Proxy
+*.log
+**/*.log
+proxy/logs/
+**/proxy/logs/
+logs/
+**/logs/
+
+# Archives
+*.zip
+**/*.zip
+
+# Docker volumes
+postgres_data/
+**/postgres_data/
+minio_data/
+**/minio_data/
+worklex_data/
+**/worklex_data/
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

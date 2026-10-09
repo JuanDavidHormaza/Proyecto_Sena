@@ -190,7 +190,17 @@ export function TeacherDashboard() {
               </div>
             </div>
 
-            <UserAccountMenu accent="blue" />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/dictionary')}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-sena-green/10 text-sena-green hover:bg-sena-green hover:text-white border border-sena-green/30 font-semibold text-xs sm:text-sm transition-all shadow-xs cursor-pointer"
+                title="Gestión de Diccionarios Técnicos por Ficha"
+              >
+                <Languages className="w-4 h-4" />
+                <span>Diccionarios Técnicos</span>
+              </button>
+              <UserAccountMenu accent="blue" />
+            </div>
           </div>
         </div>
       </header>
@@ -201,7 +211,7 @@ export function TeacherDashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6"
         >
           <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
             Bienvenido, {teacherName.split(' ')[0]}
@@ -209,6 +219,31 @@ export function TeacherDashboard() {
           <p className="text-muted-foreground">
             Revisa el progreso de tus aprendices{teacherProgram ? ` de ${teacherProgram}` : ''} y brinda retroalimentación personalizada
           </p>
+        </motion.div>
+
+        {/* Acceso directo a Diccionarios Técnicos */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-sena-blue/10 via-sena-green/10 to-transparent border border-sena-blue/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-sena-blue text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Languages className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-foreground">Gestión de Diccionarios Técnicos Especializados</h3>
+              <p className="text-xs text-muted-foreground">
+                Consulta y alimenta el vocabulario técnico de inglés para los aprendices de tus fichas asignadas.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/dictionary')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-sena-blue text-white hover:bg-sena-blue/90 text-xs sm:text-sm font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap self-stretch sm:self-auto justify-center"
+          >
+            <span>Abrir Diccionario →</span>
+          </button>
         </motion.div>
 
         {/* Stats */}

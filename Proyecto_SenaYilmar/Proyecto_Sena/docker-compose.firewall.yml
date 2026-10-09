@@ -1,15 +1,23 @@
 services:
   crowdsec:
-    image: crowdsecurity/crowdsec
-
+    image: crowdsecurity/crowdsec:v1.6.0
     container_name: worklex_firewall
+    profiles:
+      - firewall
 
     volumes:
       - ./acquis.yaml:/etc/crowdsec/acquis.yaml
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 128M
 
     networks:
       - worklex_network
 
 networks:
   worklex_network:
-    external: true
+    name: worklex_network
+    driver: bridge

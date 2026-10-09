@@ -46,7 +46,40 @@ import { SafeImage } from "../components/SafeImage";
 import { DictionaryProgramModal } from "../components/DictionaryProgramModal";
 import { AccessibilityWidget } from "../components/AccessibilityWidget";
 import { getTermsForProgram } from "../data/dictionariesByFicha";
+import { questions } from "../data";
 import { toast } from "../components/Toast";
+
+const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
+  if (!raw) return "Reading";
+  const lower = raw.trim().toLowerCase();
+  if (lower.includes("listen") || lower.includes("escucha") || lower.includes("audio")) return "Listening";
+  if (lower.includes("speak") || lower.includes("habla") || lower.includes("pronun") || lower.includes("oral")) return "Speaking";
+  if (lower.includes("writ") || lower.includes("escrit") || lower.includes("redac")) return "Writing";
+  return "Reading";
+};
+
+const getOptionSemanticText = (ans: any, answerValue: any): string => {
+  if (answerValue === undefined || answerValue === null || answerValue === "") {
+    return "Sin responder";
+  }
+  if (typeof answerValue === "string" && isNaN(Number(answerValue))) {
+    return answerValue;
+  }
+  const idx = Number(answerValue);
+  if (Array.isArray(ans.options) && ans.options[idx]) {
+    return ans.options[idx];
+  }
+  const match = questions.find(
+    (q) => q.id === ans.questionId || (q.question && ans.question && q.question.trim().toLowerCase() === ans.question.trim().toLowerCase())
+  );
+  if (match && Array.isArray(match.options) && match.options[idx]) {
+    return match.options[idx];
+  }
+  if (ans.writingAnswer) {
+    return ans.writingAnswer;
+  }
+  return typeof answerValue === "number" ? `Respuesta #${idx + 1}` : String(answerValue);
+};
 
 // ── Banco de Respaldo de 32 Términos Técnicos ADSO (CEFR A1-B2) ─────────────────
 const FALLBACK_ADSO_TERMS: api.ApiDocument[] = [
@@ -1397,14 +1430,16 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
 
             {/* Acciones del Header: Racha + Menú */}
             <div className="flex items-center gap-2.5">
-              {/* Racha Activa Preservada */}
-              <div
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-sena-green/10 text-sena-green rounded-xl border border-sena-green/20 text-xs font-semibold hover:-translate-y-1 hover:shadow-md cursor-pointer transition-all duration-300"
-                title="Días consecutivos practicando en WorkLex"
-              >
-                <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" strokeWidth={1.8} />
-                <span>{stats.currentStreak} días</span>
-              </div>
+              {/* Racha Activa (Oculta si streak < 1) */}
+              {stats.currentStreak >= 1 && (
+                <div
+                  className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-sena-green/10 text-sena-green rounded-xl border border-sena-green/20 text-xs font-semibold hover:-translate-y-1 hover:shadow-md cursor-pointer transition-all duration-300"
+                  title="Días consecutivos practicando en WorkLex"
+                >
+                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" strokeWidth={1.8} />
+                  <span>{stats.currentStreak} días</span>
+                </div>
+              )}
 
               {/* Botón Móvil Hamburguesa */}
               <button
@@ -1698,13 +1733,17 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                     color: "sena-blue",
                     tip: "Total de evaluaciones completadas por el aprendiz",
                   },
-                  {
-                    label: "Racha Activa",
-                    value: `${stats.currentStreak} días`,
-                    icon: Flame,
-                    color: "destructive",
-                    tip: "Días consecutivos accediendo a la plataforma",
-                  },
+                  ...(stats.currentStreak >= 1
+                    ? [
+                        {
+                          label: "Racha Activa",
+                          value: `${stats.currentStreak} días`,
+                          icon: Flame,
+                          color: "destructive",
+                          tip: "Días consecutivos accediendo a la plataforma",
+                        },
+                      ]
+                    : []),
                   {
                     label: "Tiempo Invertido",
                     value: stats.quizDuration,
@@ -1899,10 +1938,12 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                           <p className="text-xs text-muted-foreground">Nivel Asignado</p>
                           <p className="text-xl font-bold text-sena-blue">{stats.currentLevel}</p>
                         </div>
-                        <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                          <p className="text-xs text-muted-foreground">Racha</p>
-                          <p className="text-xl font-bold text-destructive">{stats.currentStreak} d</p>
-                        </div>
+                        {stats.currentStreak >= 1 && (
+                          <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                            <p className="text-xs text-muted-foreground">Racha</p>
+                            <p className="text-xl font-bold text-destructive">{stats.currentStreak} d</p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Historial reciente rápido */}
@@ -2478,19 +2519,23 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                             {ans.isCorrect ? "Correcto" : "Incorrecto"}
                           </span>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-600 mt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 mt-1.5 p-2 bg-white/80 rounded-lg border border-slate-200">
                           <p>
-                            <strong className="text-slate-700">Tu respuesta:</strong>{" "}
-                            Opción {(ans.userAnswer !== undefined && ans.userAnswer !== null) ? Number(ans.userAnswer) + 1 : "Sin responder"}
+                            <strong className="text-slate-800">Tu respuesta:</strong>{" "}
+                            <span className={ans.isCorrect ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                              {getOptionSemanticText(ans, ans.userAnswer)}
+                            </span>
                           </p>
                           <p>
-                            <strong className="text-emerald-700">Respuesta correcta:</strong>{" "}
-                            Opción {(ans.correctAnswer !== undefined && ans.correctAnswer !== null) ? Number(ans.correctAnswer) + 1 : "N/A"}
+                            <strong className="text-emerald-800">Respuesta correcta:</strong>{" "}
+                            <span className="text-emerald-700 font-semibold">
+                              {getOptionSemanticText(ans, ans.correctAnswer)}
+                            </span>
                           </p>
                         </div>
-                        {ans.category && (
-                          <p className="text-[10px] text-slate-400 mt-1 font-medium">
-                            Competencia: {ans.category}
+                        {(ans.category || ans.competency) && (
+                          <p className="text-[10px] text-slate-500 mt-1 font-semibold">
+                            Macro-habilidad: {normalizeCompetency(ans.competency || ans.category)}
                           </p>
                         )}
                       </div>

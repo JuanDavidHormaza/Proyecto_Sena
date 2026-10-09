@@ -21,7 +21,7 @@ from users.Models.modelsSENA import DigitalDictionary, Subject
 logger = logging.getLogger(__name__)
 
 CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2']
-COMPETENCIES = ['Grammar', 'Reading', 'Writing', 'Speaking', 'Listening']
+COMPETENCIES = ['Reading', 'Listening', 'Writing', 'Speaking']
 
 LEVEL_PASS_THRESHOLDS = {
     'A1': 60,
@@ -74,7 +74,9 @@ class ExamEngineService:
 
         for term in terms:
             term_lvl = getattr(term, 'level', 'A1') or 'A1'
-            comp = getattr(term, 'competence', 'Grammar') or 'Grammar'
+            comp = getattr(term, 'competence', 'Reading') or 'Reading'
+            if comp == 'Grammar':
+                comp = 'Reading'
             level_pool = [t for t in all_terms_by_level.get(term_lvl, []) if t.id != term.id]
 
             # Distractores del mismo nivel si es posible
@@ -157,9 +159,9 @@ class ExamEngineService:
             random.shuffle(options)
             return {
                 'id': term.id,
-                'uniqueKey': f"DICT-GRAM-{term.id}",
+                'uniqueKey': f"DICT-READ-{term.id}",
                 'level': term_lvl,
-                'competency': 'Grammar',
+                'competency': 'Reading',
                 'type': 'multiple',
                 'question': f"Completa la regla técnica con el término adecuado según el estándar ADSO:\n\n'En desarrollo de software, la entidad que representa \"{term.definition}\" se denomina _____.'",
                 'prompt': None,
@@ -167,7 +169,7 @@ class ExamEngineService:
                 'correctAnswer': options.index(term.word_id),
                 'difficulty': difficulty,
                 'difficultyTier': get_difficulty_tier(difficulty),
-                'category': f"ADSO Grammar",
+                'category': f"ADSO Reading",
                 'wordId': term.word_id,
                 'definition': term.definition,
                 'image': None,

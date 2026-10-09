@@ -1,115 +1,350 @@
 services:
 
+  # ── 1. Base de Datos Relacional PostgreSQL ──────────────────────────────────
+  worklex_persistencia:
+    image: postgres:16-alpine
+    container_name: worklex_persistencia
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-SENA}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Admin123*}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - worklex_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./postgres/conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/conf/custom.conf:/etc/postgresql/custom.conf:ro
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-SENA}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 384M
+        reservations:
+          memory: 128M
+    networks:
+      - worklex_network
+
+  # ── 2. Almacenamiento de Objetos S3 MinIO ───────────────────────────────────
+  worklex_minio:
+    image: minio/minio:latest
+    container_name: worklex_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Admin123*}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: minio server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 200M
+    networks:
+      worklex_network:
+        aliases:
+          - minio
+
+  # ── 3. Aprovisionamiento Inicial MinIO (Buckets y Permisos) ─────────────────
+  worklex_minio_provision:
+    image: minio/mc:latest
+    container_name: worklex_minio_provision
+    restart: "no"
+    depends_on:
+      worklex_minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Admin123*}
+    volumes:
+      - ./minio-seed:/seed:ro
+    networks:
+      - worklex_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 100M
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Esperando que MinIO arranque...';
+      sleep 2;
+      mc alias set localminio http://worklex_minio:9000 $${MINIO_ROOT_USER:-admin} $${MINIO_ROOT_PASSWORD:-Admin123*};
+
+      echo 'Creando buckets requeridos...';
+      mc mb --ignore-existing localminio/dictionary-audios;
+      mc mb --ignore-existing localminio/dictionary-images;
+      mc mb --ignore-existing localminio/dictionary-videos;
+      mc mb --ignore-existing localminio/exam-audios;
+      mc mb --ignore-existing localminio/exam-submissions;
+
+      echo 'Configurando políticas públicas de descarga...';
+      mc anonymous set download localminio/dictionary-audios;
+      mc anonymous set download localminio/dictionary-images;
+      mc anonymous set download localminio/dictionary-videos;
+
+      echo 'Copiando semillas multimedia si existen...';
+      mc cp --recursive /seed/dictionary-audios/ localminio/dictionary-audios/ || true;
+      mc cp --recursive /seed/dictionary-images/ localminio/dictionary-images/ || true;
+
+      echo 'Aprovisionamiento MinIO completado exitosamente.';
+      exit 0;
+      "
+
+  # ── 4. Backend Django (API REST + Gunicorn) ─────────────────────────────────
   worklex_backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-
     container_name: worklex_backend
-
     restart: unless-stopped
-
     env_file:
       - .env
-
     ports:
       - "8000:8000"
-
     volumes:
       - ./backend:/app
-
     working_dir: /app
-
-    #-------------------------------------------------------------------------
-    # Ajuste para evitar error por permisos con chmod
-    #-------------------------------------------------------------------------
-    #       python manage.py runserver 0.0.0.0:8000 &&
-
     depends_on:
-      - worklex_persistencia
-
+      worklex_persistencia:
+        condition: service_healthy
     command: >
       sh -c "
-      echo 'Esperando que PostgreSQL este listo en worklex_persistencia:5432...' &&
+      echo 'Esperando PostgreSQL en worklex_persistencia:5432...' &&
       until python -c \"import socket; s = socket.socket(); s.connect(('worklex_persistencia', 5432)); s.close()\" 2>/dev/null; do
         sleep 1
       done &&
-      echo 'PostgreSQL listo. Aplicando migraciones...' &&
+      echo 'PostgreSQL listo. Ejecutando migraciones...' &&
       python manage.py migrate --fake-initial &&
-      echo 'Precargando vocabulario tecnico ADSO en la base de datos...' &&
+      echo 'Inicializando vocabulario ADSO...' &&
       (python manage.py import_adso_dictionary || python manage.py seed_adso_dictionary) &&
       python manage.py create_superadmin || true &&
       (python manage.py upload_adso_assets || true) &&
-      echo 'Iniciando servidor Gunicorn...' &&
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000
+      echo 'Iniciando servidor WSGI Gunicorn (2 workers)...' &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 120
       "
-
-    # Permite que otros contenedores esperen a que PostgreSQL esté listo.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/')"]
-      #test: ["CMD","curl","-f","http://localhost:5173"]
       interval: 30s
       timeout: 10s
       retries: 5
-
+    deploy:
+      resources:
+        limits:
+          cpus: '0.60'
+          memory: 384M
+        reservations:
+          memory: 192M
     networks:
       - worklex_network
 
-
-
+  # ── 5. Frontend React + Vite SPA ───────────────────────────────────────────
   worklex_frontend:
-
     build:
       context: ./frontend
       dockerfile: Dockerfile
-
     container_name: worklex_frontend
-
     restart: unless-stopped
-
     ports:
       - "5173:5173"
-
     environment:
       - BACKEND_URL=http://worklex_backend:8000
-
+      - NODE_OPTIONS=--max-old-space-size=256
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
-
     working_dir: /app
-
     command: npm run dev -- --host 0.0.0.0
-
-    # Permite que otros contenedores esperen a que PostgreSQL esté listo.
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5173"]
-      #test: ["CMD","curl","-f","http://localhost:8000/api/health/"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173 || curl -f http://localhost:5173 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-
+    deploy:
+      resources:
+        limits:
+          cpus: '0.40'
+          memory: 300M
+        reservations:
+          memory: 128M
     networks:
       - worklex_network
 
+  # ── 6. Reverse Proxy + WAF (ModSecurity OWASP Core Rule Set + Nginx) ────────
   worklex_proxy:
-
     image: owasp/modsecurity-crs:nginx
-
     container_name: worklex_proxy
-
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+      - "443:8443"
     depends_on:
-      - worklex_backend
-      - worklex_frontend
-
+      worklex_backend:
+        condition: service_healthy
+      worklex_frontend:
+        condition: service_started
+      worklex_minio:
+        condition: service_healthy
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - ./proxy/conf.d/worklex.conf:/etc/nginx/templates/conf.d/default.conf.template:ro
+      - ./proxy/modsecurity/modsecurity-override.conf:/etc/nginx/templates/modsecurity.d/modsecurity-override.conf.template:ro
+      - ./proxy/modsecurity/setup.conf:/etc/nginx/templates/modsecurity.d/setup.conf.template:ro
+      - ./proxy/logs:/var/log/nginx
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - NET_RAW
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /var/run
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 200M
+        reservations:
+          memory: 64M
     networks:
       - worklex_network
 
+  # ── 7. [OPCIONAL / PERFIL auth] Identity Provider: Keycloak 24 ─────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    container_name: worklex_auth
+    profiles:
+      - auth
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD:-Admin123*}
+      KC_PROXY_HEADERS: "xforwarded"
+      KC_HOSTNAME: ${SERVER_IP:-203.161.47.73}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+      JAVA_OPTS_APPEND: "-Xms128m -Xmx384m -XX:+UseG1GC"
+    command: start-dev --http-port=8080
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 450M
+    networks:
+      - worklex_network
+
+  # ── 8. [OPCIONAL / PERFIL vault] Secret Management: HashiCorp Vault ─────────
+  vault:
+    image: hashicorp/vault:1.15.6
+    container_name: worklex_vault
+    profiles:
+      - vault
+    restart: unless-stopped
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID:-wlx_vault_master_token_2026}
+      VAULT_ADDR: "http://127.0.0.1:8200"
+    volumes:
+      - ./config:/vault/config
+      - ./data:/vault/data
+      - ./logs:/vault/logs
+    command: vault server -config=/vault/config/vault.hcl
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 128M
+    networks:
+      - worklex_network
+
+  # ── 9. [OPCIONAL / PERFIL firewall] CrowdSec Intrusion Prevention ───────────
+  crowdsec:
+    image: crowdsecurity/crowdsec:v1.6.0
+    container_name: worklex_firewall
+    profiles:
+      - firewall
+    restart: unless-stopped
+    volumes:
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 128M
+    networks:
+      - worklex_network
+
+  # ── 10. [OPCIONAL / PERFIL ssl] Certbot Let's Encrypt Renewer ───────────────
+  worklex_certbot:
+    image: certbot/certbot:v2.11.0
+    container_name: worklex_certbot
+    profiles:
+      - ssl
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command: >
+      "while :; do
+      certbot renew;
+      sleep 12h;
+      done"
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - worklex_proxy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 64M
+    networks:
+      - worklex_network
 
 networks:
   worklex_network:
-    external: true
-    #driver: bridge
+    name: worklex_network
+    driver: bridge
 
 volumes:
+  worklex_data:
+  minio_data:
   frontend_node_modules:

@@ -5,6 +5,7 @@ env/
 __pycache__/
 *.pyc
 *.pyo
+*.pyo
 *.pyd
 
 # Django
@@ -15,21 +16,42 @@ staticfiles/
 
 # Node
 node_modules/
+**/node_modules/
 dist/
 build/
 .next/
+**/frontend_node_modules/
 
 # Env & Secrets
 .env
+.env.*
+*.env
 *.env.local
+!.env.example
 
-# Logs
+# SSL & Certificados
+certbot/
+certbot/conf/
+certbot/www/
+**/certbot/
+
+# Proxy & Logs
+proxy/logs/
+**/proxy/logs/
 *.log
+**/*.log
 logs/
+
+# Archives & Large files
+*.zip
+**/*.zip
+backend/*.zip
+backend/**/*.zip
 
 # Docker volumes
 postgres_data/
 minio_data/
+worklex_data/
 
 # OS & IDE
 .DS_Store
