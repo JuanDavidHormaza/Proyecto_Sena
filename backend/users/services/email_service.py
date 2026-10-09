@@ -2,9 +2,9 @@
 EmailService - Servicio de despacho de correo para WorkLex SENA.
 
 Resuelve el bloqueo de puertos SMTP (25, 465, 587) en proveedores VPS (DigitalOcean / Clouding):
-1. Despacho asíncrono no bloqueante en hilo daemon para que los workers de Gunicorn respondan inmediatamente.
-2. Soporte nativo para APIs HTTPS en puerto 443 (Resend y SendGrid) que nunca son bloqueadas.
-3. Fallback tolerante con timeout estricto para evitar congelar la interfaz de usuario.
+1. Despacho asíncrono no bloqueante en hilo daemon para que los workers de Gunicorn respondan inmediatamente (< 50ms).
+2. Soporte nativo para APIs HTTPS en puerto 443 (Resend, Brevo y SendGrid) que nunca son bloqueadas por el firewall.
+3. Fallback tolerante con timeout estricto e impresión clara del OTP para evitar congelar la interfaz de usuario.
 4. Generación de plantilla HTML institucional SENA con código OTP destacado y recomendaciones de seguridad.
 """
 
@@ -15,6 +15,13 @@ from django.conf import settings
 from django.core.mail import send_mail
 
 logger = logging.getLogger(__name__)
+
+# Intentar importar el SDK oficial de Resend si está instalado en el entorno
+try:
+    import resend
+    RESEND_SDK_AVAILABLE = True
+except ImportError:
+    RESEND_SDK_AVAILABLE = False
 
 
 def build_institutional_email_html(
@@ -102,23 +109,57 @@ def build_institutional_email_html(
       </td>
     </tr>
   </table>
-</body>
+ </body>
 </html>
 """
 
 
 def _send_via_resend(email: str, subject: str, plain_msg: str, html_msg: str, api_key: str) -> bool:
-    """Envía correo vía API HTTPS de Resend (Puerto 443 - Bypasea bloqueo de DigitalOcean)."""
+    """
+    Envía correo vía API HTTPS de Resend (Puerto 443 - Inmune a bloqueos de VPS).
+    Soporta SDK oficial o llamada directa requests con fallback automático.
+    """
+    api_key = api_key.strip()
+    if not api_key:
+        return False
+
+    # Determinar remitente adecuado para Resend
+    from_email = os.getenv('RESEND_FROM_EMAIL', '') or getattr(settings, 'RESEND_FROM_EMAIL', '')
+    if not from_email:
+        default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or os.getenv('DEFAULT_FROM_EMAIL', '')
+        # Si DEFAULT_FROM_EMAIL usa dominio verificado o resend.dev, lo usamos; de lo contrario el sandbox seguro
+        if '@resend.dev' in default_from or ('@' in default_from and not default_from.endswith('@gmail.com')):
+            from_email = default_from
+        else:
+            from_email = "WorkLex SENA <onboarding@resend.dev>"
+
+    if '<' not in from_email and '@' in from_email:
+        from_email = f"WorkLex SENA <{from_email}>"
+
+    # Intento 1: SDK Oficial si está disponible
+    if RESEND_SDK_AVAILABLE:
+        try:
+            resend.api_key = api_key
+            params = {
+                "from": from_email,
+                "to": [email],
+                "subject": subject,
+                "html": html_msg,
+                "text": plain_msg,
+            }
+            resp = resend.Emails.send(params)
+            logger.info(f"[RESEND SDK SUCCESS] Correo entregado exitosamente a {email} vía Resend SDK: {resp}")
+            return True
+        except Exception as sdk_err:
+            logger.warning(f"[RESEND SDK WARNING] Error con SDK de Resend ({sdk_err}), intentando fallback HTTP requests...")
+
+    # Intento 2: Solicitud REST directa HTTPS (puerto 443)
     try:
         import requests
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or 'WorkLex SENA <onboarding@resend.dev>'
-        if '<' not in from_email and '@' in from_email:
-            from_email = f"WorkLex SENA <{from_email}>"
-
         resp = requests.post(
             "https://api.resend.com/emails",
             headers={
-                "Authorization": f"Bearer {api_key.strip()}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
             json={
@@ -128,28 +169,97 @@ def _send_via_resend(email: str, subject: str, plain_msg: str, html_msg: str, ap
                 "html": html_msg,
                 "text": plain_msg,
             },
-            timeout=5
+            timeout=6
         )
         if resp.status_code in (200, 201):
-            logger.info(f"[RESEND API SUCCESS] Correo entregado exitosamente a {email} vía Resend HTTPS.")
+            logger.info(f"[RESEND HTTP SUCCESS] Correo entregado exitosamente a {email} vía Resend HTTPS.")
             return True
         else:
-            logger.warning(f"[RESEND API WARNING] Resend HTTP {resp.status_code}: {resp.text}")
+            error_data = resp.text
+            logger.warning(f"[RESEND HTTP WARNING] Resend HTTP {resp.status_code}: {error_data}")
+            if "domain" in error_data.lower() or resp.status_code in (403, 422):
+                logger.info(
+                    "[RESEND HINT] En cuentas gratuitas de Resend debes enviar desde 'onboarding@resend.dev' "
+                    "o verificar tu dominio personalizado en https://resend.com/domains."
+                )
             return False
     except Exception as err:
-        logger.warning(f"[RESEND API ERROR] Error conectando con API de Resend: {err}")
+        logger.warning(f"[RESEND API ERROR] Error conectando con API de Resend vía HTTPS: {err}")
+        return False
+
+
+def _send_via_brevo(email: str, subject: str, plain_msg: str, html_msg: str, api_key: str) -> bool:
+    """
+    Envía correo vía API HTTPS de Brevo / Sendinblue (Puerto 443 - Inmune a bloqueos de VPS).
+    """
+    api_key = api_key.strip()
+    if not api_key:
+        return False
+
+    try:
+        import requests
+        sender_email = (
+            os.getenv('BREVO_SENDER_EMAIL', '') or
+            getattr(settings, 'BREVO_SENDER_EMAIL', '') or
+            getattr(settings, 'DEFAULT_FROM_EMAIL', '') or
+            os.getenv('EMAIL_HOST_USER', '') or
+            'sworklex@gmail.com'
+        )
+        if '<' in sender_email and '>' in sender_email:
+            sender_email = sender_email.split('<')[1].split('>')[0].strip()
+
+        sender_name = os.getenv('BREVO_SENDER_NAME', 'WorkLex SENA')
+
+        resp = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "accept": "application/json",
+                "api-key": api_key,
+                "content-type": "application/json"
+            },
+            json={
+                "sender": {"name": sender_name, "email": sender_email},
+                "to": [{"email": email}],
+                "subject": subject,
+                "htmlContent": html_msg,
+                "textContent": plain_msg,
+            },
+            timeout=6
+        )
+        if resp.status_code in (200, 201):
+            logger.info(f"[BREVO API SUCCESS] Correo entregado exitosamente a {email} vía Brevo HTTPS.")
+            return True
+        else:
+            logger.warning(f"[BREVO API WARNING] Brevo HTTP {resp.status_code}: {resp.text}")
+            return False
+    except Exception as err:
+        logger.warning(f"[BREVO API ERROR] Error conectando con API de Brevo vía HTTPS: {err}")
         return False
 
 
 def _send_via_sendgrid(email: str, subject: str, plain_msg: str, html_msg: str, api_key: str) -> bool:
-    """Envía correo vía API HTTPS de SendGrid (Puerto 443 - Bypasea bloqueo de DigitalOcean)."""
+    """
+    Envía correo vía API HTTPS de SendGrid (Puerto 443 - Inmune a bloqueos de VPS).
+    """
+    api_key = api_key.strip()
+    if not api_key:
+        return False
+
     try:
         import requests
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@worklexsena.shop')
+        from_email = (
+            os.getenv('SENDGRID_FROM_EMAIL', '') or
+            getattr(settings, 'SENDGRID_FROM_EMAIL', '') or
+            getattr(settings, 'DEFAULT_FROM_EMAIL', '') or
+            'no-reply@worklexsena.shop'
+        )
+        if '<' in from_email and '>' in from_email:
+            from_email = from_email.split('<')[1].split('>')[0].strip()
+
         resp = requests.post(
             "https://api.sendgrid.com/v3/mail/send",
             headers={
-                "Authorization": f"Bearer {api_key.strip()}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
             json={
@@ -161,7 +271,7 @@ def _send_via_sendgrid(email: str, subject: str, plain_msg: str, html_msg: str, 
                     {"type": "text/html", "value": html_msg}
                 ]
             },
-            timeout=5
+            timeout=6
         )
         if resp.status_code in (200, 202):
             logger.info(f"[SENDGRID API SUCCESS] Correo entregado exitosamente a {email} vía SendGrid HTTPS.")
@@ -170,43 +280,62 @@ def _send_via_sendgrid(email: str, subject: str, plain_msg: str, html_msg: str, 
             logger.warning(f"[SENDGRID API WARNING] SendGrid HTTP {resp.status_code}: {resp.text}")
             return False
     except Exception as err:
-        logger.warning(f"[SENDGRID API ERROR] Error conectando con API de SendGrid: {err}")
+        logger.warning(f"[SENDGRID API ERROR] Error conectando con API de SendGrid vía HTTPS: {err}")
         return False
 
 
-def _send_otp_task(email: str, code: str, subject: str, plain_msg: str, html_msg: str):
+def _send_otp_task(email: str, code: str, subject: str, plain_msg: str, html_msg: str, reason: str = ""):
     """
-    Tarea interna que se ejecuta en segundo plano para intentar envío
-    por API HTTP (Resend/SendGrid) o SMTP con fallback tolerante.
+    Tarea interna en segundo plano que despacha por APIs HTTP (443) o SMTP con fallback limpio.
     """
-    # 1. Intentar proveedor HTTP si hay API Key configurada (Puerto 443 - Inmune a bloqueos)
+    # 1. Probar Resend si tiene API Key (Puerto 443 HTTPS)
     resend_key = getattr(settings, 'RESEND_API_KEY', '') or os.getenv('RESEND_API_KEY', '')
     if resend_key:
         if _send_via_resend(email, subject, plain_msg, html_msg, resend_key):
             return
 
+    # 2. Probar Brevo si tiene API Key (Puerto 443 HTTPS)
+    brevo_key = getattr(settings, 'BREVO_API_KEY', '') or os.getenv('BREVO_API_KEY', '')
+    if brevo_key:
+        if _send_via_brevo(email, subject, plain_msg, html_msg, brevo_key):
+            return
+
+    # 3. Probar SendGrid si tiene API Key (Puerto 443 HTTPS)
     sendgrid_key = getattr(settings, 'SENDGRID_API_KEY', '') or os.getenv('SENDGRID_API_KEY', '')
     if sendgrid_key:
         if _send_via_sendgrid(email, subject, plain_msg, html_msg, sendgrid_key):
             return
 
-    # 2. Intentar SMTP tradicional con timeout corto
-    try:
-        send_mail(
-            subject=subject,
-            message=plain_msg,
-            html_message=html_msg,
-            from_email=None,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-        logger.info(f"[SMTP SUCCESS] Correo de verificación enviado exitosamente a {email}.")
-    except Exception as e:
-        logger.warning(f"[OTP EMAIL FAILOVER] No se pudo enviar por SMTP: {e}. Fallback activo para {email}: {code}")
-        print(f"\n======================================================\n"
-              f"[OTP EMAIL FAILOVER] Código generado para {email}: {code}\n"
-              f"(Infraestructura VPS bloquea puertos SMTP 25/465/587. Código listo para verificación)\n"
-              f"======================================================\n")
+    # 4. Fallback: Intentar SMTP tradicional solo si está explícitamente configurado
+    email_backend = getattr(settings, 'EMAIL_BACKEND', '') or os.getenv('EMAIL_BACKEND', '')
+    is_console_backend = 'console' in email_backend.lower()
+
+    if not is_console_backend:
+        try:
+            send_mail(
+                subject=subject,
+                message=plain_msg,
+                html_message=html_msg,
+                from_email=None,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            logger.info(f"[SMTP SUCCESS] Correo de verificación enviado exitosamente a {email}.")
+            return
+        except Exception as e:
+            logger.warning(f"[OTP EMAIL FAILOVER] Bloqueo SMTP en VPS ({e}). Fallback activo para {email}.")
+
+    # 5. Registro formateado y limpio en consola para depuración y soporte
+    print(f"\n"
+          f"======================================================================\n"
+          f" [WORKLEX SENA - CÓDIGO DE VERIFICACIÓN OTP]\n"
+          f" Destinatario : {email}\n"
+          f" Código OTP    : {code}\n"
+          f" Finalidad     : {reason or 'Seguridad WorkLex'}\n"
+          f" Estado        : Sin API Key de correo configurada (o puertos SMTP bloqueados)\n"
+          f" Solución      : Para entrega en bandeja de entrada en DigitalOcean/Clouding,\n"
+          f"                 agrega RESEND_API_KEY=re_tu_key en tu archivo .env del VPS\n"
+          f"======================================================================\n")
 
 
 def send_otp_email_async(
@@ -220,9 +349,6 @@ def send_otp_email_async(
     Garantiza que la respuesta HTTP hacia el frontend se retorne en < 50ms sin colgar
     los workers de Gunicorn por timeout de puertos SMTP bloqueados.
     """
-    # Impresión inmediata en consola para soporte/desarrollo
-    print(f"[OTP DISPATCH] Código de 6 dígitos generado para {email}: {code} ({reason})")
-
     if is_registration:
         subject = f'Verifica tu correo ({code}) - WorkLex SENA'
         headline = "Verificación de Registro de Aprendiz"
@@ -255,7 +381,7 @@ def send_otp_email_async(
     # Iniciar envío en hilo daemon desacoplado (cero latencia para la petición web)
     t = threading.Thread(
         target=_send_otp_task,
-        args=(email, code, subject, plain_msg, html_msg),
+        args=(email, code, subject, plain_msg, html_msg, reason),
         daemon=True
     )
     t.start()
