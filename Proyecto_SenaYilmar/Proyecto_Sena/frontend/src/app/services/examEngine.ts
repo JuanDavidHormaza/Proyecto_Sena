@@ -122,6 +122,8 @@ export function getDifficultyTier(diff: number): DifficultyTier {
   if (diff <= 3) return "Easy";
   if (diff <= 6) return "Medium";
   return "Hard";
+}
+
 // Función utilitaria para barajar arrays (Fisher-Yates)
 export function shuffleArray<T>(items: T[]): T[] {
   const arr = [...items];

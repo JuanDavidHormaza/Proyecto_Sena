@@ -262,12 +262,8 @@ export function ResultsPage() {
     return { name: comp, score, count };
   });
 
-  // Confetti effect desactivado para mantener diseño institucional sobrio y académico
+  // Animate score counter (modo institucional sin distracciones)
   useEffect(() => {
-    // Modo institucional académico: evaluación técnica sin efectos distractores
-  }, [finalScore]);
-
-    // Animate score counter
     let current = 0;
     const increment = Math.max(finalScore / 50, 1);
     const interval = setInterval(() => {
