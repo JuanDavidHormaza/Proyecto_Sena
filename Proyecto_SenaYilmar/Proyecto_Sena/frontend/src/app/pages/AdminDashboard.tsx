@@ -558,8 +558,6 @@ const PASS_THRESHOLD: Record<string, number> = {
   A2: 60,
   B1: 65,
   B2: 70,
-  C1: 75,
-  C2: 80,
 };
 
 const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -1173,8 +1171,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
 
   const levelDistributionData = [
     { name: "Basico (A1-A2)", value: testResults.filter(r => r.level?.startsWith("A")).length, color: "#E21B3C" },
-    { name: "Intermedio (B1-B2)", value: testResults.filter(r => r.level?.startsWith("B")).length, color: "#D89E00" },
-    { name: "Avanzado (C1-C2)", value: testResults.filter(r => r.level?.startsWith("C")).length, color: "#39A900" },
+    { name: "Intermedio / Avanzado (B1-B2)", value: testResults.filter(r => r.level?.startsWith("B")).length, color: "#39A900" },
   ];
 
   const scoreTrendData = Array.from({ length: 6 }, (_, index) => {

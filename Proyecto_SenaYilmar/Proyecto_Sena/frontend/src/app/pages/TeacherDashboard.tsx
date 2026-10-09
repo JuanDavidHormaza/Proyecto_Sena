@@ -168,7 +168,6 @@ export function TeacherDashboard() {
   const levelDistribution = {
     basic: filteredResults.filter(r => r.level.startsWith('A')).length,
     intermediate: filteredResults.filter(r => r.level.startsWith('B')).length,
-    advanced: filteredResults.filter(r => r.level.startsWith('C')).length,
   };
   const totalFilteredTests = filteredResults.length || 1;
 
@@ -278,11 +277,10 @@ export function TeacherDashboard() {
           className="bg-white rounded-2xl p-6 border border-border shadow-sm mb-8"
         >
           <h3 className="font-semibold text-foreground mb-4">Distribucion por Nivel</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {[
               { label: "Basico (A1-A2)", value: levelDistribution.basic, color: "#E21B3C", percentage: (levelDistribution.basic / totalFilteredTests) * 100 },
-              { label: "Intermedio (B1-B2)", value: levelDistribution.intermediate, color: "#D89E00", percentage: (levelDistribution.intermediate / totalFilteredTests) * 100 },
-              { label: "Avanzado (C1-C2)", value: levelDistribution.advanced, color: "#39A900", percentage: (levelDistribution.advanced / totalFilteredTests) * 100 },
+              { label: "Intermedio / Avanzado (B1-B2)", value: levelDistribution.intermediate, color: "#39A900", percentage: (levelDistribution.intermediate / totalFilteredTests) * 100 },
             ].map((level, index) => (
               <div key={index} className="text-center">
                 <div 
@@ -324,8 +322,7 @@ export function TeacherDashboard() {
             >
               <option value="all">Todos los niveles</option>
               <option value="A">Basico (A1-A2)</option>
-              <option value="B">Intermedio (B1-B2)</option>
-              <option value="C">Avanzado (C1-C2)</option>
+              <option value="B">Intermedio / Avanzado (B1-B2)</option>
             </select>
           </div>
         </motion.div>

@@ -257,28 +257,35 @@ export function LandingPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
-                level: "Basico",
-                range: "A1 - A2",
-                percentage: "0% - 40%",
+                level: "Principiante",
+                range: "A1",
+                percentage: "0% - 59%",
                 color: "#E21B3C",
-                description: "Conocimientos fundamentales del idioma",
+                description: "Fundamentos del idioma y vocabulario técnico esencial",
+              },
+              {
+                level: "Elemental",
+                range: "A2",
+                percentage: "60% - 64%",
+                color: "#FF6B00",
+                description: "Comprensión de instrucciones y flujos de software básicos",
               },
               {
                 level: "Intermedio",
-                range: "B1 - B2",
-                percentage: "41% - 70%",
+                range: "B1",
+                percentage: "65% - 69%",
                 color: "#D89E00",
-                description: "Comunicacion en situaciones cotidianas",
+                description: "Comunicación técnica y resolución de problemas",
               },
               {
-                level: "Avanzado",
-                range: "C1 - C2",
-                percentage: "71% - 100%",
+                level: "Intermedio Alto",
+                range: "B2",
+                percentage: "70% - 100%",
                 color: "#39A900",
-                description: "Dominio fluido del idioma",
+                description: "Dominio profesional y comunicación fluida en tecnología",
               },
             ].map((item, index) => (
               <motion.div

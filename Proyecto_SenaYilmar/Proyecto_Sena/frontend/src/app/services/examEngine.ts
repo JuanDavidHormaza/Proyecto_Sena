@@ -137,9 +137,13 @@ export function shuffleArray<T>(items: T[]): T[] {
 export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQuestion[] {
   const bank: UnifiedQuestion[] = [];
 
-  // 0. Preguntas generadas dinámicamente desde DigitalDictionary (ADSO) con orden aleatorio
+  // 0. Preguntas generadas dinámicamente desde DigitalDictionary (ADSO) con orden aleatorio (restringido a A1-B2)
   if (dictionaryQuestions && Array.isArray(dictionaryQuestions)) {
-    const shuffledDict = shuffleArray(dictionaryQuestions);
+    const validDict = dictionaryQuestions.filter((dq) => {
+      const lvl = String(dq?.level || "").toUpperCase();
+      return lvl !== "C1" && lvl !== "C2";
+    });
+    const shuffledDict = shuffleArray(validDict);
     shuffledDict.forEach((dq, idx) => {
       const diff = dq.difficulty || (dq.level === 'A1' ? 2 : dq.level === 'A2' ? 4 : dq.level === 'B1' ? 6 : 8);
       bank.push({
@@ -317,7 +321,10 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
     });
   }
 
-  return bank;
+  return bank.filter((q) => {
+    const lvl = String(q.level || "").toUpperCase();
+    return lvl !== "C1" && lvl !== "C2";
+  });
 }
 
 /**

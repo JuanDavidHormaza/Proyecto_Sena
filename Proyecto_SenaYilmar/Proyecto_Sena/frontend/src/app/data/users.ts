@@ -308,7 +308,7 @@ export const mockTestResults: TestResult[] = [
     userId: '4',
     userName: 'Maria Garcia Lopez',
     score: 92,
-    level: 'C1',
+    level: 'B2',
     correctAnswers: 18,
     totalQuestions: 20,
     completedAt: '2026-04-12T09:15:00',

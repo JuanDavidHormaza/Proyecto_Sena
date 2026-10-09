@@ -187,8 +187,6 @@ class TestResult(models.Model):
         ('A2', 'A2 - Elemental'),
         ('B1', 'B1 - Intermedio'),
         ('B2', 'B2 - Intermedio Alto'),
-        ('C1', 'C1 - Avanzado'),
-        ('C2', 'C2 - Maestría'),
         ('Sin Nivel', 'Sin Nivel / No Presentado'),
         ('Invalidada', 'Prueba Invalidada'),
         ('No Presentado', 'No Presentado'),

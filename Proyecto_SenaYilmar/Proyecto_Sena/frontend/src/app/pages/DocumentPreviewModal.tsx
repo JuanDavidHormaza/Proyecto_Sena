@@ -49,7 +49,7 @@ Analiza el siguiente contenido de un documento educativo y devuelve un JSON con 
     "description": "Descripción clara y concisa del documento en español (máximo 3 oraciones). Explica de qué trata y para qué sirve.",
     "keywords": ["palabra1", "palabra2", "palabra3", "palabra4", "palabra5", "palabra6", "palabra7", "palabra8"],
     "language": "Español o Inglés o Bilingüe",
-    "level": "A1, A2, B1, B2, C1 o C2 (nivel de inglés del contenido, o N/A si no aplica)"
+    "level": "A1, A2, B1 o B2 (nivel de inglés del contenido según estándar SENA, o N/A si no aplica)"
 }
 
 Las palabras clave deben ser términos relevantes del documento, idealmente en inglés si es material de aprendizaje.
