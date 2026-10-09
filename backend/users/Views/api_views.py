@@ -3,6 +3,7 @@
 # Reemplaza COMPLETAMENTE tu api_views.py actual con este contenido.
 # =======================================================================
 
+import logging
 import random
 import string
 from datetime import timedelta
@@ -13,6 +14,8 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
+
+logger = logging.getLogger(__name__)
 
 from ..Controllers.ControllerSENA import (
     AuthController, PersonController, UserController,
@@ -145,7 +148,9 @@ def _send_otp_email(email: str, code: str, reason: str = "verificación de acces
             recipient_list=[email],
             fail_silently=False,
         )
+        logger.info(f"[OTP NOTIFICATION] Correo SMTP enviado exitosamente a {email} ({reason})")
     except Exception as e:
+        logger.error(f"[OTP EMAIL ERROR] Fallo SMTP enviando correo a {email}: {e}. Fallback consola activo: {code}", exc_info=True)
         print(f"[OTP EMAIL WARNING] Error enviando correo a {email}: {e}. (Fallback de consola activo: {code})")
 
 
@@ -766,7 +771,12 @@ class RegisterSendOTPAPIView(APIView):
                 recipient_list=[email],
                 fail_silently=False,
             )
+            logger.info(f"[REGISTER OTP] Correo SMTP de registro enviado exitosamente a {email}")
         except Exception as e:
+            logger.error(
+                f"[REGISTER OTP] Fallo SMTP al enviar correo de verificación a {email}: {e}. Petición completada con fallback activo.",
+                exc_info=True
+            )
             print(f"[REGISTER OTP] Error al enviar correo a {email}: {e}. (Fallback de consola activo: {code})")
 
         return Response({
