@@ -31,7 +31,6 @@ import {
   History,
   Calendar,
 } from "lucide-react";
-import confetti from "canvas-confetti";
 import { getLevelFromScore } from "../data/questionsA1";
 import { questions } from "../data";
 import * as api from "../services/api";
@@ -263,34 +262,10 @@ export function ResultsPage() {
     return { name: comp, score, count };
   });
 
-  // Confetti effect
+  // Confetti effect desactivado para mantener diseño institucional sobrio y académico
   useEffect(() => {
-    if (finalScore >= 60) {
-      const durationMs = 3000;
-      const end = Date.now() + durationMs;
-      const colors = ["#39A900", "#1F4E78", "#D89E00", "#ffffff"];
-
-      (function frame() {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-          colors: colors,
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-          colors: colors,
-        });
-
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      })();
-    }
+    // Modo institucional académico: evaluación técnica sin efectos distractores
+  }, [finalScore]);
 
     // Animate score counter
     let current = 0;

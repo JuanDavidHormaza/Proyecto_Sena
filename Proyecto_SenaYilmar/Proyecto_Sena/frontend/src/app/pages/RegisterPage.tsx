@@ -472,15 +472,15 @@ export function RegisterPage() {
           </p>
 
           {/* Stepper indicator: [1 Datos Personales] ─── [2 Contraseña y Acceso] ─── [3 Verificación de Código] */}
-          <div className="flex items-center gap-2 sm:gap-3 mb-6 overflow-x-auto pb-1">
+          <div className="w-full flex items-center justify-between gap-1 sm:gap-2 mb-6 overflow-x-hidden select-none">
             {[
-              { n: 1, label: "Datos Personales" },
-              { n: 2, label: "Contraseña y Acceso" },
-              { n: 3, label: "Verificación de Código" },
-            ].map(({ n, label }, i) => (
-              <div key={n} className="flex items-center gap-2 flex-shrink-0">
+              { n: 1, full: "Datos Personales", short: "Datos" },
+              { n: 2, full: "Contraseña y Acceso", short: "Acceso" },
+              { n: 3, full: "Verificación de Código", short: "Verificación" },
+            ].map(({ n, full, short }, i) => (
+              <div key={n} className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 last:flex-initial">
                 <div
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 ${
                     step === n
                       ? "bg-sena-green text-white shadow-xs"
                       : step > n
@@ -488,12 +488,13 @@ export function RegisterPage() {
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                    {step > n ? <Check className="w-2.5 h-2.5" strokeWidth={1.8} /> : n}
+                  <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                    {step > n ? <Check className="w-2.5 h-2.5" strokeWidth={2} /> : n}
                   </span>
-                  <span>{label}</span>
+                  <span className="hidden sm:inline">{full}</span>
+                  <span className="sm:hidden">{short}</span>
                 </div>
-                {i < 2 && <div className="w-4 sm:w-6 h-0.5 bg-border flex-shrink-0" />}
+                {i < 2 && <div className="flex-1 h-0.5 bg-border mx-1 min-w-[8px]" />}
               </div>
             ))}
           </div>

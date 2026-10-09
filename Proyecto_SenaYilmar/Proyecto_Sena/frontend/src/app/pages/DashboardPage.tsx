@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 
 import {
   Target,
-  Flame,
   BarChart3,
   Clock,
   ChevronRight,
@@ -1428,18 +1427,8 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
               </div>
             </div>
 
-            {/* Acciones del Header: Racha + Menú */}
+            {/* Acciones del Header: Menú y Perfil */}
             <div className="flex items-center gap-2.5">
-              {/* Racha Activa (Oculta si streak < 1) */}
-              {stats.currentStreak >= 1 && (
-                <div
-                  className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-sena-green/10 text-sena-green rounded-xl border border-sena-green/20 text-xs font-semibold hover:-translate-y-1 hover:shadow-md cursor-pointer transition-all duration-300"
-                  title="Días consecutivos practicando en WorkLex"
-                >
-                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" strokeWidth={1.8} />
-                  <span>{stats.currentStreak} días</span>
-                </div>
-              )}
 
               {/* Botón Móvil Hamburguesa */}
               <button
@@ -1704,7 +1693,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                   </div>
                   <div>
                     <h4 className="font-bold text-foreground text-base tracking-tight">
-                      Métricas de Rendimiento y Racha Activa
+                      Métricas de Rendimiento Académico
                     </h4>
                     <p className="text-xs text-muted-foreground">
                       Progreso real, promedio general e historial de evaluaciones del aprendiz
@@ -1733,17 +1722,13 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                     color: "sena-blue",
                     tip: "Total de evaluaciones completadas por el aprendiz",
                   },
-                  ...(stats.currentStreak >= 1
-                    ? [
-                        {
-                          label: "Racha Activa",
-                          value: `${stats.currentStreak} días`,
-                          icon: Flame,
-                          color: "destructive",
-                          tip: "Días consecutivos accediendo a la plataforma",
-                        },
-                      ]
-                    : []),
+                  {
+                    label: "Nivel CEFR Actual",
+                    value: stats.currentLevel || "A1",
+                    icon: GraduationCap,
+                    color: "sena-green",
+                    tip: "Nivel de competencia lingüística según el MCER",
+                  },
                   {
                     label: "Tiempo Invertido",
                     value: stats.quizDuration,
@@ -1938,12 +1923,10 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                           <p className="text-xs text-muted-foreground">Nivel Asignado</p>
                           <p className="text-xl font-bold text-sena-blue">{stats.currentLevel}</p>
                         </div>
-                        {stats.currentStreak >= 1 && (
-                          <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                            <p className="text-xs text-muted-foreground">Racha</p>
-                            <p className="text-xl font-bold text-destructive">{stats.currentStreak} d</p>
-                          </div>
-                        )}
+                        <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                          <p className="text-xs text-muted-foreground">Programa</p>
+                          <p className="text-xl font-bold text-sena-green">ADSO</p>
+                        </div>
                       </div>
 
                       {/* Historial reciente rápido */}

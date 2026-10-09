@@ -52,7 +52,7 @@ services:
       /bin/sh -c "
       echo 'Esperando que MinIO arranque...';
       sleep 2;
-      mc alias set localminio http://worklex_minio:9000 $${MINIO_ROOT_USER:-admin} $${MINIO_ROOT_PASSWORD:-Admin123*};
+      mc alias set localminio http://minio:9000 $${MINIO_ROOT_USER:-admin} $${MINIO_ROOT_PASSWORD:-Admin123*};
 
       echo 'Creando buckets requeridos...';
       mc mb --ignore-existing localminio/dictionary-audios;
