@@ -219,9 +219,14 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
  
 # ─── MinIO / S3 Storage (100% interno en Docker) ─────────────────────────────
-MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'minio:9000')
-MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', os.getenv('MINIO_USER', 'admin'))
-MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', os.getenv('MINIO_PASSWORD', 'Admin123*'))
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'http://minio:9000')
+
+# Unificación de credenciales MinIO / S3
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', os.getenv('MINIO_ROOT_USER', os.getenv('MINIO_ACCESS_KEY', os.getenv('MINIO_USER', 'admin'))))
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', os.getenv('MINIO_ROOT_PASSWORD', os.getenv('MINIO_SECRET_KEY', os.getenv('MINIO_PASSWORD', 'Admin123*'))))
+MINIO_ACCESS_KEY = AWS_ACCESS_KEY_ID
+MINIO_SECRET_KEY = AWS_SECRET_ACCESS_KEY
+
 MINIO_USE_SSL = os.getenv('MINIO_USE_SSL', 'false').lower() in ('1', 'true', 'yes')
 MINIO_PUBLIC_URL_PREFIX = '/api/media/'
 

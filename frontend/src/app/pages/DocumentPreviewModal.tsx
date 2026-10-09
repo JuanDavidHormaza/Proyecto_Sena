@@ -238,10 +238,10 @@ export function DocumentPreviewModal({ doc, onClose }: DocumentPreviewProps) {
               {/* Título del panel */}
             <div className="px-5 py-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
+                <FileText className="w-4 h-4 text-sena-blue" strokeWidth={1.8} />
                 <h3 className="font-semibold text-foreground text-sm">Análisis del documento</h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Generado por IA automáticamente</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Diagnóstico y resumen curricular</p>
             </div>
 
             <div className="flex-1 p-5 space-y-6">
