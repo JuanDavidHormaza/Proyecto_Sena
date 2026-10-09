@@ -52,29 +52,47 @@ class MediaProxyAPIView(APIView):
                     byte_range=byte_range
                 )
             except StorageFileNotFoundError:
-                # Fallback resiliente para tolerar diferencias de minúsculas o prefijos
-                fallback_keys = [
-                    clean_key.lower(),
-                    clean_key.replace("adso_", ""),
-                    clean_key.lower().replace("adso_", ""),
-                    f"adso_{clean_key.lower()}",
-                ]
-                found = False
-                for fb_key in fallback_keys:
-                    if fb_key != clean_key:
-                        try:
-                            stream, content_type, content_length, content_range = StorageService.get_file_stream(
-                                bucket_name=clean_bucket,
-                                file_key=fb_key,
-                                byte_range=byte_range
-                            )
-                            clean_key = fb_key
-                            found = True
-                            break
-                        except StorageFileNotFoundError:
-                            continue
-                if not found:
-                    raise
+                # Fallback resiliente usando resolve_file_key de StorageService y variaciones comunes
+                resolved_key = StorageService.resolve_file_key(clean_bucket, clean_key)
+                if resolved_key and resolved_key != clean_key:
+                    stream, content_type, content_length, content_range = StorageService.get_file_stream(
+                        bucket_name=clean_bucket,
+                        file_key=resolved_key,
+                        byte_range=byte_range
+                    )
+                    clean_key = resolved_key
+                else:
+                    import os
+                    stem, ext = os.path.splitext(clean_key)
+                    fallback_keys = [
+                        clean_key.capitalize(),
+                        clean_key.title(),
+                        f"{stem.capitalize()}{ext.lower()}",
+                        f"{stem.title()}{ext.lower()}",
+                        clean_key.lower(),
+                        clean_key.upper(),
+                        clean_key.replace("adso_", ""),
+                        clean_key.replace("_", " "),
+                        clean_key.replace(" ", "_"),
+                        clean_key.lower().replace("adso_", ""),
+                        f"adso_{clean_key.lower()}",
+                    ]
+                    found = False
+                    for fb_key in fallback_keys:
+                        if fb_key != clean_key:
+                            try:
+                                stream, content_type, content_length, content_range = StorageService.get_file_stream(
+                                    bucket_name=clean_bucket,
+                                    file_key=fb_key,
+                                    byte_range=byte_range
+                                )
+                                clean_key = fb_key
+                                found = True
+                                break
+                            except StorageFileNotFoundError:
+                                continue
+                    if not found:
+                        raise
 
             # Generador en trozos para evitar cargar archivos grandes en memoria
             def file_iterator(body_stream, chunk_size=65536):
@@ -92,11 +110,11 @@ class MediaProxyAPIView(APIView):
 
             # Deducción precisa de tipo MIME
             guessed_type, _ = mimetypes.guess_type(clean_key)
+            lower_k = clean_key.lower()
             if not guessed_type:
-                lower_k = clean_key.lower()
                 if lower_k.endswith('.png'):
                     guessed_type = 'image/png'
-                elif lower_k.endswith(('.jpg', '.jpeg')):
+                elif lower_k.endswith(('.jpg', '.jpeg', '.jfif')):
                     guessed_type = 'image/jpeg'
                 elif lower_k.endswith('.webp'):
                     guessed_type = 'image/webp'

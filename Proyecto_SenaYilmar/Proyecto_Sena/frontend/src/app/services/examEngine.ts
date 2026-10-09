@@ -122,14 +122,23 @@ export function getDifficultyTier(diff: number): DifficultyTier {
   if (diff <= 3) return "Easy";
   if (diff <= 6) return "Medium";
   return "Hard";
+// Función utilitaria para barajar arrays (Fisher-Yates)
+export function shuffleArray<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQuestion[] {
   const bank: UnifiedQuestion[] = [];
 
-  // 0. Preguntas generadas dinámicamente desde DigitalDictionary (ADSO)
+  // 0. Preguntas generadas dinámicamente desde DigitalDictionary (ADSO) con orden aleatorio
   if (dictionaryQuestions && Array.isArray(dictionaryQuestions)) {
-    dictionaryQuestions.forEach((dq, idx) => {
+    const shuffledDict = shuffleArray(dictionaryQuestions);
+    shuffledDict.forEach((dq, idx) => {
       const diff = dq.difficulty || (dq.level === 'A1' ? 2 : dq.level === 'A2' ? 4 : dq.level === 'B1' ? 6 : 8);
       bank.push({
         id: dq.id || 9000 + idx,
@@ -410,18 +419,18 @@ export class ExamEngine {
       this.unlockedLevels.push(level);
     }
 
-    // Filtrar preguntas del nivel y dar prioridad activa a los términos del Diccionario ADSO
+    // Filtrar preguntas del nivel y dar prioridad activa a los términos del Diccionario ADSO de forma aleatoria
     const levelPool = this.allQuestions.filter((q) => q.level === level);
-    const dictPool = levelPool.filter((q) => q.isDictionaryTerm);
-    const basePool = levelPool.filter((q) => !q.isDictionaryTerm);
+    const dictPool = shuffleArray(levelPool.filter((q) => q.isDictionaryTerm));
+    const basePool = shuffleArray(levelPool.filter((q) => !q.isDictionaryTerm));
 
     const selected: UnifiedQuestion[] = [];
 
-    // Priorizar variedad de competencias desde el Diccionario ADSO (las 4 macro-habilidades)
-    const dictListening = dictPool.filter((q) => q.competency === "Listening");
-    const dictSpeaking = dictPool.filter((q) => q.type === "speaking" || q.competency === "Speaking");
-    const dictWriting = dictPool.filter((q) => q.type === "writing" || q.competency === "Writing");
-    const dictReading = dictPool.filter((q) => q.competency === "Reading");
+    // Priorizar variedad de competencias desde el Diccionario ADSO de forma aleatoria
+    const dictListening = shuffleArray(dictPool.filter((q) => q.competency === "Listening"));
+    const dictSpeaking = shuffleArray(dictPool.filter((q) => q.type === "speaking" || q.competency === "Speaking"));
+    const dictWriting = shuffleArray(dictPool.filter((q) => q.type === "writing" || q.competency === "Writing"));
+    const dictReading = shuffleArray(dictPool.filter((q) => q.competency === "Reading"));
 
     if (dictListening.length > 0) selected.push(dictListening[0]);
     if (dictSpeaking.length > 0) selected.push(dictSpeaking[0]);
@@ -430,8 +439,8 @@ export class ExamEngine {
       selected.push(dictReading[0]);
     }
 
-    // Si aún faltan preguntas para el cupo del nivel, completar con el pool base
-    const combinedFallback = [...dictPool, ...basePool];
+    // Si aún faltan preguntas para el cupo del nivel, completar con el pool combinado barajado
+    const combinedFallback = shuffleArray([...dictPool, ...basePool]);
     for (const q of combinedFallback) {
       if (selected.length >= this.QUESTIONS_PER_LEVEL) break;
       if (!selected.some((s) => s.uniqueKey === q.uniqueKey)) {

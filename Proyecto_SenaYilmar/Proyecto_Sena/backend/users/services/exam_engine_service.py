@@ -43,8 +43,8 @@ class ExamEngineService:
 
     @classmethod
     def get_terms_by_level(cls, level: str) -> List[DigitalDictionary]:
-        """Obtiene los términos de DigitalDictionary para el nivel dado."""
-        return list(DigitalDictionary.objects.filter(level=level).select_related('subject'))
+        """Obtiene los términos de DigitalDictionary para el nivel dado de forma aleatoria."""
+        return list(DigitalDictionary.objects.filter(level=level).select_related('subject').order_by('?'))
 
     @classmethod
     def generate_questions_from_dictionary(
@@ -53,9 +53,10 @@ class ExamEngineService:
         competence: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        Construye preguntas dinámicas a partir de los términos activos del Diccionario Digital.
+        Construye preguntas dinámicas a partir de los términos activos del Diccionario Digital,
+        con orden aleatorio garantizado en cada intento de examen.
         """
-        queryset = DigitalDictionary.objects.select_related('subject').all()
+        queryset = DigitalDictionary.objects.select_related('subject').order_by('?')
         if level and level != 'all':
             queryset = queryset.filter(level=level)
         if competence and competence != 'all':
@@ -66,9 +67,14 @@ class ExamEngineService:
             logger.warning(f"No hay términos en el diccionario para nivel '{level}' / competencia '{competence}'")
             return []
 
+        # Barajar términos para garantizar secuencia única en cada examen
+        random.shuffle(terms)
+
         all_terms_by_level: Dict[str, List[DigitalDictionary]] = {}
         for lvl in CEFR_LEVELS:
-            all_terms_by_level[lvl] = list(DigitalDictionary.objects.filter(level=lvl))
+            lvl_pool = list(DigitalDictionary.objects.filter(level=lvl).order_by('?'))
+            random.shuffle(lvl_pool)
+            all_terms_by_level[lvl] = lvl_pool
 
         questions: List[Dict[str, Any]] = []
 
@@ -79,10 +85,13 @@ class ExamEngineService:
                 comp = 'Reading'
             level_pool = [t for t in all_terms_by_level.get(term_lvl, []) if t.id != term.id]
 
-            # Distractores del mismo nivel si es posible
-            distractor_names = [t.word_id for t in level_pool[:3]]
-            while len(distractor_names) < 3:
-                distractor_names.append(f"Concept_{len(distractor_names) + 1}")
+            # Distractores aleatorios del mismo nivel
+            if len(level_pool) >= 3:
+                distractor_names = [t.word_id for t in random.sample(level_pool, 3)]
+            else:
+                distractor_names = [t.word_id for t in level_pool]
+                while len(distractor_names) < 3:
+                    distractor_names.append(f"Concept_{len(distractor_names) + 1}")
 
             # Dificultad base según nivel
             base_diff = 2 if term_lvl == 'A1' else (4 if term_lvl == 'A2' else (6 if term_lvl == 'B1' else 8))
@@ -97,6 +106,8 @@ class ExamEngineService:
             if q_obj:
                 questions.append(q_obj)
 
+        # Barajar todas las preguntas para que cada sesión sea completamente aleatoria
+        random.shuffle(questions)
         return questions
 
     @classmethod

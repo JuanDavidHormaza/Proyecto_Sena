@@ -47,6 +47,8 @@ class StorageService:
 
     _client = None
     _buckets_verified = set()
+    _key_catalog = {}
+    _resolved_keys_cache = {}
 
     # Buckets estándar del sistema WorkLex
     BUCKETS = getattr(settings, 'MINIO_BUCKETS', {
@@ -226,6 +228,131 @@ class StorageService:
             return cls.get_proxy_url(bucket_name, file_key)
 
     @classmethod
+    def _normalize_key_component(cls, s: str) -> str:
+        """Normaliza una cadena eliminando espacios, guiones bajos, guiones y convirtiendo a minúsculas."""
+        import re
+        return re.sub(r'[\s_\-]+', '', s).lower()
+
+    @classmethod
+    def _detect_content_type(cls, file_key: str, raw_content_type: Optional[str] = None) -> str:
+        guessed_type, _ = mimetypes.guess_type(file_key)
+        ext = os.path.splitext(file_key)[1].lower()
+        extension_mime_map = {
+            '.mp3': 'audio/mpeg',
+            '.wav': 'audio/wav',
+            '.ogg': 'audio/ogg',
+            '.m4a': 'audio/mp4',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.jfif': 'image/jpeg',
+            '.webp': 'image/webp',
+            '.svg': 'image/svg+xml',
+            '.mp4': 'video/mp4',
+            '.webm': 'video/webm',
+        }
+        if ext in extension_mime_map:
+            return extension_mime_map[ext]
+        if guessed_type:
+            return guessed_type
+        if raw_content_type and raw_content_type != 'application/octet-stream':
+            return raw_content_type
+        return 'application/octet-stream'
+
+    @classmethod
+    def resolve_file_key(cls, bucket_name: str, file_key: str) -> Optional[str]:
+        """
+        Resuelve una clave de archivo en MinIO de manera case-insensitive y tolerante a variaciones.
+        Resuelve 'input.png' -> 'Input.png', 'input.mp3' -> 'Input.mp3', etc.
+        """
+        clean_key = (file_key or '').strip('/')
+        if not clean_key:
+            return None
+
+        cache_key = (bucket_name, clean_key.lower())
+        if cache_key in cls._resolved_keys_cache:
+            return cls._resolved_keys_cache[cache_key]
+
+        # 1. Candidatos rápidos directos
+        stem, ext = os.path.splitext(clean_key)
+        ext_lower = ext.lower()
+        clean_stem = stem.replace('adso_', '').strip()
+
+        quick_candidates = [
+            clean_key,
+            f"{stem.capitalize()}{ext_lower}",
+            f"{stem.title()}{ext_lower}",
+            f"{stem.lower()}{ext_lower}",
+            f"{stem.upper()}{ext_lower}",
+            f"{clean_stem.capitalize()}{ext_lower}",
+            f"{clean_stem.title()}{ext_lower}",
+            f"{clean_stem.lower()}{ext_lower}",
+            f"{stem.replace('_', ' ').capitalize()}{ext_lower}",
+            f"{stem.replace('_', ' ').title()}{ext_lower}",
+            f"{stem.replace(' ', '_').capitalize()}{ext_lower}",
+            f"{stem.replace(' ', '_').title()}{ext_lower}",
+            f"{clean_stem.replace('_', ' ').capitalize()}{ext_lower}",
+            f"{clean_stem.replace('_', ' ').title()}{ext_lower}",
+            f"{clean_stem.replace(' ', '_').capitalize()}{ext_lower}",
+            f"{clean_stem.replace(' ', '_').title()}{ext_lower}",
+        ]
+
+        seen = set()
+        for cand in quick_candidates:
+            if cand and cand not in seen:
+                seen.add(cand)
+                if cls.file_exists(bucket_name, cand):
+                    cls._resolved_keys_cache[cache_key] = cand
+                    return cand
+
+        # 2. Catálogo completo del bucket (list_objects_v2) si los candidatos directos fallan
+        try:
+            client = cls.get_client()
+            if bucket_name not in cls._key_catalog:
+                catalog = {}
+                paginator = client.get_paginator('list_objects_v2')
+                for page in paginator.paginate(Bucket=bucket_name):
+                    for obj in page.get('Contents', []):
+                        real_key = obj['Key']
+                        obj_stem, obj_ext = os.path.splitext(real_key)
+                        norm_stem = cls._normalize_key_component(obj_stem.replace('adso_', ''))
+                        norm_ext = obj_ext.lower().strip('.')
+
+                        catalog[f"{norm_stem}.{norm_ext}"] = real_key
+                        catalog[cls._normalize_key_component(real_key)] = real_key
+                        if norm_stem not in catalog:
+                            catalog[norm_stem] = real_key
+
+                cls._key_catalog[bucket_name] = catalog
+
+            bucket_map = cls._key_catalog.get(bucket_name, {})
+            req_norm_stem = cls._normalize_key_component(clean_stem)
+            req_norm_ext = ext_lower.strip('.')
+
+            # Prioridad 1: stem normalizado + extensión exacta
+            match_key = bucket_map.get(f"{req_norm_stem}.{req_norm_ext}")
+            if match_key:
+                cls._resolved_keys_cache[cache_key] = match_key
+                return match_key
+
+            # Prioridad 2: clave completa normalizada
+            match_key = bucket_map.get(cls._normalize_key_component(clean_key))
+            if match_key:
+                cls._resolved_keys_cache[cache_key] = match_key
+                return match_key
+
+            # Prioridad 3: stem coincidente (ej: solicitó .png pero en MinIO está en .jpg o .jfif)
+            match_key = bucket_map.get(req_norm_stem)
+            if match_key:
+                cls._resolved_keys_cache[cache_key] = match_key
+                return match_key
+
+        except Exception as cat_err:
+            logger.warning(f"No fue posible consultar catálogo de objetos en '{bucket_name}': {cat_err}")
+
+        return None
+
+    @classmethod
     def get_file_stream(cls, bucket_name: str, file_key: str, byte_range: Optional[str] = None) -> Tuple[BinaryIO, str, int, Optional[str]]:
         """
         Obtiene el stream de lectura de un objeto en MinIO.
@@ -241,35 +368,7 @@ class StorageService:
                 params['Range'] = byte_range
             response = client.get_object(**params)
             stream = response['Body']
-            raw_content_type = response.get('ContentType')
-
-            # Detección robusta de MIME Type para audio/imagen/video
-            guessed_type, _ = mimetypes.guess_type(file_key)
-            ext = os.path.splitext(file_key)[1].lower()
-            extension_mime_map = {
-                '.mp3': 'audio/mpeg',
-                '.wav': 'audio/wav',
-                '.ogg': 'audio/ogg',
-                '.m4a': 'audio/mp4',
-                '.png': 'image/png',
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.jfif': 'image/jpeg',
-                '.webp': 'image/webp',
-                '.svg': 'image/svg+xml',
-                '.mp4': 'video/mp4',
-                '.webm': 'video/webm',
-            }
-
-            if ext in extension_mime_map:
-                content_type = extension_mime_map[ext]
-            elif guessed_type:
-                content_type = guessed_type
-            elif raw_content_type and raw_content_type != 'application/octet-stream':
-                content_type = raw_content_type
-            else:
-                content_type = 'application/octet-stream'
-
+            content_type = cls._detect_content_type(file_key, response.get('ContentType'))
             content_length = response.get('ContentLength', 0)
             content_range = response.get('ContentRange', None)
             return stream, content_type, content_length, content_range
@@ -278,6 +377,21 @@ class StorageService:
         except Exception as e:
             error_code = getattr(getattr(e, 'response', {}), 'get', lambda _: {})('Error', {}).get('Code', '')
             if error_code in ('NoSuchKey', '404', 'NotFound') or 'NoSuchKey' in str(e):
+                resolved_key = cls.resolve_file_key(bucket_name, file_key)
+                if resolved_key and resolved_key != file_key:
+                    try:
+                        logger.info(f"StorageService: Clave normalizada case-insensitive '{file_key}' -> '{resolved_key}' en bucket '{bucket_name}'")
+                        params = {'Bucket': bucket_name, 'Key': resolved_key}
+                        if byte_range:
+                            params['Range'] = byte_range
+                        response = client.get_object(**params)
+                        stream = response['Body']
+                        content_type = cls._detect_content_type(resolved_key, response.get('ContentType'))
+                        content_length = response.get('ContentLength', 0)
+                        content_range = response.get('ContentRange', None)
+                        return stream, content_type, content_length, content_range
+                    except Exception as retry_err:
+                        logger.warning(f"Error al reintentar clave resuelta '{resolved_key}': {retry_err}")
                 raise StorageFileNotFoundError(f"Archivo '{file_key}' no encontrado en el bucket '{bucket_name}'.")
             if error_code in ('InvalidRange', '416') or 'InvalidRange' in str(e):
                 raise StorageInvalidRangeError(f"Rango de bytes no satisfacible para '{file_key}'.")

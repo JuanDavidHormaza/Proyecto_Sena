@@ -77,12 +77,18 @@ urlpatterns = [
     path('media/upload/',                            MediaUploadAPIView.as_view(), name='media-upload'),
 
     # ── Examen Adaptativo Continuo CEFR (Alimentado por Diccionario ADSO)
-    path('exam/start/',                             ExamStartAPIView.as_view(),          name='exam-start'),
-    path('exam/adaptive-bank/',                     ExamAdaptiveBankAPIView.as_view(),   name='exam-adaptive-bank'),
-    path('exam/evaluate-step/',                     ExamEvaluateStepAPIView.as_view(),   name='exam-evaluate-step'),
-    path('exam/evaluate-speaking/',                 ExamEvaluateSpeakingAPIView.as_view(), name='exam-evaluate-speaking'),
-    path('exam/speaking/',                          SpeakingSubmissionAPIView.as_view(), name='exam-speaking'),
-    path('exam/tts/',                               ExamTTSAPIView.as_view(),            name='exam-tts'),
+    path('exam/start/',                             ExamStartAPIView.as_view(),          name='exam-start-slash'),
+    path('exam/start',                              ExamStartAPIView.as_view(),          name='exam-start'),
+    path('exam/adaptive-bank/',                     ExamAdaptiveBankAPIView.as_view(),   name='exam-adaptive-bank-slash'),
+    path('exam/adaptive-bank',                      ExamAdaptiveBankAPIView.as_view(),   name='exam-adaptive-bank'),
+    path('exam/evaluate-step/',                     ExamEvaluateStepAPIView.as_view(),   name='exam-evaluate-step-slash'),
+    path('exam/evaluate-step',                      ExamEvaluateStepAPIView.as_view(),   name='exam-evaluate-step'),
+    path('exam/evaluate-speaking/',                 ExamEvaluateSpeakingAPIView.as_view(), name='exam-evaluate-speaking-slash'),
+    path('exam/evaluate-speaking',                  ExamEvaluateSpeakingAPIView.as_view(), name='exam-evaluate-speaking'),
+    path('exam/speaking/',                          SpeakingSubmissionAPIView.as_view(), name='exam-speaking-slash'),
+    path('exam/speaking',                           SpeakingSubmissionAPIView.as_view(), name='exam-speaking'),
+    path('exam/tts/',                               ExamTTSAPIView.as_view(),            name='exam-tts-slash'),
+    path('exam/tts',                                ExamTTSAPIView.as_view(),            name='exam-tts'),
 
     # ── ViewSets ───────────────────────────────────────────────────────
     path('', include(router.urls)),
