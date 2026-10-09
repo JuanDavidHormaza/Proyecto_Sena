@@ -41,7 +41,11 @@ EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '3'))
 
 # Proveedores de correo por API HTTPS (Puerto 443 - Bypasea bloqueo de puertos SMTP en DigitalOcean/VPS)
 RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', '')
+BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')
+BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL', '')
 SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '')
+SENDGRID_FROM_EMAIL = os.getenv('SENDGRID_FROM_EMAIL', '')
 DEV_RETURN_OTP = os.getenv('DEV_RETURN_OTP', 'true').lower() in ('1', 'true', 'yes')
 
 
