@@ -28,7 +28,6 @@ import {
   UnifiedQuestion,
   UserAnswerRecord,
 } from "../services/examEngine";
-import { SafeImage } from "../components/SafeImage";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
 
@@ -143,7 +142,14 @@ export function QuizPage() {
       try {
         const startData = await api.startAdaptiveExam(userId || undefined);
         if (isMounted && startData?.questions && startData.questions.length > 0) {
-          engineRef.current.loadDictionaryQuestions(startData.questions);
+          const questions = [...startData.questions];
+          // Barajado inmediato con algoritmo de Fisher-Yates
+          for (let i = questions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [questions[i], questions[j]] = [questions[j], questions[i]];
+          }
+          questions.sort(() => Math.random() - 0.5);
+          engineRef.current.loadDictionaryQuestions(questions);
           setEngineState(engineRef.current.getSessionState());
         }
       } catch (err) {
