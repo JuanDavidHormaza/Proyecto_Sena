@@ -163,8 +163,8 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
     });
   }
 
-  // 1. Preguntas A1 (Fundamentos y ADSO)
-  questionsA1.forEach((q, idx) => {
+  // 1. Preguntas A1 (Fundamentos y ADSO) con orden aleatorio
+  shuffleArray(questionsA1).forEach((q, idx) => {
     const diff = q.difficulty || 2;
     bank.push({
       id: q.id,
@@ -181,8 +181,8 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
     });
   });
 
-  // 2. Preguntas A2 (Gramática, Vocabulario y ADSO Workflow)
-  questionsA2.forEach((q, idx) => {
+  // 2. Preguntas A2 (Gramática, Vocabulario y ADSO Workflow) con orden aleatorio
+  shuffleArray(questionsA2).forEach((q, idx) => {
     const diff = (q as any).points ? 4 : 3;
     const cat = q.category || "General";
     let comp: Competency = "Reading";
@@ -203,8 +203,8 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
     });
   });
 
-  // 3. Preguntas B1 (Intermedio, Software, Networking, Writing y Speaking)
-  questionsB1.forEach((q, idx) => {
+  // 3. Preguntas B1 con orden aleatorio
+  shuffleArray(questionsB1).forEach((q, idx) => {
     const diff = q.difficulty || 5;
     let comp: Competency = "Reading";
     if (q.skill === "reading" || q.category.includes("Reading")) comp = "Reading";
@@ -448,10 +448,11 @@ export class ExamEngine {
       }
     }
 
-    // Ordenar de menor a mayor dificultad para progresión adaptativa suave (1-3 Fácil -> 4-6 Medio -> 7-10 Difícil)
-    selected.sort((a, b) => (a.difficulty || 2) - (b.difficulty || 2));
+    // Barajar aleatoriamente la lista de preguntas para que cada sesión y nivel comience con una pregunta distinta
+    const randomizedQuestions = shuffleArray(selected);
+    randomizedQuestions.sort(() => Math.random() - 0.5);
 
-    this.currentLevelQuestionList = selected;
+    this.currentLevelQuestionList = randomizedQuestions;
     this.currentQuestionIndex = 0;
   }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Code, ZoomIn } from "lucide-react";
+import { ImageIcon, ZoomIn } from "lucide-react";
 import { getMediaUrl } from "../services/api";
 
 export interface SafeImageProps {
@@ -32,8 +32,6 @@ export function SafeImage({
     setIsLoaded(false);
     setHasError(!resolvedSrc);
   }, [resolvedSrc]);
-
-  const initials = (fallbackText || alt || "ADSO").trim().slice(0, 3).toUpperCase();
 
   return (
     <div
@@ -69,18 +67,10 @@ export function SafeImage({
         />
       ) : null}
 
-      {/* 3. Placeholder Institucional Estilizado si no hay imagen o falla (Cero Cajas Negras) */}
+      {/* 3. Placeholder Limpio si no hay imagen o falla (Cero texto residual o insignias) */}
       {hasError && (
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-emerald-50/30 to-slate-100 flex flex-col items-center justify-center text-slate-400 p-3 text-center">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100/80 border border-emerald-200/80 text-emerald-700 flex items-center justify-center mb-1.5 shadow-2xs">
-            <Code className="w-5 h-5 text-emerald-600" strokeWidth={1.8} />
-          </div>
-          <span className="text-xs font-bold text-slate-700 tracking-wider">
-            {initials}
-          </span>
-          <span className="text-[10px] text-slate-500 font-medium truncate max-w-[120px] mt-0.5">
-            {fallbackText || alt}
-          </span>
+        <div className="absolute inset-0 bg-slate-50 flex items-center justify-center text-slate-300 p-3">
+          <ImageIcon className="w-8 h-8 text-slate-300" strokeWidth={1.5} />
         </div>
       )}
 
