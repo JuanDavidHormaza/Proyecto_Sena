@@ -36,6 +36,14 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
+# Timeout estricto para no colgar workers de Gunicorn si el VPS bloquea puertos SMTP
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '3'))
+
+# Proveedores de correo por API HTTPS (Puerto 443 - Bypasea bloqueo de puertos SMTP en DigitalOcean/VPS)
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '')
+DEV_RETURN_OTP = os.getenv('DEV_RETURN_OTP', 'true').lower() in ('1', 'true', 'yes')
+
 
 
 

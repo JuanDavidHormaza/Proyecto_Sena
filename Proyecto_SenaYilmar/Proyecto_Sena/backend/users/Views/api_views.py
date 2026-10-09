@@ -8,12 +8,15 @@ import random
 import string
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
+
+from ..services.email_service import send_otp_email_async, build_institutional_email_html
 
 logger = logging.getLogger(__name__)
 
@@ -43,115 +46,12 @@ def _generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
 
-def _build_institutional_email_html(title: str, headline: str, message: str, otp_code: str = None, warning: str = None) -> str:
-    """Construye una plantilla de correo electrónico HTML institucional SENA / WorkLex con paleta oficial."""
-    otp_block = ""
-    if otp_code:
-        otp_block = f"""
-        <div style="margin: 28px 0; text-align: center;">
-          <div style="display: inline-block; background-color: #f0fdf4; border: 2px dashed #39A900; border-radius: 12px; padding: 18px 32px;">
-            <p style="margin: 0 0 6px 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #15803d; letter-spacing: 1.5px;">Código de Verificación Seguro</p>
-            <p style="margin: 0; font-family: 'Courier New', Courier, monospace, sans-serif; font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #00324D;">{otp_code}</p>
-          </div>
-          <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Válido únicamente durante los próximos <strong>10 minutos</strong>.</p>
-        </div>
-        """
-    warning_block = ""
-    if warning:
-        warning_block = f"""
-        <div style="margin-top: 20px; padding: 12px 16px; background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 12px; color: #92400e; line-height: 1.5;">
-          <strong>Nota de seguridad:</strong> {warning}
-        </div>
-        """
-    else:
-        warning_block = """
-        <div style="margin-top: 20px; padding: 12px 16px; background-color: #f8fafc; border-left: 4px solid #94a3b8; border-radius: 6px; font-size: 12px; color: #475569; line-height: 1.5;">
-          <strong>Seguridad:</strong> Nunca compartas este código con terceros ni con personal no autorizado. El equipo de soporte SENA jamás te solicitará tu código por teléfono ni redes sociales.
-        </div>
-        """
-
-    return f"""<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 10px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;" cellspacing="0" cellpadding="0">
-          <!-- Institutional Header -->
-          <tr>
-            <td style="background-color: #00324D; padding: 24px 30px; text-align: left; border-bottom: 4px solid #39A900;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="left">
-                    <span style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px;">Work<span style="color: #39A900;">Lex</span> <span style="font-size: 13px; font-weight: 600; color: #93c5fd; background: rgba(255,255,255,0.12); padding: 3px 8px; border-radius: 6px; margin-left: 6px;">SENA</span></span>
-                  </td>
-                  <td align="right">
-                    <span style="font-size: 11px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 1px;">Dirección de Formación</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Body Content -->
-          <tr>
-            <td style="padding: 32px 30px 24px 30px;">
-              <h1 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #00324D; line-height: 1.3;">{headline}</h1>
-              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #334155;">{message}</p>
-              {otp_block}
-              {warning_block}
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f8fafc; padding: 20px 30px; border-top: 1px solid #e2e8f0; text-align: center;">
-              <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #64748b;">Servicio Nacional de Aprendizaje SENA — Colombia</p>
-              <p style="margin: 0 0 8px 0; font-size: 11px; color: #94a3b8;">Plataforma Institucional de Bilingüismo y Evaluación Lingüística Adaptativa</p>
-              <p style="margin: 0; font-size: 10px; color: #cbd5e1;">Este es un mensaje generado automáticamente por el sistema de seguridad WorkLex SENA. Por favor, no respondas a este correo.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-"""
+_build_institutional_email_html = build_institutional_email_html
 
 
 def _send_otp_email(email: str, code: str, reason: str = "verificación de acceso"):
-    """Envía el OTP por correo con plantilla HTML institucional SENA y fallback de consola."""
-    print(f"[OTP NOTIFICATION] Código de 6 dígitos generado para {email}: {code} ({reason})")
-    try:
-        subject = f'Tu código de verificación ({code}) - WorkLex SENA'
-        plain_msg = (
-            f"WorkLex SENA - Verificación de Seguridad\n\n"
-            f"Tu código de verificación para {reason} es: {code}\n\n"
-            f"Este código expira en 10 minutos.\n\n"
-            f"Si no solicitaste este código, ignora este mensaje."
-        )
-        html_msg = _build_institutional_email_html(
-            title="Código de Verificación - WorkLex SENA",
-            headline="Código de Verificación de Seguridad",
-            message=f"Has solicitado un código de verificación para <strong>{reason}</strong> en la plataforma WorkLex SENA. Utiliza el siguiente código para continuar:",
-            otp_code=code,
-        )
-        send_mail(
-            subject=subject,
-            message=plain_msg,
-            html_message=html_msg,
-            from_email=None,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-        logger.info(f"[OTP NOTIFICATION] Correo SMTP enviado exitosamente a {email} ({reason})")
-    except Exception as e:
-        logger.error(f"[OTP EMAIL ERROR] Fallo SMTP enviando correo a {email}: {e}. Fallback consola activo: {code}", exc_info=True)
-        print(f"[OTP EMAIL WARNING] Error enviando correo a {email}: {e}. (Fallback de consola activo: {code})")
+    """Envía el OTP por correo de forma asíncrona no bloqueante con failover."""
+    send_otp_email_async(email=email, code=code, reason=reason, is_registration=False)
 
 
 def _is_valid_email_domain(email: str) -> tuple[bool, str]:
@@ -256,16 +156,17 @@ class LoginAPIView(APIView):
             expires_at=timezone.now() + timedelta(minutes=10),
         )
 
-        try:
-            _send_otp_email(email, code)
-        except Exception as e:
-            print(f"[MFA LOGIN] Error al enviar correo a {email}: {e}")
+        _send_otp_email(email, code, reason="inicio de sesión (MFA)")
         print(f"[MFA LOGIN] Código de verificación generado para {email}: {code}")
 
+        dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
         return Response({
+            'status': 'success',
             'mfa_required': True,
             'email': email,
-            'message': 'Código de verificación enviado al correo electrónico.',
+            'message': 'Código de verificación generado y enviado al correo electrónico.',
+            'otp_code': dev_otp,
+            'code': dev_otp,
         }, status=status.HTTP_200_OK)
 
 
@@ -389,16 +290,17 @@ class ResendOTPAPIView(APIView):
             expires_at=timezone.now() + timedelta(minutes=10),
         )
 
-        try:
-            _send_otp_email(email, code)
-        except Exception as e:
-            print(f"[OTP RESEND] Error al enviar correo a {email}: {e}")
+        _send_otp_email(email, code, reason="reenvío de verificación")
 
+        dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
         return Response({
-            'message': 'Código reenviado. Revisa tu correo.',
+            'status': 'success',
+            'message': 'Código reenviado exitosamente. Revisa tu correo.',
             'email': email,
             'requires_otp': True,
-        })
+            'otp_code': dev_otp,
+            'code': dev_otp,
+        }, status=status.HTTP_200_OK)
 
 
 class ResetPasswordAPIView(APIView):
@@ -746,43 +648,22 @@ class RegisterSendOTPAPIView(APIView):
             expires_at=timezone.now() + timedelta(minutes=10),
         )
 
-        # Fallback seguro en desarrollo: SIEMPRE imprimir código en consola backend
-        print(f"[REGISTER OTP] Código de 6 dígitos generado para {email}: {code}")
+        # Despacho asíncrono no bloqueante (evita congelar Gunicorn si los puertos SMTP están bloqueados en el VPS)
+        send_otp_email_async(
+            email=email,
+            code=code,
+            reason="registro de aprendiz",
+            is_registration=True
+        )
 
-        try:
-            subject = f'Verifica tu correo ({code}) - WorkLex SENA'
-            plain_msg = (
-                f"WorkLex SENA - Verificación de Registro\n\n"
-                f"Tu código de verificación para crear tu cuenta es: {code}\n\n"
-                f"Este código expira en 10 minutos.\n\n"
-                f"Si no solicitaste este código, ignora este mensaje."
-            )
-            html_msg = _build_institutional_email_html(
-                title="Verifica tu correo - WorkLex SENA",
-                headline="Verificación de Registro de Aprendiz",
-                message="Bienvenido a <strong>WorkLex SENA</strong>. Para completar la creación de tu cuenta institucional y confirmar tu identidad, ingresa el siguiente código de 6 dígitos:",
-                otp_code=code,
-            )
-            send_mail(
-                subject=subject,
-                message=plain_msg,
-                html_message=html_msg,
-                from_email=None,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-            logger.info(f"[REGISTER OTP] Correo SMTP de registro enviado exitosamente a {email}")
-        except Exception as e:
-            logger.error(
-                f"[REGISTER OTP] Fallo SMTP al enviar correo de verificación a {email}: {e}. Petición completada con fallback activo.",
-                exc_info=True
-            )
-            print(f"[REGISTER OTP] Error al enviar correo a {email}: {e}. (Fallback de consola activo: {code})")
-
+        dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
         return Response({
+            'status': 'success',
             'requires_otp': True,
-            'message': 'Código de verificación enviado. Revisa tu correo.',
+            'message': 'Código de verificación generado y despachado. Revisa tu correo.',
             'email': email,
+            'otp_code': dev_otp,
+            'code': dev_otp,
         }, status=status.HTTP_200_OK)
 
 
