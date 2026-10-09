@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   worklex_minio:
-    image: minio/minio:latest
+    image: elestio/minio:latest
     container_name: worklex_minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
@@ -30,7 +30,7 @@ services:
           memory: 200M
 
   worklex_minio_provision:
-    image: minio/mc:latest
+    image: worklex_provision:latest
     container_name: worklex_minio_provision
     restart: "no"
     depends_on:
