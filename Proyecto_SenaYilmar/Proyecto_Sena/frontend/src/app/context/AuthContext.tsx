@@ -88,13 +88,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         const userData = await getMe();
-        setUser(userData);
+        const storedAvatar = localStorage.getItem('userAvatar') || '';
+        setUser({ ...userData, avatar: userData.avatar || storedAvatar });
 
         // Actualizar localStorage para compatibilidad y persistencia
         localStorage.setItem('userName', userData.name);
         localStorage.setItem('userRole', userData.role);
         localStorage.setItem('userId', userData.id);
         localStorage.setItem('userEmail', userData.email || '');
+        if (userData.avatar || storedAvatar) {
+          localStorage.setItem('userAvatar', userData.avatar || storedAvatar);
+        }
         localStorage.setItem('userPermissions', JSON.stringify(userData.permissions));
         localStorage.setItem('userProgram', userData.program || '');
         if (userData.enrolledPrograms) {
@@ -127,18 +131,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('accessToken', response.access);
       localStorage.setItem('refreshToken', response.refresh);
        
-      setUser(response.user);
+      const storedAvatar = localStorage.getItem('userAvatar') || '';
+      const userWithAvatar = { ...response.user, avatar: response.user.avatar || storedAvatar };
+      setUser(userWithAvatar);
 
       localStorage.setItem('userName', response.user.name);
       localStorage.setItem('userRole', response.user.role);
       localStorage.setItem('userId', response.user.id);
       localStorage.setItem('userEmail', response.user.email || '');
+      if (userWithAvatar.avatar) {
+        localStorage.setItem('userAvatar', userWithAvatar.avatar);
+      }
       localStorage.setItem('userPermissions', JSON.stringify(response.user.permissions));
       localStorage.setItem('userProgram', response.user.program || '');
       if (response.user.enrolledPrograms) {
         localStorage.setItem('userEnrolledPrograms', JSON.stringify(response.user.enrolledPrograms));
       }
-      return response.user;
+      return userWithAvatar;
     } catch (err) {
       console.log("AUTH CONTEXT ERROR:", err);
       throw err;
@@ -169,10 +178,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const updateUser = (updatedUser: ApiUser) => {
-    setUser(updatedUser);
+    const storedAvatar = localStorage.getItem('userAvatar') || '';
+    const finalAvatar = updatedUser.avatar !== undefined ? updatedUser.avatar : storedAvatar;
+    const mergedUser = { ...updatedUser, avatar: finalAvatar };
+
+    setUser(mergedUser);
     localStorage.setItem('userName', updatedUser.name);
     localStorage.setItem('userRole', updatedUser.role);
     localStorage.setItem('userId', updatedUser.id);
+    if (finalAvatar) {
+      localStorage.setItem('userAvatar', finalAvatar);
+    } else {
+      localStorage.removeItem('userAvatar');
+    }
     localStorage.setItem('userPermissions', JSON.stringify(updatedUser.permissions));
     localStorage.setItem('userProgram', updatedUser.program || '');
   };

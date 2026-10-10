@@ -555,6 +555,21 @@ export async function getTestResults(userId?: string): Promise<ApiTestResult[]> 
   return handleResponse<ApiTestResult[]>(response);
 }
 
+export async function getExamHistory(userId?: string): Promise<ApiTestResult[]> {
+  try {
+    const url = userId ? `${API_BASE}/exam/history/?user_id=${userId}` : `${API_BASE}/exam/history/`;
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    if (response.ok) {
+      return await handleResponse<ApiTestResult[]>(response);
+    }
+  } catch (err) {
+    console.warn("Falla en /exam/history/, usando fallback /results/:", err);
+  }
+  return getTestResults(userId);
+}
+
 export async function createTestResult(data: any): Promise<ApiTestResult> {
   const response = await fetch(`${API_BASE}/results/`, {
     method: 'POST',
@@ -1083,6 +1098,7 @@ export const api = {
   updateDocument,
   deleteDocument,
   getTestResults,
+  getExamHistory,
   createTestResult,
   addFeedback,
   getRanking,

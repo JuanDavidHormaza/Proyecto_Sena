@@ -89,6 +89,8 @@ urlpatterns = [
     path('exam/speaking',                           SpeakingSubmissionAPIView.as_view(), name='exam-speaking'),
     path('exam/tts/',                               ExamTTSAPIView.as_view(),            name='exam-tts-slash'),
     path('exam/tts',                                ExamTTSAPIView.as_view(),            name='exam-tts'),
+    path('exam/history/',                           TestResultViewSet.as_view({'get': 'list'}), name='exam-history-slash'),
+    path('exam/history',                            TestResultViewSet.as_view({'get': 'list'}), name='exam-history'),
 
     # ── ViewSets ───────────────────────────────────────────────────────
     path('', include(router.urls)),

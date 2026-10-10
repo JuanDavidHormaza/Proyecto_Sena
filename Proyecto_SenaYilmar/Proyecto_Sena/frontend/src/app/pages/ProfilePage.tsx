@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft, Award, BadgeCheck, BookOpen, ClipboardList, Mail,
   Phone, Shield, UserRound, Globe, Calendar, RefreshCw, CheckCircle2,
-  GraduationCap, Plus, AlertCircle, Sparkles, Loader2, Edit3, X, Save
+  GraduationCap, Plus, AlertCircle, Sparkles, Loader2, Edit3, X, Save,
+  Camera, Upload, Trash2
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -47,6 +48,14 @@ const PERMISSIONS: Array<{ key: string; label: string }> = [
   { key: "canConfigureLevels", label: "Configurar niveles" },
 ];
 
+const PRESET_AVATARS = [
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+];
+
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "U";
@@ -82,6 +91,9 @@ export function ProfilePage() {
   // Estado para edición completa de perfil
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+
   const [editForm, setEditForm] = useState({
     firstName: "",
     lastName: "",
@@ -105,6 +117,51 @@ export function ProfilePage() {
       });
     }
   }, [user]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      toast.warning("Formato no compatible. Por favor sube una imagen en formato JPG, PNG o WebP.", "Formato Inválido");
+      return;
+    }
+
+    const MAX_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
+    if (file.size > MAX_SIZE_BYTES) {
+      toast.warning("La imagen seleccionada supera el límite máximo de 3 MB.", "Archivo muy pesado");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setEditForm((prev) => ({ ...prev, avatar: dataUrl }));
+        setSelectedAvatarFile(file);
+        toast.success("Foto seleccionada. Recuerda guardar los cambios para aplicarla a tu perfil.", "Vista previa lista");
+      }
+    };
+    reader.onerror = () => {
+      toast.error("Ocurrió un error al procesar la imagen seleccionada.");
+    };
+    reader.readAsDataURL(file);
+
+    e.target.value = "";
+  };
+
+  const handleRemoveAvatar = () => {
+    setEditForm((prev) => ({ ...prev, avatar: "" }));
+    setSelectedAvatarFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    toast.info("Foto removida. Guarda los cambios para actualizar tu perfil.");
+  };
+
+  const handleSelectPresetAvatar = (presetUrl: string) => {
+    setEditForm((prev) => ({ ...prev, avatar: presetUrl }));
+    setSelectedAvatarFile(null);
+  };
 
   const [editErrors, setEditErrors] = useState<{
     firstName?: string | null;
@@ -255,6 +312,20 @@ export function ProfilePage() {
 
     setIsSavingProfile(true);
     try {
+      let finalAvatar = editForm.avatar;
+
+      // Si se seleccionó un archivo nuevo, intentar subirlo al almacenamiento de media
+      if (selectedAvatarFile) {
+        try {
+          const uploadRes = await api.uploadMediaFile(selectedAvatarFile, "dictionary-images");
+          if (uploadRes?.url || uploadRes?.proxy_url) {
+            finalAvatar = uploadRes.url || uploadRes.proxy_url;
+          }
+        } catch (uploadErr) {
+          console.warn("Subida a almacenamiento no completada, conservando Base64 para avatar:", uploadErr);
+        }
+      }
+
       const payload: Partial<api.ApiUser> = {
         firstName: editForm.firstName.trim(),
         lastName: editForm.lastName.trim(),
@@ -263,14 +334,17 @@ export function ProfilePage() {
         docNum: editForm.docNum.trim(),
         email: editForm.email.trim().toLowerCase(),
         phoneNum: editForm.phoneNum.trim(),
-        avatar: editForm.avatar,
+        avatar: finalAvatar,
       };
       const updated = await api.updateUser(user.id, payload);
-      updateUser(updated);
+      const userWithAvatar = { ...updated, avatar: finalAvatar };
+      updateUser(userWithAvatar);
+      localStorage.setItem("userAvatar", finalAvatar || "");
       localStorage.setItem("userName", updated.name);
       localStorage.setItem("userEmail", updated.email);
       toast.success("Perfil institucional actualizado con éxito en la plataforma.", "Cambios Guardados");
       setShowEditModal(false);
+      setSelectedAvatarFile(null);
     } catch (err: any) {
       toast.error(err?.message || "No se pudo actualizar la información de perfil.");
     } finally {
@@ -306,10 +380,122 @@ export function ProfilePage() {
   const program = user?.program || localStorage.getItem("userProgram") || "";
   const mainBadgeLabel = isStudent ? (program || "Programa no registrado") : roleLabel;
   const subtitle = isStudent ? "Aprendiz SENA" : (program || "English Level Test");
-  const activePermissions = PERMISSIONS.filter((permission) => Boolean(user?.permissions?.[permission.key as keyof typeof user.permissions]));
-  const lastScore = Number(localStorage.getItem("quizScore") || "0");
-  const totalQuestions = Number(localStorage.getItem("totalQuestions") || "0");
-  const currentLevel = localStorage.getItem("quizLevel") || (totalQuestions > 0 ? "Registrado" : "Sin nivel");
+  // ─── Resumen de Pruebas: Conexión con historial y último intento ─────────────
+  const [examHistory, setExamHistory] = useState<{
+    lastScore: number | null;
+    currentLevel: string | null;
+    totalQuestions: number | null;
+    correctAnswers: number | null;
+    completedAt: string | null;
+    hasAttempt: boolean;
+    isLoading: boolean;
+  }>(() => {
+    try {
+      const storedResult = localStorage.getItem("lastTestResult");
+      const storedSummary = localStorage.getItem("lastTestSummary");
+      const qScore = localStorage.getItem("quizScore");
+      const qLevel = localStorage.getItem("quizLevel");
+      const qTotal = localStorage.getItem("totalQuestions");
+
+      if (storedResult) {
+        const parsed = JSON.parse(storedResult);
+        return {
+          lastScore: typeof parsed.score === "number" ? parsed.score : null,
+          currentLevel: parsed.level && parsed.level !== "Sin Nivel" ? parsed.level : null,
+          totalQuestions: typeof parsed.totalQuestions === "number" ? parsed.totalQuestions : (typeof parsed.total_questions === "number" ? parsed.total_questions : null),
+          correctAnswers: typeof parsed.correctAnswers === "number" ? parsed.correctAnswers : (typeof parsed.correct_answers === "number" ? parsed.correct_answers : null),
+          completedAt: parsed.completedAt || null,
+          hasAttempt: true,
+          isLoading: true,
+        };
+      }
+      if (storedSummary) {
+        const parsed = JSON.parse(storedSummary);
+        return {
+          lastScore: typeof parsed.finalScore === "number" ? parsed.finalScore : null,
+          currentLevel: parsed.finalLevel && parsed.finalLevel !== "Sin Nivel" ? parsed.finalLevel : null,
+          totalQuestions: typeof parsed.totalQuestions === "number" ? parsed.totalQuestions : null,
+          correctAnswers: typeof parsed.correctAnswers === "number" ? parsed.correctAnswers : null,
+          completedAt: null,
+          hasAttempt: true,
+          isLoading: true,
+        };
+      }
+      if (qScore !== null && qScore !== "") {
+        return {
+          lastScore: Number(qScore),
+          currentLevel: qLevel && qLevel !== "Sin nivel" ? qLevel : null,
+          totalQuestions: qTotal ? Number(qTotal) : null,
+          correctAnswers: null,
+          completedAt: null,
+          hasAttempt: true,
+          isLoading: true,
+        };
+      }
+    } catch {}
+
+    return {
+      lastScore: null,
+      currentLevel: null,
+      totalQuestions: null,
+      correctAnswers: null,
+      completedAt: null,
+      hasAttempt: false,
+      isLoading: true,
+    };
+  });
+
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchHistory = async () => {
+      const uId = user?.id || localStorage.getItem("userId");
+      try {
+        const results = await api.getExamHistory(uId ? String(uId) : undefined);
+        if (isCancelled) return;
+        if (Array.isArray(results) && results.length > 0) {
+          const filtered = uId
+            ? results.filter((r) => String(r.userId) === String(uId))
+            : results;
+          const candidateList = filtered.length > 0 ? filtered : results;
+
+          const sorted = [...candidateList].sort((a, b) => {
+            const timeA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+            const timeB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+            return timeB - timeA;
+          });
+
+          const latest = sorted[0];
+          setExamHistory({
+            lastScore: typeof latest.score === "number" ? latest.score : null,
+            currentLevel: latest.level && latest.level !== "Sin Nivel" ? latest.level : null,
+            totalQuestions: typeof latest.totalQuestions === "number" ? latest.totalQuestions : null,
+            correctAnswers: typeof latest.correctAnswers === "number" ? latest.correctAnswers : null,
+            completedAt: latest.completedAt || null,
+            hasAttempt: true,
+            isLoading: false,
+          });
+        } else {
+          setExamHistory((prev) => ({
+            ...prev,
+            isLoading: false,
+          }));
+        }
+      } catch (err) {
+        console.warn("No se pudo obtener el historial de exámenes:", err);
+        if (!isCancelled) {
+          setExamHistory((prev) => ({
+            ...prev,
+            isLoading: false,
+          }));
+        }
+      }
+    };
+
+    fetchHistory();
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?.id]);
 
   const enrolledPrograms = user?.enrolledPrograms && user.enrolledPrograms.length > 0
     ? user.enrolledPrograms
@@ -752,30 +938,114 @@ export function ProfilePage() {
 
           {isStudent && (
             <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl border border-border shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+              <div className="flex items-center justify-between gap-3 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
+                    <ClipboardList className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-foreground">Resumen de Pruebas</h2>
+                    <p className="text-xs text-muted-foreground">Historial y diagnóstico CEFR</p>
+                  </div>
                 </div>
-                <h2 className="font-semibold text-foreground">Resumen de Pruebas</h2>
+                {examHistory.hasAttempt && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/results")}
+                    className="text-xs font-semibold text-sena-blue hover:underline cursor-pointer"
+                  >
+                    Ver detalles
+                  </button>
+                )}
               </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Última puntuación</span>
-                  <span className="font-bold text-foreground">{lastScore}%</span>
+
+              {examHistory.isLoading ? (
+                <div className="py-8 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin text-sena-blue" />
+                  <span className="text-xs">Cargando métricas de pruebas...</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Nivel actual</span>
-                  <span className="font-bold text-sena-green">{currentLevel}</span>
+              ) : examHistory.hasAttempt && examHistory.lastScore !== null ? (
+                <div className="space-y-4">
+                  <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-muted-foreground block">Última puntuación</span>
+                      <span className="text-xl font-bold text-foreground">{examHistory.lastScore}%</span>
+                    </div>
+                    <span
+                      className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                        examHistory.lastScore >= 60
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}
+                    >
+                      {examHistory.lastScore >= 60 ? "Aprobado" : "Por reforzar"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
+                    <span className="text-xs text-muted-foreground font-medium">Nivel actual</span>
+                    <span className="text-sm font-bold text-sena-green px-2.5 py-0.5 rounded-lg bg-sena-green/10 border border-sena-green/20">
+                      {examHistory.currentLevel || "A1"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
+                    <span className="text-xs text-muted-foreground font-medium">Preguntas registradas</span>
+                    <span className="text-sm font-bold text-foreground">
+                      {examHistory.totalQuestions !== null ? `${examHistory.totalQuestions} preguntas` : "12 preguntas"}
+                      {examHistory.correctAnswers !== null && (
+                        <span className="text-xs font-normal text-muted-foreground ml-1">
+                          ({examHistory.correctAnswers} correctas)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {examHistory.completedAt && (
+                    <div className="pt-3 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
+                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.8} />
+                      <span>Evaluación: {formatDate(examHistory.completedAt)}</span>
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate("/results")}
+                      className="flex-1 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-foreground transition-colors cursor-pointer text-center"
+                    >
+                      Ver Resultados
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/quiz")}
+                      className="flex-1 py-2 text-xs font-semibold rounded-xl bg-sena-green hover:bg-emerald-700 text-white transition-colors cursor-pointer text-center"
+                    >
+                      Nueva Prueba
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Preguntas registradas</span>
-                  <span className="font-bold text-foreground">{totalQuestions}</span>
+              ) : (
+                <div className="py-6 px-3 text-center">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 mb-3">
+                    <Award className="w-6 h-6" strokeWidth={1.8} />
+                  </div>
+                  <h3 className="font-bold text-foreground text-sm mb-1">
+                    Sin pruebas realizadas
+                  </h3>
+                  <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                    Aún no has presentado tu primera prueba diagnóstica en Worklex SENA.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/quiz")}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Comenzar Examen</span>
+                  </button>
                 </div>
-                <div className="pt-4 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
-                  <Calendar className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
-                  <span>Miembro desde: {formatDate(user?.createdAt)}</span>
-                </div>
-              </div>
+              )}
             </motion.div>
           )}
         </div>
@@ -811,56 +1081,83 @@ export function ProfilePage() {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   Avatar / Foto de Perfil
                 </label>
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="w-16 h-16 rounded-2xl bg-sena-green/10 border-2 border-sena-green/30 flex items-center justify-center overflow-hidden flex-shrink-0 text-xl font-bold text-sena-green">
+
+                {/* Input de archivo real oculto */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                <div className="flex items-center gap-4 mb-4">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="relative w-20 h-20 rounded-2xl bg-sena-green/10 border-2 border-sena-green/30 flex items-center justify-center overflow-hidden flex-shrink-0 text-xl font-bold text-sena-green group cursor-pointer shadow-xs"
+                    title="Haz clic para seleccionar una foto de tu dispositivo"
+                  >
                     {editForm.avatar ? (
-                      <img src={editForm.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      <img src={editForm.avatar} alt="Foto de perfil" className="w-full h-full object-cover" />
                     ) : (
                       getInitials(`${editForm.firstName} ${editForm.lastName}` || name)
                     )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold gap-1">
+                      <Camera className="w-5 h-5" />
+                      <span>Cambiar</span>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <input
-                      type="url"
-                      placeholder="URL de foto o avatar (https://...)"
-                      value={editForm.avatar}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, avatar: e.target.value }))}
-                      className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-muted/30"
-                    />
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      Pega la URL de tu imagen o selecciona uno de los avatares predeterminados:
+
+                  <div className="flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>{editForm.avatar ? "Cambiar foto" : "Subir foto"}</span>
+                      </button>
+
+                      {editForm.avatar && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveAvatar}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-semibold border border-rose-200 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Quitar foto</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Formatos compatibles: JPG, PNG o WebP. Tamaño máximo: 3 MB.
                     </p>
                   </div>
                 </div>
-                {/* Avatares rápidos */}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {[
-                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
-                  ].map((presetUrl, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setEditForm((prev) => ({ ...prev, avatar: presetUrl }))}
-                      className={`w-9 h-9 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                        editForm.avatar === presetUrl ? "border-sena-green scale-110 shadow-sm" : "border-transparent opacity-75 hover:opacity-100"
-                      }`}
-                    >
-                      <img src={presetUrl} alt={`Avatar ${idx + 1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                  {editForm.avatar && (
-                    <button
-                      type="button"
-                      onClick={() => setEditForm((prev) => ({ ...prev, avatar: "" }))}
-                      className="px-2 py-1 text-[11px] text-muted-foreground hover:text-rose-600 rounded-lg border border-border hover:border-rose-300 transition-colors cursor-pointer"
-                    >
-                      Quitar foto
-                    </button>
-                  )}
+
+                {/* Avatares rápidos predeterminados */}
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[11px] font-semibold text-slate-700 mb-2">
+                    O selecciona un avatar institucional predeterminado:
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {PRESET_AVATARS.map((presetUrl, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectPresetAvatar(presetUrl)}
+                        className={`w-9 h-9 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                          editForm.avatar === presetUrl
+                            ? "border-sena-green scale-110 shadow-sm ring-2 ring-sena-green/30"
+                            : "border-transparent opacity-75 hover:opacity-100"
+                        }`}
+                        title={`Avatar predeterminado ${idx + 1}`}
+                      >
+                        <img src={presetUrl} alt={`Avatar ${idx + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

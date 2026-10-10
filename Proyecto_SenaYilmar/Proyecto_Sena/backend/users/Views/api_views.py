@@ -791,7 +791,10 @@ class UserViewSet(viewsets.ViewSet):
             user.program = request.data.get('program') or None
             user.save(update_fields=['program'])
 
-        return Response(_build_user_response(user, updated_person))
+        resp_data = _build_user_response(user, updated_person)
+        if 'avatar' in request.data:
+            resp_data['avatar'] = request.data.get('avatar')
+        return Response(resp_data)
 
     @action(detail=False, methods=['post'], url_path='switch-program')
     def switch_program(self, request):
@@ -1032,8 +1035,12 @@ class TestResultViewSet(viewsets.ViewSet):
         if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
             program_filter = getattr(request.user, 'program', None)
 
+        user_id = request.query_params.get('user_id')
+        if not user_id and getattr(request.user, 'role_id', None) == 'APRENDIZ':
+            user_id = getattr(request.user, 'user_id', None) or getattr(request.user, 'pk', None)
+
         return Response(TestResultController.list_all(
-            user_id=request.query_params.get('user_id'),
+            user_id=user_id,
             program_filter=program_filter,
         ))
 
