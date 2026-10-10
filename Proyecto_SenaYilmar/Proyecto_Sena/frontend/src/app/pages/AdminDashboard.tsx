@@ -1365,32 +1365,30 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             {isSuperAdmin ? "SuperAdministrador" : "Administrador"}
           </div>
           <nav className="space-y-1">
-            {tabs.map(tab => {
+            {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id as TabType)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all cursor-pointer ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer ${
                     isActive
                       ? "bg-sena-green text-white shadow-lg shadow-sena-green/25 font-bold"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <tab.icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
-                    <span className="text-sm">{tab.label}</span>
-                  </div>
+                  <tab.icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
+                  <span className="text-sm font-semibold">{tab.label}</span>
                   {Boolean(tab.badge && tab.badge > 0) && (
                     <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-black transition-all ${
+                      className={`ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold leading-none rounded-full transition-all whitespace-nowrap ${
                         isActive
-                          ? "bg-white text-sena-green shadow-xs"
-                          : "bg-amber-500 text-white shadow-xs animate-pulse"
+                          ? "bg-white text-emerald-700 shadow-sm"
+                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
                       }`}
                       title={`${tab.badge} solicitudes pendientes`}
                     >
-                      [ {tab.badge} ]
+                      {tab.badge}
                     </span>
                   )}
                 </button>
@@ -1442,7 +1440,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
           </div>
         </div>
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
-          {tabs.map(tab => {
+          {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -1452,15 +1450,17 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   isActive ? "bg-sena-green text-white font-bold" : "bg-muted text-muted-foreground"
                 }`}
               >
-                <tab.icon className="w-4 h-4" strokeWidth={1.8} />
+                <tab.icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.8} />
                 <span>{tab.label}</span>
                 {Boolean(tab.badge && tab.badge > 0) && (
                   <span
-                    className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                      isActive ? "bg-white text-sena-green" : "bg-amber-500 text-white"
+                    className={`ml-1 inline-flex items-center justify-center min-w-[18px] h-4.5 px-1.5 text-[10px] font-bold leading-none rounded-full transition-all whitespace-nowrap ${
+                      isActive
+                        ? "bg-white text-emerald-700 shadow-xs"
+                        : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
                     }`}
                   >
-                    [ {tab.badge} ]
+                    {tab.badge}
                   </span>
                 )}
               </button>
