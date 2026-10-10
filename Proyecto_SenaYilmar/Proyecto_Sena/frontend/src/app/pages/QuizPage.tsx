@@ -452,14 +452,15 @@ export function QuizPage() {
         speechTranscript
       );
 
-      // Normalizar para otorgar 100% de precisión si la palabra coincide exactamente
-      const normTranscript = (speechTranscript || evalResult.transcription || "")
+      // Normalizar para verificar coincidencia exacta si hay texto detectado
+      const spokenText = (speechTranscript || evalResult.transcription || "").trim();
+      const normTranscript = spokenText
         .toLowerCase()
         .replace(/[^a-z0-9\s]+/g, " ")
         .trim()
         .replace(/\s+/g, " ");
 
-      if (normTranscript && normTranscript === normTarget) {
+      if (normTranscript && normTarget && normTranscript === normTarget) {
         evalResult.score = 100;
         evalResult.is_correct = true;
         evalResult.feedback = `¡Excelente pronunciación! Coincidencia exacta (100%) con "${cleanedTarget}".`;
@@ -469,64 +470,59 @@ export function QuizPage() {
       setSpeakingAttempts(nextAttempts);
       setSpeakingEvaluation(evalResult);
 
-      // Si aprueba (>= 70%) o alcanza 3 intentos, registramos formalmente en el motor
-      if (evalResult.score >= 70 || nextAttempts >= 3) {
+      // Si aprueba (>= 70% e is_correct) o alcanza 3 intentos, registramos formalmente en el motor
+      const isApproved = Boolean(evalResult.is_correct && evalResult.score >= 70);
+      if (isApproved || nextAttempts >= 3) {
         engineRef.current.submitSpeakingAnswer(
           evalResult.audio_url || recordedAudioUrl || "",
           recordedAudioBlob,
           {
             score: evalResult.score,
-            isCorrect: evalResult.is_correct,
+            isCorrect: isApproved,
             feedback: evalResult.feedback,
-            transcription: evalResult.transcription,
+            transcription: evalResult.transcription || spokenText,
           }
         );
         refreshEngine();
-        if (evalResult.is_correct) {
+        if (isApproved) {
           setScore((prev) => prev + 1);
         }
       }
     } catch (err: any) {
-      console.warn("Fallo en servicio fonético externo, activando evaluación pedagógica resiliente:", err);
-      // Fallback resiliente
-      const normTranscriptFallback = (speechTranscript || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]+/g, " ")
-        .trim()
-        .replace(/\s+/g, " ");
-      const isExactMatch = Boolean(normTranscriptFallback && normTranscriptFallback === normTarget);
+      console.error("Error al evaluar pronunciación:", err);
+      const nextAttempts = speakingAttempts + 1;
+      setSpeakingAttempts(nextAttempts);
 
       const fallbackEval: api.SpeakingEvaluationResponse = {
-        success: true,
-        score: isExactMatch ? 100 : 85,
-        transcription: speechTranscript || cleanedTarget || "Pronunciación correcta",
+        success: false,
+        score: 0,
+        transcription: speechTranscript || "Audio no reconocido",
+        spoken_text: speechTranscript || "",
         target: cleanedTarget || "Término",
+        expected_text: cleanedTarget || "Término",
         ipa: `/${(cleanedTarget || "term").toLowerCase()}/`,
-        is_correct: true,
-        feedback: isExactMatch
-          ? `¡Excelente pronunciación! Coincidencia exacta (100%) con "${cleanedTarget}".`
-          : "Pronunciación registrada y validada correctamente para este ejercicio.",
-        phonetic_tips: "Continúa manteniendo una articulación clara y fluida en cada término técnico.",
+        is_correct: false,
+        feedback: "No se pudo conectar con el servicio de evaluación de pronunciación. Verifica tu conexión e intenta de nuevo.",
+        phonetic_tips: "Verifica que el micrófono funcione correctamente y articula claramente cada término técnico.",
         audio_url: recordedAudioUrl || "",
       };
 
-      const nextAttempts = speakingAttempts + 1;
-      setSpeakingAttempts(nextAttempts);
       setSpeakingEvaluation(fallbackEval);
-      setMediaError(null);
+      setMediaError("No se pudo completar la evaluación de pronunciación. Intenta de nuevo.");
 
-      engineRef.current.submitSpeakingAnswer(
-        recordedAudioUrl || "",
-        recordedAudioBlob,
-        {
-          score: fallbackEval.score,
-          isCorrect: fallbackEval.is_correct,
-          feedback: fallbackEval.feedback,
-          transcription: fallbackEval.transcription,
-        }
-      );
-      refreshEngine();
-      setScore((prev) => prev + 1);
+      if (nextAttempts >= 3) {
+        engineRef.current.submitSpeakingAnswer(
+          recordedAudioUrl || "",
+          recordedAudioBlob,
+          {
+            score: 0,
+            isCorrect: false,
+            feedback: fallbackEval.feedback,
+            transcription: fallbackEval.transcription,
+          }
+        );
+        refreshEngine();
+      }
     } finally {
       setIsEvaluatingSpeaking(false);
     }
@@ -1307,16 +1303,22 @@ export function QuizPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xl space-y-5"
+                    className={`rounded-3xl border bg-white p-6 sm:p-7 shadow-xl space-y-5 transition-all ${
+                      speakingEvaluation.is_correct && speakingEvaluation.score >= 70
+                        ? "border-emerald-300 shadow-emerald-500/10 ring-1 ring-emerald-500/20"
+                        : speakingEvaluation.score >= 40
+                        ? "border-amber-300 shadow-amber-500/10 ring-1 ring-amber-500/20"
+                        : "border-rose-300 shadow-rose-500/10 ring-1 ring-rose-500/20"
+                    }`}
                   >
                     {/* Cabecera del Feedback con Círculo de Porcentaje Dinámico */}
                     <div className="flex flex-col sm:flex-row items-center gap-5 pb-5 border-b border-slate-100">
                       {/* Círculo de porcentaje */}
                       <div
                         className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center border-2 shadow-sm flex-shrink-0 transition-transform ${
-                          speakingEvaluation.score === 100
+                          speakingEvaluation.is_correct && speakingEvaluation.score === 100
                             ? "border-emerald-500 bg-emerald-500/15 text-emerald-800 shadow-emerald-500/10"
-                            : speakingEvaluation.score >= 70
+                            : speakingEvaluation.is_correct && speakingEvaluation.score >= 70
                             ? "border-emerald-500/60 bg-emerald-50 text-emerald-800"
                             : speakingEvaluation.score >= 40
                             ? "border-amber-500/60 bg-amber-50 text-amber-800"
@@ -1331,12 +1333,12 @@ export function QuizPage() {
 
                       <div className="text-center sm:text-left flex-1">
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
-                          {speakingEvaluation.score === 100 ? (
+                          {speakingEvaluation.is_correct && speakingEvaluation.score === 100 ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 shadow-2xs">
                               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                               100% Precisión Exacta
                             </span>
-                          ) : speakingEvaluation.score >= 70 ? (
+                          ) : speakingEvaluation.is_correct && speakingEvaluation.score >= 70 ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 shadow-2xs">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               Aprobado (Umbral Superado)
@@ -1349,7 +1351,7 @@ export function QuizPage() {
                           ) : (
                             <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-800 shadow-2xs">
                               <HelpCircle className="w-3.5 h-3.5 text-rose-600" />
-                              Refuerzo Recomendado
+                              Incorrecto / Reprobado
                             </span>
                           )}
                           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
@@ -1365,20 +1367,46 @@ export function QuizPage() {
 
                     {/* Comparación Fonética: Detectado vs Esperado */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+                      <div
+                        className={`rounded-2xl p-4 border shadow-2xs transition-colors ${
+                          speakingEvaluation.is_correct && speakingEvaluation.score >= 70
+                            ? "bg-emerald-50/50 border-emerald-200"
+                            : speakingEvaluation.score >= 40
+                            ? "bg-amber-50/60 border-amber-300/80"
+                            : "bg-rose-50/60 border-rose-300/80"
+                        }`}
+                      >
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                             <Mic className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
                             Transcripción Detectada
                           </span>
-                          {speakingEvaluation.score === 100 && (
+                          {speakingEvaluation.is_correct && speakingEvaluation.score === 100 ? (
                             <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                               Exacta
                             </span>
+                          ) : speakingEvaluation.is_correct && speakingEvaluation.score >= 70 ? (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                              Válida
+                            </span>
+                          ) : speakingEvaluation.score >= 40 ? (
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                              Imprecisa
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                              No coincide
+                            </span>
                           )}
                         </div>
-                        <p className="text-base font-semibold text-slate-900 italic">
-                          "{speakingEvaluation.transcription}"
+                        <p
+                          className={`text-base font-semibold italic ${
+                            speakingEvaluation.is_correct && speakingEvaluation.score >= 70
+                              ? "text-slate-900"
+                              : "text-rose-900"
+                          }`}
+                        >
+                          "{speakingEvaluation.transcription || speakingEvaluation.spoken_text || "Audio no reconocido / silencio"}"
                         </p>
                       </div>
 

@@ -945,6 +945,8 @@ export interface SpeakingEvaluationResponse {
   score: number;
   transcription: string;
   target: string;
+  spoken_text?: string;
+  expected_text?: string;
   ipa?: string;
   is_correct: boolean;
   feedback: string;
@@ -986,35 +988,24 @@ export async function evaluateSpeakingAudio(
 
     if (response.ok) {
       const result: SpeakingEvaluationResponse = await response.json();
-      const normTarget = (targetWord || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").trim().replace(/\s+/g, " ");
-      const normTranscript = (transcript || result.transcription || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").trim().replace(/\s+/g, " ");
-      if (normTranscript && normTranscript === normTarget) {
-        result.score = 100;
-        result.is_correct = true;
-        result.feedback = `¡Excelente pronunciación! Coincidencia fonética y léxica exacta (100%) con "${targetWord}".`;
-      }
       return result;
     }
   } catch (err) {
-    console.warn("Fallo o timeout en evaluación de audio por red, activando fallback seguro:", err);
+    console.warn("Fallo o timeout en evaluación de audio por red:", err);
   }
 
-  // Fallback resiliente garantizado si la llamada al backend falla o da timeout
-  const normTargetFallback = (targetWord || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").trim().replace(/\s+/g, " ");
-  const normTranscriptFallback = (transcript || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").trim().replace(/\s+/g, " ");
-  const isExact = Boolean(normTranscriptFallback && normTranscriptFallback === normTargetFallback);
-
+  // Fallback seguro ante fallo de red o error de servidor: NUNCA aprobar automáticamente
   return {
-    success: true,
-    score: isExact ? 100 : 85,
-    transcription: transcript || targetWord,
+    success: false,
+    score: 0,
+    transcription: transcript || "",
+    spoken_text: transcript || "",
     target: targetWord,
+    expected_text: targetWord,
     ipa: `/${targetWord.toLowerCase()}/`,
-    is_correct: true,
-    feedback: isExact
-      ? `¡Excelente pronunciación! Coincidencia fonética y léxica exacta (100%) con "${targetWord}".`
-      : `Pronunciación registrada y validada para "${targetWord}". Articulación y dicción correctas.`,
-    phonetic_tips: "Continúa manteniendo una articulación clara y fluida en cada término técnico.",
+    is_correct: false,
+    feedback: "No se pudo conectar con el servicio de evaluación de pronunciación. Verifica tu conexión e intenta de nuevo.",
+    phonetic_tips: "Verifica que el micrófono funcione correctamente y articula claramente cada término técnico.",
     audio_url: "",
   };
 }

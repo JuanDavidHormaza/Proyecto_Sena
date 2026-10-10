@@ -7,6 +7,7 @@ import uuid
 import logging
 import difflib
 import re
+import unicodedata
 import random
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -338,66 +339,110 @@ class ExamEvaluateSpeakingAPIView(APIView):
                     logger.warning(f"No se pudo guardar audio en MinIO ({e}), usando proxy URL estática.")
                     proxy_url = f"/api/media/exam-submissions/{file_key}"
 
-            # 2. Transcripción y Comparación Fonética / Léxica
-            # Normalizar tanto la transcripción como el término técnico objetivo:
-            # convertir a minúsculas, eliminar signos de puntuación, comillas dobles/simples y espacios extras
-            target_clean = " ".join(re.sub(r'[^a-zA-Z0-9\s]', ' ', str(target_word)).strip().lower().split())
-            transcription_clean = " ".join(re.sub(r'[^a-zA-Z0-9\s]', ' ', str(client_transcript)).strip().lower().split()) if client_transcript else ""
-
-            # Si la transcripción limpia coincide exactamente con el término objetivo limpio:
-            # Asignar de inmediato el 100% de precisión y omitir penalizaciones
-            if transcription_clean and transcription_clean == target_clean:
-                score = 100
-                transcription = client_transcript.strip()
-                is_correct = True
-            elif audio_file and audio_file.size > 1000 and not client_transcript:
-                score = 88
-                transcription = target_word
-                is_correct = True
-            else:
-                transcription = client_transcript if client_transcript else target_word
-                # Calcular similitud textual/fonética
-                ratio = difflib.SequenceMatcher(None, transcription_clean, target_clean).ratio()
-                score = int(round(ratio * 100))
-
-                # Ajuste pedagógico si contiene la palabra objetivo
-                if target_clean and target_clean in transcription_clean:
-                    score = max(score, 85)
-
-                is_correct = score >= 70
-
-            # Obtener consejos fonéticos específicos
+            # 2. Obtener consejos fonéticos e IPA para el término objetivo
             clean_lookup = re.sub(r'[^a-zA-Z0-9\s]', '', str(target_word)).lower().strip()
             ipa, tips = self.PHONETIC_GUIDES.get(
                 clean_lookup,
                 (f"/{clean_lookup}/", f"Pronuncia con claridad cada sílaba de '{target_word}'.")
             )
 
-            if score == 100:
+            # 3. Validación estricta de recepción de audio y transcripción
+            if not audio_file or (hasattr(audio_file, 'size') and audio_file.size == 0):
+                return Response({
+                    "success": False,
+                    "score": 0,
+                    "is_correct": False,
+                    "spoken_text": "",
+                    "expected_text": target_word,
+                    "transcription": "",
+                    "target": target_word,
+                    "ipa": ipa,
+                    "feedback": "No se recibió audio o el archivo está vacío. Por favor graba de nuevo tu pronunciación.",
+                    "phonetic_tips": tips,
+                    "audio_url": ""
+                }, status=status.HTTP_200_OK)
+
+            if not client_transcript or not client_transcript.strip():
+                return Response({
+                    "success": False,
+                    "score": 0,
+                    "is_correct": False,
+                    "spoken_text": "",
+                    "expected_text": target_word,
+                    "transcription": "",
+                    "target": target_word,
+                    "ipa": ipa,
+                    "feedback": "No se pudo reconocer la pronunciación o el audio no fue claro. Intenta de nuevo.",
+                    "phonetic_tips": tips,
+                    "audio_url": proxy_url
+                }, status=status.HTTP_200_OK)
+
+            # 4. Normalización estricta y algoritmo de calificación fonética/léxica
+            def _clean_str(text):
+                if not text:
+                    return ""
+                norm = unicodedata.normalize('NFD', str(text).lower())
+                no_accents = "".join(c for c in norm if unicodedata.category(c) != 'Mn')
+                alphanumeric = re.sub(r'[^a-z0-9\s]', ' ', no_accents)
+                return " ".join(alphanumeric.split())
+
+            target_clean = _clean_str(target_word)
+            spoken_clean = _clean_str(client_transcript)
+            target_tokens = target_clean.split()
+            spoken_tokens = spoken_clean.split()
+
+            if spoken_clean == target_clean:
+                score = 100
+                is_correct = True
                 feedback = f"¡Excelente pronunciación! Coincidencia exacta (100%) con el término '{target_word}'."
-            elif score >= 85:
-                feedback = f"¡Excelente pronunciación! Fonética clara y precisa ({score}%)."
-            elif score >= 70:
-                feedback = f"Buena pronunciación. El término '{target_word}' se comprende satisfactoriamente ({score}%)."
-            elif score >= 50:
-                feedback = f"Pronunciación comprensible. Se detectó '{transcription}', pero refuerza la articulación de '{target_word}' ({score}%)."
             else:
-                feedback = f"Pronunciación registrada para '{target_word}'. Escucha el modelo y refuerza el ejercicio ({score}%)."
+                base_ratio = difflib.SequenceMatcher(None, spoken_clean, target_clean).ratio()
+
+                if target_clean in spoken_clean:
+                    in_tokens = target_clean in spoken_tokens or all(t in spoken_tokens for t in target_tokens)
+                    token_ratio = 0.92 if in_tokens else 0.86
+                    ratio = max(base_ratio, token_ratio)
+                elif len(target_tokens) == 1 and spoken_tokens:
+                    best_token_ratio = max(
+                        difflib.SequenceMatcher(None, tok, target_clean).ratio()
+                        for tok in spoken_tokens
+                    )
+                    ratio = max(base_ratio, best_token_ratio)
+                else:
+                    ratio = base_ratio
+
+                score = int(round(ratio * 100))
+                score = max(0, min(100, score))
+
+                if score >= 85:
+                    is_correct = True
+                    feedback = f"¡Excelente pronunciación! Fonética clara y precisa ({score}%) para '{target_word}'."
+                elif score >= 70:
+                    is_correct = True
+                    feedback = f"Buena pronunciación. El término '{target_word}' se comprende satisfactoriamente ({score}%). Dijiste '{client_transcript}'."
+                elif score >= 50:
+                    is_correct = False
+                    feedback = f"Pronunciación imprecisa ({score}%). Dijiste '{client_transcript}', se esperaba '{target_word}'. Intenta articular con más claridad."
+                else:
+                    is_correct = False
+                    feedback = f"Pronunciación incorrecta ({score}%). Dijiste '{client_transcript}' cuando se esperaba '{target_word}'. Escucha el modelo y repite."
 
             return Response({
                 "success": True,
                 "score": score,
-                "transcription": transcription,
+                "is_correct": is_correct,
+                "spoken_text": client_transcript,
+                "expected_text": target_word,
+                "transcription": client_transcript,
                 "target": target_word,
                 "ipa": ipa,
-                "is_correct": is_correct,
                 "feedback": feedback,
                 "phonetic_tips": tips,
                 "audio_url": proxy_url
             }, status=status.HTTP_200_OK)
 
         except Exception as global_err:
-            logger.warning(f"[PHONETIC EVALUATION RESILIENT FALLBACK] {global_err}")
+            logger.exception(f"[PHONETIC EVALUATION ERROR] {global_err}")
             safe_target = request.data.get('target_word') or request.data.get('target') or "Término Técnico"
             clean_safe = re.sub(r'[^a-zA-Z0-9\s]', '', str(safe_target)).lower().strip()
             ipa_fb, tips_fb = self.PHONETIC_GUIDES.get(
@@ -405,13 +450,15 @@ class ExamEvaluateSpeakingAPIView(APIView):
                 (f"/{clean_safe}/", f"Pronuncia con claridad cada sílaba de '{safe_target}'.")
             )
             return Response({
-                "success": True,
-                "score": 85,
-                "transcription": safe_target,
+                "success": False,
+                "score": 0,
+                "is_correct": False,
+                "spoken_text": "",
+                "expected_text": safe_target,
+                "transcription": "",
                 "target": safe_target,
                 "ipa": ipa_fb,
-                "is_correct": True,
-                "feedback": f"Pronunciación registrada y validada para '{safe_target}'. Articulación y dicción correctas.",
+                "feedback": "Ocurrió un error al procesar la evaluación de pronunciación. Por favor intenta de nuevo.",
                 "phonetic_tips": tips_fb,
-                "audio_url": f"/api/media/exam-submissions/fallback_{clean_safe}.webm"
+                "audio_url": ""
             }, status=status.HTTP_200_OK)
