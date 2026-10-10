@@ -28,6 +28,17 @@ import {
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
 import { useToast } from "../components/Toast";
+import {
+  validateName,
+  sanitizeName,
+  validateEmail,
+  sanitizeEmail,
+  validateDocumentNumber,
+  sanitizeDocumentNumber,
+  isNumericDocType,
+  getFieldValidationClass,
+} from "../utils/validation";
+import { FieldError } from "../components/FieldError";
 
 type Step = 1 | 2 | 3;
 
@@ -95,6 +106,143 @@ export function RegisterPage() {
   const [existingData, setExistingData] = useState<api.CheckDocumentResponse | null>(null);
   const [isDocDuplicate, setIsDocDuplicate] = useState(false);
   const [isEmailDuplicate, setIsEmailDuplicate] = useState(false);
+
+  // ── Validaciones estrictas campo por campo ────────────────────────────────
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string | null;
+    lastName?: string | null;
+    docNum?: string | null;
+    email?: string | null;
+  }>({});
+
+  const [touched, setTouched] = useState<{
+    firstName?: boolean;
+    lastName?: boolean;
+    docNum?: boolean;
+    email?: boolean;
+  }>({});
+
+  const handleFirstNameChange = (val: string) => {
+    const hasInvalidChars = !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/.test(val);
+    const sanitized = sanitizeName(val);
+    setFormData((prev) => ({ ...prev, firstName: sanitized }));
+    setTouched((prev) => ({ ...prev, firstName: true }));
+    if (hasInvalidChars) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        firstName: "Solo se permiten letras y espacios. No se aceptan números ni caracteres especiales.",
+      }));
+    } else {
+      const v = validateName(sanitized, "Nombres");
+      setFieldErrors((prev) => ({ ...prev, firstName: v.error }));
+    }
+  };
+
+  const handleFirstNameBlur = () => {
+    setTouched((prev) => ({ ...prev, firstName: true }));
+    const v = validateName(formData.firstName, "Nombres");
+    setFieldErrors((prev) => ({ ...prev, firstName: v.error }));
+  };
+
+  const handleLastNameChange = (val: string) => {
+    const hasInvalidChars = !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/.test(val);
+    const sanitized = sanitizeName(val);
+    setFormData((prev) => ({ ...prev, lastName: sanitized }));
+    setTouched((prev) => ({ ...prev, lastName: true }));
+    if (hasInvalidChars) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        lastName: "Solo se permiten letras y espacios. No se aceptan números ni caracteres especiales.",
+      }));
+    } else {
+      const v = validateName(sanitized, "Apellidos");
+      setFieldErrors((prev) => ({ ...prev, lastName: v.error }));
+    }
+  };
+
+  const handleLastNameBlur = () => {
+    setTouched((prev) => ({ ...prev, lastName: true }));
+    const v = validateName(formData.lastName, "Apellidos");
+    setFieldErrors((prev) => ({ ...prev, lastName: v.error }));
+  };
+
+  const handleDocNumChange = (val: string) => {
+    const isNum = isNumericDocType(formData.docType);
+    const hasInvalidChars = isNum ? /\D/.test(val) : /[^a-zA-Z0-9]/.test(val);
+    const sanitized = sanitizeDocumentNumber(val, formData.docType);
+    setFormData((prev) => ({ ...prev, docNum: sanitized }));
+    setTouched((prev) => ({ ...prev, docNum: true }));
+
+    if (hasInvalidChars) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        docNum: isNum
+          ? "El número de documento debe contener únicamente dígitos numéricos (entre 6 y 10 dígitos) sin puntos, comas ni espacios."
+          : "El número de documento debe contener únicamente caracteres alfanuméricos (entre 6 y 15 caracteres) sin símbolos ni espacios.",
+      }));
+    } else {
+      const v = validateDocumentNumber(sanitized, formData.docType);
+      setFieldErrors((prev) => ({ ...prev, docNum: v.error }));
+    }
+  };
+
+  const handleDocNumBlur = () => {
+    setTouched((prev) => ({ ...prev, docNum: true }));
+    const v = validateDocumentNumber(formData.docNum, formData.docType);
+    setFieldErrors((prev) => ({ ...prev, docNum: v.error }));
+    if (v.isValid) {
+      handleCheckDocument();
+    }
+  };
+
+  const handleDocTypeChange = (newType: string) => {
+    const sanitized = sanitizeDocumentNumber(formData.docNum, newType);
+    setFormData((prev) => ({ ...prev, docType: newType, docNum: sanitized }));
+    if (touched.docNum || sanitized) {
+      const v = validateDocumentNumber(sanitized, newType);
+      setFieldErrors((prev) => ({ ...prev, docNum: v.error }));
+    }
+    if (sanitized) handleCheckDocument(newType, sanitized);
+  };
+
+  const handleEmailChange = (val: string) => {
+    const hasSpaces = /\s/.test(val);
+    const sanitized = sanitizeEmail(val);
+    setFormData((prev) => ({ ...prev, email: sanitized }));
+    setTouched((prev) => ({ ...prev, email: true }));
+    if (isEmailDuplicate) setIsEmailDuplicate(false);
+
+    if (hasSpaces) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        email: "Ingresa un correo electrónico válido (ej. usuario@ejemplo.com). No se permiten espacios ni caracteres inválidos.",
+      }));
+    } else {
+      const v = validateEmail(sanitized);
+      setFieldErrors((prev) => ({ ...prev, email: v.error }));
+    }
+  };
+
+  const handleEmailBlur = () => {
+    setTouched((prev) => ({ ...prev, email: true }));
+    const v = validateEmail(formData.email);
+    setFieldErrors((prev) => ({ ...prev, email: v.error }));
+    if (v.isValid) {
+      handleCheckEmail();
+    }
+  };
+
+  const isStep1Valid =
+    Boolean(formData.firstName.trim()) &&
+    Boolean(formData.lastName.trim()) &&
+    Boolean(formData.docNum.trim()) &&
+    Boolean(formData.email.trim()) &&
+    !fieldErrors.firstName &&
+    !fieldErrors.lastName &&
+    !fieldErrors.docNum &&
+    !fieldErrors.email &&
+    !isDocDuplicate &&
+    !isEmailDuplicate;
 
   // ── Estado del Paso 3 (OTP) ───────────────────────────────────────────────
   const [otpEmail, setOtpEmail] = useState("");
@@ -184,18 +332,32 @@ export function RegisterPage() {
     }
   };
 
-  // ── Paso 1 → 2: validación de datos personales ────────────────────────────
+  // ── Paso 1 → 2: validación estricta de datos personales ───────────────────
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !formData.firstName.trim() ||
-      !formData.lastName.trim() ||
-      !formData.email.trim() ||
-      !formData.docType ||
-      !formData.docNum.trim()
-    ) {
-      setError("Debes completar todos los campos obligatorios.");
-      toast.warning("Debes completar todos los campos obligatorios.", "Campos Incompletos");
+
+    const vFirstName = validateName(formData.firstName, "Nombres");
+    const vLastName = validateName(formData.lastName, "Apellidos");
+    const vDoc = validateDocumentNumber(formData.docNum, formData.docType);
+    const vEmail = validateEmail(formData.email);
+
+    const newErrors = {
+      firstName: vFirstName.error,
+      lastName: vLastName.error,
+      docNum: vDoc.error,
+      email: vEmail.error,
+    };
+    setFieldErrors(newErrors);
+    setTouched({ firstName: true, lastName: true, docNum: true, email: true });
+
+    if (!vFirstName.isValid || !vLastName.isValid || !vDoc.isValid || !vEmail.isValid) {
+      setError("Por favor completa y corrige los campos con caracteres inválidos o incompletos.");
+      toast.warning("Por favor corrige los campos con errores antes de continuar.", "Campos Inválidos");
+      return;
+    }
+
+    if (isDocDuplicate) {
+      toast.warning("Este número de documento ya está registrado.", "Documento Duplicado");
       return;
     }
 
@@ -420,8 +582,9 @@ export function RegisterPage() {
     }
   };
 
-  const inputClass =
-    "w-full pl-12 pr-4 py-3 bg-muted/40 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all text-sm";
+  const baseInputClass =
+    "w-full pl-12 pr-4 py-3 bg-muted/40 rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-all text-sm";
+  const inputClass = `${baseInputClass} border border-border focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green`;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -532,11 +695,7 @@ export function RegisterPage() {
                       <select
                         required
                         value={formData.docType}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData({ ...formData, docType: val });
-                          if (formData.docNum) handleCheckDocument(val, formData.docNum);
-                        }}
+                        onChange={(e) => handleDocTypeChange(e.target.value)}
                         className={`${inputClass} appearance-none cursor-pointer`}
                       >
                         {documentTypes.map((d) => (
@@ -557,11 +716,12 @@ export function RegisterPage() {
                         placeholder="1020304050"
                         required
                         value={formData.docNum}
-                        onChange={(e) => setFormData({ ...formData, docNum: e.target.value })}
-                        onBlur={() => handleCheckDocument()}
-                        className={inputClass}
+                        onChange={(e) => handleDocNumChange(e.target.value)}
+                        onBlur={handleDocNumBlur}
+                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.docNum, fieldErrors.docNum, formData.docNum)}`}
                       />
                     </div>
+                    <FieldError error={touched.docNum ? fieldErrors.docNum : undefined} />
                   </div>
                 </div>
 
@@ -625,10 +785,12 @@ export function RegisterPage() {
                         placeholder="Juan David"
                         required
                         value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                        className={inputClass}
+                        onChange={(e) => handleFirstNameChange(e.target.value)}
+                        onBlur={handleFirstNameBlur}
+                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.firstName, fieldErrors.firstName, formData.firstName)}`}
                       />
                     </div>
+                    <FieldError error={touched.firstName ? fieldErrors.firstName : undefined} />
                   </div>
 
                   <div>
@@ -640,10 +802,12 @@ export function RegisterPage() {
                         placeholder="Hormaza Miranda"
                         required
                         value={formData.lastName}
-                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                        className={inputClass}
+                        onChange={(e) => handleLastNameChange(e.target.value)}
+                        onBlur={handleLastNameBlur}
+                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.lastName, fieldErrors.lastName, formData.lastName)}`}
                       />
                     </div>
+                    <FieldError error={touched.lastName ? fieldErrors.lastName : undefined} />
                   </div>
                 </div>
 
@@ -658,15 +822,12 @@ export function RegisterPage() {
                       required
                       autoComplete="email"
                       value={formData.email}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData({ ...formData, email: val });
-                        if (isEmailDuplicate) setIsEmailDuplicate(false);
-                      }}
-                      onBlur={() => handleCheckEmail()}
-                      className={inputClass}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      onBlur={handleEmailBlur}
+                      className={`${baseInputClass} ${getFieldValidationClass(!!touched.email, fieldErrors.email, formData.email)}`}
                     />
                   </div>
+                  <FieldError error={touched.email ? fieldErrors.email : undefined} />
 
                   {/* Banner de correo duplicado */}
                   {isEmailDuplicate && (
@@ -743,7 +904,8 @@ export function RegisterPage() {
 
                 <button
                   type="submit"
-                  className="w-full bg-sena-green hover:bg-sena-green/90 text-white py-3.5 rounded-xl font-bold transition-all shadow-md shadow-sena-green/20 cursor-pointer mt-2"
+                  disabled={!isStep1Valid || isDocDuplicate || isEmailDuplicate}
+                  className="w-full bg-sena-green hover:bg-sena-green/90 text-white py-3.5 rounded-xl font-bold transition-all shadow-md shadow-sena-green/20 cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continuar a Contraseña y Acceso
                 </button>

@@ -5,6 +5,14 @@ import { ArrowLeft, Bell, Check, Lock, Mail, Phone, Save, User, GraduationCap, P
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import * as api from "../services/api";
+import {
+  validateName,
+  sanitizeName,
+  validateEmail,
+  sanitizeEmail,
+  getFieldValidationClass,
+} from "../utils/validation";
+import { FieldError } from "../components/FieldError";
 
 const ROLE_DASHBOARDS: Record<string, string> = {
   superadmin: "/admin",
@@ -31,6 +39,15 @@ export function SettingsPage() {
   const [enrollError, setEnrollError] = useState("");
   const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
 
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string | null;
+    email?: string | null;
+  }>({});
+  const [touched, setTouched] = useState<{
+    name?: boolean;
+    email?: boolean;
+  }>({});
+
   const role = user?.role || localStorage.getItem("userRole") || "student";
   const enrolledPrograms = user?.enrolledPrograms && user.enrolledPrograms.length > 0
     ? user.enrolledPrograms
@@ -54,6 +71,48 @@ export function SettingsPage() {
     loadFichaRequests();
   }, [user]);
 
+  const handleNameChange = (val: string) => {
+    const hasInvalidChars = !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/.test(val);
+    const sanitized = sanitizeName(val);
+    setName(sanitized);
+    setTouched((prev) => ({ ...prev, name: true }));
+    if (hasInvalidChars) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        name: "Solo se permiten letras y espacios. No se aceptan números ni caracteres especiales.",
+      }));
+    } else {
+      const v = validateName(sanitized, "Nombre completo");
+      setFieldErrors((prev) => ({ ...prev, name: v.error }));
+    }
+  };
+
+  const handleNameBlur = () => {
+    setTouched((prev) => ({ ...prev, name: true }));
+    const v = validateName(name, "Nombre completo");
+    setFieldErrors((prev) => ({ ...prev, name: v.error }));
+  };
+
+  const handleEmailChange = (val: string) => {
+    const sanitized = sanitizeEmail(val);
+    setEmail(sanitized);
+    setTouched((prev) => ({ ...prev, email: true }));
+    const v = validateEmail(sanitized);
+    setFieldErrors((prev) => ({ ...prev, email: v.error }));
+  };
+
+  const handleEmailBlur = () => {
+    setTouched((prev) => ({ ...prev, email: true }));
+    const v = validateEmail(email);
+    setFieldErrors((prev) => ({ ...prev, email: v.error }));
+  };
+
+  const isFormValid =
+    !fieldErrors.name &&
+    !fieldErrors.email &&
+    name.trim().length >= 2 &&
+    email.trim().length > 0;
+
   const handleRequestFicha = async (e: FormEvent) => {
     e.preventDefault();
     const cleanFicha = newFichaInput.trim();
@@ -76,6 +135,19 @@ export function SettingsPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!user?.id) return;
+
+    const nameVal = validateName(name, "Nombre completo");
+    const emailVal = validateEmail(email);
+
+    if (!nameVal.isValid || !emailVal.isValid) {
+      setTouched({ name: true, email: true });
+      setFieldErrors({
+        name: nameVal.error,
+        email: emailVal.error,
+      });
+      setMessage("Por favor corrige los campos con errores antes de continuar.");
+      return;
+    }
 
     setIsSaving(true);
     setMessage("");
@@ -134,33 +206,51 @@ export function SettingsPage() {
               </div>
 
               <div className="space-y-4">
-                <label className="block">
-                  <span className="block text-sm font-medium text-foreground mb-1.5">Nombre completo</span>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
-                      required
-                    />
-                  </div>
-                </label>
+                <div>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-foreground mb-1.5">Nombre completo</span>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(event) => handleNameChange(event.target.value)}
+                        onBlur={handleNameBlur}
+                        className={`w-full pl-12 pr-4 py-3 bg-white border rounded-xl focus:outline-none transition-all ${getFieldValidationClass(
+                          !!touched.name,
+                          fieldErrors.name,
+                          name
+                        )}`}
+                        placeholder="Tu nombre completo"
+                        required
+                      />
+                    </div>
+                  </label>
+                  <FieldError error={touched.name ? fieldErrors.name : undefined} />
+                </div>
 
-                <label className="block">
-                  <span className="block text-sm font-medium text-foreground mb-1.5">Correo electronico</span>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
-                      required
-                    />
-                  </div>
-                </label>
+                <div>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-foreground mb-1.5">Correo electronico</span>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(event) => handleEmailChange(event.target.value)}
+                        onBlur={handleEmailBlur}
+                        className={`w-full pl-12 pr-4 py-3 bg-white border rounded-xl focus:outline-none transition-all ${getFieldValidationClass(
+                          !!touched.email,
+                          fieldErrors.email,
+                          email
+                        )}`}
+                        placeholder="usuario@ejemplo.com"
+                        required
+                      />
+                    </div>
+                  </label>
+                  <FieldError error={touched.email ? fieldErrors.email : undefined} />
+                </div>
 
                 <label className="block">
                   <span className="block text-sm font-medium text-foreground mb-1.5">Telefono</span>
@@ -336,7 +426,7 @@ export function SettingsPage() {
 
             <button
               type="submit"
-              disabled={isSaving || !user?.id}
+              disabled={isSaving || !user?.id || !isFormValid}
               className="w-full flex items-center justify-center gap-2 bg-sena-green text-white py-3 rounded-xl hover:bg-sena-green-dark transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSaving ? <Check className="w-5 h-5" strokeWidth={1.8} /> : <Save className="w-5 h-5" strokeWidth={1.8} />}

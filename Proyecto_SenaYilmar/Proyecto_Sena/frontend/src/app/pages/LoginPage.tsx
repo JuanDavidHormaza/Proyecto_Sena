@@ -23,6 +23,12 @@ import {
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
 import { useToast } from "../components/Toast";
+import {
+  validateEmail,
+  sanitizeEmail,
+  getFieldValidationClass,
+} from "../utils/validation";
+import { FieldError } from "../components/FieldError";
 
 type LoginStep = "credentials" | "otp";
 
@@ -50,6 +56,29 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailTouched, setEmailTouched] = useState(false);
+
+  const handleEmailChange = (val: string) => {
+    const hasSpaces = /\s/.test(val);
+    const sanitized = sanitizeEmail(val);
+    setFormData((p) => ({ ...p, email: sanitized }));
+    setEmailTouched(true);
+    if (hasSpaces) {
+      setEmailError(
+        "Ingresa un correo electrónico válido (ej. usuario@ejemplo.com). No se permiten espacios ni caracteres inválidos."
+      );
+    } else {
+      const v = validateEmail(sanitized);
+      setEmailError(v.error);
+    }
+  };
+
+  const handleEmailBlur = () => {
+    setEmailTouched(true);
+    const v = validateEmail(formData.email);
+    setEmailError(v.error);
+  };
 
   // Paso 2: Código de Verificación OTP
   const [otpEmail, setOtpEmail] = useState("");
@@ -137,9 +166,13 @@ export function LoginPage() {
     e.preventDefault();
     setError("");
 
-    if (!formData.email.trim() || !formData.password) {
-      setError("Debes completar todos los campos obligatorios.");
-      toast.warning("Debes completar todos los campos obligatorios.", "Campos Incompletos");
+    const v = validateEmail(formData.email);
+    setEmailTouched(true);
+    setEmailError(v.error);
+
+    if (!v.isValid || !formData.password) {
+      setError("Por favor ingresa un correo electrónico válido y tu contraseña.");
+      toast.warning("Por favor verifica tus datos de acceso.", "Campos Inválidos");
       return;
     }
 
@@ -334,11 +367,17 @@ export function LoginPage() {
                         required
                         autoComplete="email"
                         value={formData.email}
-                        onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
+                        onChange={(e) => handleEmailChange(e.target.value)}
+                        onBlur={handleEmailBlur}
                         placeholder="tu@correo.com"
-                        className="w-full pl-10 pr-4 py-3 border border-input rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all"
+                        className={`w-full pl-10 pr-4 py-3 border rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none transition-all text-sm ${getFieldValidationClass(
+                          emailTouched,
+                          emailError,
+                          formData.email
+                        )}`}
                       />
                     </div>
+                    <FieldError error={emailTouched ? emailError : undefined} />
                   </div>
 
                   <div>
@@ -378,7 +417,7 @@ export function LoginPage() {
 
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
                     className="w-full bg-sena-green hover:bg-sena-green/90 text-white py-3.5 rounded-xl font-bold transition-all shadow-md shadow-sena-green/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
                   >
                     {isLoading ? (

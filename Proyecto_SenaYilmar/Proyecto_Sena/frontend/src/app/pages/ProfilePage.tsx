@@ -10,6 +10,17 @@ import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import * as api from "../services/api";
 import { useToast } from "../components/Toast";
+import {
+  validateName,
+  sanitizeName,
+  validateEmail,
+  sanitizeEmail,
+  validateDocumentNumber,
+  sanitizeDocumentNumber,
+  isNumericDocType,
+  getFieldValidationClass,
+} from "../utils/validation";
+import { FieldError } from "../components/FieldError";
 
 const ROLE_LABELS: Record<string, string> = {
   superadmin: "SuperAdministrador",
@@ -95,9 +106,153 @@ export function ProfilePage() {
     }
   }, [user]);
 
+  const [editErrors, setEditErrors] = useState<{
+    firstName?: string | null;
+    lastName?: string | null;
+    docNum?: string | null;
+    email?: string | null;
+  }>({});
+  const [editTouched, setEditTouched] = useState<{
+    firstName?: boolean;
+    lastName?: boolean;
+    docNum?: boolean;
+    email?: boolean;
+  }>({});
+
+  const handleEditFirstNameChange = (val: string) => {
+    const hasInvalidChars = !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/.test(val);
+    const sanitized = sanitizeName(val);
+    setEditForm((prev) => ({ ...prev, firstName: sanitized }));
+    setEditTouched((prev) => ({ ...prev, firstName: true }));
+    if (hasInvalidChars) {
+      setEditErrors((prev) => ({
+        ...prev,
+        firstName: "Solo se permiten letras y espacios. No se aceptan números ni caracteres especiales.",
+      }));
+    } else {
+      const v = validateName(sanitized, "Nombres");
+      setEditErrors((prev) => ({ ...prev, firstName: v.error }));
+    }
+  };
+
+  const handleEditFirstNameBlur = () => {
+    setEditTouched((prev) => ({ ...prev, firstName: true }));
+    const v = validateName(editForm.firstName, "Nombres");
+    setEditErrors((prev) => ({ ...prev, firstName: v.error }));
+  };
+
+  const handleEditLastNameChange = (val: string) => {
+    const hasInvalidChars = !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/.test(val);
+    const sanitized = sanitizeName(val);
+    setEditForm((prev) => ({ ...prev, lastName: sanitized }));
+    setEditTouched((prev) => ({ ...prev, lastName: true }));
+    if (hasInvalidChars) {
+      setEditErrors((prev) => ({
+        ...prev,
+        lastName: "Solo se permiten letras y espacios. No se aceptan números ni caracteres especiales.",
+      }));
+    } else {
+      const v = validateName(sanitized, "Apellidos");
+      setEditErrors((prev) => ({ ...prev, lastName: v.error }));
+    }
+  };
+
+  const handleEditLastNameBlur = () => {
+    setEditTouched((prev) => ({ ...prev, lastName: true }));
+    const v = validateName(editForm.lastName, "Apellidos");
+    setEditErrors((prev) => ({ ...prev, lastName: v.error }));
+  };
+
+  const handleEditDocNumChange = (val: string) => {
+    const isNum = isNumericDocType(editForm.docType);
+    const hasInvalidChars = isNum ? /\D/.test(val) : /[^a-zA-Z0-9]/.test(val);
+    const sanitized = sanitizeDocumentNumber(val, editForm.docType);
+    setEditForm((prev) => ({ ...prev, docNum: sanitized }));
+    setEditTouched((prev) => ({ ...prev, docNum: true }));
+
+    if (hasInvalidChars) {
+      setEditErrors((prev) => ({
+        ...prev,
+        docNum: isNum
+          ? "El número de documento debe contener únicamente dígitos numéricos (entre 6 y 10 dígitos) sin puntos, comas ni espacios."
+          : "El número de documento debe contener únicamente caracteres alfanuméricos (entre 6 y 15 caracteres) sin símbolos ni espacios.",
+      }));
+    } else {
+      const v = validateDocumentNumber(sanitized, editForm.docType);
+      setEditErrors((prev) => ({ ...prev, docNum: v.error }));
+    }
+  };
+
+  const handleEditDocNumBlur = () => {
+    setEditTouched((prev) => ({ ...prev, docNum: true }));
+    const v = validateDocumentNumber(editForm.docNum, editForm.docType);
+    setEditErrors((prev) => ({ ...prev, docNum: v.error }));
+  };
+
+  const handleEditDocTypeChange = (newType: string) => {
+    const sanitized = sanitizeDocumentNumber(editForm.docNum, newType);
+    setEditForm((prev) => ({ ...prev, docType: newType, docNum: sanitized }));
+    if (editTouched.docNum || sanitized) {
+      const v = validateDocumentNumber(sanitized, newType);
+      setEditErrors((prev) => ({ ...prev, docNum: v.error }));
+    }
+  };
+
+  const handleEditEmailChange = (val: string) => {
+    const hasSpaces = /\s/.test(val);
+    const sanitized = sanitizeEmail(val);
+    setEditForm((prev) => ({ ...prev, email: sanitized }));
+    setEditTouched((prev) => ({ ...prev, email: true }));
+
+    if (hasSpaces) {
+      setEditErrors((prev) => ({
+        ...prev,
+        email: "Ingresa un correo electrónico válido (ej. usuario@ejemplo.com). No se permiten espacios ni caracteres inválidos.",
+      }));
+    } else {
+      const v = validateEmail(sanitized);
+      setEditErrors((prev) => ({ ...prev, email: v.error }));
+    }
+  };
+
+  const handleEditEmailBlur = () => {
+    setEditTouched((prev) => ({ ...prev, email: true }));
+    const v = validateEmail(editForm.email);
+    setEditErrors((prev) => ({ ...prev, email: v.error }));
+  };
+
+  const isEditFormValid =
+    Boolean(editForm.firstName.trim()) &&
+    Boolean(editForm.lastName.trim()) &&
+    Boolean(editForm.docNum.trim()) &&
+    Boolean(editForm.email.trim()) &&
+    !editErrors.firstName &&
+    !editErrors.lastName &&
+    !editErrors.docNum &&
+    !editErrors.email;
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
+
+    const vFirstName = validateName(editForm.firstName, "Nombres");
+    const vLastName = validateName(editForm.lastName, "Apellidos");
+    const vDoc = validateDocumentNumber(editForm.docNum, editForm.docType);
+    const vEmail = validateEmail(editForm.email);
+
+    setEditErrors({
+      firstName: vFirstName.error,
+      lastName: vLastName.error,
+      docNum: vDoc.error,
+      email: vEmail.error,
+    });
+    setEditTouched({ firstName: true, lastName: true, docNum: true, email: true });
+
+    if (!vFirstName.isValid || !vLastName.isValid || !vDoc.isValid || !vEmail.isValid) {
+      toast.warning("Por favor corrige los campos con errores antes de guardar.", "Campos Inválidos");
+      return;
+    }
+
     setIsSavingProfile(true);
     try {
       const payload: Partial<api.ApiUser> = {
@@ -717,10 +872,16 @@ export function ProfilePage() {
                     type="text"
                     required
                     value={editForm.firstName}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, firstName: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    onChange={(e) => handleEditFirstNameChange(e.target.value)}
+                    onBlur={handleEditFirstNameBlur}
+                    className={`w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                      !!editTouched.firstName,
+                      editErrors.firstName,
+                      editForm.firstName
+                    )}`}
                     placeholder="Ej. Juan David"
                   />
+                  <FieldError error={editTouched.firstName ? editErrors.firstName : undefined} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">Apellidos *</label>
@@ -728,10 +889,16 @@ export function ProfilePage() {
                     type="text"
                     required
                     value={editForm.lastName}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, lastName: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    onChange={(e) => handleEditLastNameChange(e.target.value)}
+                    onBlur={handleEditLastNameBlur}
+                    className={`w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                      !!editTouched.lastName,
+                      editErrors.lastName,
+                      editForm.lastName
+                    )}`}
                     placeholder="Ej. Hormaza"
                   />
+                  <FieldError error={editTouched.lastName ? editErrors.lastName : undefined} />
                 </div>
               </div>
 
@@ -741,8 +908,8 @@ export function ProfilePage() {
                   <label className="block text-xs font-semibold text-foreground mb-1">Tipo Documento</label>
                   <select
                     value={editForm.docType}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, docType: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white"
+                    onChange={(e) => handleEditDocTypeChange(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white cursor-pointer"
                   >
                     <option value="CC">Cédula de Ciudadanía (CC)</option>
                     <option value="TI">Tarjeta de Identidad (TI)</option>
@@ -757,10 +924,16 @@ export function ProfilePage() {
                     type="text"
                     required
                     value={editForm.docNum}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, docNum: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    onChange={(e) => handleEditDocNumChange(e.target.value)}
+                    onBlur={handleEditDocNumBlur}
+                    className={`w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                      !!editTouched.docNum,
+                      editErrors.docNum,
+                      editForm.docNum
+                    )}`}
                     placeholder="Ej. 1000123456"
                   />
+                  <FieldError error={editTouched.docNum ? editErrors.docNum : undefined} />
                 </div>
               </div>
 
@@ -772,17 +945,23 @@ export function ProfilePage() {
                     type="email"
                     required
                     value={editForm.email}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
+                    onChange={(e) => handleEditEmailChange(e.target.value)}
+                    onBlur={handleEditEmailBlur}
+                    className={`w-full px-3 py-2 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                      !!editTouched.email,
+                      editErrors.email,
+                      editForm.email
+                    )}`}
                     placeholder="usuario@misena.edu.co"
                   />
+                  <FieldError error={editTouched.email ? editErrors.email : undefined} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">Teléfono</label>
                   <input
                     type="tel"
                     value={editForm.phoneNum}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, phoneNum: e.target.value }))}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, phoneNum: e.target.value.replace(/\D/g, "").slice(0, 15) }))}
                     className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none"
                     placeholder="Ej. 3101234567"
                   />
@@ -801,8 +980,8 @@ export function ProfilePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingProfile}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-sena-green text-white hover:bg-sena-green/90 transition-all shadow-sm disabled:opacity-60 cursor-pointer"
+                  disabled={isSavingProfile || !isEditFormValid}
+                  className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-sena-green text-white hover:bg-sena-green/90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSavingProfile ? (
                     <>
