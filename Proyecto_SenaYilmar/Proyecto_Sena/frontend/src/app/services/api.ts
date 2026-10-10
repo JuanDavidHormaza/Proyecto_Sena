@@ -772,6 +772,8 @@ export async function createFichaRequest(ficha_code: string, program?: string): 
   return handleResponse<ApiFichaRequest>(response);
 }
 
+export const requestFichaEnrollment = createFichaRequest;
+
 export async function approveFichaRequest(requestId: number, instructorId?: string, notes?: string): Promise<ApiFichaRequest> {
   const response = await safeFetch(`${API_BASE}/ficha-requests/${requestId}/approve/`, {
     method: 'POST',
@@ -1136,6 +1138,7 @@ export const api = {
   evaluateAdaptiveStep,
   getFichaRequests,
   createFichaRequest,
+  requestFichaEnrollment,
   approveFichaRequest,
   rejectFichaRequest,
   requestLogin,
