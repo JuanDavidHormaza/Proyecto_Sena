@@ -11,6 +11,9 @@ import {
   MessageSquare,
   Award,
   CheckCircle,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
   XCircle,
   Sparkles,
   Mic,
@@ -1156,48 +1159,86 @@ export function ResultsPage() {
             <p className="text-sm text-muted-foreground mb-4">
               Grabaciones de audio procesadas y transmitidas mediante el proxy de almacenamiento seguro en Django.
             </p>
-            {speakingAnswers.map((spk, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-5 border border-border shadow-md">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-sena-green/10 flex items-center justify-center">
-                      <Mic className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
-                    </div>
-                    <div>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted">
-                        Nivel {spk.level || "B1/B2"} Speaking
-                      </span>
-                      <p className="text-xs text-muted-foreground">{spk.category}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-medium text-sena-green bg-sena-green/10 px-2 py-1 rounded-full">
-                    Grabado
-                  </span>
-                </div>
-
-                <p className="text-sm font-medium text-foreground mb-3">{spk.question}</p>
-
-                {spk.audioUrl ? (
-                  <div className="bg-muted/40 p-3 rounded-xl">
-                    <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                      <Volume2 className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
-                      Reproductor de Audio (Proxy Django / MinIO):
-                    </p>
-                    <audio
-                      controls
-                      className="w-full h-9"
-                      src={resolveMediaUrl(spk.audioUrl)}
-                    >
-                      Tu navegador no soporta el elemento de audio.
-                    </audio>
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">
-                    Audio guardado localmente o pendiente de sincronización.
-                  </p>
-                )}
+            {speakingAnswers.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center text-muted-foreground">
+                <Mic className="w-8 h-8 mx-auto mb-2 opacity-40 text-sena-green" />
+                <p className="text-sm font-medium">No se registraron ejercicios de Speaking en esta sesión.</p>
               </div>
-            ))}
+            ) : (
+              speakingAnswers.map((spk, idx) => (
+                <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm space-y-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-sena-green/10 flex items-center justify-center flex-shrink-0">
+                        <Mic className="w-4 h-4 text-sena-green" strokeWidth={2} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            Nivel {spk.level || "B1/B2"} Speaking
+                          </span>
+                          {spk.category && (
+                            <span className="text-xs text-muted-foreground font-medium">{spk.category}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {spk.scoreAwarded !== undefined ? (
+                      spk.scoreAwarded === 100 ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 shadow-2xs">
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                          100% Precisión Exacta
+                        </span>
+                      ) : spk.scoreAwarded >= 70 ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 shadow-2xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          {spk.scoreAwarded}% Aprobado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-800 shadow-2xs">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                          {spk.scoreAwarded}% Requiere Ajuste
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-200">
+                        Grabado
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-sm font-semibold text-slate-900">{spk.question}</p>
+
+                  {spk.rubricFeedback && (
+                    <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3 text-xs text-slate-700 flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <span>{spk.rubricFeedback}</span>
+                    </div>
+                  )}
+
+                  {spk.audioUrl ? (
+                    <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/70">
+                      <p className="text-xs font-medium text-slate-600 mb-2 flex items-center gap-1.5">
+                        <Volume2 className="w-3.5 h-3.5 text-sena-green" strokeWidth={2} />
+                        Tu respuesta grabada (Proxy Django / MinIO):
+                      </p>
+                      <audio
+                        controls
+                        className="w-full h-9 rounded-lg"
+                        src={resolveMediaUrl(spk.audioUrl)}
+                      >
+                        Tu navegador no soporta el elemento de audio.
+                      </audio>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">
+                      Audio guardado localmente o pendiente de sincronización.
+                    </p>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -1207,44 +1248,76 @@ export function ResultsPage() {
             <p className="text-sm text-muted-foreground mb-4">
               Producción textual evaluada bajo rúbrica semántica de vocabulario técnico, longitud mínima y coherencia.
             </p>
-            {writingAnswers.map((wrt, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-5 border border-border shadow-md">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-sena-blue/10 flex items-center justify-center">
-                      <PenTool className="w-4 h-4 text-sena-blue" strokeWidth={1.8} />
-                    </div>
-                    <div>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted">
-                        Nivel {wrt.level || "B1/B2"} Writing
-                      </span>
-                      <p className="text-xs text-muted-foreground">{wrt.category}</p>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                      wrt.isCorrect ? "bg-sena-green/10 text-sena-green" : "bg-warning/10 text-warning"
-                    }`}
-                  >
-                    {wrt.scoreAwarded !== undefined ? `${wrt.scoreAwarded}%` : wrt.isCorrect ? "Aprobado" : "Revisar"}
-                  </span>
-                </div>
-
-                <p className="text-sm font-semibold text-foreground mb-2">{wrt.question}</p>
-
-                <div className="bg-muted/30 p-3 rounded-xl mb-3 border border-border text-sm">
-                  <p className="text-xs text-muted-foreground font-medium mb-1">Texto escrito por el aprendiz:</p>
-                  <p className="text-foreground whitespace-pre-wrap">{wrt.writingAnswer || "Sin respuesta escrita."}</p>
-                </div>
-
-                {wrt.rubricFeedback && (
-                  <div className="p-3 bg-sena-blue/5 rounded-xl border border-sena-blue/20 text-xs">
-                    <span className="font-semibold text-sena-blue">Evaluación Semántica:</span>
-                    <p className="text-foreground mt-0.5">{wrt.rubricFeedback}</p>
-                  </div>
-                )}
+            {writingAnswers.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center text-muted-foreground">
+                <PenTool className="w-8 h-8 mx-auto mb-2 opacity-40 text-sena-blue" />
+                <p className="text-sm font-medium">No se registraron ejercicios de Writing en esta sesión.</p>
               </div>
-            ))}
+            ) : (
+              writingAnswers.map((wrt, idx) => (
+                <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm space-y-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-sena-blue/10 flex items-center justify-center flex-shrink-0">
+                        <PenTool className="w-4 h-4 text-sena-blue" strokeWidth={2} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            Nivel {wrt.level || "B1/B2"} Writing
+                          </span>
+                          {wrt.category && (
+                            <span className="text-xs text-muted-foreground font-medium">{wrt.category}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {wrt.scoreAwarded !== undefined ? (
+                      wrt.scoreAwarded === 100 ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 shadow-2xs">
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                          100% Excelente
+                        </span>
+                      ) : wrt.scoreAwarded >= 70 ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 shadow-2xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          {wrt.scoreAwarded}% Aprobado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-800 shadow-2xs">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                          {wrt.scoreAwarded}% Requiere Ajuste
+                        </span>
+                      )
+                    ) : (
+                      <span
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                          wrt.isCorrect
+                            ? "bg-emerald-500/10 text-emerald-700 border border-emerald-200"
+                            : "bg-amber-500/10 text-amber-800 border border-amber-200"
+                        }`}
+                      >
+                        {wrt.isCorrect ? "Aprobado" : "Revisar"}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-sm font-semibold text-slate-900">{wrt.question}</p>
+
+                  <div className="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200 text-sm">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Texto escrito por el aprendiz:</p>
+                    <p className="text-slate-800 whitespace-pre-wrap font-medium">{wrt.writingAnswer || "Sin respuesta escrita."}</p>
+                  </div>
+
+                  {wrt.rubricFeedback && (
+                    <div className="p-3 bg-sena-blue/5 rounded-xl border border-sena-blue/20 text-xs">
+                      <span className="font-semibold text-sena-blue">Evaluación Semántica:</span>
+                      <p className="text-slate-700 mt-0.5">{wrt.rubricFeedback}</p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
 

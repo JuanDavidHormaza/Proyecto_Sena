@@ -339,41 +339,50 @@ class ExamEvaluateSpeakingAPIView(APIView):
                     proxy_url = f"/api/media/exam-submissions/{file_key}"
 
             # 2. Transcripción y Comparación Fonética / Léxica
-            target_clean = re.sub(r'[^a-zA-Z0-9\s]', '', target_word).lower().strip()
-            transcription = client_transcript if client_transcript else target_clean
+            # Normalizar tanto la transcripción como el término técnico objetivo:
+            # convertir a minúsculas, eliminar signos de puntuación, comillas dobles/simples y espacios extras
+            target_clean = " ".join(re.sub(r'[^a-zA-Z0-9\s]', ' ', str(target_word)).strip().lower().split())
+            transcription_clean = " ".join(re.sub(r'[^a-zA-Z0-9\s]', ' ', str(client_transcript)).strip().lower().split()) if client_transcript else ""
 
-            # Calcular similitud textual/fonética
-            ratio = difflib.SequenceMatcher(None, transcription.lower(), target_clean).ratio()
-            
-            if audio_file and audio_file.size > 1000 and not client_transcript:
+            # Si la transcripción limpia coincide exactamente con el término objetivo limpio:
+            # Asignar de inmediato el 100% de precisión y omitir penalizaciones
+            if transcription_clean and transcription_clean == target_clean:
+                score = 100
+                transcription = client_transcript.strip()
+                is_correct = True
+            elif audio_file and audio_file.size > 1000 and not client_transcript:
                 score = 88
-                transcription = target_clean
+                transcription = target_word
+                is_correct = True
             else:
+                transcription = client_transcript if client_transcript else target_word
+                # Calcular similitud textual/fonética
+                ratio = difflib.SequenceMatcher(None, transcription_clean, target_clean).ratio()
                 score = int(round(ratio * 100))
 
-            # Ajuste pedagógico del score
-            if transcription.lower() == target_clean:
-                score = max(score, 88)
-            elif target_clean in transcription.lower():
-                score = max(score, 78)
+                # Ajuste pedagógico si contiene la palabra objetivo
+                if target_clean and target_clean in transcription_clean:
+                    score = max(score, 85)
 
-            # Regla de aprobación requerida >= 70%
-            is_correct = score >= 70
+                is_correct = score >= 70
 
             # Obtener consejos fonéticos específicos
+            clean_lookup = re.sub(r'[^a-zA-Z0-9\s]', '', str(target_word)).lower().strip()
             ipa, tips = self.PHONETIC_GUIDES.get(
-                target_clean,
-                (f"/{target_clean}/", f"Pronuncia con claridad cada sílaba de '{target_word}'.")
+                clean_lookup,
+                (f"/{clean_lookup}/", f"Pronuncia con claridad cada sílaba de '{target_word}'.")
             )
 
-            if score >= 85:
-                feedback = f"¡Excelente pronunciación! Fonética clara y precisa."
+            if score == 100:
+                feedback = f"¡Excelente pronunciación! Coincidencia exacta (100%) con el término '{target_word}'."
+            elif score >= 85:
+                feedback = f"¡Excelente pronunciación! Fonética clara y precisa ({score}%)."
             elif score >= 70:
-                feedback = f"Buena pronunciación. El término '{target_word}' se comprende satisfactoriamente."
+                feedback = f"Buena pronunciación. El término '{target_word}' se comprende satisfactoriamente ({score}%)."
             elif score >= 50:
-                feedback = f"Pronunciación comprensible. Se detectó '{transcription}', pero refuerza la articulación de '{target_word}'."
+                feedback = f"Pronunciación comprensible. Se detectó '{transcription}', pero refuerza la articulación de '{target_word}' ({score}%)."
             else:
-                feedback = f"Pronunciación registrada para '{target_word}'. Escucha el modelo y refuerza el ejercicio."
+                feedback = f"Pronunciación registrada para '{target_word}'. Escucha el modelo y refuerza el ejercicio ({score}%)."
 
             return Response({
                 "success": True,

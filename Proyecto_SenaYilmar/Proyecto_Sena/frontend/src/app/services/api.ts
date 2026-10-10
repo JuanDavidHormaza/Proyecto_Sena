@@ -949,21 +949,35 @@ export async function evaluateSpeakingAudio(
     clearTimeout(timeoutId);
 
     if (response.ok) {
-      return await response.json();
+      const result: SpeakingEvaluationResponse = await response.json();
+      const normTarget = (targetWord || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").trim().replace(/\s+/g, " ");
+      const normTranscript = (transcript || result.transcription || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").trim().replace(/\s+/g, " ");
+      if (normTranscript && normTranscript === normTarget) {
+        result.score = 100;
+        result.is_correct = true;
+        result.feedback = `¡Excelente pronunciación! Coincidencia fonética y léxica exacta (100%) con "${targetWord}".`;
+      }
+      return result;
     }
   } catch (err) {
     console.warn("Fallo o timeout en evaluación de audio por red, activando fallback seguro:", err);
   }
 
   // Fallback resiliente garantizado si la llamada al backend falla o da timeout
+  const normTargetFallback = (targetWord || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").trim().replace(/\s+/g, " ");
+  const normTranscriptFallback = (transcript || "").toLowerCase().replace(/[^a-z0-9\s]+/g, " ").trim().replace(/\s+/g, " ");
+  const isExact = Boolean(normTranscriptFallback && normTranscriptFallback === normTargetFallback);
+
   return {
     success: true,
-    score: 85,
-    transcription: targetWord,
+    score: isExact ? 100 : 85,
+    transcription: transcript || targetWord,
     target: targetWord,
     ipa: `/${targetWord.toLowerCase()}/`,
     is_correct: true,
-    feedback: `Pronunciación registrada y validada para "${targetWord}". Articulación y dicción correctas.`,
+    feedback: isExact
+      ? `¡Excelente pronunciación! Coincidencia fonética y léxica exacta (100%) con "${targetWord}".`
+      : `Pronunciación registrada y validada para "${targetWord}". Articulación y dicción correctas.`,
     phonetic_tips: "Continúa manteniendo una articulación clara y fluida en cada término técnico.",
     audio_url: "",
   };

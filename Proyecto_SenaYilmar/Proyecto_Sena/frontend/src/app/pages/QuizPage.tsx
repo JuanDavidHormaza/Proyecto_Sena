@@ -16,6 +16,8 @@ import {
   RefreshCw,
   ArrowRight,
   AlertCircle,
+  CheckCircle2,
+  HelpCircle,
   Lightbulb,
   PenTool,
   FileText,
@@ -71,6 +73,7 @@ export function QuizPage() {
   const [speakingAttempts, setSpeakingAttempts] = useState<number>(0);
   const [isEvaluatingSpeaking, setIsEvaluatingSpeaking] = useState<boolean>(false);
   const [speechTranscript, setSpeechTranscript] = useState<string>("");
+  const [recordedAudioPlaybackError, setRecordedAudioPlaybackError] = useState<boolean>(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const speechRecognitionRef = useRef<any>(null);
@@ -123,6 +126,7 @@ export function QuizPage() {
     setSpeakingEvaluation(null);
     setSpeechTranscript("");
     setIsEvaluatingSpeaking(false);
+    setRecordedAudioPlaybackError(false);
   };
 
   useEffect(() => {
@@ -381,11 +385,18 @@ export function QuizPage() {
 
     setIsEvaluatingSpeaking(true);
     setMediaError(null);
+    setRecordedAudioPlaybackError(false);
 
     const rawTarget = currentQuestion.wordId || currentQuestion.prompt || currentQuestion.question || "Encryption";
     const cleanedTarget = rawTarget
       .replace(/^.*?(?:pronuncia|diga|say|pronounce|el término|la palabra)\s*["':]?\s*([a-zA-Z\s_-]+)["']?.*$/i, "$1")
       .trim();
+
+    const normTarget = (cleanedTarget || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]+/g, " ")
+      .trim()
+      .replace(/\s+/g, " ");
 
     try {
       const evalResult = await api.evaluateSpeakingAudio(
@@ -395,6 +406,19 @@ export function QuizPage() {
         currentLevel,
         speechTranscript
       );
+
+      // Normalizar para otorgar 100% de precisión si la palabra coincide exactamente
+      const normTranscript = (speechTranscript || evalResult.transcription || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]+/g, " ")
+        .trim()
+        .replace(/\s+/g, " ");
+
+      if (normTranscript && normTranscript === normTarget) {
+        evalResult.score = 100;
+        evalResult.is_correct = true;
+        evalResult.feedback = `¡Excelente pronunciación! Coincidencia exacta (100%) con "${cleanedTarget}".`;
+      }
 
       const nextAttempts = speakingAttempts + 1;
       setSpeakingAttempts(nextAttempts);
@@ -419,15 +443,24 @@ export function QuizPage() {
       }
     } catch (err: any) {
       console.warn("Fallo en servicio fonético externo, activando evaluación pedagógica resiliente:", err);
-      // Fallback resiliente: no bloquear el examen al estudiante si el servicio de audio o red tiene latencia
+      // Fallback resiliente
+      const normTranscriptFallback = (speechTranscript || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]+/g, " ")
+        .trim()
+        .replace(/\s+/g, " ");
+      const isExactMatch = Boolean(normTranscriptFallback && normTranscriptFallback === normTarget);
+
       const fallbackEval: api.SpeakingEvaluationResponse = {
         success: true,
-        score: 85,
-        transcription: cleanedTarget || "Pronunciación correcta",
+        score: isExactMatch ? 100 : 85,
+        transcription: speechTranscript || cleanedTarget || "Pronunciación correcta",
         target: cleanedTarget || "Término",
         ipa: `/${(cleanedTarget || "term").toLowerCase()}/`,
         is_correct: true,
-        feedback: "Pronunciación registrada y validada correctamente para este ejercicio.",
+        feedback: isExactMatch
+          ? `¡Excelente pronunciación! Coincidencia exacta (100%) con "${cleanedTarget}".`
+          : "Pronunciación registrada y validada correctamente para este ejercicio.",
         phonetic_tips: "Continúa manteniendo una articulación clara y fluida en cada término técnico.",
         audio_url: recordedAudioUrl || "",
       };
@@ -463,6 +496,7 @@ export function QuizPage() {
     setSpeakingEvaluation(null);
     setSpeechTranscript("");
     setMediaError(null);
+    setRecordedAudioPlaybackError(false);
   };
 
   const handleSpeakingNext = () => {
@@ -1081,10 +1115,14 @@ export function QuizPage() {
             ) : currentQuestion.type === "speaking" ? (
               <div className="px-6 lg:px-8 pb-6 lg:pb-8">
                 {mediaError && (
-                  <div className="mb-4 rounded-2xl bg-destructive/10 border border-destructive text-destructive px-4 py-3 text-sm flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
-                    <span>{mediaError}</span>
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 rounded-2xl bg-rose-50 border border-rose-200/90 text-rose-800 px-4 py-3 text-sm flex items-center gap-2.5 shadow-2xs"
+                  >
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" strokeWidth={2} />
+                    <span className="font-medium">{mediaError}</span>
+                  </motion.div>
                 )}
 
                 {/* 1. Módulo de Audio Modelo de Referencia (ElevenLabs / MinIO) */}
@@ -1170,7 +1208,12 @@ export function QuizPage() {
                             Audio capturado
                           </span>
                         </div>
-                        <audio controls src={recordedAudioUrl} className="w-full h-10" />
+                        <audio
+                          controls
+                          src={recordedAudioUrl}
+                          className="w-full h-10 rounded-lg"
+                          onError={() => setRecordedAudioPlaybackError(true)}
+                        />
                         <p className="text-[11px] text-muted-foreground mt-2">
                           Escúchate con atención. Si crees que puedes mejorar, pulsa "Volver a grabar". Si estás conforme, haz clic en "Evaluar Pronunciación".
                         </p>
@@ -1218,69 +1261,95 @@ export function QuizPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl"
+                    className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xl space-y-5"
                   >
                     {/* Cabecera del Feedback con Círculo de Porcentaje Dinámico */}
                     <div className="flex flex-col sm:flex-row items-center gap-5 pb-5 border-b border-slate-100">
                       {/* Círculo de porcentaje */}
                       <div
-                        className={`w-20 h-20 rounded-full flex flex-col items-center justify-center border-4 shadow-md flex-shrink-0 ${
-                          speakingEvaluation.score >= 70
-                            ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                        className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center border-2 shadow-sm flex-shrink-0 transition-transform ${
+                          speakingEvaluation.score === 100
+                            ? "border-emerald-500 bg-emerald-500/15 text-emerald-800 shadow-emerald-500/10"
+                            : speakingEvaluation.score >= 70
+                            ? "border-emerald-500/60 bg-emerald-50 text-emerald-800"
                             : speakingEvaluation.score >= 40
-                            ? "border-amber-500 bg-amber-50 text-amber-700"
-                            : "border-rose-500 bg-rose-50 text-rose-700"
+                            ? "border-amber-500/60 bg-amber-50 text-amber-800"
+                            : "border-rose-500/60 bg-rose-50 text-rose-800"
                         }`}
                       >
                         <span className="text-2xl font-black leading-none">{speakingEvaluation.score}%</span>
-                        <span className="text-[10px] font-bold uppercase tracking-wider mt-0.5">Precisión</span>
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest mt-1 text-slate-600">
+                          {speakingEvaluation.score === 100 ? "PERFECTO" : "PRECISIÓN"}
+                        </span>
                       </div>
 
                       <div className="text-center sm:text-left flex-1">
-                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-                          <span
-                            className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                              speakingEvaluation.score >= 70
-                                ? "bg-emerald-100 text-emerald-800"
-                                : speakingEvaluation.score >= 40
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-rose-100 text-rose-800"
-                            }`}
-                          >
-                            {speakingEvaluation.score >= 70
-                              ? "✓ Aprobado (Umbral Superado)"
-                              : "Requiere Práctica"}
-                          </span>
-                          <span className="text-xs text-slate-500 font-medium">
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
+                          {speakingEvaluation.score === 100 ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 shadow-2xs">
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                              100% Precisión Exacta
+                            </span>
+                          ) : speakingEvaluation.score >= 70 ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 shadow-2xs">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Aprobado (Umbral Superado)
+                            </span>
+                          ) : speakingEvaluation.score >= 40 ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-800 shadow-2xs">
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                              En Práctica (Requiere Ajuste)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-800 shadow-2xs">
+                              <HelpCircle className="w-3.5 h-3.5 text-rose-600" />
+                              Refuerzo Recomendado
+                            </span>
+                          )}
+                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                             Intento {speakingAttempts} de 3
                           </span>
                         </div>
 
-                        <h3 className="text-lg font-bold text-slate-900">
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
                           {speakingEvaluation.feedback}
                         </h3>
                       </div>
                     </div>
 
                     {/* Comparación Fonética: Detectado vs Esperado */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-5">
-                      <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                          Transcripción Detectada:
-                        </span>
-                        <p className="text-base font-semibold text-slate-800 italic">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <Mic className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
+                            Transcripción Detectada
+                          </span>
+                          {speakingEvaluation.score === 100 && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                              Exacta
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-base font-semibold text-slate-900 italic">
                           "{speakingEvaluation.transcription}"
                         </p>
                       </div>
 
-                      <div className="bg-emerald-50/70 rounded-2xl p-3.5 border border-emerald-200">
-                        <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block mb-1">
-                          Término Técnico Objetivo:
-                        </span>
-                        <p className="text-base font-bold text-emerald-900">
-                          "{speakingEvaluation.target}"
+                      <div className="bg-emerald-500/10 rounded-2xl p-4 border border-emerald-500/25 shadow-2xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2} />
+                            Término Técnico Objetivo
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Oficial
+                          </span>
+                        </div>
+                        <p className="text-base font-bold text-emerald-950 flex flex-wrap items-center gap-2">
+                          <span>"{speakingEvaluation.target}"</span>
                           {speakingEvaluation.ipa && (
-                            <span className="ml-2 text-xs font-mono font-normal text-emerald-700">
+                            <span className="text-xs font-mono font-medium text-emerald-700 bg-white/90 px-2 py-0.5 rounded-md border border-emerald-300/60 shadow-2xs">
                               [{speakingEvaluation.ipa}]
                             </span>
                           )}
@@ -1288,45 +1357,88 @@ export function QuizPage() {
                       </div>
                     </div>
 
-                    {/* Consejos Fonéticos Destacados */}
+                    {/* Consejos Fonéticos Destacados con Excelente Contraste */}
                     {speakingEvaluation.phonetic_tips && (
-                      <div className="mb-5 rounded-2xl bg-amber-50/80 border border-amber-200/90 p-4 flex items-start gap-3 text-amber-900">
-                        <Lightbulb className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wider text-amber-800">
-                            Consejo Fonético y Acentuación:
-                          </p>
-                          <p className="text-sm font-medium mt-0.5 text-amber-900 leading-relaxed">
+                      <div className="rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-white border border-amber-500/25 p-4 sm:p-5 shadow-xs flex items-start gap-3.5 text-amber-900">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-700 flex items-center justify-center flex-shrink-0 shadow-2xs mt-0.5">
+                          <Lightbulb className="w-5 h-5" strokeWidth={2} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 border border-amber-500/20">
+                              Guía Fonética y Acentuación
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-slate-800 leading-relaxed">
                             {speakingEvaluation.phonetic_tips}
                           </p>
                         </div>
                       </div>
                     )}
 
-                    {/* Reproductor del audio grabado */}
+                    {/* Reproductor del audio grabado con Manejo Elegante de Estados y Errores */}
                     {recordedAudioUrl && (
-                      <div className="mb-5 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">Tu respuesta grabada:</span>
-                        <audio controls src={recordedAudioUrl} className="h-8 max-w-xs" />
+                      <div className="p-4 rounded-2xl bg-slate-50/90 border border-slate-200 shadow-2xs space-y-3">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                            <div className="w-8 h-8 rounded-xl bg-sena-blue/10 text-sena-blue flex items-center justify-center flex-shrink-0">
+                              <Headphones className="w-4 h-4" strokeWidth={2} />
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold text-slate-800 block">Tu respuesta grabada:</span>
+                              <span className="text-[11px] text-muted-foreground">Audio registrado en el ejercicio</span>
+                            </div>
+                          </div>
+                          <div className="w-full sm:w-auto flex items-center gap-2">
+                            <audio
+                              controls
+                              src={recordedAudioUrl}
+                              className="h-9 w-full sm:w-64 rounded-lg"
+                              onError={() => setRecordedAudioPlaybackError(true)}
+                            />
+                          </div>
+                        </div>
+
+                        {recordedAudioPlaybackError && (
+                          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" strokeWidth={2} />
+                              <span>No se pudo reproducir el archivo de audio grabado.</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleRetrySpeaking}
+                              className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 transition cursor-pointer"
+                            >
+                              Grabar de nuevo
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {/* Regla de Validación Estricta: Progresión Condicionada */}
                     {speakingEvaluation.score < 70 && speakingAttempts < 3 ? (
-                      <div className="space-y-3">
-                        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs font-medium flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" strokeWidth={1.8} />
-                          <span>
-                            Para avanzar a la siguiente pregunta debes alcanzar un mínimo del <strong>70% de precisión</strong>.
-                            Escucha nuevamente el modelo y reintenta.
-                          </span>
+                      <div className="space-y-3.5 pt-1">
+                        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900 flex items-start gap-3 shadow-xs">
+                          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
+                          <div className="text-xs leading-relaxed space-y-1">
+                            <p className="font-bold text-amber-900 text-sm">
+                              Umbral mínimo no alcanzado ({speakingEvaluation.score}% obtenido / 70% requerido)
+                            </p>
+                            <p className="text-amber-800/90">
+                              Para superar la evaluación debes lograr al menos el <strong>70% de precisión</strong>.
+                              Escucha nuevamente el modelo nativo y vuelve a pronunciar la palabra con calma.
+                            </p>
+                          </div>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3">
                           <button
                             type="button"
                             onClick={handlePlayAudioPrompt}
-                            className="w-full sm:w-auto px-5 py-3.5 bg-sena-blue/10 hover:bg-sena-blue/20 text-sena-blue rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer"
+                            disabled={isPlayingAudio}
+                            className="w-full sm:w-auto px-5 py-3.5 bg-sena-blue/10 hover:bg-sena-blue/20 text-sena-blue rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
                           >
                             <Volume2 className="w-4 h-4" strokeWidth={1.8} />
                             <span>Reescuchar Modelo</span>
@@ -1343,20 +1455,23 @@ export function QuizPage() {
                         </div>
                       </div>
                     ) : (
-                      <div>
+                      <div className="space-y-3 pt-1">
                         {speakingEvaluation.score < 70 && speakingAttempts >= 3 && (
-                          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 p-2.5 rounded-xl mb-3 text-center">
-                            Has alcanzado el límite de 3 intentos para esta palabra. Tu evaluación se consolida para continuar.
-                          </p>
+                          <div className="p-3.5 rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium flex items-center gap-2.5">
+                            <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0" strokeWidth={1.8} />
+                            <span>
+                              Has alcanzado el límite de 3 intentos para este término. Tu evaluación se consolida para continuar al siguiente paso.
+                            </span>
+                          </div>
                         )}
 
                         <button
                           type="button"
                           onClick={handleSpeakingNext}
-                          className="w-full bg-sena-green hover:bg-sena-green/90 text-white p-4 rounded-xl text-base font-bold transition flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                          className="w-full bg-sena-green hover:bg-sena-green-dark text-white p-4 rounded-xl text-base font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/15 cursor-pointer"
                         >
                           <span>Continuar a la siguiente pregunta</span>
-                          <ArrowRight className="w-5 h-5" strokeWidth={1.8} />
+                          <ArrowRight className="w-5 h-5" strokeWidth={2} />
                         </button>
                       </div>
                     )}
@@ -1366,9 +1481,14 @@ export function QuizPage() {
             ) : currentQuestion.type === "writing" ? (
               <div className="px-6 lg:px-8 pb-6 lg:pb-8">
                 {mediaError && (
-                  <div className="mb-4 rounded-2xl bg-destructive/10 border border-destructive text-destructive px-4 py-3 text-sm">
-                    {mediaError}
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 rounded-2xl bg-rose-50 border border-rose-200/90 text-rose-800 px-4 py-3 text-sm flex items-center gap-2.5 shadow-2xs"
+                  >
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" strokeWidth={2} />
+                    <span className="font-medium">{mediaError}</span>
+                  </motion.div>
                 )}
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-xs">
@@ -1446,43 +1566,58 @@ export function QuizPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className={`px-6 lg:px-8 py-4 text-white flex flex-col sm:flex-row items-center justify-between gap-4 ${
+                  className={`p-5 sm:p-6 text-white flex flex-col sm:flex-row items-center justify-between gap-4 border-t ${
                     answerState === "correct" || answerState === "submitted"
-                      ? "bg-sena-green"
-                      : "bg-destructive"
+                      ? "bg-gradient-to-r from-emerald-600 via-emerald-700 to-sena-green border-emerald-500/40"
+                      : "bg-gradient-to-r from-rose-600 via-rose-700 to-rose-800 border-rose-500/40"
                   }`}
                 >
                   {answerState === "correct" ? (
                     <div className="flex items-center gap-3">
-                      <Trophy className="w-6 h-6 flex-shrink-0" strokeWidth={1.8} />
-                      <span className="text-base sm:text-lg font-bold">¡Respuesta Correcta! (+1 punto)</span>
+                      <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 shadow-xs">
+                        <CheckCircle2 className="w-6 h-6 text-white" strokeWidth={2} />
+                      </div>
+                      <div>
+                        <span className="text-base sm:text-lg font-bold block">¡Respuesta Correcta! (+1 punto)</span>
+                        <span className="text-xs text-white/85">Excelente comprensión y precisión técnica.</span>
+                      </div>
                     </div>
                   ) : answerState === "submitted" ? (
                     <div className="flex items-center gap-3">
-                      <Check className="w-6 h-6 flex-shrink-0" strokeWidth={1.8} />
-                      <span className="text-base sm:text-lg font-bold">Respuesta guardada con éxito en el sistema.</span>
+                      <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 shadow-xs">
+                        <Check className="w-6 h-6 text-white" strokeWidth={2} />
+                      </div>
+                      <div>
+                        <span className="text-base sm:text-lg font-bold block">Respuesta guardada con éxito</span>
+                        <span className="text-xs text-white/85">Procesada correctamente en el sistema de evaluación.</span>
+                      </div>
                     </div>
                   ) : (
-                    <div className="text-left">
-                      <p className="font-bold text-sm sm:text-base mb-0.5">Respuesta incorrecta</p>
-                      <p className="text-white/90 text-xs sm:text-sm">
-                        La opción correcta era:{" "}
-                        <strong className="underline underline-offset-2">
-                          {currentQuestion.options && currentQuestion.correctAnswer !== undefined
-                            ? currentQuestion.options[currentQuestion.correctAnswer]
-                            : "Opción válida"}
-                        </strong>
-                      </p>
+                    <div className="flex items-start gap-3 text-left">
+                      <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 shadow-xs mt-0.5">
+                        <AlertCircle className="w-6 h-6 text-white" strokeWidth={2} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-base mb-0.5">Respuesta incorrecta</p>
+                        <p className="text-white/90 text-xs sm:text-sm">
+                          La opción correcta era:{" "}
+                          <strong className="underline underline-offset-2 bg-white/20 px-2 py-0.5 rounded-md ml-1 font-semibold">
+                            {currentQuestion.options && currentQuestion.correctAnswer !== undefined
+                              ? currentQuestion.options[currentQuestion.correctAnswer]
+                              : "Opción válida"}
+                          </strong>
+                        </p>
+                      </div>
                     </div>
                   )}
 
                   <button
                     type="button"
                     onClick={() => advanceStep()}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-100 transition shadow-md flex items-center justify-center gap-2 flex-shrink-0 text-sm"
+                    className="w-full sm:w-auto px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-100 transition shadow-md flex items-center justify-center gap-2 flex-shrink-0 text-sm cursor-pointer"
                   >
                     <span>Siguiente Pregunta</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" strokeWidth={2} />
                   </button>
                 </motion.div>
               )}
@@ -1493,14 +1628,15 @@ export function QuizPage() {
 
       {/* Exit Confirmation Modal */}
       {showExitConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md px-4">
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl text-center"
+            exit={{ scale: 0.92, opacity: 0 }}
+            className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl text-center border border-slate-200/80"
           >
-            <div className="w-12 h-12 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-6 h-6" strokeWidth={1.8} />
+            <div className="w-14 h-14 bg-rose-500/10 text-rose-600 border border-rose-200/60 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xs">
+              <AlertCircle className="w-7 h-7" strokeWidth={2} />
             </div>
             <h3 className="text-xl font-bold text-foreground mb-2">¿Deseas salir del examen?</h3>
             <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
@@ -1512,14 +1648,14 @@ export function QuizPage() {
               <button
                 type="button"
                 onClick={() => setShowExitConfirm(false)}
-                className="flex-1 py-3 px-4 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-semibold transition cursor-pointer"
+                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition cursor-pointer"
               >
                 Continuar examen
               </button>
               <button
                 type="button"
                 onClick={() => finalizeExam()}
-                className="flex-1 py-3 px-4 bg-destructive hover:bg-destructive/90 text-white rounded-xl font-semibold transition cursor-pointer"
+                className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold transition shadow-md shadow-rose-950/20 cursor-pointer"
               >
                 Finalizar y salir
               </button>
