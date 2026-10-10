@@ -95,6 +95,14 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+  {
+    path: "/admin/solicitudes",
+    element: (
+      <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+        <AdminDashboard initialTab="requests" />
+      </ProtectedRoute>
+    ),
+  },
 
   // Compartida autenticados
   {

@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminDashboard.tsx
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import {
   Users, Upload, FileText, Trash2, Plus, Search,
   BarChart3, BookOpen, Settings, X,
@@ -13,6 +13,7 @@ import {
   Edit,
   Mic, PenTool, Languages, BookMarked, Image as ImageIcon, Layers, RotateCcw,
   Code, MoreVertical, GraduationCap, SlidersHorizontal,
+  Bell, Inbox, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Headphones, ExternalLink,
 } from "lucide-react";
 import {
   User, UserPermissions, getDefaultPermissions,
@@ -519,7 +520,7 @@ export function AsignaturaCard({
 const DocumentCard = VocabCard;
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
-type TabType = "overview" | "users" | "documents" | "subjects" | "analytics";
+type TabType = "overview" | "requests" | "users" | "documents" | "subjects" | "analytics";
 type ExtendedDocument = Document & {
   objectUrl?: string;
   category?: FileCategory;
@@ -571,41 +572,121 @@ function toValidDate(value?: string) {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
-// ─── Las 4 Competencias Lingüísticas Oficiales del Sistema WorkLex ───────────
-export const SYSTEM_COMPETENCIAS = [
+// ─── Las 4 Competencias Lingüísticas Oficiales del Marco CEFR ────────────────
+export interface CEFRSkillDefinition {
+  id: "Reading" | "Listening" | "Writing" | "Speaking";
+  name: string;
+  nameEn: string;
+  code: string;
+  icon: any;
+  color: string;
+  badgeBg: string;
+  badgeText: string;
+  borderClass: string;
+  weightPercentage: number;
+  status: "Activa" | "Configurable";
+  description: string;
+  evaluationMode: string;
+  levels: string[];
+  learningOutcomes: string[];
+  matches: (doc: any) => boolean;
+}
+
+export const SYSTEM_COMPETENCIAS: CEFRSkillDefinition[] = [
   {
-    id: "Speaking",
-    name: "Speaking",
-    code: "COMP-SPK",
-    icon: Mic,
-    description: "Producción oral, pronunciación fonética de términos de software y fluidez conversacional técnica.",
-    matches: (doc: any) => (doc.competence || "").toLowerCase() === "speaking",
-  },
-  {
-    id: "Writing",
-    name: "Writing",
-    code: "COMP-WRT",
-    icon: PenTool,
-    description: "Expresión escrita, documentación de código, especificaciones de software y redacción técnica.",
-    matches: (doc: any) => (doc.competence || "").toLowerCase() === "writing",
-  },
-  {
-    id: "Grammar",
-    name: "Grammar",
-    code: "COMP-GMR",
-    icon: BookMarked,
-    description: "Estructuras gramaticales, tiempos verbales y sintaxis aplicada a la ingeniería de software.",
-    matches: (doc: any) => (doc.competence || "").toLowerCase() === "grammar",
+    id: "Reading",
+    name: "Comprensión Lectora",
+    nameEn: "Reading Comprehension",
+    code: "CEFR-RDG",
+    icon: BookOpen,
+    color: "#0284c7",
+    badgeBg: "bg-sky-50 text-sky-700 border-sky-200",
+    badgeText: "text-sky-700",
+    borderClass: "border-sky-500",
+    weightPercentage: 25,
+    status: "Activa",
+    description: "Comprensión e interpretación de especificaciones técnicas, requerimientos de software, arquitecturas, lectura crítica y léxico profesional en contexto.",
+    evaluationMode: "Preguntas de lectura contextualizada, análisis de requerimientos funcionales y selección múltiple objetiva.",
+    levels: ["A1", "A2", "B1", "B2"],
+    learningOutcomes: [
+      "Interpretar documentación y especificaciones técnicas en inglés según requerimientos.",
+      "Identificar terminología técnica y extraer ideas principales en manuales de arquitectura.",
+    ],
+    matches: (doc: any) => {
+      const comp = (doc.competence || "").toLowerCase();
+      return comp === "reading" || comp === "lectura" || comp === "grammar";
+    },
   },
   {
     id: "Listening",
-    name: "Listening",
-    code: "COMP-LSN",
-    icon: Volume2,
-    description: "Comprensión auditiva y receptiva de requerimientos de clientes, standups y diálogos ágiles.",
+    name: "Comprensión Auditiva",
+    nameEn: "Listening Comprehension",
+    code: "CEFR-LSN",
+    icon: Headphones,
+    color: "#7c3aed",
+    badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
+    badgeText: "text-purple-700",
+    borderClass: "border-purple-500",
+    weightPercentage: 25,
+    status: "Activa",
+    description: "Discriminación auditiva y comprensión de instrucciones operativas, audios de pronunciación nativa, daily meetings y diálogos laborales en entornos globales.",
+    evaluationMode: "Pistas de audio nativo con alta fidelidad en streaming, transcripción guiada y reactivos de escucha.",
+    levels: ["A1", "A2", "B1", "B2"],
+    learningOutcomes: [
+      "Comprender la idea general y detalles operacionales en conversaciones técnicas en inglés.",
+      "Identificar indicaciones habladas de clientes e instructores en ceremonias ágiles.",
+    ],
     matches: (doc: any) => {
       const comp = (doc.competence || "").toLowerCase();
-      return comp === "listening" || comp === "reading";
+      return comp === "listening" || comp === "auditiva" || Boolean(doc.audio || doc.audioUrl);
+    },
+  },
+  {
+    id: "Writing",
+    name: "Expresión Escrita",
+    nameEn: "Written Production",
+    code: "CEFR-WRT",
+    icon: PenTool,
+    color: "#059669",
+    badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    badgeText: "text-emerald-700",
+    borderClass: "border-emerald-500",
+    weightPercentage: 25,
+    status: "Activa",
+    description: "Redacción de reportes técnicos, correos institucionales, tickets de soporte, sintaxis gramatical formal y coherencia textual en inglés profesional.",
+    evaluationMode: "Producción de texto corto, respuestas abiertas técnicas, validación gramatical y criterios de coherencia.",
+    levels: ["A1", "A2", "B1", "B2"],
+    learningOutcomes: [
+      "Redactar mensajes, correos institucionales y reportes de incidentes en inglés técnico.",
+      "Estructurar oraciones con corrección sintáctica y vocabulario especializado en TI.",
+    ],
+    matches: (doc: any) => {
+      const comp = (doc.competence || "").toLowerCase();
+      return comp === "writing" || comp === "escritura" || comp === "redaccion";
+    },
+  },
+  {
+    id: "Speaking",
+    name: "Expresión Oral",
+    nameEn: "Spoken Production",
+    code: "CEFR-SPK",
+    icon: Mic,
+    color: "#d97706",
+    badgeBg: "bg-amber-50 text-amber-700 border-amber-200",
+    badgeText: "text-amber-700",
+    borderClass: "border-amber-500",
+    weightPercentage: 25,
+    status: "Activa",
+    description: "Producción fonética en tiempo real con Inteligencia Artificial, pronunciación de léxico técnico, fluidez oral y reconocimiento de voz nativo en contexto laboral.",
+    evaluationMode: "Grabación en vivo con Web Speech API, evaluación de precisión fonética al 100% y comparación acústica.",
+    levels: ["A1", "A2", "B1", "B2"],
+    learningOutcomes: [
+      "Pronunciar términos técnicos y vocabulario de software con precisión fonética adecuada.",
+      "Participar oralmente en conversaciones profesionales y presentaciones breves de proyectos.",
+    ],
+    matches: (doc: any) => {
+      const comp = (doc.competence || "").toLowerCase();
+      return comp === "speaking" || comp === "oral" || comp === "pronunciacion";
     },
   },
 ];
@@ -632,12 +713,72 @@ export function matchesSelectedProgram(docProgram?: string, targetProgram?: stri
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-export function AdminDashboard() {
+interface AdminDashboardProps {
+  initialTab?: TabType;
+}
+
+export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: authUser, logout } = useAuth();
   const isSuperAdmin = authUser?.role === "superadmin";
 
-  const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const getInitialTab = (): TabType => {
+    if (initialTab) return initialTab;
+    if (location.pathname.includes("solicitudes")) return "requests";
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab") as TabType;
+    if (tabParam && ["overview", "requests", "users", "documents", "subjects", "analytics"].includes(tabParam)) {
+      return tabParam;
+    }
+    return "overview";
+  };
+
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab);
+
+  useEffect(() => {
+    if (location.pathname.includes("solicitudes")) {
+      setActiveTab("requests");
+    } else if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [location.pathname, initialTab]);
+
+  const handleTabChange = (tabId: TabType) => {
+    setActiveTab(tabId);
+    if (tabId === "requests") {
+      navigate("/admin/solicitudes", { replace: true });
+    } else if (location.pathname.includes("solicitudes")) {
+      navigate("/admin", { replace: true });
+    }
+  };
+
+  // Popover de notificaciones del Header
+  const [showNotificationPopover, setShowNotificationPopover] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const mobileNotificationRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        notificationRef.current && !notificationRef.current.contains(target) &&
+        mobileNotificationRef.current && !mobileNotificationRef.current.contains(target)
+      ) {
+        setShowNotificationPopover(false);
+      }
+    };
+    if (showNotificationPopover) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNotificationPopover]);
+
+  // Filtros para la vista dedicada de Bandeja de Solicitudes
+  const [requestSearchTerm, setRequestSearchTerm] = useState("");
+  const [requestStatusFilter, setRequestStatusFilter] = useState<"ALL" | "PENDIENTE" | "APROBADA" | "RECHAZADA">("ALL");
   const [users, setUsers] = useState<User[]>([]);
   const [documents, setDocuments] = useState<ExtendedDocument[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -1200,9 +1341,12 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     { label: "Tasa de Aprobacion", value: `${approvalRate}%`, icon: Zap, color: "destructive", trend: `${passedTests}/${testResults.length}`, up: approvalRate >= 60 },
   ];
 
+  const pendingRequestsCount = fichaRequests.filter(r => r.status === "PENDIENTE").length;
+
   const tabs = [
     { id: "overview",   label: "Resumen",                 icon: BarChart3 },
-    { id: "analytics",  label: "Estadisticas",            icon: PieChart  },
+    { id: "requests",   label: "Solicitudes de Ficha",    icon: Inbox,      badge: pendingRequestsCount },
+    { id: "analytics",  label: "Estadísticas",            icon: PieChart  },
     { id: "users",      label: "Usuarios",                icon: Users     },
     { id: "documents",  label: "Diccionarios",            icon: BookOpen  },
     { id: "subjects",   label: "Competencias Evaluadas",  icon: Layers    },
@@ -1234,18 +1378,42 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             {isSuperAdmin ? "SuperAdministrador" : "Administrador"}
           </div>
           <nav className="space-y-1">
-            {tabs.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id as TabType)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id ? "bg-sena-green text-white shadow-lg shadow-sena-green/25" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
-                <tab.icon className="w-5 h-5" strokeWidth={1.8} />
-                <span className="font-medium">{tab.label}</span>
-              </button>
-            ))}
+            {tabs.map(tab => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id as TabType)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-sena-green text-white shadow-lg shadow-sena-green/25 font-bold"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <tab.icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
+                    <span className="text-sm">{tab.label}</span>
+                  </div>
+                  {Boolean(tab.badge && tab.badge > 0) && (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-black transition-all ${
+                        isActive
+                          ? "bg-white text-sena-green shadow-xs"
+                          : "bg-amber-500 text-white shadow-xs animate-pulse"
+                      }`}
+                      title={`${tab.badge} solicitudes pendientes`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-border">
           <button onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-destructive/10 text-destructive rounded-xl hover:bg-destructive/20 transition-all font-medium">
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-destructive/10 text-destructive rounded-xl hover:bg-destructive/20 transition-all font-medium cursor-pointer">
             <LogOut className="w-5 h-5" strokeWidth={1.8} /> Cerrar Sesión
           </button>
         </div>
@@ -1262,22 +1430,184 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             />
             <span className="font-semibold text-foreground">{isSuperAdmin ? "SuperAdmin" : "Admin"}</span>
           </div>
-          <button onClick={handleLogout} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg">
-            <LogOut className="w-5 h-5" strokeWidth={1.8} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Campana de Notificaciones en Móvil */}
+            <div className="relative" ref={mobileNotificationRef}>
+              <button
+                type="button"
+                onClick={() => setShowNotificationPopover(prev => !prev)}
+                className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer"
+                title="Notificaciones de solicitudes de ficha"
+                aria-label="Notificaciones"
+              >
+                <Bell className="w-5 h-5" strokeWidth={1.8} />
+                {pendingRequestsCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-2 ring-white animate-pulse">
+                    {pendingRequestsCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            <button onClick={handleLogout} className="p-2 text-destructive hover:bg-destructive/10 rounded-xl cursor-pointer">
+              <LogOut className="w-5 h-5" strokeWidth={1.8} />
+            </button>
+          </div>
         </div>
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as TabType)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab.id ? "bg-sena-green text-white" : "bg-muted text-muted-foreground"}`}>
-              <tab.icon className="w-4 h-4" strokeWidth={1.8} />{tab.label}
-            </button>
-          ))}
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id as TabType)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg whitespace-nowrap text-xs font-semibold transition-all cursor-pointer ${
+                  isActive ? "bg-sena-green text-white font-bold" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <tab.icon className="w-4 h-4" strokeWidth={1.8} />
+                <span>{tab.label}</span>
+                {Boolean(tab.badge && tab.badge > 0) && (
+                  <span
+                    className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                      isActive ? "bg-white text-sena-green" : "bg-amber-500 text-white"
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </header>
 
       {/* ── Main ── */}
       <main className="lg:ml-64 pt-32 lg:pt-0">
+        {/* ── Desktop Top Header con Campana de Notificaciones ── */}
+        <header className="hidden lg:flex items-center justify-between px-8 py-4 bg-white/85 backdrop-blur-md border-b border-border sticky top-0 z-30">
+          <div>
+            <h2 className="text-xl font-bold text-foreground tracking-tight">
+              {tabs.find(t => t.id === activeTab)?.label || "Panel Institucional"}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              WorkLex SENA • Plataforma de Evaluación Lingüística CEFR y Diccionarios
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Campana de Notificaciones en Desktop */}
+            <div className="relative" ref={notificationRef}>
+              <button
+                type="button"
+                onClick={() => setShowNotificationPopover(prev => !prev)}
+                className={`relative p-2.5 rounded-xl border transition-all cursor-pointer ${
+                  showNotificationPopover
+                    ? "bg-sena-green/10 text-sena-green border-sena-green/30"
+                    : "bg-white border-border text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                }`}
+                title="Notificaciones de solicitudes de ficha"
+                aria-label="Notificaciones"
+              >
+                <Bell className="w-5 h-5" strokeWidth={1.8} />
+                {pendingRequestsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white ring-2 ring-white shadow-xs animate-pulse">
+                    {pendingRequestsCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Popover de Notificaciones */}
+              <AnimatePresence>
+                {showNotificationPopover && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-border shadow-2xl z-50 overflow-hidden"
+                  >
+                    <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-sena-blue" />
+                        <h4 className="font-bold text-sm text-foreground">Notificaciones del Sistema</h4>
+                      </div>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        {pendingRequestsCount} {pendingRequestsCount === 1 ? "pendiente" : "pendientes"}
+                      </span>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto divide-y divide-border">
+                      {pendingRequestsCount === 0 ? (
+                        <div className="p-6 text-center text-muted-foreground space-y-2">
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                          <p className="text-xs font-semibold text-foreground">No hay solicitudes de ficha pendientes.</p>
+                          <p className="text-[11px] text-muted-foreground">Todas las solicitudes han sido revisadas.</p>
+                        </div>
+                      ) : (
+                        fichaRequests
+                          .filter(r => r.status === "PENDIENTE")
+                          .slice(0, 5)
+                          .map((req) => (
+                            <div
+                              key={req.request_id}
+                              className="p-3.5 hover:bg-muted/40 transition-colors cursor-pointer group"
+                              onClick={() => {
+                                setShowNotificationPopover(false);
+                                handleTabChange("requests");
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="font-bold text-xs text-foreground group-hover:text-sena-green transition-colors">
+                                    {req.learner_name}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    Solicita ficha <strong className="text-sena-blue font-bold">{req.ficha_code}</strong> ({req.program_name})
+                                  </p>
+                                  <span className="text-[10px] text-slate-400 mt-1 block">
+                                    {new Date(req.created_at).toLocaleDateString("es-CO")}
+                                  </span>
+                                </div>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 flex-shrink-0">
+                                  Pendiente
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border-t border-border flex items-center justify-between text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNotificationPopover(false);
+                          handleTabChange("requests");
+                        }}
+                        className="w-full text-center py-2 px-3 rounded-xl bg-sena-green hover:bg-emerald-700 text-white font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        <Inbox className="w-4 h-4" />
+                        <span>Ver Bandeja de Solicitudes ({fichaRequests.length})</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Identificador de Usuario */}
+            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-border">
+              <span className="text-xs font-semibold text-foreground">
+                {authUser?.name || "Administrador"}
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-muted text-muted-foreground">
+                {isSuperAdmin ? "SuperAdmin" : "Admin"}
+              </span>
+            </div>
+          </div>
+        </header>
+
         <div className="p-6 lg:p-8">
 
           {/* Error banner */}
@@ -1596,122 +1926,286 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 </div>
               )}
 
-              {/* ══ Bandeja de Solicitudes de Programa Alterno (Multiprograma SENA) ══ */}
-              <div className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
-                      <GraduationCap className="w-5 h-5" strokeWidth={1.8} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg text-foreground">
-                        Bandeja de Solicitudes de Programa Alterno
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Validación y aprobación de aprendices matriculados en una segunda ficha simultánea
-                      </p>
-                    </div>
+              {/* Enlace rápido a la nueva bandeja dedicada de Solicitudes */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-sena-blue/10 via-emerald-50/50 to-muted/40 border border-border flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
+                    <Inbox className="w-5 h-5" strokeWidth={1.8} />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                      {fichaRequests.filter(r => r.status === "PENDIENTE").length} pendientes
-                    </span>
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                      {fichaRequests.length} total
-                    </span>
+                  <div>
+                    <h4 className="font-bold text-sm text-foreground">
+                      Bandeja de Solicitudes de Ficha (Programa Alterno)
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Las solicitudes de aprendices para matrícula secundaria ahora se gestionan en su sección dedicada.
+                    </p>
                   </div>
                 </div>
-
-                {fichaRequests.length === 0 ? (
-                  <p className="text-center py-8 text-xs text-muted-foreground">
-                    No hay solicitudes de vinculación registradas por aprendices.
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
-                          <th className="py-3 px-4">Aprendiz</th>
-                          <th className="py-3 px-4">Programa Actual</th>
-                          <th className="py-3 px-4">Ficha Solicitada</th>
-                          <th className="py-3 px-4">Fecha Solicitud</th>
-                          <th className="py-3 px-4">Estado</th>
-                          <th className="py-3 px-4 text-right">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border text-xs">
-                        {fichaRequests.map((req) => (
-                          <tr key={req.request_id} className="hover:bg-muted/30 transition-colors">
-                            <td className="py-3.5 px-4">
-                              <p className="font-bold text-foreground">{req.learner_name}</p>
-                              <p className="text-muted-foreground text-[11px]">{req.learner_email}</p>
-                            </td>
-                            <td className="py-3.5 px-4 text-muted-foreground">
-                              {req.current_program || "Sin programa principal"}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="font-bold text-sena-blue">{req.ficha_code}</span>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-xs">{req.program_name}</p>
-                            </td>
-                            <td className="py-3.5 px-4 text-muted-foreground">
-                              {new Date(req.created_at).toLocaleDateString("es-CO")}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-bold text-[10px] border ${
-                                  req.status === "APROBADA"
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : req.status === "RECHAZADA"
-                                    ? "bg-rose-50 text-rose-700 border-rose-200"
-                                    : "bg-amber-50 text-amber-700 border-amber-200"
-                                }`}
-                              >
-                                {req.status === "APROBADA"
-                                  ? "Aprobada"
-                                  : req.status === "RECHAZADA"
-                                  ? "Rechazada"
-                                  : "Pendiente"}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-right">
-                              {req.status === "PENDIENTE" ? (
-                                <div className="flex items-center justify-end gap-2">
-                                  <button
-                                    type="button"
-                                    disabled={processingRequestId === req.request_id}
-                                    onClick={() => handleOpenApproveModal(req)}
-                                    className="px-3 py-1 bg-sena-green hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs flex items-center gap-1 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                                    title="Aprobar vinculación del aprendiz y asignar instructor"
-                                  >
-                                    <Check className="w-3.5 h-3.5" strokeWidth={2} />
-                                    <span>Aprobar</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={processingRequestId === req.request_id}
-                                    onClick={() => handleRejectFichaRequest(req.request_id)}
-                                    className="px-3 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg font-semibold text-xs flex items-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
-                                    title="Rechazar vinculación"
-                                  >
-                                    <X className="w-3.5 h-3.5" strokeWidth={2} />
-                                    <span>Rechazar</span>
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="text-[11px] text-muted-foreground italic">
-                                  {req.reviewed_by_name ? `Por ${req.reviewed_by_name}` : "Procesada"}
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange("requests")}
+                  className="px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer whitespace-nowrap"
+                >
+                  <Inbox className="w-4 h-4" />
+                  <span>Ver Solicitudes {pendingRequestsCount > 0 ? `(${pendingRequestsCount} pendientes)` : ""}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </motion.div>
           )}
+
+          {/* ══ Bandeja Dedicada de Solicitudes de Ficha (Multiprograma SENA) ══ */}
+          {activeTab === "requests" && (() => {
+            const filteredFichaRequests = fichaRequests.filter((req) => {
+              const matchesStatus = requestStatusFilter === "ALL" || req.status === requestStatusFilter;
+              const term = requestSearchTerm.toLowerCase().trim();
+              if (!term) return matchesStatus;
+              const matchesSearch =
+                (req.learner_name || "").toLowerCase().includes(term) ||
+                (req.learner_email || "").toLowerCase().includes(term) ||
+                (req.ficha_code || "").toLowerCase().includes(term) ||
+                (req.program_name || "").toLowerCase().includes(term);
+              return matchesStatus && matchesSearch;
+            });
+
+            return (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                {/* Encabezado Principal */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
+                      <Inbox className="w-6 h-6" strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                        Bandeja de Solicitudes de Ficha
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Validación, aprobación y asignación de instructor para aprendices con matrícula simultánea a programa alterno (Multiprograma SENA)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadDataFromApi()}
+                      className="p-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+                      title="Actualizar bandeja de solicitudes"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                      <span>Actualizar</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* KPIs de Solicitudes */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pendientes</span>
+                      <h4 className="text-2xl font-extrabold text-amber-600 mt-1">
+                        {fichaRequests.filter(r => r.status === "PENDIENTE").length}
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Por validar</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Aprobadas</span>
+                      <h4 className="text-2xl font-extrabold text-emerald-600 mt-1">
+                        {fichaRequests.filter(r => r.status === "APROBADA").length}
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Fichas vinculadas</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rechazadas</span>
+                      <h4 className="text-2xl font-extrabold text-rose-600 mt-1">
+                        {fichaRequests.filter(r => r.status === "RECHAZADA").length}
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Sin matrícula</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                      <X className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Solicitudes</span>
+                      <h4 className="text-2xl font-extrabold text-foreground mt-1">
+                        {fichaRequests.length}
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Histórico general</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-sena-blue/10 text-sena-blue flex items-center justify-center font-bold">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filtros y Búsqueda */}
+                <div className="bg-white rounded-2xl border border-border p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={requestSearchTerm}
+                      onChange={(e) => setRequestSearchTerm(e.target.value)}
+                      placeholder="Buscar aprendiz, email o código de ficha..."
+                      className="w-full pl-9 pr-4 py-2 border border-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-sena-green focus:border-transparent bg-background"
+                    />
+                    {requestSearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setRequestSearchTerm("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                    {(["ALL", "PENDIENTE", "APROBADA", "RECHAZADA"] as const).map((st) => {
+                      const count = st === "ALL" ? fichaRequests.length : fichaRequests.filter(r => r.status === st).length;
+                      const labels: Record<string, string> = {
+                        ALL: "Todas",
+                        PENDIENTE: "Pendientes",
+                        APROBADA: "Aprobadas",
+                        RECHAZADA: "Rechazadas",
+                      };
+                      const isActive = requestStatusFilter === st;
+                      return (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setRequestStatusFilter(st)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                            isActive
+                              ? "bg-sena-green text-white shadow-xs"
+                              : "bg-muted text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <span>{labels[st]}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Tabla de Solicitudes */}
+                <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+                  {filteredFichaRequests.length === 0 ? (
+                    <div className="py-16 text-center text-muted-foreground space-y-2">
+                      <Inbox className="w-10 h-10 mx-auto text-slate-300" strokeWidth={1.5} />
+                      <p className="text-sm font-semibold">No se encontraron solicitudes con los filtros aplicados</p>
+                      <p className="text-xs text-muted-foreground">Prueba modificando los términos de búsqueda o el estado seleccionado.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
+                            <th className="py-3.5 px-4">Aprendiz</th>
+                            <th className="py-3.5 px-4">Programa Actual</th>
+                            <th className="py-3.5 px-4">Ficha Solicitada</th>
+                            <th className="py-3.5 px-4">Fecha Solicitud</th>
+                            <th className="py-3.5 px-4">Estado</th>
+                            <th className="py-3.5 px-4 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border text-xs">
+                          {filteredFichaRequests.map((req) => (
+                            <tr key={req.request_id} className="hover:bg-muted/30 transition-colors">
+                              <td className="py-3.5 px-4">
+                                <p className="font-bold text-foreground text-sm">{req.learner_name}</p>
+                                <p className="text-muted-foreground text-xs">{req.learner_email}</p>
+                              </td>
+                              <td className="py-3.5 px-4 text-muted-foreground font-medium">
+                                {req.current_program || "Sin programa principal"}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className="font-bold text-sena-blue text-xs">{req.ficha_code}</span>
+                                <p className="text-xs text-muted-foreground truncate max-w-xs">{req.program_name}</p>
+                              </td>
+                              <td className="py-3.5 px-4 text-muted-foreground">
+                                {new Date(req.created_at).toLocaleDateString("es-CO", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${
+                                    req.status === "APROBADA"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : req.status === "RECHAZADA"
+                                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}
+                                >
+                                  {req.status === "APROBADA"
+                                    ? "Aprobada"
+                                    : req.status === "RECHAZADA"
+                                    ? "Rechazada"
+                                    : "Pendiente"}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-right">
+                                {req.status === "PENDIENTE" ? (
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={processingRequestId === req.request_id}
+                                      onClick={() => handleOpenApproveModal(req)}
+                                      className="px-3.5 py-1.5 bg-sena-green hover:bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                                      title="Aprobar vinculación del aprendiz y asignar instructor"
+                                    >
+                                      <Check className="w-3.5 h-3.5" strokeWidth={2.2} />
+                                      <span>Aprobar</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={processingRequestId === req.request_id}
+                                      onClick={() => handleRejectFichaRequest(req.request_id)}
+                                      className="px-3.5 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                                      title="Rechazar vinculación"
+                                    >
+                                      <X className="w-3.5 h-3.5" strokeWidth={2.2} />
+                                      <span>Rechazar</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic">
+                                    {req.reviewed_by_name ? `Procesada por ${req.reviewed_by_name}` : "Procesada"}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })()}
 
           {/* ══ Diccionarios: Gestión Multi-Programa por Ficha (Explorador Desacoplado en Modal) ══ */}
           {activeTab === "documents" && (() => {
@@ -2031,42 +2525,257 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             );
           })()}
 
-          {/* ══ Competencias Evaluadas ══ */}
+          {/* ══ Competencias Evaluadas Oficiales del Marco CEFR ══ */}
           {activeTab === "subjects" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Cabecera Principal */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-xs">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground">Competencias Lingüísticas Evaluadas</h2>
-                  <p className="text-muted-foreground">Estructura curricular de las 4 habilidades formativas del marco CEFR: Reading, Listening, Speaking y Writing</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sena-green/10 text-sena-green border border-sena-green/20">
+                      Marco Oficial CEFR / MCER
+                    </span>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      4 Macrohabilidades • Cobertura 100%
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                    Competencias Lingüísticas Evaluadas
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Estructura curricular de las 4 habilidades formativas del marco CEFR: Reading, Listening, Speaking y Writing
+                  </p>
                 </div>
-                <button onClick={() => setShowSubjectModal(true)} className="flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium shadow-lg shadow-sena-green/25 cursor-pointer">
-                  <Plus className="w-5 h-5" strokeWidth={1.8} /> Nueva Competencia
-                </button>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("documents")}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-white hover:bg-muted/60 text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
+                  >
+                    <BookOpen className="w-4 h-4 text-sena-green" />
+                    <span>Ver Diccionarios Técnicos</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSubjectModal(true)}
+                    className="inline-flex items-center gap-2 bg-sena-green text-white px-4 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all text-xs font-bold shadow-md shadow-sena-green/20 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={2} />
+                    <span>Nueva Competencia</span>
+                  </button>
+                </div>
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {subjects.map(subject => {
-                  const docsCount = documents.filter(d => d.subjectId === subject.id).length;
+
+              {/* Barra de KPIs Globales del Marco Evaluativo */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-2xl border border-border shadow-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Competencias Oficiales</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-black text-foreground">4</span>
+                    <span className="text-xs text-emerald-600 font-bold">100% Activas</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Reading, Listening, Writing, Speaking</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-border shadow-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Ponderación por Habilidad</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-black text-sena-blue">25%</span>
+                    <span className="text-xs text-muted-foreground">Equitativa</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Total marco evaluativo: 100%</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-border shadow-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Niveles Acreditados</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-black text-amber-600">A1 - B2</span>
+                    <span className="text-xs text-muted-foreground">CEFR</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Diagnóstico progresivo del aprendiz</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-border shadow-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Motor de Evaluación</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-black text-purple-600">Híbrido</span>
+                    <span className="text-xs text-emerald-600 font-bold">IA Speech</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Audio nativo, lectura, texto y voz</p>
+                </div>
+              </div>
+
+              {/* Grid de las 4 Competencias Lingüísticas Oficiales CEFR */}
+              <div className="grid md:grid-cols-2 gap-5">
+                {SYSTEM_COMPETENCIAS.map((comp) => {
+                  const linkedDocs = documents.filter(comp.matches);
+                  const IconComp = comp.icon;
+
                   return (
-                    <motion.div key={subject.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                      className="bg-white rounded-2xl p-5 border border-border shadow-sm hover:shadow-md transition-all relative overflow-hidden">
-                      <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: subject.color }} />
-                      <div className="flex items-start justify-between mb-4 pt-2">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${subject.color}20` }}>
-                          <BookOpen className="w-6 h-6" style={{ color: subject.color }} strokeWidth={1.8} />
+                    <motion.div
+                      key={comp.id}
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-white rounded-2xl p-6 border border-border shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between"
+                    >
+                      {/* Borde superior identificador */}
+                      <div className="absolute top-0 left-0 right-0 h-1.5" style={{ backgroundColor: comp.color }} />
+
+                      <div>
+                        {/* Cabecera de la Tarjeta */}
+                        <div className="flex items-start justify-between gap-3 mb-4 pt-1">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-12 h-12 rounded-xl flex items-center justify-center shadow-2xs"
+                              style={{ backgroundColor: `${comp.color}15`, color: comp.color }}
+                            >
+                              <IconComp className="w-6 h-6" strokeWidth={2} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-extrabold text-lg text-foreground tracking-tight">
+                                  {comp.name}
+                                </h3>
+                                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                  {comp.code}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground font-medium">{comp.nameEn}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1.5">
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${comp.badgeBg}`}>
+                              Ponderación {comp.weightPercentage}%
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              {comp.status} en Examen
+                            </span>
+                          </div>
                         </div>
-                        <button onClick={() => handleDeleteSubject(subject.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                          <Trash2 className="w-4 h-4" strokeWidth={1.8} />
-                        </button>
+
+                        {/* Descripción Curricular */}
+                        <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                          {comp.description}
+                        </p>
+
+                        {/* Modalidad de Evaluación */}
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-4 space-y-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                            Modalidad en el Examen
+                          </span>
+                          <p className="text-xs font-medium text-slate-700 leading-snug">
+                            {comp.evaluationMode}
+                          </p>
+                        </div>
+
+                        {/* Niveles Evaluados */}
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="text-xs font-bold text-muted-foreground">Niveles CEFR:</span>
+                          <div className="flex gap-1.5">
+                            {comp.levels.map((lvl) => (
+                              <span
+                                key={lvl}
+                                className="px-2 py-0.5 rounded-md text-[11px] font-mono font-extrabold bg-muted text-foreground border border-border"
+                              >
+                                {lvl}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Resultados de Aprendizaje */}
+                        <div className="space-y-1.5 mb-5">
+                          <span className="text-[11px] font-bold text-foreground block">
+                            Resultados de Aprendizaje SENA (RAP):
+                          </span>
+                          <ul className="space-y-1 text-xs text-muted-foreground">
+                            {comp.learningOutcomes.map((ra, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <Check className="w-3.5 h-3.5 text-sena-green flex-shrink-0 mt-0.5" />
+                                <span>{ra}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
-                      <h4 className="font-semibold text-foreground mb-2">{subject.name}</h4>
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{subject.description}</p>
-                      <div className="flex items-center justify-between pt-4 border-t border-border">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground"><FileText className="w-4 h-4" strokeWidth={1.8} /><span>{docsCount} archivo{docsCount !== 1 ? "s" : ""}</span></div>
-                        <span className="text-xs text-muted-foreground">{subject.createdAt}</span>
+
+                      {/* Pie de Tarjeta con Métricas Reales */}
+                      <div className="pt-4 border-t border-border flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-muted-foreground font-semibold">
+                          <BookMarked className="w-4 h-4 text-sena-green" />
+                          <span>{linkedDocs.length} recursos vinculados en diccionarios</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab("documents");
+                            setFilterCategory("all");
+                          }}
+                          className="font-bold text-sena-blue hover:text-emerald-700 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <span>Ver en Diccionarios</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </motion.div>
                   );
                 })}
+              </div>
+
+              {/* ── Gestión de Vocabularios Técnicos por Programa SENA (ADSO, etc.) ── */}
+              <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-sena-green/10 flex items-center justify-center text-sena-green">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base text-foreground">
+                        Especialidades Técnicas y Vocabularios por Programa SENA
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Los programas de formación (como ADSO) aportan los diccionarios técnicos especializados que nutren transversalmente las 4 macrohabilidades lingüísticas.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("documents")}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex-shrink-0"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    <span>Gestionar Diccionarios por Programa</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  {senaPrograms.slice(0, 3).map((prog) => {
+                    const progDocs = documents.filter(d => matchesSelectedProgram(d.program, prog));
+                    return (
+                      <div key={prog} className="p-3.5 rounded-xl border border-border bg-muted/20 flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-xs text-foreground">{prog}</p>
+                          <span className="text-[11px] text-muted-foreground">{progDocs.length} términos registrados</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAdminProgram(prog);
+                            setActiveTab("documents");
+                          }}
+                          className="text-xs font-semibold text-sena-blue hover:underline cursor-pointer"
+                        >
+                          Explorar →
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </motion.div>
           )}
