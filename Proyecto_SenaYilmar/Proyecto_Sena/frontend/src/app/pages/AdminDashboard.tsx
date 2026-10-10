@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useLocation } from "react-router";
 import {
   Users, Upload, FileText, Trash2, Plus, Search,
-  BarChart3, BookOpen, Settings, X,
+  BarChart3, BookOpen, Settings, X, Clock,
   Check, Filter, Eye, ToggleLeft, ToggleRight,
   FolderOpen, ZoomIn, Play, Pause, Music, Video,
   Volume2, Film, TrendingUp, PieChart, Activity, Calendar,
