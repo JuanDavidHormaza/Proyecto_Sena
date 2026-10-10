@@ -32,6 +32,8 @@ services:
 
       - ./certbot/www:/var/www/certbot
 
+      - worklex_staticfiles:/var/www/static:ro
+
     networks:
       - worklex_network
 
@@ -112,3 +114,7 @@ networks:
   worklex_network:
     name: worklex_network
     driver: bridge
+
+volumes:
+  worklex_staticfiles:
+    name: worklex_staticfiles
