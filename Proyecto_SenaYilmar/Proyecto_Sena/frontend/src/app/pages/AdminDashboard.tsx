@@ -31,6 +31,7 @@ import {
 import { resolveMediaUrl } from "../services/api";
 import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightboxModal";
 import { SafeImage } from "../components/SafeImage";
+import { playEnglishSpeech } from "../utils/speech";
 
 // ─── Tipos de archivo ─────────────────────────────────────────────────────────
 type FileCategory = "document" | "audio" | "video" | "image";
@@ -184,32 +185,15 @@ function VocabCard({
 
     const audio = new Audio(audioUrl);
     audio.onended = () => setIsPlayingAudio(false);
-    audio.onerror = () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(wordName);
-        u.lang = "en-US";
-        u.rate = 0.85;
-        u.onend = () => setIsPlayingAudio(false);
-        u.onerror = () => setIsPlayingAudio(false);
-        window.speechSynthesis.speak(u);
-      } else {
-        setIsPlayingAudio(false);
-      }
+    const fallbackTTS = () => {
+      playEnglishSpeech(wordName, {
+        rate: 0.85,
+        onEnd: () => setIsPlayingAudio(false),
+        onError: () => setIsPlayingAudio(false),
+      });
     };
-    audio.play().catch(() => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(wordName);
-        u.lang = "en-US";
-        u.rate = 0.85;
-        u.onend = () => setIsPlayingAudio(false);
-        u.onerror = () => setIsPlayingAudio(false);
-        window.speechSynthesis.speak(u);
-      } else {
-        setIsPlayingAudio(false);
-      }
-    });
+    audio.onerror = fallbackTTS;
+    audio.play().catch(fallbackTTS);
   };
 
   const isAdmin = userRole === "admin" || userRole === "superadmin";
@@ -1420,7 +1404,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       </aside>
 
       {/* ── Mobile Header ── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40 px-4 py-3">
+      <header className="lg:hidden fixed top-0 left-0 right-0 bg-background/95 dark:bg-card/95 border-b border-border z-40 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -1428,7 +1412,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               alt="WorkLex"
               className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
             />
-            <span className="font-semibold text-foreground">{isSuperAdmin ? "SuperAdmin" : "Admin"}</span>
+            <span className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">{isSuperAdmin ? "SuperAdmin" : "Admin"}</span>
           </div>
           <div className="flex items-center gap-2">
             {/* Campana de Notificaciones en Móvil */}
@@ -1485,9 +1469,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       {/* ── Main ── */}
       <main className="lg:ml-64 pt-32 lg:pt-0">
         {/* ── Desktop Top Header con Campana de Notificaciones ── */}
-        <header className="hidden lg:flex items-center justify-between px-8 py-4 bg-white/85 backdrop-blur-md border-b border-border sticky top-0 z-30">
+        <header className="hidden lg:flex items-center justify-between px-8 py-4 bg-background/95 dark:bg-card/95 backdrop-blur-md border-b border-border sticky top-0 z-30">
           <div>
-            <h2 className="text-xl font-bold text-foreground tracking-tight">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white high-contrast:text-white tracking-tight">
               {tabs.find(t => t.id === activeTab)?.label || "Panel Institucional"}
             </h2>
             <p className="text-xs text-muted-foreground">

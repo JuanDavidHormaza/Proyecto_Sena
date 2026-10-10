@@ -312,12 +312,14 @@ export function validatePasswordMatch(
 export function getFieldValidationClass(
   isTouched: boolean,
   error?: string | null,
-  value?: string
+  value?: string,
+  isValid?: boolean
 ): string {
   if (error) {
     return "border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 ring-1 ring-rose-400 bg-rose-50/20 text-rose-950 transition-all";
   }
-  if (isTouched && !error && value && value.trim().length > 0) {
+  const isTrulyValid = isValid !== undefined ? isValid : (value !== undefined && value.trim().length > 0);
+  if (isTouched && !error && isTrulyValid) {
     return "border-emerald-500/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 ring-1 ring-emerald-400/40 bg-emerald-50/15 transition-all";
   }
   return "border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all";

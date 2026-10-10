@@ -47,6 +47,7 @@ import { AccessibilityWidget } from "../components/AccessibilityWidget";
 import { getTermsForProgram } from "../data/dictionariesByFicha";
 import { questions } from "../data";
 import { toast } from "../components/Toast";
+import { playEnglishSpeech } from "../utils/speech";
 
 const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
   if (!raw) return "Reading";
@@ -1280,13 +1281,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   };
 
   const speakWord = (text: string) => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-      utterance.rate = 0.85;
-      window.speechSynthesis.speak(utterance);
-    }
+    playEnglishSpeech(text, { rate: 0.85 });
   };
 
   // Práctica interactiva de pronunciación con el micrófono del navegador
@@ -1383,7 +1378,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     <div className="min-h-screen bg-background">
       {/* ─── Encabezado Dinámico y Accesible (Smart Auto-hide con Scroll) ─── */}
       <header
-        className={`sticky top-0 bg-white/95 backdrop-blur-md border-b border-border z-40 transition-transform duration-300 ease-in-out ${
+        className={`sticky top-0 bg-background/95 dark:bg-card/95 backdrop-blur-md border-b border-border z-40 transition-transform duration-300 ease-in-out ${
           isHeaderVisible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
@@ -1404,7 +1399,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 />
                 <div className="hidden sm:block">
                   <div className="flex items-center gap-1.5">
-                    <h1 className="font-bold text-foreground text-sm leading-none">WorkLex</h1>
+                    <h1 className="font-bold text-slate-900 dark:text-white high-contrast:text-white text-sm leading-none">WorkLex</h1>
                     <span className="p-0.5 rounded text-sena-green group-hover:translate-x-0.5 transition-transform">
                       <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
                     </span>

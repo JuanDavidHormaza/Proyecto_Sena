@@ -75,7 +75,7 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-border py-2 z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-60 bg-card rounded-xl shadow-xl border border-border py-2 z-50 overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-border">
               <p className="font-medium text-foreground truncate">{userName}</p>

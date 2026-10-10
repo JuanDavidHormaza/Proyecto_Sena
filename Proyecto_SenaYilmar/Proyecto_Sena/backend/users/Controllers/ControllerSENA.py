@@ -615,22 +615,31 @@ class DictionaryController:
                 models.Q(synonyms__icontains=s)
             )
 
-        # Filtro estricto por programa / ficha (Aislamiento Multi-tenant)
+        # Filtro inteligente por programa / ficha (Aislamiento Multi-tenant)
         target_prog = (program or ficha_id or '').strip()
-        if target_prog and target_prog != 'all':
+        if target_prog and target_prog.lower() != 'all':
             import re
             m = re.search(r'\d{6,8}', target_prog)
-            if m:
-                ficha_code = m.group(0)
-                queryset = queryset.filter(
-                    models.Q(program__icontains=target_prog) |
-                    models.Q(program__icontains=ficha_code)
-                )
+            ficha_code = m.group(0) if m else None
+            prog_name_clean = re.sub(r'[-\s]*\d{6,8}[-\s]*', '', target_prog).strip()
+
+            filter_q = models.Q(program__iexact=target_prog) | models.Q(program__icontains=target_prog)
+            if ficha_code:
+                filter_q |= models.Q(program__icontains=ficha_code)
+            if prog_name_clean:
+                filter_q |= models.Q(program__icontains=prog_name_clean) | models.Q(program__iexact=prog_name_clean)
+
+            filtered_qs = queryset.filter(filter_q)
+
+            if not filtered_qs.exists() and any(k in target_prog.upper() for k in ['ADSO', 'SOFTWARE', 'DESARROLLO', 'PROGRAM']):
+                filtered_qs = queryset.filter(models.Q(program__icontains='ADSO') | models.Q(program__icontains='SOFTWARE'))
+
+            if filtered_qs.exists():
+                queryset = filtered_qs
             else:
-                queryset = queryset.filter(
-                    models.Q(program__iexact=target_prog) |
-                    models.Q(program__icontains=target_prog)
-                )
+                adso_qs = queryset.filter(program__icontains='ADSO')
+                if adso_qs.exists():
+                    queryset = adso_qs
 
         documents = []
         for doc in queryset:

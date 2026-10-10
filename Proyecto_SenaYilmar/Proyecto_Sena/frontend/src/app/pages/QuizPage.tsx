@@ -30,6 +30,7 @@ import {
   UnifiedQuestion,
   UserAnswerRecord,
 } from "../services/examEngine";
+import { playEnglishSpeech } from "../utils/speech";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
 
@@ -408,17 +409,11 @@ export function QuizPage() {
   };
 
   const fallbackToSpeechSynthesis = (text: string) => {
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-      utterance.rate = 0.9;
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      setIsPlayingAudio(false);
-    }
+    playEnglishSpeech(text, {
+      rate: 0.9,
+      onEnd: () => setIsPlayingAudio(false),
+      onError: () => setIsPlayingAudio(false),
+    });
   };
 
   // ── Manejo de Evaluación de Speaking (Motor Fonético Backend) ─────────────

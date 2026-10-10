@@ -174,7 +174,7 @@ export function TeacherDashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 bg-white/80 backdrop-blur-lg border-b border-border z-40">
+      <header className="sticky top-0 bg-background/95 dark:bg-card/95 backdrop-blur-lg border-b border-border z-40">
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export function TeacherDashboard() {
                 className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
               />
               <div className="hidden sm:block">
-                <h1 className="font-semibold text-foreground">English Level Test</h1>
+                <h1 className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">English Level Test</h1>
                 <p className="text-xs text-muted-foreground">Panel de Instructor</p>
               </div>
             </div>

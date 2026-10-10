@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { X, Volume2 } from "lucide-react";
+import { playEnglishSpeech } from "../utils/speech";
 
 export interface LightboxDocItem {
   id?: string;
@@ -73,32 +74,15 @@ export function ImageLightboxModal({
     setIsPlaying(true);
     const audio = new Audio(audioUrl);
     audio.onended = () => setIsPlaying(false);
-    audio.onerror = () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(wordName);
-        u.lang = "en-US";
-        u.rate = 0.85;
-        u.onend = () => setIsPlaying(false);
-        u.onerror = () => setIsPlaying(false);
-        window.speechSynthesis.speak(u);
-      } else {
-        setIsPlaying(false);
-      }
+    const fallbackTTS = () => {
+      playEnglishSpeech(wordName, {
+        rate: 0.85,
+        onEnd: () => setIsPlaying(false),
+        onError: () => setIsPlaying(false),
+      });
     };
-    audio.play().catch(() => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(wordName);
-        u.lang = "en-US";
-        u.rate = 0.85;
-        u.onend = () => setIsPlaying(false);
-        u.onerror = () => setIsPlaying(false);
-        window.speechSynthesis.speak(u);
-      } else {
-        setIsPlaying(false);
-      }
-    });
+    audio.onerror = fallbackTTS;
+    audio.play().catch(fallbackTTS);
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "motion/react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -40,6 +40,7 @@ import * as api from "../services/api";
 import { resolveMediaUrl } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
+import { playEnglishSpeech } from "../utils/speech";
 
 const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
   if (!raw) return "Reading";
@@ -139,8 +140,14 @@ export function ResultsPage() {
   const duration = resultsState?.duration ?? lastTestSummary?.duration ?? localStorage.getItem("quizDuration") ?? "00:00";
   const levelReached = resultsState?.levelReached ?? lastTestSummary?.finalLevel ?? lastTestResult?.level ?? "A1";
 
+  const isCancelled =
+    totalQuestions === 0 ||
+    answers.length === 0 ||
+    (resultsState as any)?.status === "cancelled" ||
+    (resultsState as any)?.status === "no_presentado";
+
   const levelInfo = getLevelFromScore(finalScore);
-  const passed = resultsState?.passed ?? lastTestSummary?.passed ?? (finalScore >= 60);
+  const passed = !isCancelled && (resultsState?.passed ?? lastTestSummary?.passed ?? (finalScore >= 60));
   const threshold = resultsState?.threshold ?? 60;
   const breakdown = resultsState?.breakdown ?? lastTestResult?.breakdown;
   const autoFeedback = resultsState?.auto_feedback ?? lastTestSummary?.autoFeedback;
@@ -197,7 +204,37 @@ export function ResultsPage() {
     lastTestResult?.process?.reinforceTerms ??
     [];
 
-  // Reproductor de pronunciación con fallback a síntesis de voz en inglés
+  // Cargar términos del diccionario técnico activo para filtrar términos fantasma o huérfanos
+  const [activeDictionaryWords, setActiveDictionaryWords] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let isCancelledSub = false;
+    api.getDocuments()
+      .then((docs) => {
+        if (!isCancelledSub && Array.isArray(docs)) {
+          const wordSet = new Set(
+            docs.map((d) => (d.word_id || d.name || (d as any).word || "").toLowerCase().trim()).filter(Boolean)
+          );
+          setActiveDictionaryWords(wordSet);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isCancelledSub = true;
+    };
+  }, []);
+
+  const cleanMasteredTerms = useMemo(() => {
+    if (activeDictionaryWords.size === 0) return masteredTerms;
+    return masteredTerms.filter((term) => activeDictionaryWords.has(term.toLowerCase().trim()));
+  }, [masteredTerms, activeDictionaryWords]);
+
+  const cleanReinforceTerms = useMemo(() => {
+    if (activeDictionaryWords.size === 0) return reinforceTerms;
+    return reinforceTerms.filter((rf) => activeDictionaryWords.has((rf.wordId || "").toLowerCase().trim()));
+  }, [reinforceTerms, activeDictionaryWords]);
+
+  // Reproductor de pronunciación con fallback a síntesis de voz en inglés forzada
   const handlePlayPronunciation = (termText: string, audioUrl?: string) => {
     setPlayingTerm(termText);
     if (audioUrl) {
@@ -214,18 +251,15 @@ export function ResultsPage() {
       });
     } else {
       speakWord(termText);
-      setTimeout(() => setPlayingTerm(null), 1200);
     }
   };
 
   const speakWord = (text: string) => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-      utterance.rate = 0.85;
-      window.speechSynthesis.speak(utterance);
-    }
+    playEnglishSpeech(text, {
+      rate: 0.85,
+      onEnd: () => setPlayingTerm(null),
+      onError: () => setPlayingTerm(null),
+    });
   };
 
   // Level scores calculation or fallback
@@ -300,6 +334,7 @@ export function ResultsPage() {
   };
 
   const getGradientColors = () => {
+    if (isCancelled) return "from-slate-700 to-slate-900";
     if (finalScore >= 80) return "from-sena-green to-sena-green-dark";
     if (finalScore >= 60) return "from-warning to-amber-600";
     return "from-destructive to-red-700";
@@ -331,12 +366,18 @@ export function ResultsPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-lg rounded-full text-sm font-medium mb-6"
+              className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-lg rounded-full text-sm font-medium mb-6 ${
+                isCancelled ? "bg-amber-500/20 text-amber-100" : "bg-white/20 text-white"
+              }`}
             >
               <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white">
-                <CheckCircle className="w-4 h-4 text-emerald-200" strokeWidth={2} />
+                {isCancelled ? (
+                  <AlertCircle className="w-4 h-4 text-amber-200" strokeWidth={2} />
+                ) : (
+                  <CheckCircle className="w-4 h-4 text-emerald-200" strokeWidth={2} />
+                )}
               </div>
-              Evaluación enviada con éxito
+              {isCancelled ? "Prueba no presentada / Cancelada" : "Evaluación enviada con éxito"}
             </motion.div>
 
             <motion.div
@@ -345,16 +386,26 @@ export function ResultsPage() {
               transition={{ delay: 0.4 }}
             >
               <div className="w-32 h-32 lg:w-40 lg:h-40 mx-auto bg-white/10 backdrop-blur-lg rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
-                <span className="text-5xl lg:text-6xl font-bold">{animatedScore}%</span>
+                <span className="text-5xl lg:text-6xl font-bold">{isCancelled ? 0 : animatedScore}%</span>
               </div>
 
               <div className="flex items-center justify-center gap-2 mb-3">
                 <Award className="w-7 h-7 text-amber-300" strokeWidth={1.8} />
-                <span className="text-2xl lg:text-3xl font-bold">Nivel Obtenido: {levelReached}</span>
+                <span className="text-2xl lg:text-3xl font-bold">
+                  {isCancelled ? "Sin Nivel Registrado" : `Nivel Obtenido: ${levelReached}`}
+                </span>
               </div>
 
-              <p className="text-lg text-white/90 mb-2">{levelInfo.description}</p>
-              <p className="text-white/80 max-w-md mx-auto">{levelInfo.message}</p>
+              <p className="text-lg text-white/90 mb-2">
+                {isCancelled
+                  ? "La prueba fue finalizada sin respuestas registradas."
+                  : levelInfo.description}
+              </p>
+              <p className="text-white/80 max-w-md mx-auto">
+                {isCancelled
+                  ? "Para diagnosticar tu nivel oficial según el Marco CEFR, inicia una nueva prueba y responde las preguntas de cada habilidad."
+                  : levelInfo.message}
+              </p>
             </motion.div>
           </motion.div>
         </div>
@@ -700,16 +751,16 @@ export function ResultsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
-                      Términos Dominados ({masteredTerms.length})
+                      Términos Dominados ({cleanMasteredTerms.length})
                     </span>
                     <span className="text-xs bg-sena-green/10 text-sena-green font-medium px-2 py-0.5 rounded-full">
                       Aprobados
                     </span>
                   </div>
 
-                  {masteredTerms.length > 0 ? (
+                  {cleanMasteredTerms.length > 0 ? (
                     <div className="flex flex-wrap gap-2 p-3.5 rounded-xl bg-sena-green/5 border border-sena-green/20">
-                      {masteredTerms.map((term, i) => (
+                      {cleanMasteredTerms.map((term, i) => (
                         <div
                           key={i}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-sena-green/30 text-xs font-semibold text-foreground shadow-sm"
@@ -739,16 +790,16 @@ export function ResultsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Target className="w-4 h-4 text-amber-600" strokeWidth={1.8} />
-                      Términos Recomendados para Reforzar ({reinforceTerms.length})
+                      Términos Recomendados para Reforzar ({cleanReinforceTerms.length})
                     </span>
                     <span className="text-xs bg-amber-500/10 text-amber-700 font-medium px-2 py-0.5 rounded-full">
                       Refuerzo Sugerido
                     </span>
                   </div>
 
-                  {reinforceTerms.length > 0 ? (
+                  {cleanReinforceTerms.length > 0 ? (
                     <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                      {reinforceTerms.map((rf, i) => (
+                      {cleanReinforceTerms.map((rf, i) => (
                         <div
                           key={i}
                           className="p-3 bg-amber-500/5 rounded-xl border border-amber-500/20 text-xs space-y-1.5"
@@ -767,7 +818,7 @@ export function ResultsPage() {
                                 className="px-2 py-1 rounded-lg bg-white border border-amber-500/30 text-amber-800 hover:bg-amber-100/50 transition-colors inline-flex items-center gap-1"
                                 title="Escuchar pronunciación"
                               >
-                                <Volume2 className={`w-3 h-3 ${playingTerm === rf.wordId ? "text-amber-600 animate-pulse" : ""}`} strokeWidth={1.8} />
+                                <Volume2 className={`w-3.5 h-3.5 ${playingTerm === rf.wordId ? "text-amber-600 animate-pulse" : ""}`} strokeWidth={1.8} />
                                 Audio
                               </button>
                               <button
@@ -785,6 +836,12 @@ export function ResultsPage() {
                           </p>
                         </div>
                       ))}
+                    </div>
+                  ) : isCancelled || answers.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-muted/40 border border-border text-center">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        No hay términos de refuerzo disponibles debido a que la prueba fue cancelada o no fue presentada.
+                      </p>
                     </div>
                   ) : (
                     <div className="p-4 rounded-xl bg-sena-green/10 border border-sena-green/30 text-center">
@@ -890,7 +947,7 @@ export function ResultsPage() {
                       vocabFilter === mode ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"
                     }`}
                   >
-                    {mode === "all" ? `Todos (${masteredTerms.length + reinforceTerms.length})` : mode === "mastered" ? `Dominados (${masteredTerms.length})` : `Por Reforzar (${reinforceTerms.length})`}
+                    {mode === "all" ? `Todos (${cleanMasteredTerms.length + cleanReinforceTerms.length})` : mode === "mastered" ? `Dominados (${cleanMasteredTerms.length})` : `Por Reforzar (${cleanReinforceTerms.length})`}
                   </button>
                 ))}
               </div>
@@ -900,7 +957,7 @@ export function ResultsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Términos por Reforzar */}
               {(vocabFilter === "all" || vocabFilter === "reinforce") &&
-                reinforceTerms.map((rf, idx) => (
+                cleanReinforceTerms.map((rf, idx) => (
                   <div
                     key={`rf-${idx}`}
                     className="p-4 bg-white rounded-2xl border border-amber-500/25 shadow-sm space-y-2 hover:border-amber-500/40 transition-all"
@@ -942,7 +999,7 @@ export function ResultsPage() {
 
               {/* Términos Dominados */}
               {(vocabFilter === "all" || vocabFilter === "mastered") &&
-                masteredTerms.map((term, idx) => (
+                cleanMasteredTerms.map((term, idx) => (
                   <div
                     key={`mst-${idx}`}
                     className="p-4 bg-white rounded-2xl border border-sena-green/25 shadow-sm space-y-2 hover:border-sena-green/40 transition-all"
@@ -986,7 +1043,7 @@ export function ResultsPage() {
                 ))}
             </div>
 
-            {masteredTerms.length === 0 && reinforceTerms.length === 0 && (
+            {cleanMasteredTerms.length === 0 && cleanReinforceTerms.length === 0 && (
               <div className="p-8 text-center bg-white rounded-2xl border border-border text-muted-foreground text-sm">
                 No hay términos del diccionario registrados en esta prueba particular.
               </div>

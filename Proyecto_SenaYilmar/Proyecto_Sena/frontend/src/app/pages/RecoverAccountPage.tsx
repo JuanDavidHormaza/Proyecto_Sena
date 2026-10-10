@@ -25,8 +25,12 @@ export function RecoverAccountPage() {
 
   // Retención persistente de estado entre pasos y recargas
   const [step, setStep] = useState<"email" | "otp" | "success">(() => {
-    const savedStep = sessionStorage.getItem("recover_step");
-    const savedEmail = sessionStorage.getItem("recover_email") || sessionStorage.getItem("resetEmail");
+    const savedStep = sessionStorage.getItem("recover_step") || localStorage.getItem("recover_step");
+    const savedEmail =
+      sessionStorage.getItem("recover_email") ||
+      sessionStorage.getItem("resetEmail") ||
+      localStorage.getItem("recover_email") ||
+      localStorage.getItem("resetEmail");
     if (savedStep === "otp" && savedEmail) {
       return "otp";
     }
@@ -38,6 +42,8 @@ export function RecoverAccountPage() {
       searchParams.get("email") ||
       sessionStorage.getItem("recover_email") ||
       sessionStorage.getItem("resetEmail") ||
+      localStorage.getItem("recover_email") ||
+      localStorage.getItem("resetEmail") ||
       ""
     );
   });
@@ -59,6 +65,8 @@ export function RecoverAccountPage() {
       setEmail(clean);
       sessionStorage.setItem("recover_email", clean);
       sessionStorage.setItem("resetEmail", clean);
+      localStorage.setItem("recover_email", clean);
+      localStorage.setItem("resetEmail", clean);
     }
   }, [searchParams]);
 
@@ -99,10 +107,13 @@ export function RecoverAccountPage() {
       await api.resendLoginOTP(cleanEmail);
       toast.success("Código de recuperación enviado a tu correo.", "Correo enviado");
 
-      // Persistir correo en memoria de sesión para garantizar retención
+      // Persistir correo en memoria de sesión y almacenamiento local para garantizar retención
       sessionStorage.setItem("recover_email", cleanEmail);
       sessionStorage.setItem("resetEmail", cleanEmail);
       sessionStorage.setItem("recover_step", "otp");
+      localStorage.setItem("recover_email", cleanEmail);
+      localStorage.setItem("resetEmail", cleanEmail);
+      localStorage.setItem("recover_step", "otp");
       setEmail(cleanEmail);
       setStep("otp");
       setResendCooldown(60);
@@ -128,6 +139,7 @@ export function RecoverAccountPage() {
   const handleBackToEmail = () => {
     setStep("email");
     sessionStorage.removeItem("recover_step");
+    localStorage.removeItem("recover_step");
     setError("");
     setOtp(["", "", "", "", "", ""]);
     setNewPassword("");
@@ -177,11 +189,13 @@ export function RecoverAccountPage() {
     e.preventDefault();
     setError("");
 
-    // Garantizar obtención del email desde estado o almacenamiento de sesión
+    // Garantizar obtención del email desde estado o almacenamiento de sesión / local
     const targetEmail = (
       email ||
       sessionStorage.getItem("recover_email") ||
       sessionStorage.getItem("resetEmail") ||
+      localStorage.getItem("recover_email") ||
+      localStorage.getItem("resetEmail") ||
       searchParams.get("email") ||
       ""
     ).trim().toLowerCase();
@@ -228,6 +242,9 @@ export function RecoverAccountPage() {
       sessionStorage.removeItem("recover_email");
       sessionStorage.removeItem("resetEmail");
       sessionStorage.removeItem("recover_step");
+      localStorage.removeItem("recover_email");
+      localStorage.removeItem("resetEmail");
+      localStorage.removeItem("recover_step");
       setStep("success");
     } catch (err: any) {
       const msg = err?.message || "No se pudo actualizar la contraseña. Verifica el código e intenta de nuevo.";

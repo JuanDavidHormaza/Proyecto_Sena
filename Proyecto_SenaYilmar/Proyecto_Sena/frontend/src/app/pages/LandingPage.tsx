@@ -32,7 +32,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Responsivo */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-border">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 dark:bg-card/95 backdrop-blur-md border-b border-border">
         <div className="w-full flex items-center justify-between px-4 sm:px-8 py-4 transition-all duration-300">
           <div className="flex-shrink-0 flex items-center gap-3">
             <img
@@ -41,7 +41,7 @@ export function LandingPage() {
               className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
             />
             <div className="min-w-0">
-              <h1 className="text-base sm:text-xl font-bold text-foreground leading-tight truncate">
+              <h1 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white high-contrast:text-white leading-tight truncate">
                 English Level Test
               </h1>
               <p className="text-[11px] sm:text-xs text-muted-foreground font-medium truncate">
@@ -117,7 +117,7 @@ export function LandingPage() {
                 </motion.button>
                 <motion.button
                   onClick={() => navigate("/login")}
-                  className="flex items-center justify-center gap-2 bg-white text-sena-blue px-8 py-4 rounded-xl text-lg font-semibold border-2 border-sena-blue/20 hover:border-sena-blue/40 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
+                  className="flex items-center justify-center gap-2 bg-card text-foreground dark:text-white px-8 py-4 rounded-xl text-lg font-semibold border-2 border-sena-blue/20 hover:border-sena-blue/40 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -135,12 +135,12 @@ export function LandingPage() {
               className="grid grid-cols-2 gap-4"
             >
               <motion.div
-                className="col-span-2 bg-white rounded-2xl p-6 shadow-xl border border-border"
+                className="col-span-2 bg-card rounded-2xl p-6 shadow-xl border border-border"
                 whileHover={{ y: -5 }}
                 transition={{ duration: 0.3 }}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 flex items-center justify-center text-blue-600 shadow-xs">
                     <GraduationCap className="w-6 h-6 text-blue-600" strokeWidth={2} />
                   </div>
                   <div>
@@ -151,11 +151,11 @@ export function LandingPage() {
               </motion.div>
 
               <motion.div
-                className="bg-white rounded-2xl p-5 shadow-xl border border-border"
+                className="bg-card rounded-2xl p-5 shadow-xl border border-border"
                 whileHover={{ y: -5 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-green-600 mb-3 shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900 flex items-center justify-center text-green-600 mb-3 shadow-xs">
                   <Layers className="w-6 h-6 text-green-600" strokeWidth={2} />
                 </div>
                 <p className="text-2xl font-bold text-foreground">0</p>
@@ -163,11 +163,11 @@ export function LandingPage() {
               </motion.div>
 
               <motion.div
-                className="bg-white rounded-2xl p-5 shadow-xl border border-border"
+                className="bg-card rounded-2xl p-5 shadow-xl border border-border"
                 whileHover={{ y: -5 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="w-12 h-12 bg-amber-50 border border-amber-100 text-amber-500 rounded-2xl flex items-center justify-center mb-3 shadow-xs">
+                <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 text-amber-500 rounded-2xl flex items-center justify-center mb-3 shadow-xs">
                   <Trophy className="w-6 h-6 text-amber-500" strokeWidth={2} />
                 </div>
                 <p className="text-2xl font-bold text-foreground">0%</p>
@@ -226,7 +226,7 @@ export function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: feature.delay }}
-                className="bg-white rounded-2xl p-8 shadow-lg border border-border hover:shadow-xl transition-all duration-300 group"
+                className="bg-card rounded-2xl p-8 shadow-lg border border-border hover:shadow-xl transition-all duration-300 group"
               >
                 <div className={`w-16 h-16 bg-${feature.color}/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
                   <feature.icon className={`w-8 h-8 text-${feature.color}`} strokeWidth={2} />
@@ -294,7 +294,7 @@ export function LandingPage() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg border border-border group hover:shadow-xl transition-all duration-300"
+                className="relative overflow-hidden bg-card rounded-2xl p-6 shadow-lg border border-border group hover:shadow-xl transition-all duration-300"
               >
                 <div
                   className="absolute top-0 left-0 right-0 h-1.5"
@@ -357,7 +357,7 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-6 border-t border-border bg-white">
+      <footer className="py-8 px-6 border-t border-border bg-card">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">

@@ -254,10 +254,10 @@ export function RegisterPage() {
         email: "Ingresa un correo electrónico válido (ej. usuario@ejemplo.com). No se permiten espacios ni caracteres inválidos.",
       }));
     } else {
-      const v = validateEmail(sanitized, false);
+      // Al escribir no mostrar error de formato incompleto antes de que el usuario termine y desenfoque (blur)
       setFieldErrors((prev) => ({
         ...prev,
-        email: v.isValid ? null : (sanitized.includes("@") && sanitized.length > 5 ? v.error : null),
+        email: null,
       }));
     }
   };
@@ -272,30 +272,45 @@ export function RegisterPage() {
   };
 
   const handlePhoneChange = (val: string) => {
-    const hasLettersOrSymbols = /\D/.test(val);
-    const sanitized = sanitizePhoneNumber(val, formData.country);
-    setFormData((prev) => ({ ...prev, phoneNum: sanitized }));
-
-    const isCol = formData.country.toLowerCase() === "colombia";
+    const isCol = (formData.country || "").toLowerCase() === "colombia";
     const expectedMsg = isCol
       ? "Ingresa un número de teléfono celular válido (solo dígitos numéricos, 10 dígitos)."
       : "Ingresa un número de teléfono celular válido (solo dígitos numéricos, entre 7 y 15 dígitos).";
 
-    if (hasLettersOrSymbols) {
+    const hadNonDigits = /[^0-9]/.test(val);
+    const maxDigits = isCol ? 10 : 15;
+    const onlyDigits = val.replace(/[^0-9]/g, "").slice(0, maxDigits);
+    setFormData((prev) => ({ ...prev, phoneNum: onlyDigits }));
+
+    if (hadNonDigits) {
       setFieldErrors((prev) => ({
         ...prev,
         phoneNum: expectedMsg,
       }));
-    } else if (sanitized.length > 0 && isCol && !sanitized.startsWith("3")) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        phoneNum: "El número de celular en Colombia debe iniciar por 3 y contener 10 dígitos.",
-      }));
+      return;
+    }
+
+    if (onlyDigits.length === 0) {
+      setFieldErrors((prev) => ({ ...prev, phoneNum: null }));
+      return;
+    }
+
+    if (isCol) {
+      if (!onlyDigits.startsWith("3")) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          phoneNum: "El número de celular en Colombia debe iniciar por 3 y contener 10 dígitos.",
+        }));
+      } else {
+        setFieldErrors((prev) => ({
+          ...prev,
+          phoneNum: touched.phoneNum && onlyDigits.length < 10 ? expectedMsg : null,
+        }));
+      }
     } else {
-      const v = validatePhoneNumber(sanitized, formData.country, false);
       setFieldErrors((prev) => ({
         ...prev,
-        phoneNum: v.isValid ? null : (sanitized.length >= 10 ? v.error : null),
+        phoneNum: touched.phoneNum && onlyDigits.length < 7 ? expectedMsg : null,
       }));
     }
   };
@@ -824,7 +839,12 @@ export function RegisterPage() {
                         value={formData.docNum}
                         onChange={(e) => handleDocNumChange(e.target.value)}
                         onBlur={handleDocNumBlur}
-                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.docNum, getFieldError("docNum", formData.docNum), formData.docNum)}`}
+                        className={`${baseInputClass} ${getFieldValidationClass(
+                          !!touched.docNum,
+                          getFieldError("docNum", formData.docNum),
+                          formData.docNum,
+                          validateDocumentNumber(formData.docNum, formData.docType, true).isValid && !isDocDuplicate
+                        )}`}
                       />
                     </div>
                     <FieldError error={getFieldError("docNum", formData.docNum)} />
@@ -893,7 +913,12 @@ export function RegisterPage() {
                         value={formData.firstName}
                         onChange={(e) => handleFirstNameChange(e.target.value)}
                         onBlur={handleFirstNameBlur}
-                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.firstName, getFieldError("firstName", formData.firstName), formData.firstName)}`}
+                        className={`${baseInputClass} ${getFieldValidationClass(
+                          !!touched.firstName,
+                          getFieldError("firstName", formData.firstName),
+                          formData.firstName,
+                          validateName(formData.firstName, "Nombres", true).isValid
+                        )}`}
                       />
                     </div>
                     <FieldError error={getFieldError("firstName", formData.firstName)} />
@@ -910,7 +935,12 @@ export function RegisterPage() {
                         value={formData.lastName}
                         onChange={(e) => handleLastNameChange(e.target.value)}
                         onBlur={handleLastNameBlur}
-                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.lastName, getFieldError("lastName", formData.lastName), formData.lastName)}`}
+                        className={`${baseInputClass} ${getFieldValidationClass(
+                          !!touched.lastName,
+                          getFieldError("lastName", formData.lastName),
+                          formData.lastName,
+                          validateName(formData.lastName, "Apellidos", true).isValid
+                        )}`}
                       />
                     </div>
                     <FieldError error={getFieldError("lastName", formData.lastName)} />
@@ -930,7 +960,12 @@ export function RegisterPage() {
                       value={formData.email}
                       onChange={(e) => handleEmailChange(e.target.value)}
                       onBlur={handleEmailBlur}
-                      className={`${baseInputClass} ${getFieldValidationClass(!!touched.email, getFieldError("email", formData.email), formData.email)}`}
+                      className={`${baseInputClass} ${getFieldValidationClass(
+                        !!touched.email,
+                        getFieldError("email", formData.email),
+                        formData.email,
+                        validateEmail(formData.email, true).isValid && !isEmailDuplicate
+                      )}`}
                     />
                   </div>
                   <FieldError error={getFieldError("email", formData.email)} />
@@ -990,7 +1025,8 @@ export function RegisterPage() {
                         className={`${baseInputClass} ${getFieldValidationClass(
                           !!touched.phoneNum,
                           getFieldError("phoneNum", formData.phoneNum),
-                          formData.phoneNum
+                          formData.phoneNum,
+                          validatePhoneNumber(formData.phoneNum, formData.country, true).isValid
                         )}`}
                       />
                     </div>

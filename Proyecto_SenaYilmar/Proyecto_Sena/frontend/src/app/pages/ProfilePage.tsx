@@ -134,9 +134,9 @@ export function ProfilePage() {
       return;
     }
 
-    const MAX_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
+    const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
     if (file.size > MAX_SIZE_BYTES) {
-      toast.warning("La imagen seleccionada supera el límite máximo de 3 MB.", "Archivo muy pesado");
+      toast.warning("La imagen seleccionada supera el límite máximo de 2 MB.", "Archivo muy pesado");
       return;
     }
 
@@ -447,6 +447,9 @@ export function ProfilePage() {
     totalQuestions: number | null;
     correctAnswers: number | null;
     completedAt: string | null;
+    totalExams: number | null;
+    avgScore: number | null;
+    avgDuration: string | null;
     hasAttempt: boolean;
     isLoading: boolean;
   }>(() => {
@@ -461,6 +464,9 @@ export function ProfilePage() {
           totalQuestions: storedQuestions ? Number(storedQuestions) : 12,
           correctAnswers: null,
           completedAt: null,
+          totalExams: 1,
+          avgScore: Number(storedScore),
+          avgDuration: null,
           hasAttempt: true,
           isLoading: true,
         };
@@ -473,6 +479,9 @@ export function ProfilePage() {
       totalQuestions: null,
       correctAnswers: null,
       completedAt: null,
+      totalExams: null,
+      avgScore: null,
+      avgDuration: null,
       hasAttempt: false,
       isLoading: true,
     };
@@ -498,12 +507,45 @@ export function ProfilePage() {
           });
 
           const latest = sorted[0];
+
+          const totalExams = candidateList.length;
+          const validScores = candidateList
+            .map((r) => (typeof r.score === "number" ? r.score : null))
+            .filter((s): s is number => s !== null);
+          const avgScore =
+            validScores.length > 0
+              ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
+              : null;
+
+          const parseDurSec = (d?: string) => {
+            if (!d) return 0;
+            if (d.includes(":")) {
+              const parts = d.split(":").map(Number);
+              if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
+            }
+            const n = parseInt(d.replace(/\D/g, ""));
+            return isNaN(n) ? 0 : n;
+          };
+
+          const durations = candidateList.map((r) => parseDurSec(r.duration)).filter((s) => s > 0);
+          const avgSec =
+            durations.length > 0
+              ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+              : 0;
+          const avgDuration =
+            avgSec > 0
+              ? `${Math.ceil(avgSec / 60)} min`
+              : latest.duration || null;
+
           setExamHistory({
             lastScore: typeof latest.score === "number" ? latest.score : null,
             currentLevel: latest.level && latest.level !== "Sin Nivel" ? latest.level : null,
             totalQuestions: typeof latest.totalQuestions === "number" ? latest.totalQuestions : null,
             correctAnswers: typeof latest.correctAnswers === "number" ? latest.correctAnswers : null,
             completedAt: latest.completedAt || null,
+            totalExams,
+            avgScore,
+            avgDuration,
             hasAttempt: true,
             isLoading: false,
           });
@@ -661,7 +703,7 @@ export function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header institucional */}
-      <header className="sticky top-0 bg-white/80 backdrop-blur-lg border-b border-border z-40">
+      <header className="sticky top-0 bg-background/95 dark:bg-card/95 backdrop-blur-lg border-b border-border z-40">
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4">
             <button
@@ -909,7 +951,7 @@ export function ProfilePage() {
                           )}
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-relaxed">
-                          Formatos admitidos: JPG, PNG o WebP. Tamaño máximo: 3 MB. Vista previa instantánea.
+                          Formatos admitidos: JPG, PNG o WebP. Tamaño máximo: 2 MB. Vista previa instantánea.
                         </p>
                       </div>
                     </div>
@@ -1474,9 +1516,10 @@ export function ProfilePage() {
                   </div>
                 ) : examHistory.hasAttempt && examHistory.lastScore !== null ? (
                   <div className="space-y-4">
+                    {/* Tarjeta de Última Puntuación y Estado */}
                     <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
                       <div>
-                        <span className="text-xs text-muted-foreground block">Última puntuación</span>
+                        <span className="text-xs text-muted-foreground block">Última calificación</span>
                         <span className="text-xl font-bold text-foreground">{examHistory.lastScore}%</span>
                       </div>
                       <span
@@ -1490,29 +1533,38 @@ export function ProfilePage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
-                      <span className="text-xs text-muted-foreground font-medium">Nivel actual</span>
-                      <span className="text-sm font-bold text-sena-green px-2.5 py-0.5 rounded-lg bg-sena-green/10 border border-sena-green/20">
-                        {examHistory.currentLevel || "A1"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
-                      <span className="text-xs text-muted-foreground font-medium">Preguntas registradas</span>
-                      <span className="text-sm font-bold text-foreground">
-                        {examHistory.totalQuestions !== null ? `${examHistory.totalQuestions} preguntas` : "12 preguntas"}
-                        {examHistory.correctAnswers !== null && (
-                          <span className="text-xs font-normal text-muted-foreground ml-1">
-                            ({examHistory.correctAnswers} correctas)
-                          </span>
-                        )}
-                      </span>
+                    {/* Grid de Métricas Reales */}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="p-3 bg-muted/30 rounded-xl">
+                        <span className="text-[11px] text-muted-foreground font-medium block">Total Pruebas</span>
+                        <span className="text-sm font-bold text-foreground">
+                          {examHistory.totalExams ? `${examHistory.totalExams} realizadas` : "1 realizada"}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-muted/30 rounded-xl">
+                        <span className="text-[11px] text-muted-foreground font-medium block">Promedio General</span>
+                        <span className="text-sm font-bold text-sena-blue">
+                          {examHistory.avgScore !== null ? `${examHistory.avgScore}%` : `${examHistory.lastScore}%`}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-muted/30 rounded-xl">
+                        <span className="text-[11px] text-muted-foreground font-medium block">Nivel Actual CEFR</span>
+                        <span className="text-sm font-bold text-sena-green">
+                          {examHistory.currentLevel || "A1"}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-muted/30 rounded-xl">
+                        <span className="text-[11px] text-muted-foreground font-medium block">Tiempo Promedio</span>
+                        <span className="text-sm font-bold text-foreground">
+                          {examHistory.avgDuration || "Real / Adaptativo"}
+                        </span>
+                      </div>
                     </div>
 
                     {examHistory.completedAt && (
                       <div className="pt-3 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.8} />
-                        <span>Evaluación: {formatDate(examHistory.completedAt)}</span>
+                        <span>Última evaluación: {formatDate(examHistory.completedAt)}</span>
                       </div>
                     )}
 
@@ -1556,35 +1608,6 @@ export function ProfilePage() {
                 )}
               </motion.div>
             )}
-
-            {/* Permisos activos */}
-            <motion.section
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-              className="bg-white rounded-2xl border border-border shadow-sm p-6"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 bg-warning/10 rounded-xl flex items-center justify-center">
-                  <Award className="w-4 h-4 text-warning" strokeWidth={1.8} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-foreground text-sm">Permisos activos</h3>
-                  <p className="text-[11px] text-muted-foreground">Accesos de tu rol institucional</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {(activePermissions.length > 0 ? activePermissions : [{ key: "default", label: "Sin permisos especiales" }]).map((permission) => (
-                  <span
-                    key={permission.key}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-muted/60 rounded-lg text-xs font-medium text-foreground"
-                  >
-                    <BookOpen className="w-3 h-3 text-sena-green" />
-                    {permission.label}
-                  </span>
-                ))}
-              </div>
-            </motion.section>
           </div>
         </div>
       </main>

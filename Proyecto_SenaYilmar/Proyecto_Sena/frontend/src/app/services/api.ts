@@ -491,6 +491,8 @@ export async function getDocuments(params?: {
   return handleResponse<ApiDocument[]>(response);
 }
 
+export const getDictionary = getDocuments;
+
 export async function createDocument(docData: Partial<ApiDocument>): Promise<ApiDocument> {
   const response = await fetch(`${API_BASE}/dictionary/`, {
     method: 'POST',

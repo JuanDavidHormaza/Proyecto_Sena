@@ -85,13 +85,13 @@ export function AccessibilityWidget() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.2 }}
-              className="w-80 sm:w-88 bg-white rounded-3xl shadow-2xl border border-slate-200/90 overflow-hidden flex flex-col"
+              className="w-80 sm:w-88 bg-card rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col"
               role="dialog"
               aria-modal="true"
               aria-label="Panel de accesibilidad visual"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-sena-green/15 via-emerald-50 to-sena-blue/15 px-5 py-4 border-b border-border flex items-center justify-between">
+              <div className="bg-gradient-to-r from-sena-green/15 via-emerald-500/10 to-sena-blue/15 px-5 py-4 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-sena-green text-white flex items-center justify-center shadow-xs">
                     <Accessibility className="w-4 h-4" strokeWidth={1.8} />
@@ -104,7 +104,7 @@ export function AccessibilityWidget() {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                  className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   title="Cerrar panel"
                 >
                   <X className="w-4 h-4" strokeWidth={1.8} />
@@ -120,7 +120,7 @@ export function AccessibilityWidget() {
                       <Type className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
                       Tamaño de Letra (DOM)
                     </span>
-                    <span className="text-xs font-bold text-sena-green bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    <span className="text-xs font-bold text-sena-green bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                       {fontScale}%
                     </span>
                   </div>
@@ -133,7 +133,7 @@ export function AccessibilityWidget() {
                     step="5"
                     value={fontScale}
                     onChange={(e) => setFontScale(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-sena-green"
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-sena-green"
                     aria-label="Ajustar tamaño de fuente"
                   />
 
@@ -143,7 +143,7 @@ export function AccessibilityWidget() {
                       type="button"
                       onClick={handleDecreaseFont}
                       disabled={fontScale <= 80}
-                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 disabled:opacity-40 transition-colors cursor-pointer"
+                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground disabled:opacity-40 transition-colors cursor-pointer"
                       title="Disminuir tamaño (A-)"
                     >
                       <ZoomOut className="w-3.5 h-3.5" strokeWidth={1.8} />
@@ -152,7 +152,7 @@ export function AccessibilityWidget() {
                     <button
                       type="button"
                       onClick={() => setFontScale(100)}
-                      className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+                      className="py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground transition-colors cursor-pointer"
                       title="Restablecer tamaño normal (100%)"
                     >
                       100%
@@ -161,7 +161,7 @@ export function AccessibilityWidget() {
                       type="button"
                       onClick={handleIncreaseFont}
                       disabled={fontScale >= 140}
-                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 disabled:opacity-40 transition-colors cursor-pointer"
+                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground disabled:opacity-40 transition-colors cursor-pointer"
                       title="Aumentar tamaño (A+)"
                     >
                       <ZoomIn className="w-3.5 h-3.5" strokeWidth={1.8} />
@@ -184,8 +184,8 @@ export function AccessibilityWidget() {
                       onClick={() => setContrastMode("default")}
                       className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         contrastMode === "default"
-                          ? "bg-emerald-50 border-sena-green text-emerald-900 shadow-xs ring-2 ring-sena-green/30"
-                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 shadow-xs ring-2 ring-sena-green/30"
+                          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       <Sun className="w-4 h-4 text-amber-500" strokeWidth={1.8} />
@@ -198,11 +198,11 @@ export function AccessibilityWidget() {
                       onClick={() => setContrastMode("high-contrast")}
                       className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         contrastMode === "high-contrast"
-                          ? "bg-slate-900 border-slate-900 text-white shadow-xs ring-2 ring-slate-400"
-                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+                          ? "bg-slate-900 dark:bg-black border-white text-white shadow-xs ring-2 ring-white"
+                          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <Contrast className="w-4 h-4 text-slate-900" strokeWidth={1.8} />
+                      <Contrast className={`w-4 h-4 ${contrastMode === "high-contrast" ? "text-white" : "text-foreground"}`} strokeWidth={1.8} />
                       <span className="text-[11px] font-bold">Alto Contraste</span>
                     </button>
 
@@ -212,11 +212,11 @@ export function AccessibilityWidget() {
                       onClick={() => setContrastMode("clean-reading")}
                       className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         contrastMode === "clean-reading"
-                          ? "bg-amber-100/90 border-amber-600 text-amber-900 shadow-xs ring-2 ring-amber-400/40"
-                          : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+                          ? "bg-amber-100 dark:bg-amber-950/50 border-amber-600 text-amber-900 dark:text-amber-100 shadow-xs ring-2 ring-amber-400/40"
+                          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <BookOpen className="w-4 h-4 text-amber-700" strokeWidth={1.8} />
+                      <BookOpen className="w-4 h-4 text-amber-700 dark:text-amber-400" strokeWidth={1.8} />
                       <span className="text-[11px] font-bold">Lectura Limpia</span>
                     </button>
                   </div>
@@ -224,11 +224,11 @@ export function AccessibilityWidget() {
               </div>
 
               {/* Footer */}
-              <div className="bg-slate-50 px-5 py-3 border-t border-border flex items-center justify-between">
+              <div className="bg-muted/40 px-5 py-3 border-t border-border flex items-center justify-between">
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
                   <span>Restablecer todo</span>

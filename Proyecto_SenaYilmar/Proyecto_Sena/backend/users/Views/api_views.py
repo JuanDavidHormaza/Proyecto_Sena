@@ -365,10 +365,9 @@ class ResetPasswordAPIView(APIView):
             )
 
         user = User.objects.filter(person=person).first()
-        user_or_person = user if user else person
 
         # Validación estricta: impedir reutilizar la contraseña anterior
-        if user_or_person.check_password(new_password):
+        if person.check_password(new_password):
             msg = 'La nueva contraseña no puede ser igual a tu contraseña anterior. Por favor, elige una diferente.'
             return Response(
                 {
@@ -398,12 +397,9 @@ class ResetPasswordAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Aplicar set_password y persistir cambio
-        if user:
-            user.set_password(new_password)
-        else:
-            person.set_password(new_password)
-            person.save(update_fields=['password'])
+        # Aplicar set_password y persistir cambio en Person (modelo con hash de contraseña)
+        person.set_password(new_password)
+        person.save(update_fields=['password'])
 
         if otp:
             otp.used = True
