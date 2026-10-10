@@ -6,7 +6,7 @@ import {
   Phone, Shield, UserRound, Globe, Calendar, RefreshCw, CheckCircle2,
   GraduationCap, Plus, AlertCircle, Sparkles, Loader2, Edit3, X, Save,
   Camera, Upload, Trash2, Flame, Clock, Bell, Settings, Volume2,
-  Check, ChevronRight, Zap
+  Check, ChevronRight, Zap, Layers
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -92,7 +92,7 @@ export function ProfilePage() {
   const [feedbackMsg, setFeedbackMsg] = useState("");
 
   // Pestañas principales de gestión de perfil
-  const [activeTab, setActiveTab] = useState<"edit" | "preferences" | "fichas">("edit");
+  const [activeTab, setActiveTab] = useState<"all" | "edit" | "preferences" | "fichas">("all");
 
   // Estado para edición completa de datos personales
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -378,6 +378,15 @@ export function ProfilePage() {
       localStorage.setItem("userAvatar", finalAvatar || "");
       localStorage.setItem("userName", updated.name);
       localStorage.setItem("userEmail", updated.email);
+
+      // Sincronizar preferencias del usuario
+      localStorage.setItem("pref_emailNotifications", String(preferences.emailNotifications));
+      localStorage.setItem("pref_studyReminders", String(preferences.studyReminders));
+      localStorage.setItem("pref_supportLanguage", preferences.supportLanguage);
+      localStorage.setItem("pref_soundEffects", String(preferences.soundEffects));
+      localStorage.setItem("pref_theme", preferences.theme);
+      localStorage.setItem("pref_reminderTime", preferences.practiceReminderTime);
+
       toast.success("Perfil institucional actualizado con éxito en la plataforma.", "Cambios Guardados");
       setSelectedAvatarFile(null);
     } catch (err: any) {
@@ -773,11 +782,24 @@ export function ProfilePage() {
           {/* Columna Izquierda: Pestañas de Edición, Preferencias y Fichas (2 columnas) */}
           <div className="lg:col-span-2 space-y-6">
             {/* Navegación por pestañas */}
-            <div className="flex border-b border-border bg-white rounded-2xl p-1.5 shadow-xs gap-1">
+            <div className="flex border-b border-border bg-white rounded-2xl p-1.5 shadow-xs gap-1 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === "all"
+                    ? "bg-sena-green text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span>Vista Completa</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab("edit")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "edit"
                     ? "bg-sena-green text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -790,7 +812,7 @@ export function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("preferences")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "preferences"
                     ? "bg-sena-green text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -803,7 +825,7 @@ export function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("fichas")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "fichas"
                     ? "bg-sena-green text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -815,7 +837,7 @@ export function ProfilePage() {
             </div>
 
             {/* ─── PESTAÑA 1: FORMULARIO COMPLETO DE EDICIÓN DE DATOS PERSONALES ─── */}
-            {activeTab === "edit" && (
+            {(activeTab === "all" || activeTab === "edit") && (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1051,7 +1073,7 @@ export function ProfilePage() {
             )}
 
             {/* ─── PESTAÑA 2: MÓDULO DE PREFERENCIAS DE ESTUDIO E INTERFAZ ─── */}
-            {activeTab === "preferences" && (
+            {(activeTab === "all" || activeTab === "preferences") && (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1187,7 +1209,7 @@ export function ProfilePage() {
             )}
 
             {/* ─── PESTAÑA 3: MIS FICHAS / PROGRAMAS DE FORMACIÓN ─── */}
-            {activeTab === "fichas" && (
+            {(activeTab === "all" || activeTab === "fichas") && (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
