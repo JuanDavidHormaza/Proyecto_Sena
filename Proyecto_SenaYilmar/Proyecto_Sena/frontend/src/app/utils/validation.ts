@@ -46,7 +46,7 @@ export function validateName(
   }
 
   // Longitud mínima y máxima (2 - 50 caracteres)
-  if (trimmed.length < 2) {
+  if (isRequired && trimmed.length < 2) {
     return {
       isValid: false,
       error: `${fieldLabel} debe tener al menos 2 caracteres.`,
@@ -204,13 +204,69 @@ export function sanitizeDocumentNumber(
   return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 15);
 }
 
-// ─── 4. ESTILOS VISUALES DINÁMICOS PARA INPUTS ──────────────────────────────
+// ─── 4. VALIDACIÓN DE TELÉFONO CELULAR ──────────────────────────────────────
+export function validatePhoneNumber(
+  value: string,
+  country = "Colombia",
+  isRequired = true
+): ValidationResult {
+  const raw = value || "";
+  const trimmed = raw.replace(/\s+/g, "");
+
+  if (!trimmed) {
+    if (isRequired) {
+      return {
+        isValid: false,
+        error: "El teléfono celular es obligatorio.",
+      };
+    }
+    return { isValid: true, error: null };
+  }
+
+  // Verificar que contenga únicamente dígitos numéricos
+  if (!/^\d+$/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "Ingresa un número de teléfono celular válido (solo dígitos numéricos, 10 dígitos).",
+    };
+  }
+
+  const isColombia = (country || "").toLowerCase() === "colombia";
+
+  if (isColombia) {
+    // Celular en Colombia: exactamente 10 dígitos comenzando por 3 (ej. 3001234567)
+    if (!/^3\d{9}$/.test(trimmed)) {
+      return {
+        isValid: false,
+        error: "Ingresa un número de teléfono celular válido (solo dígitos numéricos, 10 dígitos).",
+      };
+    }
+  } else {
+    // Internacional: entre 7 y 15 dígitos numéricos
+    if (trimmed.length < 7 || trimmed.length > 15) {
+      return {
+        isValid: false,
+        error: "Ingresa un número de teléfono celular válido (entre 7 y 15 dígitos).",
+      };
+    }
+  }
+
+  return { isValid: true, error: null };
+}
+
+export function sanitizePhoneNumber(value: string, country = "Colombia"): string {
+  const digits = (value || "").replace(/\D/g, "");
+  const isColombia = (country || "").toLowerCase() === "colombia";
+  return isColombia ? digits.slice(0, 10) : digits.slice(0, 15);
+}
+
+// ─── 5. ESTILOS VISUALES DINÁMICOS PARA INPUTS ──────────────────────────────
 export function getFieldValidationClass(
   isTouched: boolean,
   error?: string | null,
   value?: string
 ): string {
-  if (isTouched && error) {
+  if (error) {
     return "border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 ring-1 ring-rose-400 bg-rose-50/20 text-rose-950 transition-all";
   }
   if (isTouched && !error && value && value.trim().length > 0) {

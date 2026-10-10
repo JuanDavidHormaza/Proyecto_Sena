@@ -35,6 +35,8 @@ import {
   sanitizeEmail,
   validateDocumentNumber,
   sanitizeDocumentNumber,
+  validatePhoneNumber,
+  sanitizePhoneNumber,
   isNumericDocType,
   getFieldValidationClass,
 } from "../utils/validation";
@@ -113,6 +115,7 @@ export function RegisterPage() {
     lastName?: string | null;
     docNum?: string | null;
     email?: string | null;
+    phoneNum?: string | null;
   }>({});
 
   const [touched, setTouched] = useState<{
@@ -120,27 +123,56 @@ export function RegisterPage() {
     lastName?: boolean;
     docNum?: boolean;
     email?: boolean;
+    phoneNum?: boolean;
   }>({});
+
+  // Función sincronizada para obtener el error visible.
+  // Regla estricta: Si el campo tiene texto (value.trim().length > 0), NUNCA disparar error de "es obligatorio".
+  // El error de "es obligatorio" solo se muestra si el usuario tocó el campo y lo dejó vacío (touched && !value).
+  const getFieldError = (
+    field: "firstName" | "lastName" | "docNum" | "email" | "phoneNum",
+    value: string
+  ): string | undefined => {
+    const err = fieldErrors[field];
+    if (!err) return undefined;
+
+    const isRequiredError = err.toLowerCase().includes("obligatorio");
+
+    // 1. Error de campo obligatorio:
+    // Solo debe dispararse si el usuario tocó el campo y lo dejó vacío (touched && !value).
+    if (isRequiredError) {
+      if (touched[field] && value.trim().length === 0) {
+        return err;
+      }
+      return undefined;
+    }
+
+    // 2. Error de sintaxis / formato / caracteres inválidos:
+    return err;
+  };
 
   const handleFirstNameChange = (val: string) => {
     const hasInvalidChars = !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/.test(val);
     const sanitized = sanitizeName(val);
     setFormData((prev) => ({ ...prev, firstName: sanitized }));
-    setTouched((prev) => ({ ...prev, firstName: true }));
+
     if (hasInvalidChars) {
       setFieldErrors((prev) => ({
         ...prev,
         firstName: "Solo se permiten letras y espacios. No se aceptan números ni caracteres especiales.",
       }));
     } else {
-      const v = validateName(sanitized, "Nombres");
-      setFieldErrors((prev) => ({ ...prev, firstName: v.error }));
+      const v = validateName(sanitized, "Nombres", false);
+      setFieldErrors((prev) => ({
+        ...prev,
+        firstName: v.isValid ? null : (sanitized.trim().length > 0 ? v.error : null),
+      }));
     }
   };
 
   const handleFirstNameBlur = () => {
     setTouched((prev) => ({ ...prev, firstName: true }));
-    const v = validateName(formData.firstName, "Nombres");
+    const v = validateName(formData.firstName, "Nombres", true);
     setFieldErrors((prev) => ({ ...prev, firstName: v.error }));
   };
 
@@ -148,21 +180,24 @@ export function RegisterPage() {
     const hasInvalidChars = !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/.test(val);
     const sanitized = sanitizeName(val);
     setFormData((prev) => ({ ...prev, lastName: sanitized }));
-    setTouched((prev) => ({ ...prev, lastName: true }));
+
     if (hasInvalidChars) {
       setFieldErrors((prev) => ({
         ...prev,
         lastName: "Solo se permiten letras y espacios. No se aceptan números ni caracteres especiales.",
       }));
     } else {
-      const v = validateName(sanitized, "Apellidos");
-      setFieldErrors((prev) => ({ ...prev, lastName: v.error }));
+      const v = validateName(sanitized, "Apellidos", false);
+      setFieldErrors((prev) => ({
+        ...prev,
+        lastName: v.isValid ? null : (sanitized.trim().length > 0 ? v.error : null),
+      }));
     }
   };
 
   const handleLastNameBlur = () => {
     setTouched((prev) => ({ ...prev, lastName: true }));
-    const v = validateName(formData.lastName, "Apellidos");
+    const v = validateName(formData.lastName, "Apellidos", true);
     setFieldErrors((prev) => ({ ...prev, lastName: v.error }));
   };
 
@@ -171,7 +206,6 @@ export function RegisterPage() {
     const hasInvalidChars = isNum ? /\D/.test(val) : /[^a-zA-Z0-9]/.test(val);
     const sanitized = sanitizeDocumentNumber(val, formData.docType);
     setFormData((prev) => ({ ...prev, docNum: sanitized }));
-    setTouched((prev) => ({ ...prev, docNum: true }));
 
     if (hasInvalidChars) {
       setFieldErrors((prev) => ({
@@ -181,14 +215,17 @@ export function RegisterPage() {
           : "El número de documento debe contener únicamente caracteres alfanuméricos (entre 6 y 15 caracteres) sin símbolos ni espacios.",
       }));
     } else {
-      const v = validateDocumentNumber(sanitized, formData.docType);
-      setFieldErrors((prev) => ({ ...prev, docNum: v.error }));
+      const v = validateDocumentNumber(sanitized, formData.docType, false);
+      setFieldErrors((prev) => ({
+        ...prev,
+        docNum: v.isValid ? null : (sanitized.length >= 6 ? v.error : null),
+      }));
     }
   };
 
   const handleDocNumBlur = () => {
     setTouched((prev) => ({ ...prev, docNum: true }));
-    const v = validateDocumentNumber(formData.docNum, formData.docType);
+    const v = validateDocumentNumber(formData.docNum, formData.docType, true);
     setFieldErrors((prev) => ({ ...prev, docNum: v.error }));
     if (v.isValid) {
       handleCheckDocument();
@@ -199,7 +236,7 @@ export function RegisterPage() {
     const sanitized = sanitizeDocumentNumber(formData.docNum, newType);
     setFormData((prev) => ({ ...prev, docType: newType, docNum: sanitized }));
     if (touched.docNum || sanitized) {
-      const v = validateDocumentNumber(sanitized, newType);
+      const v = validateDocumentNumber(sanitized, newType, true);
       setFieldErrors((prev) => ({ ...prev, docNum: v.error }));
     }
     if (sanitized) handleCheckDocument(newType, sanitized);
@@ -209,7 +246,6 @@ export function RegisterPage() {
     const hasSpaces = /\s/.test(val);
     const sanitized = sanitizeEmail(val);
     setFormData((prev) => ({ ...prev, email: sanitized }));
-    setTouched((prev) => ({ ...prev, email: true }));
     if (isEmailDuplicate) setIsEmailDuplicate(false);
 
     if (hasSpaces) {
@@ -218,17 +254,64 @@ export function RegisterPage() {
         email: "Ingresa un correo electrónico válido (ej. usuario@ejemplo.com). No se permiten espacios ni caracteres inválidos.",
       }));
     } else {
-      const v = validateEmail(sanitized);
-      setFieldErrors((prev) => ({ ...prev, email: v.error }));
+      const v = validateEmail(sanitized, false);
+      setFieldErrors((prev) => ({
+        ...prev,
+        email: v.isValid ? null : (sanitized.includes("@") && sanitized.length > 5 ? v.error : null),
+      }));
     }
   };
 
   const handleEmailBlur = () => {
     setTouched((prev) => ({ ...prev, email: true }));
-    const v = validateEmail(formData.email);
+    const v = validateEmail(formData.email, true);
     setFieldErrors((prev) => ({ ...prev, email: v.error }));
     if (v.isValid) {
       handleCheckEmail();
+    }
+  };
+
+  const handlePhoneChange = (val: string) => {
+    const hasLettersOrSymbols = /\D/.test(val);
+    const sanitized = sanitizePhoneNumber(val, formData.country);
+    setFormData((prev) => ({ ...prev, phoneNum: sanitized }));
+
+    const isCol = formData.country.toLowerCase() === "colombia";
+    const expectedMsg = isCol
+      ? "Ingresa un número de teléfono celular válido (solo dígitos numéricos, 10 dígitos)."
+      : "Ingresa un número de teléfono celular válido (solo dígitos numéricos, entre 7 y 15 dígitos).";
+
+    if (hasLettersOrSymbols) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        phoneNum: expectedMsg,
+      }));
+    } else if (sanitized.length > 0 && isCol && !sanitized.startsWith("3")) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        phoneNum: "El número de celular en Colombia debe iniciar por 3 y contener 10 dígitos.",
+      }));
+    } else {
+      const v = validatePhoneNumber(sanitized, formData.country, false);
+      setFieldErrors((prev) => ({
+        ...prev,
+        phoneNum: v.isValid ? null : (sanitized.length >= 10 ? v.error : null),
+      }));
+    }
+  };
+
+  const handlePhoneBlur = () => {
+    setTouched((prev) => ({ ...prev, phoneNum: true }));
+    const v = validatePhoneNumber(formData.phoneNum, formData.country, true);
+    setFieldErrors((prev) => ({ ...prev, phoneNum: v.error }));
+  };
+
+  const handleCountryChange = (newCountry: string) => {
+    const sanitized = sanitizePhoneNumber(formData.phoneNum, newCountry);
+    setFormData((prev) => ({ ...prev, country: newCountry, phoneNum: sanitized }));
+    if (touched.phoneNum && sanitized) {
+      const v = validatePhoneNumber(sanitized, newCountry, true);
+      setFieldErrors((prev) => ({ ...prev, phoneNum: v.error }));
     }
   };
 
@@ -237,12 +320,19 @@ export function RegisterPage() {
     Boolean(formData.lastName.trim()) &&
     Boolean(formData.docNum.trim()) &&
     Boolean(formData.email.trim()) &&
-    !fieldErrors.firstName &&
-    !fieldErrors.lastName &&
-    !fieldErrors.docNum &&
-    !fieldErrors.email &&
+    Boolean(formData.phoneNum.trim()) &&
+    !getFieldError("firstName", formData.firstName) &&
+    !getFieldError("lastName", formData.lastName) &&
+    !getFieldError("docNum", formData.docNum) &&
+    !getFieldError("email", formData.email) &&
+    !getFieldError("phoneNum", formData.phoneNum) &&
     !isDocDuplicate &&
-    !isEmailDuplicate;
+    !isEmailDuplicate &&
+    validateName(formData.firstName, "Nombres", true).isValid &&
+    validateName(formData.lastName, "Apellidos", true).isValid &&
+    validateDocumentNumber(formData.docNum, formData.docType, true).isValid &&
+    validateEmail(formData.email, true).isValid &&
+    validatePhoneNumber(formData.phoneNum, formData.country, true).isValid;
 
   // ── Estado del Paso 3 (OTP) ───────────────────────────────────────────────
   const [otpEmail, setOtpEmail] = useState("");
@@ -288,6 +378,14 @@ export function RegisterPage() {
           email: res.email || prev.email,
           country: res.country || prev.country || "Colombia",
           phoneNum: res.phoneNum ? String(res.phoneNum) : prev.phoneNum,
+        }));
+        // Sincronizar inmediatamente y limpiar errores de campos que ahora tienen texto
+        setFieldErrors((prev) => ({
+          ...prev,
+          firstName: res.firstName ? null : prev.firstName,
+          lastName: res.lastName ? null : prev.lastName,
+          email: res.email ? null : prev.email,
+          phoneNum: res.phoneNum ? null : prev.phoneNum,
         }));
         toast.warning(
           "Ya existe un registro con este número de documento. Si buscas inscribirte a un segundo programa, inicia sesión para solicitarlo desde tu perfil.",
@@ -336,21 +434,29 @@ export function RegisterPage() {
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const vFirstName = validateName(formData.firstName, "Nombres");
-    const vLastName = validateName(formData.lastName, "Apellidos");
-    const vDoc = validateDocumentNumber(formData.docNum, formData.docType);
-    const vEmail = validateEmail(formData.email);
+    const vFirstName = validateName(formData.firstName, "Nombres", true);
+    const vLastName = validateName(formData.lastName, "Apellidos", true);
+    const vDoc = validateDocumentNumber(formData.docNum, formData.docType, true);
+    const vEmail = validateEmail(formData.email, true);
+    const vPhone = validatePhoneNumber(formData.phoneNum, formData.country, true);
 
     const newErrors = {
       firstName: vFirstName.error,
       lastName: vLastName.error,
       docNum: vDoc.error,
       email: vEmail.error,
+      phoneNum: vPhone.error,
     };
     setFieldErrors(newErrors);
-    setTouched({ firstName: true, lastName: true, docNum: true, email: true });
+    setTouched({
+      firstName: true,
+      lastName: true,
+      docNum: true,
+      email: true,
+      phoneNum: true,
+    });
 
-    if (!vFirstName.isValid || !vLastName.isValid || !vDoc.isValid || !vEmail.isValid) {
+    if (!vFirstName.isValid || !vLastName.isValid || !vDoc.isValid || !vEmail.isValid || !vPhone.isValid) {
       setError("Por favor completa y corrige los campos con caracteres inválidos o incompletos.");
       toast.warning("Por favor corrige los campos con errores antes de continuar.", "Campos Inválidos");
       return;
@@ -718,10 +824,10 @@ export function RegisterPage() {
                         value={formData.docNum}
                         onChange={(e) => handleDocNumChange(e.target.value)}
                         onBlur={handleDocNumBlur}
-                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.docNum, fieldErrors.docNum, formData.docNum)}`}
+                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.docNum, getFieldError("docNum", formData.docNum), formData.docNum)}`}
                       />
                     </div>
-                    <FieldError error={touched.docNum ? fieldErrors.docNum : undefined} />
+                    <FieldError error={getFieldError("docNum", formData.docNum)} />
                   </div>
                 </div>
 
@@ -787,10 +893,10 @@ export function RegisterPage() {
                         value={formData.firstName}
                         onChange={(e) => handleFirstNameChange(e.target.value)}
                         onBlur={handleFirstNameBlur}
-                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.firstName, fieldErrors.firstName, formData.firstName)}`}
+                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.firstName, getFieldError("firstName", formData.firstName), formData.firstName)}`}
                       />
                     </div>
-                    <FieldError error={touched.firstName ? fieldErrors.firstName : undefined} />
+                    <FieldError error={getFieldError("firstName", formData.firstName)} />
                   </div>
 
                   <div>
@@ -804,10 +910,10 @@ export function RegisterPage() {
                         value={formData.lastName}
                         onChange={(e) => handleLastNameChange(e.target.value)}
                         onBlur={handleLastNameBlur}
-                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.lastName, fieldErrors.lastName, formData.lastName)}`}
+                        className={`${baseInputClass} ${getFieldValidationClass(!!touched.lastName, getFieldError("lastName", formData.lastName), formData.lastName)}`}
                       />
                     </div>
-                    <FieldError error={touched.lastName ? fieldErrors.lastName : undefined} />
+                    <FieldError error={getFieldError("lastName", formData.lastName)} />
                   </div>
                 </div>
 
@@ -824,10 +930,10 @@ export function RegisterPage() {
                       value={formData.email}
                       onChange={(e) => handleEmailChange(e.target.value)}
                       onBlur={handleEmailBlur}
-                      className={`${baseInputClass} ${getFieldValidationClass(!!touched.email, fieldErrors.email, formData.email)}`}
+                      className={`${baseInputClass} ${getFieldValidationClass(!!touched.email, getFieldError("email", formData.email), formData.email)}`}
                     />
                   </div>
-                  <FieldError error={touched.email ? fieldErrors.email : undefined} />
+                  <FieldError error={getFieldError("email", formData.email)} />
 
                   {/* Banner de correo duplicado */}
                   {isEmailDuplicate && (
@@ -870,17 +976,25 @@ export function RegisterPage() {
                 {/* Teléfono y País */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">Teléfono Celular</label>
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">Teléfono Celular *</label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                       <input
                         type="tel"
+                        inputMode="numeric"
                         placeholder="300 123 4567"
+                        required
                         value={formData.phoneNum}
-                        onChange={(e) => setFormData({ ...formData, phoneNum: e.target.value })}
-                        className={inputClass}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        onBlur={handlePhoneBlur}
+                        className={`${baseInputClass} ${getFieldValidationClass(
+                          !!touched.phoneNum,
+                          getFieldError("phoneNum", formData.phoneNum),
+                          formData.phoneNum
+                        )}`}
                       />
                     </div>
+                    <FieldError error={getFieldError("phoneNum", formData.phoneNum)} />
                   </div>
 
                   <div>
@@ -889,7 +1003,7 @@ export function RegisterPage() {
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                       <select
                         value={formData.country}
-                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                        onChange={(e) => handleCountryChange(e.target.value)}
                         className={`${inputClass} appearance-none cursor-pointer`}
                       >
                         {countries.map((c) => (
