@@ -33,6 +33,16 @@ class Person(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
+    def check_password(self, raw_password):
+        from django.contrib.auth.hashers import check_password
+        if not self.password or not raw_password:
+            return False
+        return check_password(raw_password, self.password)
+
+    def set_password(self, raw_password):
+        from django.contrib.auth.hashers import make_password
+        self.password = make_password(raw_password)
+
 
 class User(models.Model):
     user_id = models.AutoField(primary_key=True)
@@ -60,6 +70,16 @@ class User(models.Model):
     mfa = models.CharField(max_length=255)
 
     created_at = models.DateTimeField(default=timezone.now)
+
+    def check_password(self, raw_password):
+        if self.person:
+            return self.person.check_password(raw_password)
+        return False
+
+    def set_password(self, raw_password):
+        if self.person:
+            self.person.set_password(raw_password)
+            self.person.save(update_fields=['password'])
 
 
 class RoleAccess(models.Model):

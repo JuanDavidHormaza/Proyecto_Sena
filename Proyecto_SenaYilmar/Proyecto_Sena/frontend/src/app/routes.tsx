@@ -21,6 +21,9 @@ export const router = createBrowserRouter([
   { path: "/login", Component: LoginPage },
   { path: "/register", Component: RegisterPage },
   { path: "/recuperar-cuenta", Component: RecoverAccountPage },
+  { path: "/recuperar", Component: RecoverAccountPage },
+  { path: "/reset-password", Component: RecoverAccountPage },
+  { path: "/recover", Component: RecoverAccountPage },
   { path: "/404", Component: NotFoundPage },
 
   // Estudiante

@@ -781,11 +781,30 @@ export async function approveFichaRequest(requestId: number, instructorId?: stri
   return handleResponse<ApiFichaRequest>(response);
 }
 
-export async function resetPassword(data: { email: string; code: string; new_password: string; confirm_password?: string }): Promise<{ message: string; success: boolean }> {
+export async function resetPassword(data: {
+  email: string;
+  code: string;
+  new_password?: string;
+  newPassword?: string;
+  confirm_password?: string;
+  confirmPassword?: string;
+}): Promise<{ message: string; success: boolean }> {
+  const newPass = data.new_password || data.newPassword || '';
+  const confirmPass = data.confirm_password || data.confirmPassword || '';
+  const payload = {
+    email: (data.email || '').trim().toLowerCase(),
+    code: (data.code || '').trim(),
+    otp: (data.code || '').trim(),
+    new_password: newPass,
+    newPassword: newPass,
+    password: newPass,
+    confirm_password: confirmPass,
+    confirmPassword: confirmPass,
+  };
   const response = await safeFetch(`${API_BASE}/auth/reset-password/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify(payload),
   });
   return handleResponse<{ message: string; success: boolean }>(response);
 }

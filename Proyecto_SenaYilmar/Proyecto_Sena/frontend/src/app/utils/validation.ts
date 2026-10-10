@@ -260,7 +260,55 @@ export function sanitizePhoneNumber(value: string, country = "Colombia"): string
   return isColombia ? digits.slice(0, 10) : digits.slice(0, 15);
 }
 
-// ─── 5. ESTILOS VISUALES DINÁMICOS PARA INPUTS ──────────────────────────────
+// ─── 5. VALIDACIÓN DE CONTRASEÑA ───────────────────────────────────────────
+export function validatePassword(
+  value: string,
+  fieldLabel = "Nueva contraseña",
+  isRequired = true
+): ValidationResult {
+  const trimmed = value || "";
+
+  if (!trimmed) {
+    if (isRequired) {
+      return { isValid: false, error: `${fieldLabel} es obligatoria.` };
+    }
+    return { isValid: true, error: null };
+  }
+
+  if (trimmed.length < 8) {
+    return {
+      isValid: false,
+      error: "La contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+
+  const hasLetter = /[a-zA-Z]/.test(trimmed);
+  const hasNumber = /\d/.test(trimmed);
+
+  if (!hasLetter || !hasNumber) {
+    return {
+      isValid: false,
+      error: "La contraseña debe incluir al menos una letra y un número.",
+    };
+  }
+
+  return { isValid: true, error: null };
+}
+
+export function validatePasswordMatch(
+  newPass: string,
+  confirmPass: string
+): ValidationResult {
+  if (!confirmPass) {
+    return { isValid: false, error: "Debes confirmar la nueva contraseña." };
+  }
+  if (newPass !== confirmPass) {
+    return { isValid: false, error: "Las contraseñas no coinciden." };
+  }
+  return { isValid: true, error: null };
+}
+
+// ─── 6. ESTILOS VISUALES DINÁMICOS PARA INPUTS ──────────────────────────────
 export function getFieldValidationClass(
   isTouched: boolean,
   error?: string | null,

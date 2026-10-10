@@ -315,24 +315,41 @@ class ResetPasswordAPIView(APIView):
     def post(self, request):
         email = (request.data.get('email') or '').strip().lower()
         code = str(request.data.get('code') or request.data.get('otp') or '').strip()
-        new_password = request.data.get('new_password') or request.data.get('password')
-        confirm_password = request.data.get('confirm_password')
+        new_password = (
+            request.data.get('new_password')
+            or request.data.get('newPassword')
+            or request.data.get('password')
+            or ''
+        )
+        confirm_password = (
+            request.data.get('confirm_password')
+            or request.data.get('confirmPassword')
+        )
 
         if not email or not code or not new_password:
             return Response(
-                {'error': 'El correo, el código OTP y la nueva contraseña son requeridos.'},
+                {
+                    'error': 'El correo, el código OTP y la nueva contraseña son requeridos.',
+                    'detail': 'El correo, el código OTP y la nueva contraseña son requeridos.',
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {
+                    'error': 'La nueva contraseña debe tener al menos 8 caracteres.',
+                    'detail': 'La nueva contraseña debe tener al menos 8 caracteres.',
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         if confirm_password and new_password != confirm_password:
             return Response(
-                {'error': 'Las contraseñas ingresadas no coinciden.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if len(new_password) < 6:
-            return Response(
-                {'error': 'La nueva contraseña debe tener al menos 6 caracteres.'},
+                {
+                    'error': 'Las contraseñas no coinciden.',
+                    'detail': 'Las contraseñas no coinciden.',
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -340,26 +357,53 @@ class ResetPasswordAPIView(APIView):
             person = Person.objects.get(email__iexact=email)
         except Person.DoesNotExist:
             return Response(
-                {'error': 'No se encontró ninguna cuenta asociada a este correo electrónico.'},
+                {
+                    'error': 'No se encontró ninguna cuenta asociada a este correo electrónico.',
+                    'detail': 'No se encontró ninguna cuenta asociada a este correo electrónico.',
+                },
                 status=status.HTTP_404_NOT_FOUND
+            )
+
+        user = User.objects.filter(person=person).first()
+        user_or_person = user if user else person
+
+        # Validación estricta: impedir reutilizar la contraseña anterior
+        if user_or_person.check_password(new_password):
+            msg = 'La nueva contraseña no puede ser igual a tu contraseña anterior. Por favor, elige una diferente.'
+            return Response(
+                {
+                    'error': msg,
+                    'detail': msg,
+                    'message': msg,
+                },
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         otp = EmailOTP.objects.filter(email__iexact=email, code=code, used=False).order_by('-created_at').first()
         if not otp and code != '123456':
             return Response(
-                {'error': 'Código de verificación inválido o ya utilizado.'},
+                {
+                    'error': 'Código de verificación inválido o ya utilizado.',
+                    'detail': 'Código de verificación inválido o ya utilizado.',
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         if otp and (timezone.now() - otp.created_at) > timedelta(minutes=10):
             return Response(
-                {'error': 'El código de verificación ha expirado. Solicita un nuevo código.'},
+                {
+                    'error': 'El código de verificación ha expirado. Solicita un nuevo código.',
+                    'detail': 'El código de verificación ha expirado. Solicita un nuevo código.',
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        from django.contrib.auth.hashers import make_password
-        person.password = make_password(new_password)
-        person.save(update_fields=['password'])
+        # Aplicar set_password y persistir cambio
+        if user:
+            user.set_password(new_password)
+        else:
+            person.set_password(new_password)
+            person.save(update_fields=['password'])
 
         if otp:
             otp.used = True
@@ -369,6 +413,7 @@ class ResetPasswordAPIView(APIView):
 
         return Response({
             'message': 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
+            'detail': 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
             'success': True
         }, status=status.HTTP_200_OK)
 
