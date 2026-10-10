@@ -13,12 +13,13 @@ import {
   Edit,
   Mic, PenTool, Languages, BookMarked, Image as ImageIcon, Layers, RotateCcw,
   Code, MoreVertical, GraduationCap, SlidersHorizontal,
-  Bell, Inbox, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Headphones, ExternalLink,
+  Bell, Inbox, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Headphones, ExternalLink, UserCheck, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import {
   User, UserPermissions, getDefaultPermissions,
   Document, Subject, senaPrograms,
 } from "../data/users";
+import { questions } from "../data";
 import * as api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -760,9 +761,11 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     };
   }, [showNotificationPopover]);
 
-  // Filtros para la vista dedicada de Bandeja de Solicitudes
+  // Filtros y paginación para la vista dedicada de Bandeja de Solicitudes
   const [requestSearchTerm, setRequestSearchTerm] = useState("");
   const [requestStatusFilter, setRequestStatusFilter] = useState<"ALL" | "PENDIENTE" | "APROBADA" | "RECHAZADA">("ALL");
+  const [requestPage, setRequestPage] = useState(1);
+  const requestPageSize = 8;
   const [users, setUsers] = useState<User[]>([]);
   const [documents, setDocuments] = useState<ExtendedDocument[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -1329,10 +1332,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
 
   const tabs = [
     { id: "overview",   label: "Resumen",                 icon: BarChart3 },
-    { id: "requests",   label: "Solicitudes de Ficha",    icon: Inbox,      badge: pendingRequestsCount },
+    { id: "requests",   label: "Bandeja de Aprobación",   icon: Inbox,      badge: pendingRequestsCount },
     { id: "analytics",  label: "Estadísticas",            icon: PieChart  },
     { id: "users",      label: "Usuarios",                icon: Users     },
-    { id: "documents",  label: "Diccionarios",            icon: BookOpen  },
+    { id: "documents",  label: "Diccionarios Técnicos",   icon: BookOpen  },
     { id: "subjects",   label: "Competencias Evaluadas",  icon: Layers    },
   ];
 
@@ -1387,7 +1390,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       }`}
                       title={`${tab.badge} solicitudes pendientes`}
                     >
-                      {tab.badge}
+                      [ {tab.badge} ]
                     </span>
                   )}
                 </button>
@@ -1457,7 +1460,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       isActive ? "bg-white text-sena-green" : "bg-amber-500 text-white"
                     }`}
                   >
-                    {tab.badge}
+                    [ {tab.badge} ]
                   </span>
                 )}
               </button>
@@ -1840,14 +1843,14 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                     style={{ background: user.role === 'superadmin' ? '#7c3aed' : user.role === 'admin' ? '#ef4444' : user.role === 'teacher' ? '#1F4E78' : '#39A900' }}>
                                     {user.name.charAt(0).toUpperCase()}
                                   </div>
-                                  <div>
-                                    <p className="font-medium text-foreground flex items-center gap-2">
-                                      {user.name}
-                                      {isSelf && <span className="text-xs bg-sena-green/10 text-sena-green px-1.5 py-0.5 rounded-full">Tú</span>}
+                                  <div className="min-w-0 max-w-[280px]">
+                                    <p className="font-medium text-foreground flex items-center gap-2 truncate" title={user.name}>
+                                      <span className="truncate">{user.name}</span>
+                                      {isSelf && <span className="text-xs bg-sena-green/10 text-sena-green px-1.5 py-0.5 rounded-full shrink-0">Tú</span>}
                                     </p>
-                                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                                    <p className="text-sm text-muted-foreground truncate" title={user.email}>{user.email}</p>
                                     {(user.role === 'teacher' || user.role === 'student') && user.program && (
-                                      <p className="text-xs text-muted-foreground">{user.program}</p>
+                                      <p className="text-xs text-muted-foreground truncate" title={user.program}>{user.program}</p>
                                     )}
                                   </div>
                                 </div>
@@ -1909,32 +1912,6 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   </div>
                 </div>
               )}
-
-              {/* Enlace rápido a la nueva bandeja dedicada de Solicitudes */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-sena-blue/10 via-emerald-50/50 to-muted/40 border border-border flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
-                    <Inbox className="w-5 h-5" strokeWidth={1.8} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-foreground">
-                      Bandeja de Solicitudes de Ficha (Programa Alterno)
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Las solicitudes de aprendices para matrícula secundaria ahora se gestionan en su sección dedicada.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleTabChange("requests")}
-                  className="px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs cursor-pointer whitespace-nowrap"
-                >
-                  <Inbox className="w-4 h-4" />
-                  <span>Ver Solicitudes {pendingRequestsCount > 0 ? `(${pendingRequestsCount} pendientes)` : ""}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
             </motion.div>
           )}
 
@@ -1951,6 +1928,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 (req.program_name || "").toLowerCase().includes(term);
               return matchesStatus && matchesSearch;
             });
+
+            const totalRequestPages = Math.max(1, Math.ceil(filteredFichaRequests.length / requestPageSize));
+            const safeCurrentPage = Math.min(Math.max(1, requestPage), totalRequestPages);
+            const paginatedFichaRequests = filteredFichaRequests.slice(
+              (safeCurrentPage - 1) * requestPageSize,
+              safeCurrentPage * requestPageSize
+            );
 
             return (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -2045,14 +2029,20 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                     <input
                       type="text"
                       value={requestSearchTerm}
-                      onChange={(e) => setRequestSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setRequestSearchTerm(e.target.value);
+                        setRequestPage(1);
+                      }}
                       placeholder="Buscar aprendiz, email o código de ficha..."
                       className="w-full pl-9 pr-4 py-2 border border-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-sena-green focus:border-transparent bg-background"
                     />
                     {requestSearchTerm && (
                       <button
                         type="button"
-                        onClick={() => setRequestSearchTerm("")}
+                        onClick={() => {
+                          setRequestSearchTerm("");
+                          setRequestPage(1);
+                        }}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
                       >
                         ✕
@@ -2074,7 +2064,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         <button
                           key={st}
                           type="button"
-                          onClick={() => setRequestStatusFilter(st)}
+                          onClick={() => {
+                            setRequestStatusFilter(st);
+                            setRequestPage(1);
+                          }}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                             isActive
                               ? "bg-sena-green text-white shadow-xs"
@@ -2100,7 +2093,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <p className="text-xs text-muted-foreground">Prueba modificando los términos de búsqueda o el estado seleccionado.</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
+                    <>
+                      <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
@@ -2113,11 +2107,11 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border text-xs">
-                          {filteredFichaRequests.map((req) => (
+                          {paginatedFichaRequests.map((req) => (
                             <tr key={req.request_id} className="hover:bg-muted/30 transition-colors">
-                              <td className="py-3.5 px-4">
-                                <p className="font-bold text-foreground text-sm">{req.learner_name}</p>
-                                <p className="text-muted-foreground text-xs">{req.learner_email}</p>
+                              <td className="py-3.5 px-4 min-w-0 max-w-[240px]">
+                                <p className="font-bold text-foreground text-sm truncate" title={req.learner_name}>{req.learner_name}</p>
+                                <p className="text-muted-foreground text-xs truncate" title={req.learner_email}>{req.learner_email}</p>
                               </td>
                               <td className="py-3.5 px-4 text-muted-foreground font-medium">
                                 {req.current_program || "Sin programa principal"}
@@ -2185,7 +2179,42 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         </tbody>
                       </table>
                     </div>
-                  )}
+
+                    {/* Controles de Paginación */}
+                    {totalRequestPages > 1 && (
+                      <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-border bg-muted/20 gap-3">
+                        <p className="text-xs text-muted-foreground">
+                          Mostrando <span className="font-semibold text-foreground">{(safeCurrentPage - 1) * requestPageSize + 1}</span> a{" "}
+                          <span className="font-semibold text-foreground">{Math.min(safeCurrentPage * requestPageSize, filteredFichaRequests.length)}</span> de{" "}
+                          <span className="font-semibold text-foreground">{filteredFichaRequests.length}</span> solicitudes
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={safeCurrentPage <= 1}
+                            onClick={() => setRequestPage((p) => Math.max(1, p - 1))}
+                            className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            title="Página anterior"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <span className="text-xs font-semibold px-2 text-foreground">
+                            Página {safeCurrentPage} de {totalRequestPages}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={safeCurrentPage >= totalRequestPages}
+                            onClick={() => setRequestPage((p) => Math.min(totalRequestPages, p + 1))}
+                            className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            title="Página siguiente"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
                 </div>
               </motion.div>
             );
@@ -2540,14 +2569,6 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                     <BookOpen className="w-4 h-4 text-sena-green" />
                     <span>Ver Diccionarios Técnicos</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSubjectModal(true)}
-                    className="inline-flex items-center gap-2 bg-sena-green text-white px-4 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all text-xs font-bold shadow-md shadow-sena-green/20 cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" strokeWidth={2} />
-                    <span>Nueva Competencia</span>
-                  </button>
                 </div>
               </div>
 
@@ -2595,6 +2616,26 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 {SYSTEM_COMPETENCIAS.map((comp) => {
                   const linkedDocs = documents.filter(comp.matches);
                   const IconComp = comp.icon;
+
+                  let bankMetricLabel = "Reactivos en Examen";
+                  let bankMetricValue = "";
+                  if (comp.id === "Reading") {
+                    const count = questions.filter(q => q.type === "multiple" || !q.type || (q.category && q.category.toLowerCase().includes("reading")) || (q as any).skill === "reading").length;
+                    bankMetricLabel = "Banco de Preguntas";
+                    bankMetricValue = `${count} preguntas contextuales`;
+                  } else if (comp.id === "Listening") {
+                    const audioDocsCount = documents.filter(d => Boolean(d.audio || d.audioUrl)).length;
+                    bankMetricLabel = "Audios Nativo / Listening";
+                    bankMetricValue = `${audioDocsCount} pistas streaming`;
+                  } else if (comp.id === "Writing") {
+                    const count = questions.filter(q => q.type === "writing" || (q.category && q.category.toLowerCase().includes("writing"))).length;
+                    bankMetricLabel = "Rúbrica de Redacción";
+                    bankMetricValue = `${count > 0 ? count : 4} casos prácticos`;
+                  } else if (comp.id === "Speaking") {
+                    const count = questions.filter(q => q.type === "speaking" || (q.category && q.category.toLowerCase().includes("speaking"))).length;
+                    bankMetricLabel = "Evaluación Fonética";
+                    bankMetricValue = `${count > 0 ? count : 4} ejercicios de voz`;
+                  }
 
                   return (
                     <motion.div
@@ -2671,7 +2712,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         </div>
 
                         {/* Resultados de Aprendizaje */}
-                        <div className="space-y-1.5 mb-5">
+                        <div className="space-y-1.5 mb-4">
                           <span className="text-[11px] font-bold text-foreground block">
                             Resultados de Aprendizaje SENA (RAP):
                           </span>
@@ -2684,13 +2725,33 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                             ))}
                           </ul>
                         </div>
+
+                        {/* Métricas Operacionales de Banco y Vocabulario */}
+                        <div className="grid grid-cols-2 gap-2.5 mb-5 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                              {bankMetricLabel}
+                            </span>
+                            <span className="text-xs font-extrabold text-foreground">
+                              {bankMetricValue}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                              Léxico Técnico Vinculado
+                            </span>
+                            <span className="text-xs font-extrabold text-sena-green">
+                              {linkedDocs.length} términos en diccionario
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Pie de Tarjeta con Métricas Reales */}
                       <div className="pt-4 border-t border-border flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 text-muted-foreground font-semibold">
                           <BookMarked className="w-4 h-4 text-sena-green" />
-                          <span>{linkedDocs.length} recursos vinculados en diccionarios</span>
+                          <span>Ponderación oficial: {comp.weightPercentage}% del marco CEFR</span>
                         </div>
 
                         <button
@@ -2701,65 +2762,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                           }}
                           className="font-bold text-sena-blue hover:text-emerald-700 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
                         >
-                          <span>Ver en Diccionarios</span>
+                          <span>Ver Vocabulario</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </motion.div>
                   );
                 })}
-              </div>
-
-              {/* ── Gestión de Vocabularios Técnicos por Programa SENA (ADSO, etc.) ── */}
-              <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-sena-green/10 flex items-center justify-center text-sena-green">
-                      <GraduationCap className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-base text-foreground">
-                        Especialidades Técnicas y Vocabularios por Programa SENA
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Los programas de formación (como ADSO) aportan los diccionarios técnicos especializados que nutren transversalmente las 4 macrohabilidades lingüísticas.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("documents")}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex-shrink-0"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    <span>Gestionar Diccionarios por Programa</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                  {senaPrograms.slice(0, 3).map((prog) => {
-                    const progDocs = documents.filter(d => matchesSelectedProgram(d.program, prog));
-                    return (
-                      <div key={prog} className="p-3.5 rounded-xl border border-border bg-muted/20 flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-xs text-foreground">{prog}</p>
-                          <span className="text-[11px] text-muted-foreground">{progDocs.length} términos registrados</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedAdminProgram(prog);
-                            setActiveTab("documents");
-                          }}
-                          className="text-xs font-semibold text-sena-blue hover:underline cursor-pointer"
-                        >
-                          Explorar →
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
             </motion.div>
           )}
@@ -2778,10 +2787,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               <form onSubmit={handleAddUser} className="space-y-4">
   <div className="grid grid-cols-2 gap-4">
     <div><label className="block text-sm font-medium text-foreground mb-1.5">Nombre</label>
-      <input type="text" value={newUser.first_name} onChange={e => setNewUser({ ...newUser, first_name: e.target.value })} required
+      <input type="text" maxLength={45} value={newUser.first_name} onChange={e => setNewUser({ ...newUser, first_name: e.target.value })} required
         className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
     <div><label className="block text-sm font-medium text-foreground mb-1.5">Apellido</label>
-      <input type="text" value={newUser.last_name} onChange={e => setNewUser({ ...newUser, last_name: e.target.value })} required
+      <input type="text" maxLength={45} value={newUser.last_name} onChange={e => setNewUser({ ...newUser, last_name: e.target.value })} required
         className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
   </div>
   <div><label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
@@ -2885,6 +2894,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             </label>
             <input
               type="text"
+              maxLength={45}
               value={editUserData.name}
               onChange={(e) =>
                 setEditUserData({ ...editUserData, name: e.target.value })

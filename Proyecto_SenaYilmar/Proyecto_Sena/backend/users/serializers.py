@@ -1,10 +1,32 @@
+from collections import Counter
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password, check_password
 from .Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, FichaRequest
 
 
+def validate_name_anti_spam(value, field_name="Nombre"):
+    val = (value or "").strip()
+    if not val:
+        return val
+    if len(val) > 50:
+        raise serializers.ValidationError(f"{field_name} no puede exceder 50 caracteres.")
+    words = val.lower().split()
+    if len(words) >= 3:
+        counts = Counter(words)
+        for w, c in counts.items():
+            if c >= 3:
+                raise serializers.ValidationError(f"{field_name} contiene palabras repetidas de forma consecutiva o excesiva.")
+        if len(words) >= 4:
+            for i in range(len(words) - 3):
+                if words[i:i+2] == words[i+2:i+4]:
+                    raise serializers.ValidationError(f"{field_name} contiene secuencias repetitivas de spam no válidas.")
+    return val
+
+
 class PersonSerializer(serializers.ModelSerializer):
     """Serializer para el modelo Person"""
+    first_name = serializers.CharField(max_length=50, required=False)
+    last_name = serializers.CharField(max_length=50, required=False)
     
     class Meta:
         model = Person
@@ -17,6 +39,12 @@ class PersonSerializer(serializers.ModelSerializer):
             'person_id': {'read_only': True},
             'created_at': {'read_only': True},
         }
+
+    def validate_first_name(self, value):
+        return validate_name_anti_spam(value, "El nombre")
+
+    def validate_last_name(self, value):
+        return validate_name_anti_spam(value, "El apellido")
     
     def create(self, validated_data):
         # Hash the password before saving
@@ -38,8 +66,14 @@ class UserSerializer(serializers.ModelSerializer):
     
     # Campos virtuales para facilitar la creacion
     email = serializers.EmailField(write_only=True, required=False)
-    first_name = serializers.CharField(write_only=True, required=False)
-    last_name = serializers.CharField(write_only=True, required=False)
+    first_name = serializers.CharField(max_length=50, write_only=True, required=False)
+    last_name = serializers.CharField(max_length=50, write_only=True, required=False)
+
+    def validate_first_name(self, value):
+        return validate_name_anti_spam(value, "El nombre")
+
+    def validate_last_name(self, value):
+        return validate_name_anti_spam(value, "El apellido")
     
     class Meta:
         model = User
@@ -183,6 +217,12 @@ class RegisterSerializer(serializers.Serializer):
         required=False
     )
     is_alternate_program = serializers.BooleanField(required=False, default=False)
+
+    def validate_first_name(self, value):
+        return validate_name_anti_spam(value, "El nombre")
+
+    def validate_last_name(self, value):
+        return validate_name_anti_spam(value, "El apellido")
 
     def validate_email(self, value):
         is_alternate = bool(self.initial_data.get('is_alternate_program'))

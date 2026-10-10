@@ -372,9 +372,9 @@ export function TeacherDashboard() {
                       <div className="w-12 h-12 bg-sena-green rounded-xl flex items-center justify-center text-white font-medium text-lg">
                         {studentName.charAt(0)}
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">{studentName}</h3>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="min-w-0 max-w-[280px]">
+                        <h3 className="font-semibold text-foreground truncate" title={studentName}>{studentName}</h3>
+                        <p className="text-sm text-muted-foreground truncate" title={studentProgram}>
                           {studentProgram} - {userResults.length} prueba{userResults.length !== 1 ? 's' : ''}
                         </p>
                       </div>

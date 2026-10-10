@@ -45,7 +45,7 @@ export function validateName(
     };
   }
 
-  // Longitud mínima y máxima (2 - 50 caracteres)
+  // Longitud mínima y máxima (2 - 45 caracteres)
   if (isRequired && trimmed.length < 2) {
     return {
       isValid: false,
@@ -53,21 +53,46 @@ export function validateName(
     };
   }
 
-  if (trimmed.length > 50) {
+  if (trimmed.length > 45) {
     return {
       isValid: false,
-      error: `${fieldLabel} no puede exceder los 50 caracteres.`,
+      error: `${fieldLabel} no puede exceder los 45 caracteres.`,
     };
+  }
+
+  // Verificar patrones repetitivos de spam (ej. "juan leonardo juan leonardo...")
+  const words = trimmed.toLowerCase().split(/\s+/);
+  if (words.length >= 3) {
+    const counts: Record<string, number> = {};
+    for (const w of words) {
+      counts[w] = (counts[w] || 0) + 1;
+      if (counts[w] >= 3) {
+        return {
+          isValid: false,
+          error: `${fieldLabel} contiene palabras repetidas de forma excesiva.`,
+        };
+      }
+    }
+    if (words.length >= 4) {
+      for (let i = 0; i <= words.length - 4; i += 2) {
+        if (words[i] === words[i + 2] && words[i + 1] === words[i + 3]) {
+          return {
+            isValid: false,
+            error: `${fieldLabel} contiene secuencias repetitivas no válidas.`,
+          };
+        }
+      }
+    }
   }
 
   return { isValid: true, error: null };
 }
 
 /**
- * Sanitiza en tiempo real la entrada de nombres impidiendo caracteres inválidos.
+ * Sanitiza en tiempo real la entrada de nombres impidiendo caracteres inválidos y limitando a 45 caracteres.
  */
 export function sanitizeName(value: string): string {
-  return value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, "").slice(0, 50);
+  return value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, "").slice(0, 45);
 }
 
 // ─── 2. VALIDACIÓN DE CORREO ELECTRÓNICO ───────────────────────────────────

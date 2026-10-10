@@ -819,6 +819,32 @@ class UserViewSet(viewsets.ViewSet):
         if 'country' in request.data:
             person_data['country'] = request.data['country']
 
+        if 'first_name' in person_data:
+            fn = person_data['first_name']
+            if len(fn) > 50:
+                return Response({'error': 'El nombre no puede exceder 50 caracteres.'}, status=status.HTTP_400_BAD_REQUEST)
+            words = fn.lower().split()
+            if len(words) >= 3:
+                from collections import Counter
+                counts = Counter(words)
+                if any(c >= 3 for c in counts.values()):
+                    return Response({'error': 'El nombre contiene secuencias repetitivas no válidas.'}, status=status.HTTP_400_BAD_REQUEST)
+                if len(words) >= 4 and any(words[i:i+2] == words[i+2:i+4] for i in range(len(words)-3)):
+                    return Response({'error': 'El nombre contiene secuencias repetitivas de spam no válidas.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'last_name' in person_data:
+            ln = person_data['last_name']
+            if len(ln) > 50:
+                return Response({'error': 'El apellido no puede exceder 50 caracteres.'}, status=status.HTTP_400_BAD_REQUEST)
+            words = ln.lower().split()
+            if len(words) >= 3:
+                from collections import Counter
+                counts = Counter(words)
+                if any(c >= 3 for c in counts.values()):
+                    return Response({'error': 'El apellido contiene secuencias repetitivas no válidas.'}, status=status.HTTP_400_BAD_REQUEST)
+                if len(words) >= 4 and any(words[i:i+2] == words[i+2:i+4] for i in range(len(words)-3)):
+                    return Response({'error': 'El apellido contiene secuencias repetitivas de spam no válidas.'}, status=status.HTTP_400_BAD_REQUEST)
+
         updated_person = None
         if person_data:
             updated_person, error = PersonController.update(person.person_id, person_data)

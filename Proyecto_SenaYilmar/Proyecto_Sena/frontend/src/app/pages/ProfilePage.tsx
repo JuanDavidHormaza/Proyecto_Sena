@@ -987,6 +987,7 @@ export function ProfilePage() {
                       <label className="block text-xs font-semibold text-foreground mb-1.5">Nombres *</label>
                       <input
                         type="text"
+                        maxLength={45}
                         value={editForm.firstName}
                         onChange={(e) => handleEditFirstNameChange(e.target.value)}
                         onBlur={handleEditFirstNameBlur}
@@ -1004,6 +1005,7 @@ export function ProfilePage() {
                       <label className="block text-xs font-semibold text-foreground mb-1.5">Apellidos *</label>
                       <input
                         type="text"
+                        maxLength={45}
                         value={editForm.lastName}
                         onChange={(e) => handleEditLastNameChange(e.target.value)}
                         onBlur={handleEditLastNameBlur}

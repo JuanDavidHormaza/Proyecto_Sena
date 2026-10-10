@@ -910,6 +910,7 @@ export function RegisterPage() {
                         type="text"
                         placeholder="Juan David"
                         required
+                        maxLength={45}
                         value={formData.firstName}
                         onChange={(e) => handleFirstNameChange(e.target.value)}
                         onBlur={handleFirstNameBlur}
@@ -932,6 +933,7 @@ export function RegisterPage() {
                         type="text"
                         placeholder="Hormaza Miranda"
                         required
+                        maxLength={45}
                         value={formData.lastName}
                         onChange={(e) => handleLastNameChange(e.target.value)}
                         onBlur={handleLastNameBlur}

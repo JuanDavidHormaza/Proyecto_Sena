@@ -61,9 +61,9 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
         </div>
         {!compact && (
           <div className="hidden sm:block text-left min-w-0">
-            <p className="font-medium text-foreground text-sm truncate max-w-40">{userName}</p>
+            <p className="font-medium text-foreground text-sm truncate max-w-40" title={userName}>{userName}</p>
             {showRole && (
-              <p className="text-xs text-muted-foreground truncate max-w-40">{subtitle}</p>
+              <p className="text-xs text-muted-foreground truncate max-w-40" title={subtitle}>{subtitle}</p>
             )}
           </div>
         )}
