@@ -13,6 +13,7 @@ import { TeacherDictionariesPage } from "./pages/TeacherDictionariesPage";
 import { MediaPage } from "./pages/MediaPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
   { path: "/login", Component: LoginPage },
   { path: "/register", Component: RegisterPage },
   { path: "/recuperar-cuenta", Component: RecoverAccountPage },
+  { path: "/404", Component: NotFoundPage },
 
   // Estudiante
   {
@@ -117,6 +119,6 @@ export const router = createBrowserRouter([
     ),
   },
 
-  // Ruta catch-all
-  { path: "*", element: <Navigate to="/login" replace /> },
+  // Ruta catch-all (404 estilizada)
+  { path: "*", Component: NotFoundPage },
 ]);

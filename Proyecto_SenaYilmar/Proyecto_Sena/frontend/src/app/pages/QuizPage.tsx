@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
+import { useNavigate, useBlocker } from "react-router-dom";
 import {
   Check,
   Clock,
@@ -54,10 +54,55 @@ export function QuizPage() {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(35);
   const [hasStartedExam, setHasStartedExam] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerState, setAnswerState] = useState<AnswerState>("idle");
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [levelUpMessage, setLevelUpMessage] = useState<string | null>(null);
+
+  // ── Protección contra abandono accidental de la prueba (beforeunload) ────
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasStartedExam && !isFinishing) {
+        e.preventDefault();
+        e.returnValue = "Tienes una evaluación de nivel en progreso. Si sales o recargas la página, tu avance actual se perderá. ¿Estás seguro de que deseas salir?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasStartedExam, isFinishing]);
+
+  // ── Protección de navegación interna en React Router (botón Atrás) ──────
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasStartedExam && !isFinishing && nextLocation.pathname !== "/results"
+  );
+
+  useEffect(() => {
+    if (blocker?.state === "blocked") {
+      setShowExitConfirm(true);
+    }
+  }, [blocker?.state]);
+
+  const handleCancelExit = () => {
+    setShowExitConfirm(false);
+    if (blocker?.state === "blocked") {
+      blocker.reset();
+    }
+  };
+
+  const handleConfirmExit = async () => {
+    setIsFinishing(true);
+    setShowExitConfirm(false);
+    await finalizeExam();
+    if (blocker?.state === "blocked") {
+      blocker.proceed();
+    }
+  };
 
   // Multimedia states
   const [isRecording, setIsRecording] = useState(false);
@@ -627,6 +672,7 @@ export function QuizPage() {
   };
 
   const finalizeExam = async () => {
+    setIsFinishing(true);
     const elapsedSeconds = Math.max(
       Math.round((Date.now() - quizStartedAtRef.current) / 1000),
       1
@@ -1647,14 +1693,14 @@ export function QuizPage() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setShowExitConfirm(false)}
+                onClick={handleCancelExit}
                 className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition cursor-pointer"
               >
                 Continuar examen
               </button>
               <button
                 type="button"
-                onClick={() => finalizeExam()}
+                onClick={handleConfirmExit}
                 className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold transition shadow-md shadow-rose-950/20 cursor-pointer"
               >
                 Finalizar y salir

@@ -329,7 +329,26 @@ export function TeacherDashboard() {
 
         {/* Students Results */}
         <div className="space-y-6">
-          {studentEntries.map(([userId, userResults], index) => {
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-2xl border border-border p-6 animate-pulse">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-slate-200 rounded-xl" />
+                      <div className="space-y-2">
+                        <div className="h-4 bg-slate-200 rounded w-36" />
+                        <div className="h-3 bg-slate-100 rounded w-48" />
+                      </div>
+                    </div>
+                    <div className="w-16 h-8 bg-slate-100 rounded-lg" />
+                  </div>
+                  <div className="h-16 bg-slate-50 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            studentEntries.map(([userId, userResults], index) => {
             const student = students.find(s => s.id === userId);
             const latestResult = userResults[0];
             const studentName = student?.name || latestResult?.userName || "Aprendiz";
@@ -455,10 +474,11 @@ export function TeacherDashboard() {
                 )}
               </motion.div>
             );
-          })}
+          })
+        )}
         </div>
 
-        {studentEntries.length === 0 && (
+        {!isLoading && studentEntries.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-border">
             <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" strokeWidth={1.8} />
             <h3 className="text-lg font-semibold text-foreground mb-2">No hay resultados</h3>

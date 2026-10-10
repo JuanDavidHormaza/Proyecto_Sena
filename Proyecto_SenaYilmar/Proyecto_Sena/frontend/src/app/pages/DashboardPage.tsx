@@ -1062,10 +1062,16 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   }, [defaultTab, queryTab, isDictionaryPath, searchParams]);
 
   // Cargar resultados de exámenes
+  const [isLoadingResults, setIsLoadingResults] = useState(true);
+
   useEffect(() => {
     const fetchResults = async () => {
-      if (!userId) return;
+      if (!userId) {
+        setIsLoadingResults(false);
+        return;
+      }
 
+      setIsLoadingResults(true);
       try {
         const results = await api.getTestResults(userId);
         const sortedResults = Array.isArray(results)
@@ -1076,6 +1082,8 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
         setTestResults(sortedResults);
       } catch (error) {
         console.error("No se pudieron cargar los resultados desde la base de datos:", error);
+      } finally {
+        setIsLoadingResults(false);
       }
     };
 
@@ -1781,7 +1789,22 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                   </div>
 
                   <div className="divide-y divide-border">
-                    {recentTests.length > 0 ? (
+                    {isLoadingResults ? (
+                      <div className="py-6 px-3 space-y-4">
+                        {[1, 2, 3].map((item) => (
+                          <div key={item} className="flex items-center justify-between animate-pulse">
+                            <div className="flex items-center gap-3">
+                              <div className="w-11 h-11 rounded-xl bg-slate-200" />
+                              <div className="space-y-2">
+                                <div className="h-4 bg-slate-200 rounded w-28" />
+                                <div className="h-3 bg-slate-100 rounded w-40" />
+                              </div>
+                            </div>
+                            <div className="w-6 h-6 bg-slate-100 rounded" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : recentTests.length > 0 ? (
                       recentTests.map((test) => (
                         <div
                           key={test.id}
