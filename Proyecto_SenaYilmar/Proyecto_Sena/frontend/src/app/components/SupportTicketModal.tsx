@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LifeBuoy,
@@ -74,6 +75,22 @@ export function SupportTicketModal({ isOpen, onClose, onTicketCreated }: Support
   const [createdTicketId, setCreatedTicketId] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Mounted guard para SSR / hidratación segura en el cliente
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Bloquear el scroll del fondo (body) mientras el modal esté abierto
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
 
   // Limpiar URL de objeto al desmontar o cambiar archivo
   useEffect(() => {
@@ -201,30 +218,29 @@ export function SupportTicketModal({ isOpen, onClose, onTicketCreated }: Support
     }
   };
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          {/* Backdrop con desenfoque suave */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => !isSubmitting && onClose()}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
-          />
+  if (!isOpen || !mounted || typeof document === "undefined") {
+    return null;
+  }
 
-          {/* Tarjeta del Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            transition={{ duration: 0.2 }}
-            className="relative w-full max-w-xl bg-white dark:bg-card rounded-3xl shadow-2xl border border-border overflow-hidden my-auto z-10 flex flex-col max-h-[92vh]"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="support-modal-title"
-          >
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSubmitting) onClose();
+      }}
+    >
+      {/* Tarjeta del Modal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ duration: 0.2 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto z-10 flex flex-col max-h-[92vh]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="support-modal-title"
+      >
             {/* Encabezado moderno institucional */}
             <div className="bg-gradient-to-r from-emerald-500/10 via-sena-green/5 to-sena-blue/10 border-b border-border px-6 py-4.5 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3.5">
@@ -520,10 +536,9 @@ export function SupportTicketModal({ isOpen, onClose, onTicketCreated }: Support
                 </form>
               )}
             </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+      </motion.div>
+    </div>,
+    document.body
   );
 }
 
