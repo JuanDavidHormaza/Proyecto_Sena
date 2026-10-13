@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import {
   login as apiLogin,
   register as apiRegister,
@@ -274,7 +274,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const logout = (reason?: string) => {
+  const logout = useCallback((reason?: string) => {
     setUser(null);
     clearAllTokens();
     try {
@@ -288,7 +288,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch {
       // ignorar
     }
-  };
+  }, []);
 
   const updateUser = (updatedUser: ApiUser) => {
     const storedAvatar = localStorage.getItem('userAvatar') || '';

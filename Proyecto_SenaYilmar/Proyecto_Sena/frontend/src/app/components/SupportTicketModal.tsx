@@ -84,11 +84,13 @@ export function SupportTicketModal({ isOpen, onClose, onTicketCreated }: Support
 
   // Bloquear el scroll del fondo (body) mientras el modal esté abierto
   useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.overflow = "unset";
     };
   }, [isOpen]);
 
@@ -218,25 +220,19 @@ export function SupportTicketModal({ isOpen, onClose, onTicketCreated }: Support
     }
   };
 
-  if (!isOpen || !mounted || typeof document === "undefined") {
-    return null;
-  }
+  if (!isOpen || !mounted) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isSubmitting) onClose();
       }}
     >
-      {/* Tarjeta del Modal */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        transition={{ duration: 0.2 }}
+      {/* Tarjeta del Modal con máxima jerarquía z-[100000] */}
+      <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto z-10 flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-[100000] border border-slate-200 dark:border-slate-800 my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="support-modal-title"
@@ -536,7 +532,7 @@ export function SupportTicketModal({ isOpen, onClose, onTicketCreated }: Support
                 </form>
               )}
             </div>
-      </motion.div>
+      </div>
     </div>,
     document.body
   );
