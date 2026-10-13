@@ -4,6 +4,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RecoverAccountPage } from "./pages/RecoverAccountPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { QuizPage } from "./pages/QuizPage";
 import { ResultsPage } from "./pages/ResultsPage";
@@ -20,10 +21,10 @@ export const router = createBrowserRouter([
   { path: "/", Component: LandingPage },
   { path: "/login", Component: LoginPage },
   { path: "/register", Component: RegisterPage },
-  { path: "/recuperar-cuenta", Component: RecoverAccountPage },
-  { path: "/recuperar", Component: RecoverAccountPage },
-  { path: "/reset-password", Component: RecoverAccountPage },
-  { path: "/recover", Component: RecoverAccountPage },
+  { path: "/recuperar-cuenta", Component: ResetPasswordPage },
+  { path: "/recuperar", Component: ResetPasswordPage },
+  { path: "/reset-password", Component: ResetPasswordPage },
+  { path: "/recover", Component: ResetPasswordPage },
   { path: "/404", Component: NotFoundPage },
 
   // Estudiante

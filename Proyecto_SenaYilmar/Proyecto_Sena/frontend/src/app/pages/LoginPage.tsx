@@ -407,7 +407,16 @@ export function LoginPage() {
                     <div className="flex justify-end mt-2">
                       <button
                         type="button"
-                        onClick={() => navigate("/recuperar-cuenta")}
+                        onClick={() => {
+                          const userEmail = (formData.email || "").trim().toLowerCase();
+                          if (userEmail) {
+                            sessionStorage.setItem("reset_email", userEmail);
+                            sessionStorage.setItem("recover_email", userEmail);
+                            navigate(`/recuperar-cuenta?email=${encodeURIComponent(userEmail)}`);
+                          } else {
+                            navigate("/recuperar-cuenta");
+                          }
+                        }}
                         className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold hover:underline transition-colors cursor-pointer"
                       >
                         ¿Olvidaste tu contraseña? / Recuperar cuenta

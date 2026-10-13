@@ -140,13 +140,21 @@ export interface ApiTestResult {
 
 // ─── Utilidades ──────────────────────────────────────────────────────────────
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status: number;
-  
-  constructor(message: string, status: number) {
+  data: any;
+  detail: string;
+  error: string;
+  response: { data: any; status: number };
+
+  constructor(message: string, status: number, data?: any) {
     super(message);
     this.status = status;
     this.name = 'ApiError';
+    this.data = data;
+    this.detail = (data && (data.detail || data.error || data.message)) || message;
+    this.error = (data && (data.error || data.detail || data.message)) || message;
+    this.response = { data: data || { detail: message, error: message }, status };
   }
 }
 
@@ -283,7 +291,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
       }
     }
 
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, rawError);
   }
 
   return response.json();
@@ -789,30 +797,37 @@ export async function approveFichaRequest(requestId: number, instructorId?: stri
 
 export async function resetPassword(data: {
   email: string;
-  code: string;
+  otp?: string;
+  code?: string;
   new_password?: string;
   newPassword?: string;
   confirm_password?: string;
   confirmPassword?: string;
-}): Promise<{ message: string; success: boolean }> {
+}): Promise<{ message?: string; detail?: string; success: boolean }> {
+  const email = (data.email || '').trim().toLowerCase();
+  const otpCode = String(data.otp || data.code || '').trim();
   const newPass = data.new_password || data.newPassword || '';
   const confirmPass = data.confirm_password || data.confirmPassword || '';
-  const payload = {
-    email: (data.email || '').trim().toLowerCase(),
-    code: (data.code || '').trim(),
-    otp: (data.code || '').trim(),
+
+  const payload: Record<string, string> = {
+    email,
+    otp: otpCode,
+    code: otpCode,
     new_password: newPass,
     newPassword: newPass,
     password: newPass,
-    confirm_password: confirmPass,
-    confirmPassword: confirmPass,
   };
+  if (confirmPass) {
+    payload.confirm_password = confirmPass;
+    payload.confirmPassword = confirmPass;
+  }
+
   const response = await safeFetch(`${API_BASE}/auth/reset-password/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return handleResponse<{ message: string; success: boolean }>(response);
+  return handleResponse<{ message?: string; detail?: string; success: boolean }>(response);
 }
 
 export async function rejectFichaRequest(requestId: number, notes?: string): Promise<ApiFichaRequest> {

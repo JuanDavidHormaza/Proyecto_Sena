@@ -367,3 +367,28 @@ class SupportTicketSerializer(serializers.ModelSerializer):
         if obj.resolved_by and hasattr(obj.resolved_by, 'person'):
             return f"{obj.resolved_by.person.first_name} {obj.resolved_by.person.last_name}"
         return None
+
+
+class ResetPasswordConfirmSerializer(serializers.Serializer):
+    """Serializer para validación estricta del flujo de restablecimiento de contraseña"""
+    email = serializers.EmailField(error_messages={'required': 'El correo electrónico es requerido.'})
+    otp = serializers.CharField(required=False, allow_blank=True)
+    code = serializers.CharField(required=False, allow_blank=True)
+    new_password = serializers.CharField(
+        min_length=8,
+        error_messages={
+            'required': 'La nueva contraseña es requerida.',
+            'min_length': 'La nueva contraseña debe tener al menos 8 caracteres.'
+        }
+    )
+    confirm_password = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        otp_val = attrs.get('otp') or attrs.get('code')
+        if not otp_val or not str(otp_val).strip():
+            raise serializers.ValidationError({"otp": "El código OTP de 6 dígitos es requerido."})
+        attrs['otp'] = str(otp_val).strip()
+        attrs['code'] = str(otp_val).strip()
+        attrs['email'] = attrs['email'].strip().lower()
+        return attrs
+

@@ -44,6 +44,8 @@ urlpatterns = [
     path('auth/resend-otp',      ResendOTPAPIView.as_view(),     name='resend-otp'),
     path('auth/reset-password/', ResetPasswordAPIView.as_view(), name='reset-password-slash'),
     path('auth/reset-password',  ResetPasswordAPIView.as_view(), name='reset-password'),
+    path('auth/password-reset-confirm/', ResetPasswordAPIView.as_view(), name='password-reset-confirm-slash'),
+    path('auth/password-reset-confirm',  ResetPasswordAPIView.as_view(), name='password-reset-confirm'),
 
     # ── Registro con verificación de correo ────────────────────────────
     # Paso 1: valida datos + dominio y envía OTP al correo (NO crea cuenta aún)

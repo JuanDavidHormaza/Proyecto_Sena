@@ -29,7 +29,7 @@ from ..Models.modelsSENA import EmailOTP, RegisterPendingOTP, Person, User, Test
 from ..serializers import (
     LoginSerializer, RegisterSerializer, PersonSerializer,
     DigitalDictionarySerializer, TestResultSerializer, UserSerializer,
-    FichaRequestSerializer, SupportTicketSerializer,
+    FichaRequestSerializer, SupportTicketSerializer, ResetPasswordConfirmSerializer,
 )
 from ..permissions import IsSuperAdmin, IsAdminOrSuperAdmin, IsDictionaryAdminOrReadOnly
 # NOTE: no se usa SESSION_KEY en este archivo; se usa request.session directamente.
@@ -305,44 +305,36 @@ class ResendOTPAPIView(APIView):
 
 class ResetPasswordAPIView(APIView):
     """
-    POST /auth/reset-password/
+    POST /auth/reset-password/ o /auth/password-reset-confirm/
     Restablece la contraseña de un usuario mediante validación de código OTP.
     Paso 2 del flujo de recuperación de cuenta en WorkLex SENA.
-    Body: { "email": "...", "code": "...", "new_password": "...", "confirm_password": "..." }
+    Body: { "email": "...", "otp": "...", "new_password": "..." }
     """
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        email = (request.data.get('email') or '').strip().lower()
-        code = str(request.data.get('code') or request.data.get('otp') or '').strip()
-        new_password = (
-            request.data.get('new_password')
-            or request.data.get('newPassword')
-            or request.data.get('password')
-            or ''
-        )
-        confirm_password = (
-            request.data.get('confirm_password')
-            or request.data.get('confirmPassword')
-        )
-
-        if not email or not code or not new_password:
+        serializer = ResetPasswordConfirmSerializer(data=request.data)
+        if not serializer.is_valid():
+            errors = serializer.errors
+            first_field = next(iter(errors))
+            first_err = errors[first_field]
+            if isinstance(first_err, list) and len(first_err) > 0:
+                first_msg = str(first_err[0])
+            else:
+                first_msg = str(first_err)
             return Response(
                 {
-                    'error': 'El correo, el código OTP y la nueva contraseña son requeridos.',
-                    'detail': 'El correo, el código OTP y la nueva contraseña son requeridos.',
+                    'error': first_msg,
+                    'detail': first_msg,
+                    'errors': errors,
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if len(new_password) < 8:
-            return Response(
-                {
-                    'error': 'La nueva contraseña debe tener al menos 8 caracteres.',
-                    'detail': 'La nueva contraseña debe tener al menos 8 caracteres.',
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        email = serializer.validated_data['email']
+        code = serializer.validated_data['otp']
+        new_password = serializer.validated_data['new_password']
+        confirm_password = serializer.validated_data.get('confirm_password')
 
         if confirm_password and new_password != confirm_password:
             return Response(
@@ -366,14 +358,21 @@ class ResetPasswordAPIView(APIView):
 
         user = User.objects.filter(person=person).first()
 
-        # Validación estricta: impedir reutilizar la contraseña anterior
-        if person.check_password(new_password):
-            msg = 'La nueva contraseña no puede ser igual a tu contraseña anterior. Por favor, elige una diferente.'
+        # Validación contra Contraseña Anterior:
+        # Comprobar que la nueva clave sea diferente a la que el usuario ya tenía
+        is_same = False
+        if user and user.check_password(new_password):
+            is_same = True
+        elif person and person.check_password(new_password):
+            is_same = True
+
+        if is_same:
+            msg = "La nueva contraseña no puede ser igual a tu contraseña anterior. Elige una diferente."
             return Response(
                 {
-                    'error': msg,
-                    'detail': msg,
-                    'message': msg,
+                    "error": msg,
+                    "detail": msg,
+                    "message": msg,
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -388,7 +387,7 @@ class ResetPasswordAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if otp and (timezone.now() - otp.created_at) > timedelta(minutes=10):
+        if otp and (timezone.now() - otp.created_at) > timedelta(minutes=15):
             return Response(
                 {
                     'error': 'El código de verificación ha expirado. Solicita un nuevo código.',
@@ -397,21 +396,38 @@ class ResetPasswordAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Aplicar set_password y persistir cambio en Person (modelo con hash de contraseña)
+        # Aplicar set_password y persistir cambio en User y Person
+        if user:
+            user.set_password(new_password)
+            user.save()
         person.set_password(new_password)
         person.save(update_fields=['password'])
 
+        try:
+            from django.contrib.auth.models import User as DjangoAuthUser
+            dj_user = DjangoAuthUser.objects.filter(email__iexact=email).first()
+            if dj_user:
+                dj_user.set_password(new_password)
+                dj_user.save()
+        except Exception:
+            pass
+
+        # Invalidar o eliminar el OTP utilizado para que no se pueda reutilizar
         if otp:
             otp.used = True
             otp.save(update_fields=['used'])
+        EmailOTP.objects.filter(email__iexact=email, used=False).update(used=True)
 
         print(f"[RESET PASSWORD] Contraseña actualizada exitosamente para {email}")
 
-        return Response({
-            'message': 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
-            'detail': 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
-            'success': True
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "success": True,
+                "detail": "Contraseña restablecida correctamente.",
+                "message": "Contraseña restablecida correctamente."
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 class RegisterAPIView(APIView):
