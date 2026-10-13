@@ -405,6 +405,7 @@ export class ExamEngine {
   private currentLevelQuestionList: UnifiedQuestion[] = [];
   private streak = 0;
   private isFinished = false;
+  private isInitialized = false;
 
   private readonly QUESTIONS_PER_LEVEL = 6; // Cantidad adaptativa óptima por nivel
 
@@ -414,12 +415,24 @@ export class ExamEngine {
   }
 
   /**
+   * Inicializa o fija el banco adaptativo de manera inmutable para la sesión actual
+   */
+  public initialize(dictQuestions?: any[]) {
+    if (this.isInitialized) return;
+    this.allQuestions = buildUnifiedQuestionBank(dictQuestions);
+    this.prepareLevelQuestions("A1");
+    this.isInitialized = true;
+  }
+
+  /**
    * Carga o actualiza preguntas dinámicas desde el backend de DigitalDictionary
    */
   public loadDictionaryQuestions(dictQuestions: any[]) {
     if (!dictQuestions || !Array.isArray(dictQuestions) || dictQuestions.length === 0) return;
+    if (this.isInitialized) return;
     this.allQuestions = buildUnifiedQuestionBank(dictQuestions);
     this.prepareLevelQuestions(this.currentLevel);
+    this.isInitialized = true;
   }
 
   private prepareLevelQuestions(level: CEFRLevel) {

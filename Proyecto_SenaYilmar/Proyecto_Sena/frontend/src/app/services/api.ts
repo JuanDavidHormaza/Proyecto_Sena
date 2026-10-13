@@ -849,8 +849,10 @@ export interface ApiSupportTicket {
   user_email: string;
   user_role: string;
   subject: string;
-  category: 'TECNICA' | 'EXAMEN' | 'CALIFICACION' | 'SUGERENCIA' | 'OTRO';
+  category: 'TECNICA' | 'EXAMEN' | 'CALIFICACION' | 'SUGERENCIA' | 'RECLAMO' | 'OTRO';
   description: string;
+  screenshot?: string | null;
+  screenshot_url?: string | null;
   status: 'ABIERTO' | 'EN_PROCESO' | 'RESUELTO';
   admin_notes?: string | null;
   created_at: string;
@@ -870,11 +872,35 @@ export async function createSupportTicket(data: {
   subject: string;
   category: string;
   description: string;
-}): Promise<ApiSupportTicket> {
+  screenshot?: File | null;
+} | FormData): Promise<ApiSupportTicket> {
+  let headers: HeadersInit;
+  let body: BodyInit;
+
+  if (data instanceof FormData) {
+    headers = getAuthHeaders(false);
+    body = data;
+  } else if (data.screenshot) {
+    const formData = new FormData();
+    formData.append('subject', data.subject);
+    formData.append('category', data.category);
+    formData.append('description', data.description);
+    formData.append('screenshot', data.screenshot);
+    headers = getAuthHeaders(false);
+    body = formData;
+  } else {
+    headers = getAuthHeaders(true);
+    body = JSON.stringify({
+      subject: data.subject,
+      category: data.category,
+      description: data.description,
+    });
+  }
+
   const response = await safeFetch(`${API_BASE}/tickets/`, {
     method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data),
+    headers,
+    body,
   });
   return handleResponse<ApiSupportTicket>(response);
 }

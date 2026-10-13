@@ -44,7 +44,7 @@ import { resolveMediaUrl } from "../services/api";
 import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightboxModal";
 import { SafeImage } from "../components/SafeImage";
 import { DictionaryProgramModal } from "../components/DictionaryProgramModal";
-import { SupportTicketModal } from "../components/SupportTicketModal";
+import { HeaderActionTools } from "../components/HeaderActionTools";
 import { AccessibilityWidget } from "../components/AccessibilityWidget";
 import { getTermsForProgram } from "../data/dictionariesByFicha";
 import { questions } from "../data";
@@ -1025,7 +1025,6 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   );
   const [editingFeedback, setEditingFeedback] = useState<string>("");
   const [isSavingFeedback, setIsSavingFeedback] = useState<boolean>(false);
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
   useEffect(() => {
     if (selectedTest) {
@@ -1462,6 +1461,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
 
             {/* Acciones del Header: Menú y Perfil */}
             <div className="flex items-center gap-2.5">
+              <HeaderActionTools />
 
               {/* Botón Móvil Hamburguesa */}
               <button
@@ -2651,23 +2651,6 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
           handleProgramSwitch(program);
           setActiveMainTab("study");
         }}
-      />
-
-      {/* ══ Botón Flotante Accesible: Soporte y Reportes (PQRS) ══ */}
-      <button
-        type="button"
-        onClick={() => setIsTicketModalOpen(true)}
-        className="fixed bottom-6 right-6 z-40 bg-white dark:bg-card border-2 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 px-4 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 group cursor-pointer"
-        title="Radicar Ticket de Soporte, Pregunta o Reporte (PQRS)"
-      >
-        <LifeBuoy className="w-5 h-5 text-emerald-600 group-hover:rotate-45 transition-transform duration-300" strokeWidth={2} />
-        <span className="text-xs font-bold hidden sm:inline">Soporte y PQRS</span>
-      </button>
-
-      {/* ══ Modal de Radicación de Tickets (PQRS) ══ */}
-      <SupportTicketModal
-        isOpen={isTicketModalOpen}
-        onClose={() => setIsTicketModalOpen(false)}
       />
     </div>
   );

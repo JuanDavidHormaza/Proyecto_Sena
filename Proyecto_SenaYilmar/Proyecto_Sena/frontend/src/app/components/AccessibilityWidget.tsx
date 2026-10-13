@@ -58,6 +58,17 @@ export function AccessibilityWidget() {
     setContrastMode("default");
   };
 
+  useEffect(() => {
+    const handleToggle = () => setAccessibilityOpen((prev) => !prev);
+    const handleOpen = () => setAccessibilityOpen(true);
+    window.addEventListener("toggle-worklex-accessibility", handleToggle);
+    window.addEventListener("open-worklex-accessibility", handleOpen);
+    return () => {
+      window.removeEventListener("toggle-worklex-accessibility", handleToggle);
+      window.removeEventListener("open-worklex-accessibility", handleOpen);
+    };
+  }, []);
+
   return (
     <>
       {/* Botón Flotante de Accesibilidad (Muñeco Universal en SVG Puro) */}

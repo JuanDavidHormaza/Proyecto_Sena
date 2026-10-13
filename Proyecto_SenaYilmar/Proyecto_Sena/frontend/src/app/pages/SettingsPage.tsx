@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, Bell, Check, Lock, Mail, Phone, Save, User, GraduationCap, Plus, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
+import { HeaderActionTools } from "../components/HeaderActionTools";
 import * as api from "../services/api";
 import {
   validateName,
@@ -181,7 +182,10 @@ export function SettingsPage() {
               <ArrowLeft className="w-4 h-4" strokeWidth={1.8} />
               <span className="hidden sm:inline">Volver</span>
             </button>
-            <UserAccountMenu accent={role === "teacher" ? "blue" : role === "superadmin" ? "purple" : "green"} />
+            <div className="flex items-center gap-3">
+              <HeaderActionTools />
+              <UserAccountMenu accent={role === "teacher" ? "blue" : role === "superadmin" ? "purple" : "green"} />
+            </div>
           </div>
         </div>
       </header>

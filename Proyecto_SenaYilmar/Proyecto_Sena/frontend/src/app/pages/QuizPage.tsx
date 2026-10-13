@@ -31,6 +31,7 @@ import {
   UserAnswerRecord,
 } from "../services/examEngine";
 import { playEnglishSpeech } from "../utils/speech";
+import { QuizSkeleton } from "../components/QuizSkeleton";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
 
@@ -55,6 +56,9 @@ export function QuizPage() {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(35);
   const [hasStartedExam, setHasStartedExam] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [isLoadingBank, setIsLoadingBank] = useState(true);
+  const isInitializingRef = useRef(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerState, setAnswerState] = useState<AnswerState>("idle");
@@ -185,33 +189,52 @@ export function QuizPage() {
     };
   }, []);
 
-  // Cargar preguntas dinámicas adaptativas del Diccionario ADSO desde el backend
+  // Cargar preguntas dinámicas adaptativas fijando el orden de manera inmutable antes de renderizar
   useEffect(() => {
     let isMounted = true;
-    const fetchDictionaryExamQuestions = async () => {
+
+    const initializeExamBank = async () => {
+      if (isInitializingRef.current) return;
+      isInitializingRef.current = true;
+
       try {
-        const startData = await api.startAdaptiveExam(userId || undefined);
-        if (isMounted && startData?.questions && startData.questions.length > 0) {
-          const questions = [...startData.questions];
-          // Barajado inmediato con algoritmo de Fisher-Yates
-          for (let i = questions.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [questions[i], questions[j]] = [questions[j], questions[i]];
-          }
-          questions.sort(() => Math.random() - 0.5);
-          engineRef.current.loadDictionaryQuestions(questions);
+        setIsLoadingBank(true);
+        const startData = await api.startAdaptiveExam(userId || undefined).catch((err) => {
+          console.warn("Iniciando evaluación con banco local de respaldo:", err);
+          return null;
+        });
+
+        if (!isMounted) return;
+
+        const dictQuestions =
+          startData?.questions && startData.questions.length > 0
+            ? startData.questions
+            : undefined;
+
+        // Inicializar el banco de preguntas adaptativo fijando el orden de manera inmutable
+        engineRef.current.initialize(dictQuestions);
+        const lockedState = engineRef.current.getSessionState();
+        setEngineState(lockedState);
+      } catch (err) {
+        console.warn("Error inicializando motor adaptativo con respaldo local:", err);
+        if (isMounted) {
+          engineRef.current.initialize();
           setEngineState(engineRef.current.getSessionState());
         }
-      } catch (err) {
-        console.warn("Iniciando evaluación con banco local:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingBank(false);
+          setHasInitialized(true);
+        }
       }
     };
 
-    fetchDictionaryExamQuestions();
+    initializeExamBank();
+
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     cleanupRecording();
@@ -884,13 +907,27 @@ export function QuizPage() {
               onClick={handleStartExam}
               className="w-full flex-1 py-3.5 px-6 rounded-xl bg-sena-green hover:bg-sena-green/90 text-white font-bold text-sm shadow-lg shadow-sena-green/30 transition flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Comenzar Examen de Nivel</span>
-              <ArrowRight className="w-4 h-4" />
+              {isLoadingBank ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Preparando Banco de Preguntas...</span>
+                </>
+              ) : (
+                <>
+                  <span>Comenzar Examen de Nivel</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </motion.div>
       </div>
     );
+  }
+
+  // ── Bloqueo estricto de renderizado con Esqueleto institucional hasta que el banco esté 100% listo ──
+  if (hasStartedExam && (!hasInitialized || isLoadingBank || !currentQuestion?.uniqueKey)) {
+    return <QuizSkeleton />;
   }
 
   const progress = Math.min(

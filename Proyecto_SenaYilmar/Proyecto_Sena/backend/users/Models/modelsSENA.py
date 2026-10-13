@@ -317,14 +317,16 @@ class SupportTicket(models.Model):
     subject = models.CharField(max_length=200)
 
     CATEGORY_CHOICES = [
-        ('TECNICA', 'Técnica / Sistema'),
+        ('TECNICA', 'Problema Técnico'),
+        ('CALIFICACION', 'Duda sobre Evaluación/Calificación'),
+        ('SUGERENCIA', 'Petición / Sugerencia'),
+        ('RECLAMO', 'Reclamo'),
         ('EXAMEN', 'Examen / Preguntas'),
-        ('CALIFICACION', 'Calificación'),
-        ('SUGERENCIA', 'Sugerencia'),
         ('OTRO', 'Otro'),
     ]
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='TECNICA')
     description = models.TextField()
+    screenshot = models.ImageField(upload_to='support_tickets/', null=True, blank=True)
 
     STATUS_CHOICES = [
         ('ABIERTO', 'Abierto'),

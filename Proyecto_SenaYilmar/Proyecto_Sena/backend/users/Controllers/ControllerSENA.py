@@ -1125,7 +1125,7 @@ class SupportTicketController:
     """Controlador para Peticiones, Quejas, Reclamos y Soporte Técnico (PQRS)."""
 
     @staticmethod
-    def create(user, subject, category='TECNICA', description=''):
+    def create(user, subject, category='TECNICA', description='', screenshot=None):
         if not subject or not str(subject).strip():
             return None, 'El asunto del ticket es obligatorio.'
         if not description or not str(description).strip():
@@ -1141,6 +1141,7 @@ class SupportTicketController:
             category=category or 'TECNICA',
             description=str(description).strip(),
             status='ABIERTO',
+            screenshot=screenshot,
         )
         return ticket, None
 

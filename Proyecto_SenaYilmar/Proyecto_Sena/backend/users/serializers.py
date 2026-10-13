@@ -332,6 +332,7 @@ class SupportTicketSerializer(serializers.ModelSerializer):
     user_email = serializers.SerializerMethodField()
     user_role = serializers.SerializerMethodField()
     resolved_by_name = serializers.SerializerMethodField()
+    screenshot_url = serializers.SerializerMethodField()
 
     class Meta:
         model = SupportTicket
@@ -345,6 +346,8 @@ class SupportTicketSerializer(serializers.ModelSerializer):
             'subject',
             'category',
             'description',
+            'screenshot',
+            'screenshot_url',
             'status',
             'admin_notes',
             'created_at',
@@ -353,6 +356,17 @@ class SupportTicketSerializer(serializers.ModelSerializer):
             'resolved_by_name',
         ]
         read_only_fields = ['ticket_id', 'user', 'person', 'created_at', 'updated_at', 'resolved_by']
+
+    def get_screenshot_url(self, obj):
+        if obj.screenshot:
+            request = self.context.get('request')
+            if request:
+                try:
+                    return request.build_absolute_uri(obj.screenshot.url)
+                except Exception:
+                    return obj.screenshot.url
+            return obj.screenshot.url
+        return None
 
     def get_user_name(self, obj):
         return f"{obj.person.first_name} {obj.person.last_name}"

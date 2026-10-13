@@ -11,7 +11,7 @@ import {
 import { mockTestResults, TestResult, mockUsers, User } from "../data/users";
 import * as api from "../services/api";
 import { UserAccountMenu } from "../components/UserAccountMenu";
-import { SupportTicketModal } from "../components/SupportTicketModal";
+import { HeaderActionTools } from "../components/HeaderActionTools";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
 
@@ -29,7 +29,6 @@ export function TeacherDashboard() {
   const [filterLevel, setFilterLevel] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<User[]>([]);
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
   const teacherName = user?.name || localStorage.getItem("userName") || "Instructor";
   const teacherProgram = user?.program || localStorage.getItem("userProgram") || "";
@@ -193,14 +192,7 @@ export function TeacherDashboard() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsTicketModalOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold text-xs sm:text-sm transition-all shadow-xs cursor-pointer border border-border"
-                title="Radicar Ticket de Soporte o Reporte (PQRS)"
-              >
-                <LifeBuoy className="w-4 h-4 text-emerald-600" />
-                <span className="hidden md:inline">Soporte y PQRS</span>
-              </button>
+              <HeaderActionTools />
               <button
                 onClick={() => navigate('/dictionary')}
                 className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-sena-green/10 text-sena-green hover:bg-sena-green hover:text-white border border-sena-green/30 font-semibold text-xs sm:text-sm transition-all shadow-xs cursor-pointer"
@@ -648,11 +640,6 @@ export function TeacherDashboard() {
           </div>
         )}
       </AnimatePresence>
-
-      <SupportTicketModal
-        isOpen={isTicketModalOpen}
-        onClose={() => setIsTicketModalOpen(false)}
-      />
     </div>
   );
 }

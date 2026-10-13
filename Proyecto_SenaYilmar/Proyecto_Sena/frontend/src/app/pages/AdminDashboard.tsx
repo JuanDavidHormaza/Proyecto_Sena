@@ -24,6 +24,7 @@ import { questions } from "../data";
 import * as api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
+import { HeaderActionTools } from "../components/HeaderActionTools";
 import { toast } from "../components/Toast";
 import {
   AreaChart, Area, BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
@@ -1531,6 +1532,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
           </div>
 
           <div className="flex items-center gap-3">
+            <HeaderActionTools />
             {/* Campana de Notificaciones en Desktop */}
             <div className="relative" ref={notificationRef}>
               <button

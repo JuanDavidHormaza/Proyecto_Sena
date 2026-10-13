@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -1339,16 +1339,18 @@ class FichaRequestViewSet(viewsets.ViewSet):
 
 class SupportTicketViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def list(self, request):
         tickets_qs = SupportTicketController.list_all(request.user)
-        serializer = SupportTicketSerializer(tickets_qs, many=True)
+        serializer = SupportTicketSerializer(tickets_qs, many=True, context={'request': request})
         return Response(serializer.data)
 
     def create(self, request):
         subject = request.data.get('subject')
         category = request.data.get('category', 'TECNICA')
         description = request.data.get('description')
+        screenshot = request.FILES.get('screenshot')
 
         if not subject:
             return Response({'error': 'El asunto del ticket es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1359,18 +1361,19 @@ class SupportTicketViewSet(viewsets.ViewSet):
             request.user,
             subject=subject,
             category=category,
-            description=description
+            description=description,
+            screenshot=screenshot,
         )
         if err:
             return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(SupportTicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
+        return Response(SupportTicketSerializer(ticket, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, pk=None):
         tickets_qs = SupportTicketController.list_all(request.user)
         try:
             ticket = tickets_qs.get(pk=pk)
-            return Response(SupportTicketSerializer(ticket).data)
+            return Response(SupportTicketSerializer(ticket, context={'request': request}).data)
         except SupportTicket.DoesNotExist:
             return Response({'error': 'Ticket no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1389,7 +1392,7 @@ class SupportTicketViewSet(viewsets.ViewSet):
         if err:
             return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(SupportTicketSerializer(ticket).data)
+        return Response(SupportTicketSerializer(ticket, context={'request': request}).data)
 
     def update(self, request, pk=None):
         return self.partial_update(request, pk=pk)
