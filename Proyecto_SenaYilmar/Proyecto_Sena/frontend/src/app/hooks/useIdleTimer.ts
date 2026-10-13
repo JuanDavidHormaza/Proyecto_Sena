@@ -55,14 +55,21 @@ export function useIdleTimer({
 
   // Función explícita para reiniciar el contador (ej. botón "Continuar conectado")
   const resetTimer = useCallback(() => {
-    lastActivityRef.current = Date.now();
-    lastEventLoggedRef.current = Date.now();
+    const now = Date.now();
+    lastActivityRef.current = now;
+    lastEventLoggedRef.current = now;
+    try {
+      localStorage.setItem("worklex_last_active", String(now));
+    } catch {
+      // ignore
+    }
     setIsWarning(false);
     isWarningRef.current = false;
     setRemainingSeconds(Math.floor(warningMs / 1000));
   }, [warningMs]);
 
-  // Manejador de eventos de usuario (con throttling de 1 segundo)
+  // Manejador de eventos de usuario (con throttling de 1s para memoria y 3s para storage)
+  const lastStorageSyncRef = useRef<number>(0);
   const handleUserActivity = useCallback(() => {
     // Si la advertencia ya está visible, se requiere acción intencional (clic en botón)
     if (isWarningRef.current) return;
@@ -71,6 +78,16 @@ export function useIdleTimer({
     if (now - lastEventLoggedRef.current > 1000) {
       lastActivityRef.current = now;
       lastEventLoggedRef.current = now;
+
+      // Sincronizar actividad hacia otras pestañas con throttling de 3 segundos
+      if (now - lastStorageSyncRef.current > 3000) {
+        lastStorageSyncRef.current = now;
+        try {
+          localStorage.setItem("worklex_last_active", String(now));
+        } catch {
+          // ignore
+        }
+      }
     }
   }, []);
 
@@ -111,7 +128,14 @@ export function useIdleTimer({
 
     const interval = setInterval(() => {
       const now = Date.now();
-      const elapsed = now - lastActivityRef.current;
+      let remoteLastActive = 0;
+      try {
+        remoteLastActive = Number(localStorage.getItem("worklex_last_active") || 0);
+      } catch {
+        remoteLastActive = 0;
+      }
+      const effectiveLastActive = Math.max(lastActivityRef.current, remoteLastActive);
+      const elapsed = now - effectiveLastActive;
       const timeLeftMs = Math.max(0, timeoutMs - elapsed);
       const timeLeftSec = Math.ceil(timeLeftMs / 1000);
 

@@ -158,6 +158,71 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Purga total de tokens, identificadores de usuario y estado de sesión.
+ * Elimina residuos de localStorage, sessionStorage y cookies de autenticación
+ * para evitar mezclas o retención de perfiles entre cuentas diferentes en el mismo navegador.
+ */
+export function clearAllTokens(): void {
+  try {
+    const authKeys = [
+      'accessToken',
+      'refreshToken',
+      'token',
+      'userId',
+      'userName',
+      'userRole',
+      'userEmail',
+      'userAvatar',
+      'userPermissions',
+      'userProgram',
+      'userEnrolledPrograms',
+      'quizScore',
+      'quizLevel',
+      'totalQuestions',
+      'correctAnswers',
+      'quizDuration',
+      'quizAnswers',
+      'lastTestResult',
+      'lastTestSummary',
+      'studyStreak',
+      'studyLastActiveDate',
+      'worklex_last_active',
+      'reset_email',
+      'recover_email',
+      'resetEmail',
+      'recover_step',
+    ];
+
+    authKeys.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // ignore
+      }
+    });
+
+    try {
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
+
+    if (typeof document !== 'undefined' && document.cookie) {
+      const cookies = document.cookie.split(';');
+      for (const cookie of cookies) {
+        const eqPos = cookie.indexOf('=');
+        const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+        if (name) {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;`;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error al purgar tokens y almacenamiento:', err);
+  }
+}
+
 function getAuthHeaders(includeJsonContentType = true): HeadersInit {
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
   const headers: HeadersInit = {};
@@ -283,10 +348,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
     if (response.status === 401 && localStorage.getItem("accessToken") && !isAuthEndpoint) {
       const refreshed = await refreshToken();
       if (!refreshed) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+        clearAllTokens();
         if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/register" && window.location.pathname !== "/") {
-          window.location.href = "/login";
+          window.location.href = "/login?reason=session_expired";
         }
       }
     }

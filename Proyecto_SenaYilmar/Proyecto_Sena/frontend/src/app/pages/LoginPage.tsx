@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -48,8 +48,19 @@ function getProgramIcon(program: string) {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isIdleTimeout = searchParams.get("reason") === "idle_timeout";
   const { login, updateUser } = useAuth();
   const toast = useToast();
+
+  useEffect(() => {
+    if (isIdleTimeout) {
+      toast.warning(
+        "Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.",
+        "Sesión Expirada"
+      );
+    }
+  }, [isIdleTimeout]);
 
   const [step, setStep] = useState<LoginStep>("credentials");
   const [showPassword, setShowPassword] = useState(false);
@@ -166,6 +177,9 @@ export function LoginPage() {
     e.preventDefault();
     setError("");
 
+    // Purga total de cualquier sesión o token previo antes de iniciar una nueva autenticación
+    api.clearAllTokens();
+
     const v = validateEmail(formData.email);
     setEmailTouched(true);
     setEmailError(v.error);
@@ -246,6 +260,9 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
+      // Purga preventiva de cualquier residuo previo antes de autenticar al usuario verificado
+      api.clearAllTokens();
+
       const loggedUser = await login({
         otp_email: otpEmail,
         otp_code: code,
@@ -345,6 +362,17 @@ export function LoginPage() {
               >
                 <h2 className="text-3xl font-extrabold text-foreground mb-2 tracking-tight">Bienvenido de nuevo</h2>
                 <p className="text-sm text-muted-foreground mb-8">Ingresa tus credenciales para continuar tu formación</p>
+
+                {isIdleTimeout && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-6 text-amber-800 dark:text-amber-200 text-sm font-medium"
+                  >
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={1.8} />
+                    <p className="leading-snug">Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.</p>
+                  </motion.div>
+                )}
 
                 {error && (
                   <motion.div

@@ -618,6 +618,9 @@ export function RegisterPage() {
     try {
       const response = await api.registerVerifyOTP(otpEmail, code);
 
+      // Purga total previa de tokens para evitar colisión de cuentas
+      api.clearAllTokens();
+
       // Guardar tokens y sesión en el frontend
       localStorage.setItem("accessToken", response.access);
       localStorage.setItem("refreshToken", response.refresh);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LifeBuoy, Accessibility } from "lucide-react";
+import { LifeBuoy } from "lucide-react";
 import { SupportTicketModal } from "./SupportTicketModal";
 
 interface HeaderActionToolsProps {
@@ -10,24 +10,9 @@ interface HeaderActionToolsProps {
 export function HeaderActionTools({ className = "", onTicketCreated }: HeaderActionToolsProps) {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
-  const handleOpenAccessibility = () => {
-    window.dispatchEvent(new CustomEvent("toggle-worklex-accessibility"));
-  };
-
   return (
     <>
       <div className={`flex items-center gap-2 ${className}`}>
-        {/* Botón de Accesibilidad Visual en el Header */}
-        <button
-          type="button"
-          onClick={handleOpenAccessibility}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-100 dark:bg-muted/80 hover:bg-slate-200 dark:hover:bg-muted text-slate-700 dark:text-slate-200 border border-border/80 text-xs font-semibold shadow-xs hover:shadow-sm transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
-          title="Herramientas de Accesibilidad Visual"
-          aria-label="Herramientas de Accesibilidad Visual"
-        >
-          <Accessibility className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" strokeWidth={2} />
-          <span className="hidden xl:inline text-[11px] font-medium">Accesibilidad</span>
-        </button>
 
         {/* Botón Estilizado Cápsula de Soporte / Radicar PQRS */}
         <button

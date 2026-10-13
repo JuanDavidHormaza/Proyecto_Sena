@@ -45,7 +45,6 @@ import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightbox
 import { SafeImage } from "../components/SafeImage";
 import { DictionaryProgramModal } from "../components/DictionaryProgramModal";
 import { HeaderActionTools } from "../components/HeaderActionTools";
-import { AccessibilityWidget } from "../components/AccessibilityWidget";
 import { getTermsForProgram } from "../data/dictionariesByFicha";
 import { questions } from "../data";
 import { toast } from "../components/Toast";

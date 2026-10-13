@@ -16,10 +16,14 @@ export function IdleSessionManager() {
   const { user, isAuthenticated, logout } = useAuth();
 
   const handleTimeout = useCallback(() => {
-    logout();
-    router.navigate("/login");
+    logout("idle_timeout");
+    try {
+      router.navigate("/login?reason=idle_timeout");
+    } catch {
+      window.location.href = "/login?reason=idle_timeout";
+    }
     toast.warning(
-      "Sesión cerrada automáticamente por inactividad.",
+      "Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.",
       "Sesión Expirada"
     );
   }, [logout]);

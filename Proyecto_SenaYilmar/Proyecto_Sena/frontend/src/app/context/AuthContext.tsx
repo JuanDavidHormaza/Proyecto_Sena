@@ -7,10 +7,10 @@ import {
   RegisterData,
   verifyLoginOTP,
   privilegedMe,
+  clearAllTokens,
 } from '../services/api';
 
-
-
+export { clearAllTokens } from '../services/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: any) => Promise<ApiUser>;
   register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
+  logout: (reason?: string) => void;
   updateUser: (user: ApiUser) => void;
 }
 
@@ -120,34 +120,120 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth();
   }, []);
 
+  // Detección y sincronización entre pestañas (storage event listener)
+  useEffect(() => {
+    const handleStorageEvent = async (e: StorageEvent) => {
+      // Sincronización explícita mediante evento de canal auth_sync_event
+      if (e.key === 'auth_sync_event') {
+        if (!e.newValue) return;
+        try {
+          const syncData = JSON.parse(e.newValue);
+          if (syncData.type === 'logout') {
+            setUser(null);
+            clearAllTokens();
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+              window.location.href = '/login';
+            }
+          } else if (syncData.type === 'idle_timeout') {
+            setUser(null);
+            clearAllTokens();
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+              window.location.href = '/login?reason=idle_timeout';
+            }
+          } else if (syncData.type === 'login') {
+            if (syncData.userId && syncData.userId !== user?.id) {
+              try {
+                const refreshedUser = await getMe();
+                setUser(refreshedUser);
+              } catch {
+                setUser(null);
+                window.location.href = '/login';
+              }
+            }
+          }
+        } catch {
+          // ignorar errores de parseo
+        }
+      }
+
+      // Modificación o revocación de token en otra pestaña
+      if (e.key === 'accessToken') {
+        if (!e.newValue) {
+          setUser(null);
+          clearAllTokens();
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+            window.location.href = '/login';
+          }
+        } else if (e.newValue !== localStorage.getItem('accessToken')) {
+          try {
+            const refreshedUser = await getMe();
+            setUser(refreshedUser);
+          } catch {
+            setUser(null);
+            window.location.href = '/login';
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageEvent);
+    return () => window.removeEventListener('storage', handleStorageEvent);
+  }, [user]);
 
   // Soporta MFA: si vienen otp_email/otp_code llama al endpoint OTP
   const login = async (credentials: any) => {
+    // Purga total del estado previo ANTES de autenticar y almacenar el nuevo token
+    clearAllTokens();
+    setUser(null);
+
     try {
       const response = (credentials?.otp_email && credentials?.otp_code)
         ? await verifyLoginOTP(credentials.otp_email, credentials.otp_code)
         : await apiLogin(credentials);
 
+      // Limpieza preventiva adicional post-respuesta
+      clearAllTokens();
+
       localStorage.setItem('accessToken', response.access);
       localStorage.setItem('refreshToken', response.refresh);
-       
-      const storedAvatar = localStorage.getItem('userAvatar') || '';
-      const userWithAvatar = { ...response.user, avatar: response.user.avatar || storedAvatar };
-      setUser(userWithAvatar);
 
-      localStorage.setItem('userName', response.user.name);
-      localStorage.setItem('userRole', response.user.role);
-      localStorage.setItem('userId', response.user.id);
-      localStorage.setItem('userEmail', response.user.email || '');
-      if (userWithAvatar.avatar) {
-        localStorage.setItem('userAvatar', userWithAvatar.avatar);
+      // Sobre-escritura total y limpia del usuario sin arrastrar propiedades residuales
+      const cleanUser: ApiUser = {
+        ...response.user,
+        avatar: response.user.avatar || '',
+      };
+      setUser(cleanUser);
+
+      localStorage.setItem('userName', cleanUser.name);
+      localStorage.setItem('userRole', cleanUser.role);
+      localStorage.setItem('userId', cleanUser.id);
+      localStorage.setItem('userEmail', cleanUser.email || '');
+      if (cleanUser.avatar) {
+        localStorage.setItem('userAvatar', cleanUser.avatar);
       }
-      localStorage.setItem('userPermissions', JSON.stringify(response.user.permissions));
-      localStorage.setItem('userProgram', response.user.program || '');
-      if (response.user.enrolledPrograms) {
-        localStorage.setItem('userEnrolledPrograms', JSON.stringify(response.user.enrolledPrograms));
+      localStorage.setItem('userPermissions', JSON.stringify(cleanUser.permissions || {}));
+      if (cleanUser.program) {
+        localStorage.setItem('userProgram', cleanUser.program);
       }
-      return userWithAvatar;
+      if (cleanUser.enrolledPrograms && cleanUser.enrolledPrograms.length > 0) {
+        localStorage.setItem('userEnrolledPrograms', JSON.stringify(cleanUser.enrolledPrograms));
+      }
+
+      // Notificar a otras pestañas del nuevo usuario
+      try {
+        localStorage.setItem(
+          'auth_sync_event',
+          JSON.stringify({
+            type: 'login',
+            userId: cleanUser.id,
+            timestamp: Date.now(),
+          })
+        );
+      } catch {
+        // ignorar
+      }
+
+      return cleanUser;
     } catch (err) {
       console.log("AUTH CONTEXT ERROR:", err);
       throw err;
@@ -155,6 +241,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const register = async (data: RegisterData) => {
+    clearAllTokens();
+    setUser(null);
+
     const response = await apiRegister(data);
     
     // Guardar tokens
@@ -168,13 +257,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.setItem('userName', response.user.name);
     localStorage.setItem('userRole', response.user.role);
     localStorage.setItem('userId', response.user.id);
-    localStorage.setItem('userPermissions', JSON.stringify(response.user.permissions));
+    localStorage.setItem('userPermissions', JSON.stringify(response.user.permissions || {}));
     localStorage.setItem('userProgram', response.user.program || '');
+
+    try {
+      localStorage.setItem(
+        'auth_sync_event',
+        JSON.stringify({
+          type: 'login',
+          userId: response.user.id,
+          timestamp: Date.now(),
+        })
+      );
+    } catch {
+      // ignorar
+    }
   };
 
-  const logout = () => {
+  const logout = (reason?: string) => {
     setUser(null);
-    localStorage.clear();
+    clearAllTokens();
+    try {
+      localStorage.setItem(
+        'auth_sync_event',
+        JSON.stringify({
+          type: reason === 'idle_timeout' ? 'idle_timeout' : 'logout',
+          timestamp: Date.now(),
+        })
+      );
+    } catch {
+      // ignorar
+    }
   };
 
   const updateUser = (updatedUser: ApiUser) => {
