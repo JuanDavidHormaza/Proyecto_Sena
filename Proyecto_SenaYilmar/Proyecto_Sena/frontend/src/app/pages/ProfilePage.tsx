@@ -1332,10 +1332,10 @@ export function ProfilePage() {
                   <form onSubmit={handleRequestFichaEnroll} className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Ej. ADSO 2670142"
+                      placeholder="Número de ficha (ej. 2670142)"
                       value={newFichaInput}
                       onChange={(e) => {
-                        setNewFichaInput(e.target.value);
+                        setNewFichaInput(e.target.value.replace(/\D/g, ""));
                         setEnrollError("");
                         setEnrollSuccess("");
                       }}

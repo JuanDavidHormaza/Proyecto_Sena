@@ -1,7 +1,7 @@
 from collections import Counter
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password, check_password
-from .Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, FichaRequest
+from .Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, FichaRequest, SupportTicket
 
 
 def validate_name_anti_spam(value, field_name="Nombre"):
@@ -282,6 +282,7 @@ class FichaRequestSerializer(serializers.ModelSerializer):
     learner_email = serializers.SerializerMethodField()
     current_program = serializers.SerializerMethodField()
     reviewed_by_name = serializers.SerializerMethodField()
+    assigned_instructor_name = serializers.SerializerMethodField()
 
     class Meta:
         model = FichaRequest
@@ -300,6 +301,8 @@ class FichaRequestSerializer(serializers.ModelSerializer):
             'reviewed_at',
             'reviewed_by',
             'reviewed_by_name',
+            'assigned_instructor',
+            'assigned_instructor_name',
         ]
         read_only_fields = ['request_id', 'status', 'created_at', 'reviewed_at', 'reviewed_by']
 
@@ -315,4 +318,52 @@ class FichaRequestSerializer(serializers.ModelSerializer):
     def get_reviewed_by_name(self, obj):
         if obj.reviewed_by and hasattr(obj.reviewed_by, 'person'):
             return f"{obj.reviewed_by.person.first_name} {obj.reviewed_by.person.last_name}"
+        return None
+
+    def get_assigned_instructor_name(self, obj):
+        if obj.assigned_instructor and hasattr(obj.assigned_instructor, 'person'):
+            return f"{obj.assigned_instructor.person.first_name} {obj.assigned_instructor.person.last_name}"
+        return None
+
+
+class SupportTicketSerializer(serializers.ModelSerializer):
+    """Serializer para tickets de soporte / PQRS."""
+    user_name = serializers.SerializerMethodField()
+    user_email = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
+    resolved_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SupportTicket
+        fields = [
+            'ticket_id',
+            'user',
+            'person',
+            'user_name',
+            'user_email',
+            'user_role',
+            'subject',
+            'category',
+            'description',
+            'status',
+            'admin_notes',
+            'created_at',
+            'updated_at',
+            'resolved_by',
+            'resolved_by_name',
+        ]
+        read_only_fields = ['ticket_id', 'user', 'person', 'created_at', 'updated_at', 'resolved_by']
+
+    def get_user_name(self, obj):
+        return f"{obj.person.first_name} {obj.person.last_name}"
+
+    def get_user_email(self, obj):
+        return obj.person.email
+
+    def get_user_role(self, obj):
+        return obj.user.role_id
+
+    def get_resolved_by_name(self, obj):
+        if obj.resolved_by and hasattr(obj.resolved_by, 'person'):
+            return f"{obj.resolved_by.person.first_name} {obj.resolved_by.person.last_name}"
         return None

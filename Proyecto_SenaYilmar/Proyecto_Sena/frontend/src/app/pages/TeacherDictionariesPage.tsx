@@ -547,15 +547,29 @@ export function TeacherDictionariesPage() {
                       </a>
                     )}
                     {doc.videoUrl && (
-                      <a
-                        href={resolveMediaUrl(doc.videoUrl)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-sena-blue bg-sena-blue/10 hover:bg-sena-blue/20 px-2.5 py-1.5 rounded-lg transition-colors"
-                      >
-                        <Video className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
-                        Ver Video
-                      </a>
+                      <div className="w-full mt-2">
+                        {api.getEmbedVideoUrl(doc.videoUrl) ? (
+                          <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-border bg-black shadow-xs">
+                            <iframe
+                              src={api.getEmbedVideoUrl(doc.videoUrl)!}
+                              title={`Video explicativo de ${doc.wordId}`}
+                              className="w-full h-full border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                        ) : (
+                          <a
+                            href={resolveMediaUrl(doc.videoUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-sena-blue bg-sena-blue/10 hover:bg-sena-blue/20 px-2.5 py-1.5 rounded-lg transition-colors"
+                          >
+                            <Video className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
+                            Ver Video
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -696,6 +710,31 @@ export function TeacherDictionariesPage() {
                     onChange={(e) => setFormData({ ...formData, synonyms: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm"
                   />
+                </div>
+
+                {/* URL de Video Educativo (YouTube o Vimeo) */}
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    <Video className="w-4 h-4 text-sena-blue" strokeWidth={1.8} />
+                    <span>URL de Video Educativo (YouTube o Vimeo)</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="Ej. https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                    value={formData.videoUrl || ""}
+                    onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm"
+                  />
+                  {formData.videoUrl && api.getEmbedVideoUrl(formData.videoUrl) && (
+                    <div className="mt-2.5 rounded-xl overflow-hidden border border-border aspect-video max-h-48 bg-black">
+                      <iframe
+                        src={api.getEmbedVideoUrl(formData.videoUrl)!}
+                        title="Vista previa del video"
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Multimedia: Subida a MinIO */}

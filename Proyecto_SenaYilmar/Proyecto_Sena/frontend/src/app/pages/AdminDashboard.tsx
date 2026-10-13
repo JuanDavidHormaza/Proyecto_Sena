@@ -14,6 +14,7 @@ import {
   Mic, PenTool, Languages, BookMarked, Image as ImageIcon, Layers, RotateCcw,
   Code, MoreVertical, GraduationCap, SlidersHorizontal,
   Bell, Inbox, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Headphones, ExternalLink, UserCheck, ChevronLeft, ChevronRight,
+  LifeBuoy,
 } from "lucide-react";
 import {
   User, UserPermissions, getDefaultPermissions,
@@ -505,7 +506,7 @@ export function AsignaturaCard({
 const DocumentCard = VocabCard;
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
-type TabType = "overview" | "requests" | "users" | "documents" | "subjects" | "analytics";
+type TabType = "overview" | "requests" | "tickets" | "users" | "documents" | "subjects" | "analytics";
 type ExtendedDocument = Document & {
   objectUrl?: string;
   category?: FileCategory;
@@ -662,7 +663,7 @@ export const SYSTEM_COMPETENCIAS: CEFRSkillDefinition[] = [
     borderClass: "border-amber-500",
     weightPercentage: 25,
     status: "Activa",
-    description: "Producción fonética en tiempo real con Inteligencia Artificial, pronunciación de léxico técnico, fluidez oral y reconocimiento de voz nativo en contexto laboral.",
+    description: "Producción fonética en tiempo real, pronunciación de léxico técnico, fluidez oral y reconocimiento de voz nativo en contexto laboral.",
     evaluationMode: "Grabación en vivo con Web Speech API, evaluación de precisión fonética al 100% y comparación acústica.",
     levels: ["A1", "A2", "B1", "B2"],
     learningOutcomes: [
@@ -774,6 +775,23 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
   const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
 
+  // Estados para Mesa de Ayuda (Tickets de Soporte / PQRS)
+  const [supportTickets, setSupportTickets] = useState<api.ApiSupportTicket[]>([]);
+  const [selectedTicket, setSelectedTicket] = useState<api.ApiSupportTicket | null>(null);
+  const [ticketStatusFilter, setTicketStatusFilter] = useState<string>("ALL");
+  const [ticketSearchTerm, setTicketSearchTerm] = useState<string>("");
+  const [ticketCategoryFilter, setTicketCategoryFilter] = useState<string>("ALL");
+  const [ticketAdminNotes, setTicketAdminNotes] = useState<string>("");
+  const [ticketNewStatus, setTicketNewStatus] = useState<string>("ABIERTO");
+  const [isUpdatingTicket, setIsUpdatingTicket] = useState<boolean>(false);
+  const [ticketCurrentPage, setTicketCurrentPage] = useState<number>(1);
+  const ticketPageSize = 8;
+
+  // Estados para filtros avanzados y paginación de usuarios
+  const [filterUserStatus, setFilterUserStatus] = useState<string>("all");
+  const [userCurrentPage, setUserCurrentPage] = useState<number>(1);
+  const userPageSize = 10;
+
   const [apiError, setApiError] = useState<string | null>(null);
   const [showEditDataModal, setShowEditDataModal] = useState(false);
   const [editUserData, setEditUserData] = useState({ id: "", name: "", email: "", phone_num: "", role: "", program: "" });
@@ -818,6 +836,23 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
       alert(err?.message || "Error al rechazar solicitud de ficha");
     } finally {
       setProcessingRequestId(null);
+    }
+  };
+
+  const handleUpdateTicketStatus = async (ticketId: number) => {
+    setIsUpdatingTicket(true);
+    try {
+      await api.updateSupportTicket(ticketId, {
+        status: ticketNewStatus,
+        admin_notes: ticketAdminNotes,
+      });
+      toast.success("Estado del ticket actualizado correctamente");
+      setSelectedTicket(null);
+      await loadDataFromApi();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al actualizar el ticket");
+    } finally {
+      setIsUpdatingTicket(false);
     }
   };
 
@@ -893,16 +928,20 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     setIsLoading(true);
     setApiError(null);
     try {
-      const [apiUsers, apiSubjects, apiDocs, apiResults, apiRequests] = await Promise.all([
+      const [apiUsers, apiSubjects, apiDocs, apiResults, apiRequests, apiTickets] = await Promise.all([
         api.getUsers(),
         api.getSubjects(),
         api.getDocuments(),
         api.getTestResults(),
         api.getFichaRequests().catch(() => []),
+        api.getSupportTickets().catch(() => []),
       ]);
 
       if (Array.isArray(apiRequests)) {
         setFichaRequests(apiRequests);
+      }
+      if (Array.isArray(apiTickets)) {
+        setSupportTickets(apiTickets);
       }
 
       const convertedUsers: User[] = apiUsers.map(u => ({
@@ -1243,10 +1282,26 @@ const handleSaveUserData = async (e: React.FormEvent) => {
   const handleManageCompetence = handleEditAsignatura;
   const handleDeleteCompetenceWords = handleDeleteAsignatura;
 
-  const filteredUsers = users.filter(u => {
-    const matchSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchSearch && (filterRole === "all" || u.role === filterRole);
+  const filteredUsers = users.filter((u) => {
+    const term = searchTerm.toLowerCase().trim();
+    const matchSearch =
+      !term ||
+      u.name.toLowerCase().includes(term) ||
+      u.email.toLowerCase().includes(term) ||
+      Boolean(u.docNum && u.docNum.toLowerCase().includes(term));
+    const matchRole = filterRole === "all" || u.role === filterRole;
+    const matchStatus = filterUserStatus === "all" || u.status === filterUserStatus;
+    return matchSearch && matchRole && matchStatus;
   });
+
+  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / userPageSize));
+  const safeUserCurrentPage = Math.min(userCurrentPage, totalUserPages);
+  const paginatedUsers = filteredUsers.slice(
+    (safeUserCurrentPage - 1) * userPageSize,
+    safeUserCurrentPage * userPageSize
+  );
+
+  const pendingTicketsCount = supportTickets.filter((t) => t.status === "ABIERTO").length;
 
   const filteredDocs = documents.filter(d => {
     const matchProg = matchesSelectedProgram(d.program, selectedAdminProgram);
@@ -1333,6 +1388,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
   const tabs = [
     { id: "overview",   label: "Resumen",                 icon: BarChart3 },
     { id: "requests",   label: "Bandeja de Aprobación",   icon: Inbox,      badge: pendingRequestsCount },
+    { id: "tickets",    label: "Mesa de Ayuda",           icon: LifeBuoy,   badge: pendingTicketsCount },
     { id: "analytics",  label: "Estadísticas",            icon: PieChart  },
     { id: "users",      label: "Usuarios",                icon: Users     },
     { id: "documents",  label: "Diccionarios Técnicos",   icon: BookOpen  },
@@ -1346,47 +1402,39 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       {/* ── Sidebar ── */}
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-border z-40 hidden lg:block">
         <div className="p-6">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-6">
             <img
               src="/worklex.png"
               alt="WorkLex"
               className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
             />
-            <div>
-              <h1 className="font-semibold text-foreground">English Test</h1>
-              <p className="text-xs text-muted-foreground">
-                {isSuperAdmin ? "Panel SuperAdmin" : "Panel Admin"}
-              </p>
+            <div className="min-w-0">
+              <h1 className="font-semibold text-foreground tracking-tight truncate">Worklex SENA</h1>
+              <p className="text-xs text-muted-foreground truncate">Gestión Institucional</p>
             </div>
           </div>
-          {/* Badge de rol */}
-          <div className={`mb-6 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 w-fit ${isSuperAdmin ? "bg-purple-100 text-purple-700" : "bg-destructive/10 text-destructive"}`}>
-            <Shield className="w-3.5 h-3.5" strokeWidth={1.8} />
-            {isSuperAdmin ? "SuperAdministrador" : "Administrador"}
-          </div>
-          <nav className="space-y-1">
+          <nav className="space-y-1.5">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id as TabType)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer ${
+                  className={`w-full h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
                     isActive
-                      ? "bg-sena-green text-white shadow-lg shadow-sena-green/25 font-bold"
+                      ? "bg-sena-green text-white shadow-md shadow-sena-green/20 font-semibold"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
                   }`}
                 >
                   <tab.icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
-                  <span className="text-sm font-semibold">{tab.label}</span>
+                  <span className="text-sm truncate whitespace-nowrap">{tab.label}</span>
                   {Boolean(tab.badge && tab.badge > 0) && (
                     <span
                       className={`ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold leading-none rounded-full transition-all whitespace-nowrap ${
                         isActive
-                          ? "bg-white text-emerald-700 shadow-sm"
+                          ? "bg-white text-emerald-700 shadow-xs"
                           : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
                       }`}
-                      title={`${tab.badge} solicitudes pendientes`}
                     >
                       {tab.badge}
                     </span>
@@ -1413,7 +1461,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               alt="WorkLex"
               className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
             />
-            <span className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">{isSuperAdmin ? "SuperAdmin" : "Admin"}</span>
+            <span className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">Worklex SENA</span>
           </div>
           <div className="flex items-center gap-2">
             {/* Campana de Notificaciones en Móvil */}
@@ -1585,11 +1633,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
 
             {/* Identificador de Usuario */}
             <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-border">
-              <span className="text-xs font-semibold text-foreground">
+              <span className="text-xs font-semibold text-foreground max-w-[200px] truncate" title={authUser?.name || "Administrador"}>
                 {authUser?.name || "Administrador"}
-              </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-muted text-muted-foreground">
-                {isSuperAdmin ? "SuperAdmin" : "Admin"}
               </span>
             </div>
           </div>
@@ -1609,8 +1654,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
           {activeTab === "overview" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">Panel de Administración</h2>
-                <p className="text-muted-foreground">Bienvenido al centro de control de English Level Test</p>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Worklex SENA — Resumen</h2>
+                <p className="text-muted-foreground">Centro de control institucional y seguimiento formativo</p>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
@@ -1674,8 +1719,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
           {activeTab === "analytics" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">Panel de Estadisticas</h2>
-                <p className="text-muted-foreground">Analisis detallado del rendimiento de la plataforma</p>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Estadísticas y Métricas Formativas</h2>
+                <p className="text-muted-foreground">Análisis institucional del rendimiento formativo y evaluaciones CEFR</p>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {analyticsKpis.map((kpi, i) => (
@@ -1777,38 +1822,54 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">Gestión de Usuarios</h2>
                   <p className="text-muted-foreground">
-                    {isSuperAdmin ? "Control total — puedes cambiar roles, activar/desactivar y eliminar usuarios" : "Administra usuarios y sus permisos"}
+                    {isSuperAdmin ? "Control total — puedes cambiar roles, activar/desactivar y eliminar usuarios" : "Administra usuarios, roles y estados de cuenta"}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={loadDataFromApi} className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all text-sm">
+                  <button onClick={loadDataFromApi} className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all text-sm cursor-pointer">
                     <RefreshCw className="w-4 h-4" strokeWidth={1.8} /> Actualizar
                   </button>
-                  {isSuperAdmin && (
-                    <button onClick={() => setShowUserModal(true)}
-                      className="flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium shadow-lg shadow-sena-green/25">
-                      <Plus className="w-5 h-5" strokeWidth={1.8} /> Agregar Usuario
-                    </button>
-                  )}
+                  <button onClick={() => setShowUserModal(true)}
+                    className="flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium shadow-md shadow-sena-green/20 cursor-pointer">
+                    <Plus className="w-5 h-5" strokeWidth={1.8} /> Crear Usuario
+                  </button>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="relative sm:col-span-1">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
-                  <input type="text" placeholder="Buscar por nombre o email..." value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" />
+                  <input type="text" placeholder="Buscar por nombre, email o documento..." value={searchTerm}
+                    onChange={e => {
+                      setSearchTerm(e.target.value);
+                      setUserCurrentPage(1);
+                    }}
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm" />
                 </div>
                 <div className="relative">
                   <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
-                  <select value={filterRole} onChange={e => setFilterRole(e.target.value)}
-                    className="pl-12 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer">
+                  <select value={filterRole} onChange={e => {
+                    setFilterRole(e.target.value);
+                    setUserCurrentPage(1);
+                  }}
+                    className="w-full pl-12 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer text-sm">
                     <option value="all">Todos los roles</option>
                     <option value="superadmin">SuperAdministrador</option>
                     <option value="admin">Administrador</option>
                     <option value="teacher">Instructor</option>
                     <option value="student">Aprendiz</option>
+                  </select>
+                </div>
+                <div className="relative">
+                  <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
+                  <select value={filterUserStatus} onChange={e => {
+                    setFilterUserStatus(e.target.value);
+                    setUserCurrentPage(1);
+                  }}
+                    className="w-full pl-12 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer text-sm">
+                    <option value="all">Todos los estados</option>
+                    <option value="active">Activo</option>
+                    <option value="inactive">Inactivo</option>
                   </select>
                 </div>
               </div>
@@ -1828,7 +1889,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredUsers.map(user => {
+                        {paginatedUsers.map(user => {
                           const isSelf = user.id === authUser?.id;
                           const isTargetSuperAdmin = user.role === "superadmin";
                           const canModify = canModifyUserActions(user);
@@ -1872,7 +1933,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                               <td className="py-4 px-5">
                                 <button onClick={() => canModify && handleToggleUserStatus(user.id)}
                                   disabled={!canModify}
-                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${user.status === "active" ? "bg-sena-green/10 text-sena-green hover:bg-sena-green/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${user.status === "active" ? "bg-sena-green/10 text-sena-green hover:bg-sena-green/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
                                   {user.status === "active" ? <><ToggleRight className="w-4 h-4" strokeWidth={1.8} /> Activo</> : <><ToggleLeft className="w-4 h-4" strokeWidth={1.8} /> Inactivo</>}
                                 </button>
                               </td>
@@ -1881,7 +1942,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                   {canModify && (
                                     <button
                                       onClick={() => handleEditUserData(user)}
-                                      className="p-2 text-sena-green hover:bg-sena-green/10 rounded-lg transition-colors"
+                                      className="p-2 text-sena-green hover:bg-sena-green/10 rounded-lg transition-colors cursor-pointer"
                                       title="Editar datos"
                                     >
                                       <Edit className="w-4 h-4" strokeWidth={1.8} />
@@ -1889,13 +1950,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                   )}
                                   {canOpenPermissions && (
                                     <button onClick={() => handleEditUserPermissions(user)}
-                                      className="p-2 text-sena-blue hover:bg-sena-blue/10 rounded-lg transition-colors" title="Editar permisos">
+                                      className="p-2 text-sena-blue hover:bg-sena-blue/10 rounded-lg transition-colors cursor-pointer" title="Editar permisos">
                                       <Settings className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
                                   {canModify && !isTargetSuperAdmin && (
                                     <button onClick={() => handleDeleteUser(user.id)}
-                                      className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors" title="Eliminar usuario">
+                                      className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer" title="Eliminar usuario">
                                       <Trash2 className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
@@ -1910,6 +1971,40 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Paginación de Usuarios */}
+                  {totalUserPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3 border-t border-border bg-muted/20 gap-3">
+                      <p className="text-xs text-muted-foreground">
+                        Mostrando <span className="font-semibold text-foreground">{(safeUserCurrentPage - 1) * userPageSize + 1}</span> a{" "}
+                        <span className="font-semibold text-foreground">{Math.min(safeUserCurrentPage * userPageSize, filteredUsers.length)}</span> de{" "}
+                        <span className="font-semibold text-foreground">{filteredUsers.length}</span> usuarios
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={safeUserCurrentPage <= 1}
+                          onClick={() => setUserCurrentPage(p => Math.max(1, p - 1))}
+                          className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          title="Página anterior"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <span className="text-xs font-semibold px-2 text-foreground">
+                          Página {safeUserCurrentPage} de {totalUserPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={safeUserCurrentPage >= totalUserPages}
+                          onClick={() => setUserCurrentPage(p => Math.min(totalUserPages, p + 1))}
+                          className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          title="Página siguiente"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>
@@ -2220,6 +2315,308 @@ const handleSaveUserData = async (e: React.FormEvent) => {
             );
           })()}
 
+          {/* ══ Mesa de Ayuda: Soporte y PQRS (Tickets) ══ */}
+          {activeTab === "tickets" && (() => {
+            const filteredTickets = supportTickets.filter((ticket) => {
+              const matchesStatus = ticketStatusFilter === "ALL" || ticket.status === ticketStatusFilter;
+              const matchesCategory = ticketCategoryFilter === "ALL" || ticket.category === ticketCategoryFilter;
+              const term = ticketSearchTerm.toLowerCase().trim();
+              if (!term) return matchesStatus && matchesCategory;
+              const matchesSearch =
+                (ticket.subject || "").toLowerCase().includes(term) ||
+                (ticket.description || "").toLowerCase().includes(term) ||
+                (ticket.user_name || "").toLowerCase().includes(term) ||
+                (ticket.user_email || "").toLowerCase().includes(term);
+              return matchesStatus && matchesCategory && matchesSearch;
+            });
+
+            const totalTicketPages = Math.max(1, Math.ceil(filteredTickets.length / ticketPageSize));
+            const safeTicketCurrentPage = Math.min(Math.max(1, ticketCurrentPage), totalTicketPages);
+            const paginatedTickets = filteredTickets.slice(
+              (safeTicketCurrentPage - 1) * ticketPageSize,
+              safeTicketCurrentPage * ticketPageSize
+            );
+
+            const openCount = supportTickets.filter(t => t.status === "ABIERTO").length;
+            const inProgressCount = supportTickets.filter(t => t.status === "EN_PROCESO").length;
+            const resolvedCount = supportTickets.filter(t => t.status === "RESUELTO" || t.status === "CERRADO").length;
+
+            return (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                {/* Encabezado Principal */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-sena-green flex items-center justify-center">
+                      <LifeBuoy className="w-6 h-6" strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                        Mesa de Ayuda y PQRS
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Gestión, seguimiento y resolución de solicitudes de soporte técnico e inquietudes académicas
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={loadDataFromApi}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all text-sm self-start sm:self-auto cursor-pointer"
+                  >
+                    <RefreshCw className="w-4 h-4" strokeWidth={1.8} /> Actualizar
+                  </button>
+                </div>
+
+                {/* Métricas KPI de Tickets */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs">
+                    <p className="text-xs text-muted-foreground font-medium">Total Tickets</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">{supportTickets.length}</p>
+                    <span className="text-[11px] text-muted-foreground mt-0.5 block">Histórico de radicados</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs">
+                    <p className="text-xs text-amber-700 font-medium flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" /> Abiertos / Pendientes
+                    </p>
+                    <p className="text-2xl font-bold text-amber-700 mt-1">{openCount}</p>
+                    <span className="text-[11px] text-amber-600 mt-0.5 block">Requieren atención</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs">
+                    <p className="text-xs text-blue-700 font-medium flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5" /> En Proceso
+                    </p>
+                    <p className="text-2xl font-bold text-blue-700 mt-1">{inProgressCount}</p>
+                    <span className="text-[11px] text-blue-600 mt-0.5 block">En revisión por equipo</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs">
+                    <p className="text-xs text-emerald-700 font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Resueltos / Cerrados
+                    </p>
+                    <p className="text-2xl font-bold text-emerald-700 mt-1">{resolvedCount}</p>
+                    <span className="text-[11px] text-emerald-600 mt-0.5 block">Casos atendidos</span>
+                  </div>
+                </div>
+
+                {/* Filtros y Búsqueda */}
+                <div className="bg-white p-4 rounded-2xl border border-border shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+                  <div className="relative w-full md:w-80">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por usuario, asunto o detalle..."
+                      value={ticketSearchTerm}
+                      onChange={(e) => {
+                        setTicketSearchTerm(e.target.value);
+                        setTicketCurrentPage(1);
+                      }}
+                      className="w-full pl-10 pr-8 py-2.5 bg-muted/30 border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+                    />
+                    {ticketSearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTicketSearchTerm("");
+                          setTicketCurrentPage(1);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    {/* Filtro por Categoría */}
+                    <div className="relative">
+                      <select
+                        value={ticketCategoryFilter}
+                        onChange={(e) => {
+                          setTicketCategoryFilter(e.target.value);
+                          setTicketCurrentPage(1);
+                        }}
+                        className="py-2 px-3 bg-muted/40 border border-border rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer pr-7"
+                      >
+                        <option value="ALL">Todas las categorías</option>
+                        <option value="TECNICA">Incidencia Técnica</option>
+                        <option value="EXAMEN">Examen / Evaluación</option>
+                        <option value="CALIFICACION">Calificación / Puntaje</option>
+                        <option value="SUGERENCIA">Sugerencia</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                    </div>
+
+                    {/* Filtro por Estado */}
+                    <div className="flex items-center gap-1 overflow-x-auto">
+                      {(["ALL", "ABIERTO", "EN_PROCESO", "RESUELTO", "CERRADO"] as const).map((st) => {
+                        const count = st === "ALL" ? supportTickets.length : supportTickets.filter(t => t.status === st).length;
+                        const labels: Record<string, string> = {
+                          ALL: "Todos",
+                          ABIERTO: "Abiertos",
+                          EN_PROCESO: "En Proceso",
+                          RESUELTO: "Resueltos",
+                          CERRADO: "Cerrados",
+                        };
+                        const isActive = ticketStatusFilter === st;
+                        return (
+                          <button
+                            key={st}
+                            type="button"
+                            onClick={() => {
+                              setTicketStatusFilter(st);
+                              setTicketCurrentPage(1);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                              isActive
+                                ? "bg-sena-green text-white shadow-xs"
+                                : "bg-muted text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            <span>{labels[st]}</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabla de Tickets */}
+                <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+                  {filteredTickets.length === 0 ? (
+                    <div className="py-16 text-center text-muted-foreground space-y-2">
+                      <LifeBuoy className="w-10 h-10 mx-auto text-slate-300" strokeWidth={1.5} />
+                      <p className="text-sm font-semibold">No se encontraron tickets con los filtros aplicados</p>
+                      <p className="text-xs text-muted-foreground">Prueba modificando los términos de búsqueda o el estado seleccionado.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
+                              <th className="py-3.5 px-4">Radicado</th>
+                              <th className="py-3.5 px-4">Usuario</th>
+                              <th className="py-3.5 px-4">Categoría</th>
+                              <th className="py-3.5 px-4">Asunto y Descripción</th>
+                              <th className="py-3.5 px-4">Fecha</th>
+                              <th className="py-3.5 px-4">Estado</th>
+                              <th className="py-3.5 px-4 text-right">Acción</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border text-xs">
+                            {paginatedTickets.map((ticket) => {
+                              const statusStyles: Record<string, string> = {
+                                ABIERTO: "bg-amber-100 text-amber-800 border-amber-200",
+                                EN_PROCESO: "bg-blue-100 text-blue-800 border-blue-200",
+                                RESUELTO: "bg-emerald-100 text-emerald-800 border-emerald-200",
+                                CERRADO: "bg-slate-100 text-slate-700 border-slate-200",
+                              };
+                              const statusLabels: Record<string, string> = {
+                                ABIERTO: "Abierto",
+                                EN_PROCESO: "En Proceso",
+                                RESUELTO: "Resuelto",
+                                CERRADO: "Cerrado",
+                              };
+                              return (
+                                <tr key={ticket.ticket_id} className="hover:bg-muted/30 transition-colors">
+                                  <td className="py-3.5 px-4 font-mono font-bold text-sena-blue">
+                                    #TK-{ticket.ticket_id}
+                                  </td>
+                                  <td className="py-3.5 px-4">
+                                    <div className="min-w-0 max-w-[200px]">
+                                      <p className="font-semibold text-foreground truncate" title={ticket.user_name || "Usuario"}>
+                                        {ticket.user_name || "Usuario SENA"}
+                                      </p>
+                                      <p className="text-[11px] text-muted-foreground truncate" title={ticket.user_email}>
+                                        {ticket.user_email || "Sin correo"}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="py-3.5 px-4">
+                                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-800">
+                                      {ticket.category}
+                                    </span>
+                                  </td>
+                                  <td className="py-3.5 px-4">
+                                    <div className="min-w-0 max-w-[280px]">
+                                      <p className="font-semibold text-foreground truncate" title={ticket.subject}>
+                                        {ticket.subject}
+                                      </p>
+                                      <p className="text-[11px] text-muted-foreground truncate mt-0.5" title={ticket.description}>
+                                        {ticket.description}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
+                                    {new Date(ticket.created_at).toLocaleDateString("es-CO")}
+                                  </td>
+                                  <td className="py-3.5 px-4 whitespace-nowrap">
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusStyles[ticket.status] || "bg-gray-100 text-gray-800 border-gray-200"}`}>
+                                      {statusLabels[ticket.status] || ticket.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-3.5 px-4 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedTicket(ticket);
+                                        setTicketNewStatus(ticket.status);
+                                        setTicketAdminNotes(ticket.admin_notes || "");
+                                      }}
+                                      className="px-3 py-1.5 rounded-xl bg-sena-green/10 text-sena-green hover:bg-sena-green hover:text-white transition-all font-semibold text-xs cursor-pointer shadow-2xs"
+                                    >
+                                      Gestionar
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Paginación de Tickets */}
+                      {totalTicketPages > 1 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-border bg-muted/20 gap-3">
+                          <p className="text-xs text-muted-foreground">
+                            Mostrando <span className="font-semibold text-foreground">{(safeTicketCurrentPage - 1) * ticketPageSize + 1}</span> a{" "}
+                            <span className="font-semibold text-foreground">{Math.min(safeTicketCurrentPage * ticketPageSize, filteredTickets.length)}</span> de{" "}
+                            <span className="font-semibold text-foreground">{filteredTickets.length}</span> tickets
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={safeTicketCurrentPage <= 1}
+                              onClick={() => setTicketCurrentPage((p) => Math.max(1, p - 1))}
+                              className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              title="Página anterior"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <span className="text-xs font-semibold px-2 text-foreground">
+                              Página {safeTicketCurrentPage} de {totalTicketPages}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={safeTicketCurrentPage >= totalTicketPages}
+                              onClick={() => setTicketCurrentPage((p) => Math.min(totalTicketPages, p + 1))}
+                              className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              title="Página siguiente"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })()}
+
           {/* ══ Diccionarios: Gestión Multi-Programa por Ficha (Explorador Desacoplado en Modal) ══ */}
           {activeTab === "documents" && (() => {
             const currentProgramDocs = documents.filter(d => matchesSelectedProgram(d.program, selectedAdminProgram));
@@ -2311,9 +2708,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         title="Seleccionar programa de formación SENA"
                       >
                         <option value="ADSO">ADSO (Análisis y Desarrollo de Software)</option>
-                        <option value="Análisis de Datos">Análisis de Datos — Ficha 3411643</option>
-                        <option value="Mecánica Automotriz">Mecánica Automotriz — Ficha 3520681</option>
-                        {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("3411643") && !p.includes("3520681")).map(p => (
+                        <option value="Análisis de Datos">Análisis de Datos</option>
+                        <option value="Mecánica Automotriz">Mecánica Automotriz</option>
+                        {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Análisis de Datos") && !p.includes("Mecánica Automotriz")).map(p => (
                           <option key={p} value={p}>{p}</option>
                         ))}
                       </select>
@@ -2453,9 +2850,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <tbody className="divide-y divide-border/60 text-xs">
                         {[
                           { name: "ADSO", title: "ADSO (Análisis y Desarrollo de Software)" },
-                          { name: "Análisis de Datos", title: "Análisis de Datos — Ficha 3411643" },
-                          { name: "Mecánica Automotriz", title: "Mecánica — Ficha 3520681" },
-                          ...senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("3411643") && !p.includes("3520681")).map(p => ({ name: p, title: p }))
+                          { name: "Análisis de Datos", title: "Análisis de Datos" },
+                          { name: "Mecánica Automotriz", title: "Mecánica Automotriz" },
+                          ...senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Análisis de Datos") && !p.includes("Mecánica Automotriz")).map(p => ({ name: p, title: p }))
                         ].map(progItem => {
                           const pDocs = documents.filter(d => matchesSelectedProgram(d.program, progItem.name));
                           const isCurrent = matchesSelectedProgram(progItem.name, selectedAdminProgram);
@@ -3433,9 +3830,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-background text-foreground cursor-pointer"
                     >
                       <option value="ADSO">ADSO — Análisis y Desarrollo de Software</option>
-                      <option value="Análisis de Datos">Análisis de Datos — Ficha 3411643</option>
-                      <option value="Mecánica Automotriz">Mecánica Automotriz — Ficha 3520681</option>
-                      {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("3411643") && !p.includes("3520681")).map(prog => (
+                      <option value="Análisis de Datos">Análisis de Datos</option>
+                      <option value="Mecánica Automotriz">Mecánica Automotriz</option>
+                      {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Análisis de Datos") && !p.includes("Mecánica Automotriz")).map(prog => (
                         <option key={prog} value={prog}>{prog}</option>
                       ))}
                     </select>
@@ -3504,6 +3901,122 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* ── Modal de Gestión y Resolución de Ticket ── */}
+        {selectedTicket && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-border max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-sena-green flex items-center justify-center">
+                    <LifeBuoy className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-foreground text-base">
+                      Gestión de Ticket #{selectedTicket.ticket_id}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedTicket.user_name || "Usuario"} • {selectedTicket.category}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTicket(null)}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="py-4 space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Asunto</label>
+                  <p className="text-sm font-bold text-foreground bg-muted/30 p-3 rounded-xl border border-border">
+                    {selectedTicket.subject}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Descripción del Usuario</label>
+                  <div className="text-xs text-foreground bg-slate-50 p-3.5 rounded-xl border border-border whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                    {selectedTicket.description}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs bg-muted/20 p-3 rounded-xl border border-border">
+                  <div>
+                    <span className="text-muted-foreground block">Fecha de radicado:</span>
+                    <span className="font-semibold text-foreground">
+                      {new Date(selectedTicket.created_at).toLocaleString("es-CO")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Correo remitente:</span>
+                    <span className="font-semibold text-foreground truncate block" title={selectedTicket.user_email}>
+                      {selectedTicket.user_email || "N/A"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Selección de nuevo estado */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1.5">
+                    Actualizar Estado *
+                  </label>
+                  <select
+                    value={ticketNewStatus}
+                    onChange={(e) => setTicketNewStatus(e.target.value)}
+                    className="w-full py-2.5 px-3 bg-white border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sena-green/50 cursor-pointer"
+                  >
+                    <option value="ABIERTO">Abierto / Pendiente</option>
+                    <option value="EN_PROCESO">En Proceso</option>
+                    <option value="RESUELTO">Resuelto</option>
+                    <option value="CERRADO">Cerrado</option>
+                  </select>
+                </div>
+
+                {/* Notas de resolución del Administrador */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1.5">
+                    Notas Administrativas / Respuesta al Usuario
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={ticketAdminNotes}
+                    onChange={(e) => setTicketAdminNotes(e.target.value)}
+                    placeholder="Registra la solución brindada, observaciones técnicas o respuesta formal..."
+                    className="w-full p-3 bg-white border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sena-green/50 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  disabled={isUpdatingTicket}
+                  onClick={() => handleUpdateTicketStatus(selectedTicket.ticket_id)}
+                  className="flex-1 py-2.5 px-4 bg-sena-green hover:bg-sena-green-dark text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-sena-green/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {isUpdatingTicket ? "Actualizando..." : "Guardar Cambios"}
+                </button>
+                <button
+                  type="button"
+                  disabled={isUpdatingTicket}
+                  onClick={() => setSelectedTicket(null)}
+                  className="py-2.5 px-4 bg-muted hover:bg-muted/80 text-muted-foreground rounded-xl font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

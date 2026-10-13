@@ -756,6 +756,8 @@ export interface ApiFichaRequest {
   reviewed_at?: string | null;
   reviewed_by?: number | null;
   reviewed_by_name?: string | null;
+  assigned_instructor?: number | null;
+  assigned_instructor_name?: string | null;
 }
 
 export async function getFichaRequests(): Promise<ApiFichaRequest[]> {
@@ -820,6 +822,77 @@ export async function rejectFichaRequest(requestId: number, notes?: string): Pro
     body: JSON.stringify({ notes }),
   });
   return handleResponse<ApiFichaRequest>(response);
+}
+
+// ── Tickets de Soporte / PQRS ─────────────────────────────────────────────
+
+export interface ApiSupportTicket {
+  ticket_id: number;
+  user?: number;
+  person?: number;
+  user_name: string;
+  user_email: string;
+  user_role: string;
+  subject: string;
+  category: 'TECNICA' | 'EXAMEN' | 'CALIFICACION' | 'SUGERENCIA' | 'OTRO';
+  description: string;
+  status: 'ABIERTO' | 'EN_PROCESO' | 'RESUELTO';
+  admin_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  resolved_by?: number | null;
+  resolved_by_name?: string | null;
+}
+
+export async function getSupportTickets(): Promise<ApiSupportTicket[]> {
+  const response = await safeFetch(`${API_BASE}/tickets/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<ApiSupportTicket[]>(response);
+}
+
+export async function createSupportTicket(data: {
+  subject: string;
+  category: string;
+  description: string;
+}): Promise<ApiSupportTicket> {
+  const response = await safeFetch(`${API_BASE}/tickets/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ApiSupportTicket>(response);
+}
+
+export async function updateSupportTicket(
+  ticketId: number,
+  data: { status?: string; admin_notes?: string }
+): Promise<ApiSupportTicket> {
+  const response = await safeFetch(`${API_BASE}/tickets/${ticketId}/`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ApiSupportTicket>(response);
+}
+
+/**
+ * Convierte enlaces directos de YouTube o Vimeo a URLs reproducibles en un <iframe> responsivo.
+ */
+export function getEmbedVideoUrl(url?: string | null): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  // YouTube watch?v=ID o youtu.be/ID o embed/ID o shorts/ID
+  const ytMatch = trimmed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  }
+  // Vimeo
+  const vimeoMatch = trimmed.match(/(?:vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|album\/(\d+)\/video\/|video\/|)(\d+))/i);
+  if (vimeoMatch && vimeoMatch[3]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[3]}`;
+  }
+  return null;
 }
 
 // ─── Exam Multimedia (Speaking & ElevenLabs TTS) ─────────────────────────────
@@ -1134,6 +1207,10 @@ export const api = {
   requestFichaEnrollment,
   approveFichaRequest,
   rejectFichaRequest,
+  getSupportTickets,
+  createSupportTicket,
+  updateSupportTicket,
+  getEmbedVideoUrl,
   requestLogin,
   verifyLoginOTP,
   resendLoginOTP,

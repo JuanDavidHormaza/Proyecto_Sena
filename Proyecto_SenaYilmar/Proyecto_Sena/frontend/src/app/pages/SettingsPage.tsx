@@ -308,14 +308,14 @@ export function SettingsPage() {
                   <span className="text-xs font-bold text-slate-800">Solicitar vinculación de nueva ficha extra:</span>
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Ingresa el código numérico de la ficha adicional que cursas (ej. 3520681, 3411643). El Administrador verificará y autorizará tu vinculación.
+                  Ingresa el código numérico de la ficha adicional que cursas. El Administrador verificará y autorizará tu vinculación.
                 </p>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newFichaInput}
-                    onChange={(e) => setNewFichaInput(e.target.value)}
-                    placeholder="Ej. 3520681"
+                    onChange={(e) => setNewFichaInput(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Número de ficha (ej. 2670142)"
                     className="flex-1 px-3.5 py-2 bg-white border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50"
                   />
                   <button

@@ -294,9 +294,57 @@ class FichaRequest(models.Model):
         blank=True,
         related_name='reviewed_ficha_requests'
     )
+    assigned_instructor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_fichas'
+    )
 
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
         return f"Solicitud {self.ficha_code} - {self.person.first_name} {self.person.last_name} ({self.status})"
+
+
+class SupportTicket(models.Model):
+    """Peticiones, Quejas, Reclamos y Soporte Técnico (PQRS) de aprendices e instructores."""
+    ticket_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='support_tickets')
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='support_tickets')
+    subject = models.CharField(max_length=200)
+
+    CATEGORY_CHOICES = [
+        ('TECNICA', 'Técnica / Sistema'),
+        ('EXAMEN', 'Examen / Preguntas'),
+        ('CALIFICACION', 'Calificación'),
+        ('SUGERENCIA', 'Sugerencia'),
+        ('OTRO', 'Otro'),
+    ]
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='TECNICA')
+    description = models.TextField()
+
+    STATUS_CHOICES = [
+        ('ABIERTO', 'Abierto'),
+        ('EN_PROCESO', 'En Proceso'),
+        ('RESUELTO', 'Resuelto'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ABIERTO')
+    admin_notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    resolved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='resolved_tickets'
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Ticket #{self.ticket_id}: {self.subject} ({self.status})"

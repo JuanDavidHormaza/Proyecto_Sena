@@ -332,15 +332,14 @@ export const mockTestResults: TestResult[] = [
 // SENA Programs
 export const senaPrograms = [
   'ADSO (Análisis y Desarrollo de Software)',
-  'Mecánica - Ficha 3520681',
-  'Análisis de Datos - Ficha 3411643',
-  'Desarrollo de Software - Ficha 2670142',
-  'Redes y Telecomunicaciones - Ficha 2710321',
-  'Producción Multimedia - Ficha 2554901',
-  'Seguridad Informática - Ficha 2901412',
-  'Automatización Industrial - Ficha 2894102',
-  'Gestión Empresarial - Ficha 2689104',
-  'Diseño Gráfico - Ficha 2450912',
+  'Análisis de Datos (Programación para Analítica de Datos)',
+  'Mecánica Industrial',
+  'Redes y Telecomunicaciones',
+  'Producción Multimedia',
+  'Seguridad Informática',
+  'Automatización Industrial',
+  'Gestión Empresarial',
+  'Diseño Gráfico',
 ];
 
 // Helper functions

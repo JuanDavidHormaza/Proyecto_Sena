@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
-import { BookOpen, LogOut, Settings, User } from "lucide-react";
+import { BookOpen, LogOut, Settings, User, LifeBuoy } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { SupportTicketModal } from "./SupportTicketModal";
 
 const ROLE_LABELS: Record<string, string> = {
   superadmin: "SuperAdministrador",
@@ -28,6 +29,7 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const [showTicketModal, setShowTicketModal] = useState(false);
 
   const userName = user?.name || localStorage.getItem("userName") || "Usuario";
   const role = user?.role || localStorage.getItem("userRole") || "student";
@@ -104,6 +106,16 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
                 Mis diccionarios
               </button>
             )}
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                setShowTicketModal(true);
+              }}
+              className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-sena-green font-medium cursor-pointer"
+            >
+              <LifeBuoy className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
+              Soporte y PQRS
+            </button>
             <div className="border-t border-border mt-2 pt-2">
               <button
                 onClick={handleLogout}
@@ -116,6 +128,12 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
           </motion.div>
         </>
       )}
+
+      {/* Modal de radicación de ticket PQRS */}
+      <SupportTicketModal
+        isOpen={showTicketModal}
+        onClose={() => setShowTicketModal(false)}
+      />
     </div>
   );
 }

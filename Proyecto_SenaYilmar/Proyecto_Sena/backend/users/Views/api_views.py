@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 from ..Controllers.ControllerSENA import (
     AuthController, PersonController, UserController,
     SubjectController, DictionaryController, TestResultController,
-    RankingController, FichaRequestController, _build_user_response,
+    RankingController, FichaRequestController, SupportTicketController, _build_user_response,
 )
-from ..Models.modelsSENA import EmailOTP, RegisterPendingOTP, Person, User, TestResult, FichaRequest
+from ..Models.modelsSENA import EmailOTP, RegisterPendingOTP, Person, User, TestResult, FichaRequest, SupportTicket
 from ..serializers import (
     LoginSerializer, RegisterSerializer, PersonSerializer,
     DigitalDictionarySerializer, TestResultSerializer, UserSerializer,
-    FichaRequestSerializer,
+    FichaRequestSerializer, SupportTicketSerializer,
 )
 from ..permissions import IsSuperAdmin, IsAdminOrSuperAdmin, IsDictionaryAdminOrReadOnly
 # NOTE: no se usa SESSION_KEY en este archivo; se usa request.session directamente.
@@ -1315,4 +1315,66 @@ class FichaRequestViewSet(viewsets.ViewSet):
             return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(FichaRequestSerializer(req).data)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SOPORTE TÉCNICO Y PQRS (TICKETS DE SOPORTE)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SupportTicketViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        tickets_qs = SupportTicketController.list_all(request.user)
+        serializer = SupportTicketSerializer(tickets_qs, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        subject = request.data.get('subject')
+        category = request.data.get('category', 'TECNICA')
+        description = request.data.get('description')
+
+        if not subject:
+            return Response({'error': 'El asunto del ticket es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not description:
+            return Response({'error': 'La descripción detallada del caso es obligatoria.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        ticket, err = SupportTicketController.create(
+            request.user,
+            subject=subject,
+            category=category,
+            description=description
+        )
+        if err:
+            return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(SupportTicketSerializer(ticket).data, status=status.HTTP_201_CREATED)
+
+    def retrieve(self, request, pk=None):
+        tickets_qs = SupportTicketController.list_all(request.user)
+        try:
+            ticket = tickets_qs.get(pk=pk)
+            return Response(SupportTicketSerializer(ticket).data)
+        except SupportTicket.DoesNotExist:
+            return Response({'error': 'Ticket no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+    def partial_update(self, request, pk=None):
+        if getattr(request.user, 'role_id', None) not in ('ADMIN', 'SUPERADMIN'):
+            return Response({'error': 'No tienes permisos de administrador para actualizar tickets.'}, status=status.HTTP_403_FORBIDDEN)
+
+        new_status = request.data.get('status')
+        admin_notes = request.data.get('admin_notes')
+        ticket, err = SupportTicketController.update_status(
+            pk,
+            request.user,
+            new_status=new_status,
+            admin_notes=admin_notes
+        )
+        if err:
+            return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(SupportTicketSerializer(ticket).data)
+
+    def update(self, request, pk=None):
+        return self.partial_update(request, pk=pk)
 

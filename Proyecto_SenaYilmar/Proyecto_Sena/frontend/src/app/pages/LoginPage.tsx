@@ -690,7 +690,7 @@ export function LoginPage() {
                     required
                     value={manualFichaInput}
                     onChange={(e) => setManualFichaInput(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Ej: 3520681, 3411643..."
+                    placeholder="Número de ficha (ej. 2670142)"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-sm font-semibold"
                   />
                 </div>

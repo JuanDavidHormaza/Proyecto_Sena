@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.utils import timezone
-from ..Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, Ranking, FichaRequest
+from ..Models.modelsSENA import Person, User, Subject, DigitalDictionary, TestResult, Ranking, FichaRequest, SupportTicket
 
 
 # ─── Mapas de roles y estados ────────────────────────────────────────────────
@@ -1078,9 +1078,10 @@ class FichaRequestController:
         if instructor_id:
             try:
                 instructor_user = User.objects.select_related('person').get(pk=instructor_id)
+                req.assigned_instructor = instructor_user
                 inst_name = f"{instructor_user.person.first_name} {instructor_user.person.last_name}"
                 req.admin_notes = f"Instructor asignado: {inst_name}. {notes or ''}".strip()
-                update_fields.append('admin_notes')
+                update_fields.extend(['admin_notes', 'assigned_instructor'])
             except Exception as e:
                 print(f"[FICHA APPROVE] Error asociando instructor {instructor_id}: {e}")
         elif notes:
@@ -1118,3 +1119,57 @@ class FichaRequestController:
         req.reviewed_by = real_admin
         req.save(update_fields=['status', 'admin_notes', 'reviewed_at', 'reviewed_by'])
         return req, None
+
+
+class SupportTicketController:
+    """Controlador para Peticiones, Quejas, Reclamos y Soporte Técnico (PQRS)."""
+
+    @staticmethod
+    def create(user, subject, category='TECNICA', description=''):
+        if not subject or not str(subject).strip():
+            return None, 'El asunto del ticket es obligatorio.'
+        if not description or not str(description).strip():
+            return None, 'La descripción detallada del caso es obligatoria.'
+
+        real_user = getattr(user, '_user', user)
+        person = real_user.person
+
+        ticket = SupportTicket.objects.create(
+            user=real_user,
+            person=person,
+            subject=str(subject).strip(),
+            category=category or 'TECNICA',
+            description=str(description).strip(),
+            status='ABIERTO',
+        )
+        return ticket, None
+
+    @staticmethod
+    def list_all(user):
+        if getattr(user, 'role_id', None) in ('ADMIN', 'SUPERADMIN'):
+            return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').all()
+        return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').filter(person=user.person)
+
+    @staticmethod
+    def update_status(ticket_id, admin_user, new_status=None, admin_notes=None):
+        try:
+            ticket = SupportTicket.objects.select_related('person', 'user').get(pk=ticket_id)
+        except SupportTicket.DoesNotExist:
+            return None, 'Ticket no encontrado.'
+
+        real_admin = getattr(admin_user, '_user', admin_user) if admin_user else None
+        update_fields = []
+        if new_status and new_status in ('ABIERTO', 'EN_PROCESO', 'RESUELTO'):
+            ticket.status = new_status
+            update_fields.append('status')
+            if new_status == 'RESUELTO':
+                ticket.resolved_by = real_admin
+                update_fields.append('resolved_by')
+
+        if admin_notes is not None:
+            ticket.admin_notes = admin_notes
+            update_fields.append('admin_notes')
+
+        if update_fields:
+            ticket.save(update_fields=update_fields)
+        return ticket, None

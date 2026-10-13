@@ -6,10 +6,12 @@ import {
   Users, BarChart3, TrendingUp, Send, X, Clock,
   Filter,
   Languages,
+  LifeBuoy,
 } from "lucide-react";
 import { mockTestResults, TestResult, mockUsers, User } from "../data/users";
 import * as api from "../services/api";
 import { UserAccountMenu } from "../components/UserAccountMenu";
+import { SupportTicketModal } from "../components/SupportTicketModal";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
 
@@ -27,6 +29,7 @@ export function TeacherDashboard() {
   const [filterLevel, setFilterLevel] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<User[]>([]);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
   const teacherName = user?.name || localStorage.getItem("userName") || "Instructor";
   const teacherProgram = user?.program || localStorage.getItem("userProgram") || "";
@@ -180,16 +183,24 @@ export function TeacherDashboard() {
             <div className="flex items-center gap-3">
               <img
                 src="/worklex.png"
-                alt="WorkLex"
+                alt="Worklex SENA"
                 className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
               />
               <div className="hidden sm:block">
-                <h1 className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">English Level Test</h1>
-                <p className="text-xs text-muted-foreground">Panel de Instructor</p>
+                <h1 className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">Worklex SENA</h1>
+                <p className="text-xs text-muted-foreground">Seguimiento Formativo</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsTicketModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold text-xs sm:text-sm transition-all shadow-xs cursor-pointer border border-border"
+                title="Radicar Ticket de Soporte o Reporte (PQRS)"
+              >
+                <LifeBuoy className="w-4 h-4 text-emerald-600" />
+                <span className="hidden md:inline">Soporte y PQRS</span>
+              </button>
               <button
                 onClick={() => navigate('/dictionary')}
                 className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-sena-green/10 text-sena-green hover:bg-sena-green hover:text-white border border-sena-green/30 font-semibold text-xs sm:text-sm transition-all shadow-xs cursor-pointer"
@@ -637,6 +648,11 @@ export function TeacherDashboard() {
           </div>
         )}
       </AnimatePresence>
+
+      <SupportTicketModal
+        isOpen={isTicketModalOpen}
+        onClose={() => setIsTicketModalOpen(false)}
+      />
     </div>
   );
 }

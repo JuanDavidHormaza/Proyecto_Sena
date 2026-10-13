@@ -14,7 +14,7 @@ from .Views.api_views import (
     PrivilegedLoginAPIView, PrivilegedMeAPIView,
     UserViewSet, SubjectViewSet,
     DigitalDictionaryViewSet, TestResultViewSet, RankingViewSet,
-    FichaRequestViewSet,
+    FichaRequestViewSet, SupportTicketViewSet,
 )
 from .Views.media_views import MediaProxyAPIView, MediaUploadAPIView
 from .Views.exam_views import (
@@ -32,6 +32,7 @@ router.register(r'dictionary',     DigitalDictionaryViewSet, basename='dictionar
 router.register(r'results',        TestResultViewSet,        basename='result')
 router.register(r'ranking',        RankingViewSet,           basename='ranking')
 router.register(r'ficha-requests', FichaRequestViewSet,      basename='ficha-request')
+router.register(r'tickets',        SupportTicketViewSet,     basename='support-ticket')
 
 urlpatterns = [
     # ── Autenticación (login) con MFA ──────────────────────────────────

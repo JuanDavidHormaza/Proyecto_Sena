@@ -34,6 +34,7 @@ import {
   Trophy,
   Layers,
   Languages,
+  LifeBuoy,
 } from "lucide-react";
 import { getLevelFromScore } from "../data/questionsA1";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -43,6 +44,7 @@ import { resolveMediaUrl } from "../services/api";
 import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightboxModal";
 import { SafeImage } from "../components/SafeImage";
 import { DictionaryProgramModal } from "../components/DictionaryProgramModal";
+import { SupportTicketModal } from "../components/SupportTicketModal";
 import { AccessibilityWidget } from "../components/AccessibilityWidget";
 import { getTermsForProgram } from "../data/dictionariesByFicha";
 import { questions } from "../data";
@@ -835,6 +837,33 @@ function StudentVocabCard({
             </div>
           )}
 
+          {/* Video Embebido por URL (YouTube/Vimeo o Video Técnico) */}
+          {Boolean(term.videoUrl) && (
+            <div className="pt-2 border-t border-border/60">
+              {api.getEmbedVideoUrl(term.videoUrl) ? (
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-border bg-black shadow-xs">
+                  <iframe
+                    src={api.getEmbedVideoUrl(term.videoUrl)!}
+                    title={`Video demostrativo de ${termKey}`}
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <a
+                  href={api.resolveMediaUrl(term.videoUrl!)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-sena-blue hover:underline py-1"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  Ver video técnico complementario
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Feedback de voz si está activo */}
           {feedback && (
             <div
@@ -996,6 +1025,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   );
   const [editingFeedback, setEditingFeedback] = useState<string>("");
   const [isSavingFeedback, setIsSavingFeedback] = useState<boolean>(false);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
   useEffect(() => {
     if (selectedTest) {
@@ -1106,9 +1136,9 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
           setStudyTerms(docs);
         } else {
           // Si es ADSO o el programa principal con semillas, usar respaldo seguro
-          const isAdso = (selectedDictProgram || "").toLowerCase().includes("adso") ||
-            (selectedDictProgram || "").toLowerCase().includes("software") ||
-            (selectedDictProgram || "").toLowerCase().includes("2670142");
+          const progLower = (selectedDictProgram || "").toLowerCase();
+          const isAdso = (progLower.includes("adso") || progLower.includes("software") || progLower.includes("2670142")) &&
+            !progLower.includes("datos") && !progLower.includes("data") && !progLower.includes("analítica");
           if (isAdso) {
             setStudyTerms(FALLBACK_ADSO_TERMS);
           } else {
@@ -1119,9 +1149,9 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
       } catch (err) {
         console.warn("Fallo al conectar con diccionario en API:", err);
         if (isCancelled) return;
-        const isAdso = (selectedDictProgram || "").toLowerCase().includes("adso") ||
-          (selectedDictProgram || "").toLowerCase().includes("software") ||
-          (selectedDictProgram || "").toLowerCase().includes("2670142");
+        const progLower = (selectedDictProgram || "").toLowerCase();
+        const isAdso = (progLower.includes("adso") || progLower.includes("software") || progLower.includes("2670142")) &&
+          !progLower.includes("datos") && !progLower.includes("data") && !progLower.includes("analítica");
         if (isAdso) {
           setStudyTerms(FALLBACK_ADSO_TERMS);
         } else {
@@ -1394,17 +1424,17 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
               >
                 <img
                   src="/worklex.png"
-                  alt="WorkLex"
+                  alt="Worklex SENA"
                   className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
                 />
                 <div className="hidden sm:block">
                   <div className="flex items-center gap-1.5">
-                    <h1 className="font-bold text-slate-900 dark:text-white high-contrast:text-white text-sm leading-none">WorkLex</h1>
+                    <h1 className="font-bold text-slate-900 dark:text-white high-contrast:text-white text-sm leading-none">Worklex SENA</h1>
                     <span className="p-0.5 rounded text-sena-green group-hover:translate-x-0.5 transition-transform">
                       <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">Plataforma SENA</p>
+                  <p className="text-[11px] text-muted-foreground">Plataforma Institucional</p>
                 </div>
               </button>
 
@@ -2621,6 +2651,23 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
           handleProgramSwitch(program);
           setActiveMainTab("study");
         }}
+      />
+
+      {/* ══ Botón Flotante Accesible: Soporte y Reportes (PQRS) ══ */}
+      <button
+        type="button"
+        onClick={() => setIsTicketModalOpen(true)}
+        className="fixed bottom-6 right-6 z-40 bg-white dark:bg-card border-2 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 px-4 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 group cursor-pointer"
+        title="Radicar Ticket de Soporte, Pregunta o Reporte (PQRS)"
+      >
+        <LifeBuoy className="w-5 h-5 text-emerald-600 group-hover:rotate-45 transition-transform duration-300" strokeWidth={2} />
+        <span className="text-xs font-bold hidden sm:inline">Soporte y PQRS</span>
+      </button>
+
+      {/* ══ Modal de Radicación de Tickets (PQRS) ══ */}
+      <SupportTicketModal
+        isOpen={isTicketModalOpen}
+        onClose={() => setIsTicketModalOpen(false)}
       />
     </div>
   );
