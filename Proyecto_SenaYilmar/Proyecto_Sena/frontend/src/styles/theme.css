@@ -290,31 +290,29 @@
 }
 
 /* ─── Escalado Tipográfico Real (Accesibilidad Universal sin Zoom) ─── */
+/* El elemento raíz (html, :root) permanece estrictamente en 16px para preservar */
+/* la cuadrícula, los anchos de tarjetas, márgenes y paddings basados en rem sin efecto zoom */
+html,
+:root,
 html.font-level-normal,
 :root.font-level-normal,
 html.font-scale-normal,
 :root.font-scale-normal,
 html.font-scale-100,
-:root.font-scale-100 {
-  font-size: 16px !important;
-}
-
+:root.font-scale-100,
 html.font-level-large,
 :root.font-level-large,
 html.font-scale-large,
 :root.font-scale-large,
 html.font-scale-112,
-:root.font-scale-112 {
-  font-size: 18px !important;
-}
-
+:root.font-scale-112,
 html.font-level-extra-large,
 :root.font-level-extra-large,
 html.font-scale-xl,
 :root.font-scale-xl,
 html.font-scale-125,
 :root.font-scale-125 {
-  font-size: 20px !important;
+  font-size: 16px !important;
 }
 
 /* Multiplicador para 18px (Grande) */
