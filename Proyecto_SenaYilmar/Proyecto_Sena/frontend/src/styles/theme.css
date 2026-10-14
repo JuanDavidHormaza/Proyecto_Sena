@@ -301,12 +301,12 @@ html.font-level-large,
 :root.font-level-large,
 html.font-scale-112,
 :root.font-scale-112 {
-  font-size: 18.5px !important;
+  font-size: 18px !important;
 }
 
 html.font-level-extra-large,
 :root.font-level-extra-large,
 html.font-scale-125,
 :root.font-scale-125 {
-  font-size: 21px !important;
+  font-size: 20px !important;
 }
