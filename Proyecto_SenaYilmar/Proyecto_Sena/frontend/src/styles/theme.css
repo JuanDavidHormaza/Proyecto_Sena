@@ -261,25 +261,30 @@
   --warning-foreground: #000000;
 }
 
-:root.high-contrast body {
+:root.high-contrast body,
+html[data-contrast="high-contrast"] body {
   background-color: var(--background);
   color: var(--foreground);
 }
 
-:root.high-contrast .bg-white {
+:root.high-contrast .bg-white,
+html[data-contrast="high-contrast"] .bg-white {
   background-color: var(--card) !important;
   color: var(--card-foreground) !important;
 }
 
-:root.high-contrast .border-border {
+:root.high-contrast .border-border,
+html[data-contrast="high-contrast"] .border-border {
   border-color: var(--border) !important;
 }
 
-:root.high-contrast .text-muted-foreground {
+:root.high-contrast .text-muted-foreground,
+html[data-contrast="high-contrast"] .text-muted-foreground {
   color: var(--muted-foreground) !important;
 }
 
-:root.clean-reading {
+:root.clean-reading,
+html[data-contrast="clean-reading"] {
   --background: #fbf7ee;
   --foreground: #2d2a24;
   --card: #fffdf8;
@@ -289,99 +294,36 @@
   --border: #e8ddc4;
 }
 
-/* ─── Escalado Tipográfico Real (Accesibilidad Universal sin Zoom) ─── */
-/* El elemento raíz (html, :root) permanece estrictamente en 16px para preservar */
-/* la cuadrícula, los anchos de tarjetas, márgenes y paddings basados en rem sin efecto zoom */
-html,
-:root,
-html.font-level-normal,
-:root.font-level-normal,
-html.font-scale-normal,
-:root.font-scale-normal,
-html.font-scale-100,
-:root.font-scale-100,
-html.font-level-large,
-:root.font-level-large,
-html.font-scale-large,
-:root.font-scale-large,
-html.font-scale-112,
-:root.font-scale-112,
-html.font-level-extra-large,
-:root.font-level-extra-large,
-html.font-scale-xl,
-:root.font-scale-xl,
-html.font-scale-125,
-:root.font-scale-125 {
-  font-size: 16px !important;
+/* ─── Motor Estándar y Aislado de Accesibilidad (Worklex SENA) ─── */
+html, body {
+  zoom: 1 !important;
+  transform: none !important;
 }
 
-/* Multiplicador para 18px (Grande) */
-html.font-scale-large body h1,
-html.font-scale-large body h2,
-html.font-scale-large body h3,
-html.font-scale-large body h4,
-html.font-scale-large body h5,
-html.font-scale-large body h6,
-html.font-scale-large body p,
-html.font-scale-large body span,
-html.font-scale-large body a,
-html.font-scale-large body button,
-html.font-scale-large body label,
-html.font-scale-large body input {
-  font-size: 1.12em !important;
-  line-height: 1.35 !important;
+/* Escalado sutil, predecible y que respeta la cuadrícula */
+html[data-font-size="medium"] :where(p, span:not([class*="icon"]), h1, h2, h3, h4, h5, h6, a, button, label, input) {
+  font-size: 1.1em;
 }
 
-/* Multiplicador para 20px (Extra grande) */
-html.font-scale-xl body h1,
-html.font-scale-xl body h2,
-html.font-scale-xl body h3,
-html.font-scale-xl body h4,
-html.font-scale-xl body h5,
-html.font-scale-xl body h6,
-html.font-scale-xl body p,
-html.font-scale-xl body span,
-html.font-scale-xl body a,
-html.font-scale-xl body button,
-html.font-scale-xl body label,
-html.font-scale-xl body input {
-  font-size: 1.25em !important;
+html[data-font-size="large"] :where(p, span:not([class*="icon"]), h1, h2, h3, h4, h5, h6, a, button, label, input) {
+  font-size: 1.22em;
+}
+
+/* Espaciado para Dislexia */
+html[data-dyslexia="true"] :where(p, span:not([class*="icon"]), h1, h2, h3, h4, h5, h6, a, button, label, input) {
+  letter-spacing: 0.05em !important;
+  line-height: 1.6 !important;
+}
+
+/* Aislamiento estricto del widget de accesibilidad montado en Portal */
+#accessibility-panel,
+#accessibility-panel * {
+  font-size: 14px !important;
+  letter-spacing: normal !important;
   line-height: 1.4 !important;
 }
 
-/* Evitar sobre-escalado recursivo en spans o textos anidados */
-html.font-scale-large body h1 span,
-html.font-scale-large body h2 span,
-html.font-scale-large body h3 span,
-html.font-scale-large body h4 span,
-html.font-scale-large body h5 span,
-html.font-scale-large body h6 span,
-html.font-scale-large body p span,
-html.font-scale-large body a span,
-html.font-scale-large body button span,
-html.font-scale-large body span span,
-html.font-scale-xl body h1 span,
-html.font-scale-xl body h2 span,
-html.font-scale-xl body h3 span,
-html.font-scale-xl body h4 span,
-html.font-scale-xl body h5 span,
-html.font-scale-xl body h6 span,
-html.font-scale-xl body p span,
-html.font-scale-xl body a span,
-html.font-scale-xl body button span,
-html.font-scale-xl body span span {
-  font-size: inherit !important;
-}
-
-/* Excepciones para mantener la proporción de iconos y el panel de accesibilidad */
-html.font-scale-large svg,
-html.font-scale-xl svg,
-.accessibility-widget-panel,
-.accessibility-widget-panel * {
-  font-size: inherit;
-}
-
-html.font-scale-large .accessibility-widget-panel *,
-html.font-scale-xl .accessibility-widget-panel * {
-  font-size: revert !important;
+#accessibility-panel svg {
+  width: 1rem;
+  height: 1rem;
 }

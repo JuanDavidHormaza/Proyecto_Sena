@@ -9,7 +9,7 @@ import {
   LifeBuoy,
   Inbox, Check, CheckCircle2, RefreshCw, UserCheck
 } from "lucide-react";
-import { mockTestResults, TestResult, mockUsers, User } from "../data/users";
+import { TestResult, User } from "../data/users";
 import * as api from "../services/api";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { HeaderActionTools } from "../components/HeaderActionTools";
@@ -70,26 +70,32 @@ export function TeacherDashboard() {
         answers: r.answers || (r.process as any)?.answers || (r.process as any)?.userAnswers || [],
       }));
       
-      // Convertir estudiantes de API
-      const convertedStudents = apiUsers.map((u) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        password: '',
-        role: u.role as 'student',
-        permissions: u.permissions,
-        status: u.status,
-        createdAt: new Date().toISOString().split('T')[0],
-        program: u.program || '',
-      }));
+      // Convertir estudiantes de API (excluyendo cuentas de prueba)
+      const convertedStudents = (apiUsers || [])
+        .filter((u) => {
+          const email = (u.email || "").toLowerCase();
+          const name = (u.name || "").toLowerCase();
+          return !email.includes("santiagolegarda") && !name.includes("legarda");
+        })
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          password: '',
+          role: u.role as 'student',
+          permissions: u.permissions,
+          status: u.status,
+          createdAt: new Date().toISOString().split('T')[0],
+          program: u.program || '',
+        }));
       
       setResults(convertedResults);
       setStudents(convertedStudents);
       setFichaRequests(apiRequests || []);
     } catch (error) {
-      console.log("[v0] Failed to load from API, using mock data", error);
-      setResults(mockTestResults);
-      setStudents(mockUsers.filter(u => u.role === 'student'));
+      console.error("[TeacherDashboard] Error al cargar datos del API institucional:", error);
+      setResults([]);
+      setStudents([]);
       setFichaRequests([]);
     }
     setIsLoading(false);

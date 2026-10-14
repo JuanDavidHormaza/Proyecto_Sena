@@ -153,80 +153,8 @@ export const mockSubjects: Subject[] = [
   },
 ];
 
-// Mock users database
-export const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'Administrador SENA',
-    email: 'admin@gmail.com',
-    password: '123',
-    role: 'admin',
-    permissions: getDefaultPermissions('admin'),
-    status: 'active',
-    createdAt: '2026-01-01',
-  },
-  {
-    id: '2',
-    name: 'Carlos Martinez',
-    email: 'docente@gmail.com',
-    password: '123',
-    role: 'teacher',
-    program: 'Desarrollo de Software',
-    permissions: getDefaultPermissions('teacher'),
-    status: 'active',
-    createdAt: '2026-01-15',
-  },
-  {
-    id: '3',
-    name: 'Juan David Perez',
-    email: 'juan@gmail.com',
-    password: '123',
-    role: 'student',
-    country: 'Colombia',
-    program: 'Desarrollo de Software',
-    permissions: getDefaultPermissions('student'),
-    status: 'active',
-    createdAt: '2026-02-01',
-  },
-  {
-    id: '4',
-    name: 'Maria Garcia Lopez',
-    email: 'maria@gmail.com',
-    password: '123',
-    role: 'student',
-    country: 'Colombia',
-    program: 'Analisis de Datos',
-    permissions: getDefaultPermissions('student'),
-    status: 'active',
-    createdAt: '2026-02-05',
-  },
-  {
-    id: '5',
-    name: 'Carlos Andres Lopez',
-    email: 'carlos@gmail.com',
-    password: '123',
-    role: 'student',
-    country: 'Colombia',
-    program: 'Redes y Telecomunicaciones',
-    permissions: getDefaultPermissions('student'),
-    status: 'inactive',
-    createdAt: '2026-02-10',
-  },
-  {
-    id: '6',
-    name: 'Ana Sofia Rodriguez',
-    email: 'ana@gmail.com',
-    password: '123',
-    role: 'teacher',
-    program: 'Analisis de Datos',
-    permissions: {
-      ...getDefaultPermissions('teacher'),
-      canManageSubjects: true,
-    },
-    status: 'active',
-    createdAt: '2026-02-15',
-  },
-];
+// Mock users database (empty - loaded dynamically from Django API)
+export const mockUsers: User[] = [];
 
 // Mock documents
 export const mockDocuments: Document[] = [
@@ -276,58 +204,8 @@ export const mockDocuments: Document[] = [
   },
 ];
 
-// Mock test results
-export const mockTestResults: TestResult[] = [
-  {
-    id: 'r1',
-    userId: '3',
-    userName: 'Juan David Perez',
-    score: 85,
-    level: 'B2',
-    correctAnswers: 17,
-    totalQuestions: 20,
-    completedAt: '2026-04-10T10:30:00',
-    duration: '8:45',
-    answers: [],
-  },
-  {
-    id: 'r2',
-    userId: '3',
-    userName: 'Juan David Perez',
-    score: 70,
-    level: 'B1',
-    correctAnswers: 14,
-    totalQuestions: 20,
-    completedAt: '2026-04-05T14:20:00',
-    duration: '9:12',
-    answers: [],
-    feedback: 'Buen progreso Juan. Te recomiendo practicar mas los tiempos verbales condicionales.',
-  },
-  {
-    id: 'r3',
-    userId: '4',
-    userName: 'Maria Garcia Lopez',
-    score: 92,
-    level: 'B2',
-    correctAnswers: 18,
-    totalQuestions: 20,
-    completedAt: '2026-04-12T09:15:00',
-    duration: '7:30',
-    answers: [],
-  },
-  {
-    id: 'r4',
-    userId: '5',
-    userName: 'Carlos Andres Lopez',
-    score: 60,
-    level: 'B1',
-    correctAnswers: 12,
-    totalQuestions: 20,
-    completedAt: '2026-04-08T16:45:00',
-    duration: '10:15',
-    answers: [],
-  },
-];
+// Mock test results (empty - loaded dynamically from Django API)
+export const mockTestResults: TestResult[] = [];
 
 // SENA Programs
 export const senaPrograms = [

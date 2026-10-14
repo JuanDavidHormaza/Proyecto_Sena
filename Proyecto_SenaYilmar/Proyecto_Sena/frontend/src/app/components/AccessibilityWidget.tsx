@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Accessibility,
@@ -7,119 +8,146 @@ import {
   AArrowUp,
   RotateCcw,
   Sun,
-  Eye,
   Contrast,
-  Check,
-  X,
   BookOpen,
-  Sparkles,
+  X,
+  Check,
+  MoveHorizontal,
+  Baseline,
 } from "lucide-react";
 
-export type FontSizeLevel = 'normal' | 'large' | 'extra-large';
+export type FontSizeLevel = "normal" | "medium" | "large";
+export type ContrastMode = "normal" | "high-contrast" | "clean-reading";
 
-// Niveles de fuente estrictos y escalado tipográfico real sin zoom:
-export const applyGlobalFontScale = (level: 'normal' | 'large' | 'extra-large') => {
-  // 1. Limpiar cualquier rastro de zoom o transformación en el DOM
-  document.documentElement.style.zoom = '';
-  document.body.style.zoom = '';
-  document.body.style.transform = '';
+// Aplicar escala tipográfica estándar mediante atributo data-font-size en <html>
+export const applyGlobalFontScale = (level: FontSizeLevel) => {
+  // 1. Limpiar cualquier residuo de zoom o transformación en el DOM
+  document.documentElement.style.zoom = "";
+  document.body.style.zoom = "";
+  document.body.style.transform = "";
 
-  // 2. Mantener la raíz fija en 16px para que las unidades rem de Tailwind
-  // (anchos w-*, paddings p-*, márgenes m-* y cuadrículas grid) permanezcan exactamente estáticos
-  document.documentElement.style.fontSize = '16px';
+  // 2. Establecer atributo estándar data-font-size en <html>
+  document.documentElement.setAttribute("data-font-size", level);
 
-  const root = document.documentElement;
-  root.classList.remove(
-    'font-scale-normal',
-    'font-scale-large',
-    'font-scale-xl',
-    'font-level-normal',
-    'font-level-large',
-    'font-level-extra-large'
-  );
-
-  switch (level) {
-    case 'normal':
-      root.classList.add('font-scale-normal', 'font-level-normal');
-      break;
-    case 'large':
-      root.classList.add('font-scale-large', 'font-level-large');
-      break;
-    case 'extra-large':
-      root.classList.add('font-scale-xl', 'font-level-extra-large');
-      break;
-  }
-  localStorage.setItem('worklex_font_size', level);
-  localStorage.setItem('worklex_font_level', level);
+  // 3. Persistir en localStorage
+  localStorage.setItem("worklex_accessibility_font", level);
+  localStorage.setItem("worklex_font_size", level);
 };
 
 export const setFontSizeLevel = applyGlobalFontScale;
 
-type ContrastMode = "default" | "high-contrast" | "clean-reading";
-
 export function AccessibilityWidget() {
-  const [accessibilityOpen, setAccessibilityOpen] = useState(false);
-  const isOpen = accessibilityOpen;
-  const setIsOpen = setAccessibilityOpen;
+  const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  // 1. Escala tipográfica real (Niveles estrictos: 'normal' | 'large' | 'extra-large')
-  const [fontSizeLevel, setFontSizeLevelState] = useState<FontSizeLevel>(() => {
-    const saved = (localStorage.getItem("worklex_font_size") || localStorage.getItem("worklex_font_level")) as FontSizeLevel | null;
-    if (saved && ["normal", "large", "extra-large"].includes(saved)) {
-      return saved;
+  // 1. Tamaño de fuente ('normal' | 'medium' | 'large')
+  const [fontSize, setFontSize] = useState<FontSizeLevel>(() => {
+    const saved = localStorage.getItem("worklex_accessibility_font") || localStorage.getItem("worklex_font_size");
+    if (saved === "large" || saved === "medium" || saved === "normal") {
+      return saved as FontSizeLevel;
     }
-    const legacy = localStorage.getItem("worklex_font_scale");
-    if (legacy === "125" || legacy === "130") return "extra-large";
-    if (legacy === "112.5" || legacy === "115" || legacy === "112") return "large";
+    if (saved === "extra-large") return "large";
     return "normal";
   });
 
-  // 2. Modo de contraste y lectura visual
+  // 2. Modo de contraste ('normal' | 'high-contrast' | 'clean-reading')
   const [contrastMode, setContrastMode] = useState<ContrastMode>(() => {
-    const saved = localStorage.getItem("worklex_contrast_mode");
-    return (saved as ContrastMode) || "default";
+    const saved = localStorage.getItem("worklex_accessibility_contrast") || localStorage.getItem("worklex_contrast_mode");
+    if (saved === "high-contrast" || saved === "clean-reading") {
+      return saved as ContrastMode;
+    }
+    return "normal";
   });
 
-  // Aplicar escala tipográfica real mediante clases globales
-  useEffect(() => {
-    applyGlobalFontScale(fontSizeLevel);
-  }, [fontSizeLevel]);
+  // 3. Espaciado para Dislexia (boolean)
+  const [dyslexiaSpacing, setDyslexiaSpacing] = useState<boolean>(() => {
+    return localStorage.getItem("worklex_accessibility_dyslexia") === "true";
+  });
 
-  // Aplicar modo de contraste al elemento raíz
+  // 4. Guía horizontal de lectura que sigue el cursor (boolean)
+  const [readingGuide, setReadingGuide] = useState<boolean>(() => {
+    return localStorage.getItem("worklex_accessibility_guide") === "true";
+  });
+  const [mouseY, setMouseY] = useState<number>(100);
+
+  // Asegurar montaje en cliente para createPortal
   useEffect(() => {
-    document.documentElement.classList.remove("high-contrast", "clean-reading");
+    setMounted(true);
+  }, []);
+
+  // Efecto: aplicar tamaño de fuente
+  useEffect(() => {
+    applyGlobalFontScale(fontSize);
+  }, [fontSize]);
+
+  // Efecto: aplicar modo de contraste
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-contrast", contrastMode);
+    root.classList.remove("high-contrast", "clean-reading");
+
     if (contrastMode === "high-contrast") {
-      document.documentElement.classList.add("high-contrast");
+      root.classList.add("high-contrast");
     } else if (contrastMode === "clean-reading") {
-      document.documentElement.classList.add("clean-reading");
+      root.classList.add("clean-reading");
     }
-    localStorage.setItem("worklex_contrast_mode", contrastMode);
+    localStorage.setItem("worklex_accessibility_contrast", contrastMode);
   }, [contrastMode]);
 
-  const handleIncreaseFont = () => {
-    setFontSizeLevelState((prev) => {
-      if (prev === "normal") return "large";
-      if (prev === "large") return "extra-large";
-      return "extra-large";
-    });
-  };
+  // Efecto: aplicar espaciado de dislexia
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-dyslexia", dyslexiaSpacing ? "true" : "false");
+    localStorage.setItem("worklex_accessibility_dyslexia", dyslexiaSpacing ? "true" : "false");
+  }, [dyslexiaSpacing]);
 
-  const handleDecreaseFont = () => {
-    setFontSizeLevelState((prev) => {
-      if (prev === "extra-large") return "large";
-      if (prev === "large") return "normal";
+  // Efecto: guía de lectura horizontal que sigue el puntero
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-reading-guide", readingGuide ? "true" : "false");
+    localStorage.setItem("worklex_accessibility_guide", readingGuide ? "true" : "false");
+
+    if (!readingGuide) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setMouseY(e.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [readingGuide]);
+
+  // Handlers para tamaño de letra
+  const handleIncreaseFont = useCallback(() => {
+    setFontSize((prev) => {
+      if (prev === "normal") return "medium";
+      if (prev === "medium") return "large";
+      return "large";
+    });
+  }, []);
+
+  const handleDecreaseFont = useCallback(() => {
+    setFontSize((prev) => {
+      if (prev === "large") return "medium";
+      if (prev === "medium") return "normal";
       return "normal";
     });
-  };
+  }, []);
 
-  const handleReset = () => {
-    setFontSizeLevelState("normal");
-    setContrastMode("default");
-  };
+  // Restablecer todas las configuraciones a valores por defecto
+  const handleReset = useCallback(() => {
+    setFontSize("normal");
+    setContrastMode("normal");
+    setDyslexiaSpacing(false);
+    setReadingGuide(false);
+  }, []);
 
+  // Eventos globales para abrir/alternar el widget
   useEffect(() => {
-    const handleToggle = () => setAccessibilityOpen((prev) => !prev);
-    const handleOpen = () => setAccessibilityOpen(true);
+    const handleToggle = () => setIsOpen((prev) => !prev);
+    const handleOpen = () => setIsOpen(true);
     window.addEventListener("toggle-worklex-accessibility", handleToggle);
     window.addEventListener("open-worklex-accessibility", handleOpen);
     return () => {
@@ -128,37 +156,50 @@ export function AccessibilityWidget() {
     };
   }, []);
 
-  return (
-    <>
-      {/* Botón Flotante de Accesibilidad (Muñeco Universal en SVG Puro) */}
+  if (!mounted) return null;
+
+  return createPortal(
+    <div id="accessibility-panel">
+      {/* Guía horizontal de lectura interactiva */}
+      {readingGuide && (
+        <div
+          style={{ top: `${mouseY}px` }}
+          className="fixed left-0 right-0 h-1 bg-sena-green/80 pointer-events-none z-[99999] shadow-[0_0_10px_rgba(57,169,0,0.7)] transition-all duration-75"
+        >
+          <div className="w-full h-8 -mt-3.5 bg-sena-green/5 pointer-events-none border-y border-sena-green/20" />
+        </div>
+      )}
+
+      {/* Botón Flotante de Accesibilidad (Muñeco Universal SENA en SVG) */}
       <button
-        aria-label="Opciones de Accesibilidad"
-        onClick={() => setAccessibilityOpen(!accessibilityOpen)}
-        className="accessibility-widget-panel fixed bottom-6 right-6 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl flex items-center justify-center focus:outline-none cursor-pointer z-50"
+        type="button"
+        aria-label="Abrir panel de accesibilidad institucional"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-sena-green hover:bg-sena-green-dark text-white shadow-2xl flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-sena-green/30 cursor-pointer z-[99998] transition-transform active:scale-95"
       >
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 24 24" 
-          fill="currentColor" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
           className="w-8 h-8 text-white"
         >
-          <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/>
+          <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z" />
         </svg>
       </button>
 
-      {/* Menú Interactivo Desplegable */}
+      {/* Panel Flotante Aislado */}
       <AnimatePresence>
         {isOpen && (
-          <div className="accessibility-widget-panel fixed bottom-24 right-6 z-50">
+          <div className="fixed bottom-24 right-6 z-[99999]">
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12 }}
-              transition={{ duration: 0.2 }}
-              className="accessibility-widget-panel w-80 sm:w-88 bg-card rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col"
+              initial={{ opacity: 0, y: 14, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 14, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              className="w-84 sm:w-92 bg-card text-card-foreground rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col"
               role="dialog"
               aria-modal="true"
-              aria-label="Panel de accesibilidad visual"
+              aria-label="Panel de accesibilidad universal Worklex SENA"
             >
               {/* Header */}
               <div className="bg-gradient-to-r from-sena-green/15 via-emerald-500/10 to-sena-blue/15 px-5 py-4 border-b border-border flex items-center justify-between">
@@ -168,7 +209,7 @@ export function AccessibilityWidget() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-foreground">Accesibilidad Visual</h3>
-                    <p className="text-[11px] text-muted-foreground">Inclusión & Ergonomía Digital</p>
+                    <p className="panel-sub text-[11px] text-muted-foreground">Inclusión & Ergonomía Digital</p>
                   </div>
                 </div>
                 <button
@@ -181,74 +222,68 @@ export function AccessibilityWidget() {
                 </button>
               </div>
 
-              {/* Contenido */}
-              <div className="p-5 space-y-5">
-                {/* 1. Control de Tamaño de Fuente (Escalado Tipográfico Real sin zoom) */}
+              {/* Contenido Modular */}
+              <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+                {/* 1. Control de Tamaño de Texto */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <Type className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
-                      Escalado Tipográfico Real
+                      Tamaño de Texto
                     </span>
-                    <span className="text-xs font-bold text-sena-green bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
-                      {fontSizeLevel === "normal" ? "16px (Normal)" : fontSizeLevel === "large" ? "18px (Grande)" : "20px (Extra Grande)"}
+                    <span className="badge-text text-[11px] font-bold text-sena-green bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                      {fontSize === "normal" ? "Normal (100%)" : fontSize === "medium" ? "Mediano (+10%)" : "Grande (+22%)"}
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mb-3 leading-tight">
-                    Incrementa la fuente proporcionalmente mediante unidades relativas (rem), sin escalar la ventana ni deformar botones o tarjetas.
+                  <p className="panel-sub text-[11px] text-muted-foreground mb-2.5 leading-snug">
+                    Escala el texto de forma fluida y predecible sin deformar contenedores ni mover la cuadrícula.
                   </p>
 
-                  {/* Selector de Presets (Normal: 16px, Grande: 18px, Extra Grande: 20px) */}
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
-                      onClick={() => setFontSizeLevelState("normal")}
-                      className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
-                        fontSizeLevel === "normal"
+                      onClick={() => setFontSize("normal")}
+                      className={`py-2 px-1 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                        fontSize === "normal"
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                       }`}
-                      title="Tamaño normal (16px base)"
                     >
-                      <span className="text-xs font-bold">16px</span>
-                      <span className="text-[10px] text-muted-foreground">Normal</span>
+                      <span className="btn-title font-bold text-xs">Normal</span>
+                      <span className="btn-desc text-[10px] text-muted-foreground">Base</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFontSizeLevelState("large")}
-                      className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
-                        fontSizeLevel === "large"
+                      onClick={() => setFontSize("medium")}
+                      className={`py-2 px-1 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                        fontSize === "medium"
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                       }`}
-                      title="Tamaño grande (18px base)"
                     >
-                      <span className="text-xs font-bold">18px</span>
-                      <span className="text-[10px] text-muted-foreground">Grande</span>
+                      <span className="btn-title font-bold text-xs">Mediano</span>
+                      <span className="btn-desc text-[10px] text-muted-foreground">+10%</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFontSizeLevelState("extra-large")}
-                      className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
-                        fontSizeLevel === "extra-large"
+                      onClick={() => setFontSize("large")}
+                      className={`py-2 px-1 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                        fontSize === "large"
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                       }`}
-                      title="Tamaño extra grande (20px base)"
                     >
-                      <span className="text-xs font-bold">20px</span>
-                      <span className="text-[10px] text-muted-foreground">Extra</span>
+                      <span className="btn-title font-bold text-xs">Grande</span>
+                      <span className="btn-desc text-[10px] text-muted-foreground">+22%</span>
                     </button>
                   </div>
 
-                  {/* Acciones de incremento/decremento A- / A+ */}
-                  <div className="grid grid-cols-2 gap-2 mt-2.5">
+                  <div className="grid grid-cols-2 gap-2 mt-2">
                     <button
                       type="button"
                       onClick={handleDecreaseFont}
-                      disabled={fontSizeLevel === "normal"}
+                      disabled={fontSize === "normal"}
                       className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground disabled:opacity-40 transition-colors cursor-pointer"
-                      title="Disminuir tamaño (A-)"
                     >
                       <AArrowDown className="w-3.5 h-3.5" strokeWidth={1.8} />
                       <span>Reducir (A-)</span>
@@ -256,9 +291,8 @@ export function AccessibilityWidget() {
                     <button
                       type="button"
                       onClick={handleIncreaseFont}
-                      disabled={fontSizeLevel === "extra-large"}
+                      disabled={fontSize === "large"}
                       className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground disabled:opacity-40 transition-colors cursor-pointer"
-                      title="Aumentar tamaño (A+)"
                     >
                       <AArrowUp className="w-3.5 h-3.5" strokeWidth={1.8} />
                       <span>Aumentar (A+)</span>
@@ -266,20 +300,19 @@ export function AccessibilityWidget() {
                   </div>
                 </div>
 
-                {/* 2. Modos de Contraste y Lectura */}
+                {/* 2. Modos de Contraste */}
                 <div>
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5 mb-2.5">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5 mb-2">
                     <Contrast className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
-                    Modo de Contraste & Lectura
+                    Modo de Contraste
                   </span>
 
                   <div className="grid grid-cols-3 gap-2">
-                    {/* Estándar */}
                     <button
                       type="button"
-                      onClick={() => setContrastMode("default")}
+                      onClick={() => setContrastMode("normal")}
                       className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
-                        contrastMode === "default"
+                        contrastMode === "normal"
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
                       }`}
@@ -288,21 +321,19 @@ export function AccessibilityWidget() {
                       <span className="text-[11px] font-bold">Estándar</span>
                     </button>
 
-                    {/* Alto Contraste */}
                     <button
                       type="button"
                       onClick={() => setContrastMode("high-contrast")}
                       className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         contrastMode === "high-contrast"
-                          ? "bg-slate-900 dark:bg-black border-white text-white shadow-xs ring-2 ring-white"
+                          ? "bg-slate-900 dark:bg-black border-amber-400 text-white shadow-xs ring-2 ring-amber-400"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <Contrast className={`w-4 h-4 ${contrastMode === "high-contrast" ? "text-white" : "text-foreground"}`} strokeWidth={1.8} />
+                      <Contrast className={`w-4 h-4 ${contrastMode === "high-contrast" ? "text-amber-400" : "text-foreground"}`} strokeWidth={1.8} />
                       <span className="text-[11px] font-bold">Alto Contraste</span>
                     </button>
 
-                    {/* Lectura Limpia */}
                     <button
                       type="button"
                       onClick={() => setContrastMode("clean-reading")}
@@ -313,9 +344,65 @@ export function AccessibilityWidget() {
                       }`}
                     >
                       <BookOpen className="w-4 h-4 text-amber-700 dark:text-amber-400" strokeWidth={1.8} />
-                      <span className="text-[11px] font-bold">Lectura Limpia</span>
+                      <span className="text-[11px] font-bold">Modo Sepia</span>
                     </button>
                   </div>
+                </div>
+
+                {/* 3. Ayudas Adicionales: Dislexia y Guía de Lectura */}
+                <div className="space-y-2 pt-1 border-t border-border">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Baseline className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
+                    Ayudas de Lectura & Dislexia
+                  </span>
+
+                  {/* Espaciado para Dislexia */}
+                  <button
+                    type="button"
+                    onClick={() => setDyslexiaSpacing((prev) => !prev)}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      dyslexiaSpacing
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-foreground"
+                        : "bg-card border-border hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${dyslexiaSpacing ? "bg-sena-green text-white" : "bg-muted text-muted-foreground"}`}>
+                        <Baseline className="w-3.5 h-3.5" strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">Espaciado para Dislexia</p>
+                        <p className="text-[10px] text-muted-foreground">Mayor separación entre letras y renglones</p>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${dyslexiaSpacing ? "bg-sena-green border-sena-green text-white" : "border-border bg-white"}`}>
+                      {dyslexiaSpacing && <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                    </div>
+                  </button>
+
+                  {/* Guía Horizontal de Lectura */}
+                  <button
+                    type="button"
+                    onClick={() => setReadingGuide((prev) => !prev)}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      readingGuide
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-foreground"
+                        : "bg-card border-border hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${readingGuide ? "bg-sena-green text-white" : "bg-muted text-muted-foreground"}`}>
+                        <MoveHorizontal className="w-3.5 h-3.5" strokeWidth={1.8} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">Guía de Lectura</p>
+                        <p className="text-[10px] text-muted-foreground">Línea guía horizontal que sigue el cursor</p>
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${readingGuide ? "bg-sena-green border-sena-green text-white" : "border-border bg-white"}`}>
+                      {readingGuide && <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                    </div>
+                  </button>
                 </div>
               </div>
 
@@ -333,7 +420,7 @@ export function AccessibilityWidget() {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-3.5 py-1.5 bg-sena-green text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 bg-sena-green text-white rounded-xl text-xs font-bold hover:bg-sena-green-dark transition-colors cursor-pointer shadow-xs"
                 >
                   Listo
                 </button>
@@ -342,6 +429,7 @@ export function AccessibilityWidget() {
           </div>
         )}
       </AnimatePresence>
-    </>
+    </div>,
+    document.body
   );
 }

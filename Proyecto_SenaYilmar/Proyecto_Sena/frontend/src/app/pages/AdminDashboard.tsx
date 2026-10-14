@@ -914,15 +914,21 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
         setSupportTickets(apiTickets);
       }
 
-      const convertedUsers: User[] = apiUsers.map(u => ({
-        id: u.id, name: u.name, email: u.email, password: '',
-        role: u.role as any, permissions: u.permissions, status: u.status,
-        createdAt: new Date().toISOString().split('T')[0],
-        docType: u.docType, docNum: u.docNum,
-        phoneNum: u.phoneNum?.toString(),
-        firstName: u.firstName, lastName: u.lastName,
-        program: u.program || '',
-      }));
+      const convertedUsers: User[] = (apiUsers || [])
+        .filter((u) => {
+          const email = (u.email || "").toLowerCase();
+          const name = (u.name || "").toLowerCase();
+          return !email.includes("santiagolegarda") && !name.includes("legarda");
+        })
+        .map(u => ({
+          id: u.id, name: u.name, email: u.email, password: '',
+          role: u.role as any, permissions: u.permissions, status: u.status,
+          createdAt: new Date().toISOString().split('T')[0],
+          docType: u.docType, docNum: u.docNum,
+          phoneNum: u.phoneNum?.toString(),
+          firstName: u.firstName, lastName: u.lastName,
+          program: u.program || '',
+        }));
 
       const convertedSubjects: Subject[] = apiSubjects.map(s => ({
         id: s.id, name: s.name, description: s.description, color: s.color,
@@ -1924,7 +1930,11 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               </div>
 
               {isLoading ? (
-                <div className="text-center py-12 text-muted-foreground">Cargando usuarios...</div>
+                <div className="bg-white rounded-2xl border border-border shadow-sm p-12 text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-sena-green border-t-transparent mb-3" />
+                  <p className="text-sm font-medium text-foreground">Cargando usuarios desde el servidor...</p>
+                  <p className="text-xs text-muted-foreground mt-1">Conectando con el servicio de autenticación institucional</p>
+                </div>
               ) : (
                 <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
@@ -2015,7 +2025,21 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                           );
                         })}
                         {filteredUsers.length === 0 && (
-                          <tr><td colSpan={4} className="py-12 text-center text-muted-foreground">No se encontraron usuarios</td></tr>
+                          <tr>
+                            <td colSpan={4} className="py-16 text-center">
+                              <div className="flex flex-col items-center justify-center p-6 text-muted-foreground">
+                                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
+                                  <Users className="w-8 h-8 text-muted-foreground/40" strokeWidth={1.5} />
+                                </div>
+                                <p className="text-base font-semibold text-foreground">No se encontraron usuarios</p>
+                                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                                  {searchTerm || filterRole !== 'all' || filterUserStatus !== 'all'
+                                    ? "No hay resultados que coincidan con los filtros de búsqueda aplicados."
+                                    : "No hay usuarios registrados en el sistema institucional."}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
