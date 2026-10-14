@@ -22,26 +22,42 @@ import {
 
 export type FontSizeLevel = 'normal' | 'large' | 'extra-large';
 
-// Niveles de fuente estrictos:
-export const setFontSizeLevel = (level: 'normal' | 'large' | 'extra-large') => {
-  const root = document.documentElement;
-  // Limpiar propiedades residuales
-  document.body.style.zoom = '';
+// Niveles de fuente estrictos y escalado tipográfico real sin zoom:
+export const applyGlobalFontScale = (level: 'normal' | 'large' | 'extra-large') => {
+  // 1. Limpiar cualquier rastro de zoom o transformación
   document.documentElement.style.zoom = '';
+  document.body.style.zoom = '';
   document.body.style.transform = '';
+
+  const root = document.documentElement;
+  root.classList.remove(
+    'font-scale-normal',
+    'font-scale-large',
+    'font-scale-xl',
+    'font-level-normal',
+    'font-level-large',
+    'font-level-extra-large'
+  );
 
   switch (level) {
     case 'normal':
+      root.classList.add('font-scale-normal', 'font-level-normal');
       root.style.fontSize = '16px';
       break;
     case 'large':
+      root.classList.add('font-scale-large', 'font-level-large');
       root.style.fontSize = '18px';
       break;
     case 'extra-large':
+      root.classList.add('font-scale-xl', 'font-level-extra-large');
       root.style.fontSize = '20px';
       break;
   }
+  localStorage.setItem('worklex_font_size', level);
+  localStorage.setItem('worklex_font_level', level);
 };
+
+export const setFontSizeLevel = applyGlobalFontScale;
 
 type ContrastMode = "default" | "high-contrast" | "clean-reading";
 
@@ -77,31 +93,9 @@ export function AccessibilityWidget() {
   const talkBackRef = useRef(talkBackEnabled);
   talkBackRef.current = talkBackEnabled;
 
-  // Aplicar escala tipográfica real mediante font-size en documentElement (Sin zoom de ventana)
+  // Aplicar escala tipográfica real mediante font-size en documentElement y clases globales
   useEffect(() => {
-    // Limpiar propiedades residuales al montar/actualizar
-    document.body.style.zoom = '';
-    document.documentElement.style.zoom = '';
-    document.body.style.transform = '';
-
-    setFontSizeLevel(fontSizeLevel);
-    document.documentElement.classList.remove(
-      "font-level-normal",
-      "font-level-large",
-      "font-level-extra-large",
-      "font-scale-100",
-      "font-scale-112",
-      "font-scale-125"
-    );
-    if (fontSizeLevel === "large") {
-      document.documentElement.classList.add("font-level-large", "font-scale-112");
-    } else if (fontSizeLevel === "extra-large") {
-      document.documentElement.classList.add("font-level-extra-large", "font-scale-125");
-    } else {
-      document.documentElement.classList.add("font-level-normal", "font-scale-100");
-    }
-    localStorage.setItem("worklex_font_size", fontSizeLevel);
-    localStorage.setItem("worklex_font_level", fontSizeLevel);
+    applyGlobalFontScale(fontSizeLevel);
   }, [fontSizeLevel]);
 
   // Aplicar modo de contraste al elemento raíz
@@ -298,7 +292,7 @@ export function AccessibilityWidget() {
       <button
         aria-label="Opciones de Accesibilidad"
         onClick={() => setAccessibilityOpen(!accessibilityOpen)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 focus:outline-none cursor-pointer z-50"
+        className="accessibility-widget-panel fixed bottom-6 right-6 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl flex items-center justify-center transition-transform hover:scale-105 focus:outline-none cursor-pointer z-50"
       >
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
@@ -313,13 +307,13 @@ export function AccessibilityWidget() {
       {/* Menú Interactivo Desplegable */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed bottom-24 right-6 z-50">
+          <div className="accessibility-widget-panel fixed bottom-24 right-6 z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.2 }}
-              className="w-80 sm:w-88 bg-card rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col"
+              className="accessibility-widget-panel w-80 sm:w-88 bg-card rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col"
               role="dialog"
               aria-modal="true"
               aria-label="Panel de accesibilidad visual"

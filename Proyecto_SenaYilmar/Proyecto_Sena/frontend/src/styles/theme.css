@@ -292,6 +292,8 @@
 /* ─── Escalado Tipográfico Real (Accesibilidad Universal sin Zoom) ─── */
 html.font-level-normal,
 :root.font-level-normal,
+html.font-scale-normal,
+:root.font-scale-normal,
 html.font-scale-100,
 :root.font-scale-100 {
   font-size: 16px !important;
@@ -299,6 +301,8 @@ html.font-scale-100,
 
 html.font-level-large,
 :root.font-level-large,
+html.font-scale-large,
+:root.font-scale-large,
 html.font-scale-112,
 :root.font-scale-112 {
   font-size: 18px !important;
@@ -306,7 +310,80 @@ html.font-scale-112,
 
 html.font-level-extra-large,
 :root.font-level-extra-large,
+html.font-scale-xl,
+:root.font-scale-xl,
 html.font-scale-125,
 :root.font-scale-125 {
   font-size: 20px !important;
+}
+
+/* Multiplicador para 18px (Grande) */
+html.font-scale-large body h1,
+html.font-scale-large body h2,
+html.font-scale-large body h3,
+html.font-scale-large body h4,
+html.font-scale-large body h5,
+html.font-scale-large body h6,
+html.font-scale-large body p,
+html.font-scale-large body span,
+html.font-scale-large body a,
+html.font-scale-large body button,
+html.font-scale-large body label,
+html.font-scale-large body input {
+  font-size: 1.12em !important;
+  line-height: 1.35 !important;
+}
+
+/* Multiplicador para 20px (Extra grande) */
+html.font-scale-xl body h1,
+html.font-scale-xl body h2,
+html.font-scale-xl body h3,
+html.font-scale-xl body h4,
+html.font-scale-xl body h5,
+html.font-scale-xl body h6,
+html.font-scale-xl body p,
+html.font-scale-xl body span,
+html.font-scale-xl body a,
+html.font-scale-xl body button,
+html.font-scale-xl body label,
+html.font-scale-xl body input {
+  font-size: 1.25em !important;
+  line-height: 1.4 !important;
+}
+
+/* Evitar sobre-escalado recursivo en spans o textos anidados */
+html.font-scale-large body h1 span,
+html.font-scale-large body h2 span,
+html.font-scale-large body h3 span,
+html.font-scale-large body h4 span,
+html.font-scale-large body h5 span,
+html.font-scale-large body h6 span,
+html.font-scale-large body p span,
+html.font-scale-large body a span,
+html.font-scale-large body button span,
+html.font-scale-large body span span,
+html.font-scale-xl body h1 span,
+html.font-scale-xl body h2 span,
+html.font-scale-xl body h3 span,
+html.font-scale-xl body h4 span,
+html.font-scale-xl body h5 span,
+html.font-scale-xl body h6 span,
+html.font-scale-xl body p span,
+html.font-scale-xl body a span,
+html.font-scale-xl body button span,
+html.font-scale-xl body span span {
+  font-size: inherit !important;
+}
+
+/* Excepciones para mantener la proporción de iconos y el panel de accesibilidad */
+html.font-scale-large svg,
+html.font-scale-xl svg,
+.accessibility-widget-panel,
+.accessibility-widget-panel * {
+  font-size: inherit;
+}
+
+html.font-scale-large .accessibility-widget-panel *,
+html.font-scale-xl .accessibility-widget-panel * {
+  font-size: revert !important;
 }
