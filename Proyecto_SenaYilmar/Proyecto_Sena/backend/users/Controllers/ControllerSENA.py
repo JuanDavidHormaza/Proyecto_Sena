@@ -857,18 +857,21 @@ class TestResultController:
 
         correct_answers = int(data.get('correct_answers', 0))
         total_questions = int(data.get('total_questions', 0)) or 0
-        is_abandoned = bool(data.get('is_abandoned') or data.get('abandoned'))
+        is_abandoned = bool(data.get('is_abandoned') or data.get('abandoned') or data.get('is_incomplete'))
         is_invalidated = bool(data.get('is_invalidated') or data.get('invalidated'))
         answered = int(data.get('answered', 0) or 0)
 
-        # El puntaje se calcula si no viene explícito en la petición.
+        # El porcentaje final debe calcularse como (preguntas_acertadas / total_preguntas) * 100, reflejando 0% en preguntas no contestadas
         score = data.get('score')
-        if score is None:
+        if score is None or is_abandoned:
             score = round((correct_answers / total_questions) * 100) if total_questions else 0
         score = int(score)
 
         explicit_level = (data.get('level') or '').strip()
-        if is_abandoned or is_invalidated or total_questions == 0 or (correct_answers == 0 and answered == 0 and score == 0):
+        if is_abandoned or explicit_level == 'Incompleto':
+            level = 'Incompleto'
+            character = 'Incompleto'
+        elif is_invalidated or total_questions == 0 or (correct_answers == 0 and answered == 0 and score == 0):
             level = 'Invalidada' if is_invalidated else 'No Presentado'
             character = 'No Presentado'
             score = 0
@@ -894,8 +897,9 @@ class TestResultController:
             duration=data.get('duration'),
         )
 
-        # Guarda / actualiza el ranking (leaderboard) del usuario solo si finalizó formalmente.
-        RankingController.update_from_result(result)
+        # Guarda / actualiza el ranking (leaderboard) del usuario solo si finalizó formalmente (NO si abandonó o está incompleto).
+        if not is_abandoned and level not in ('Incompleto', 'Invalidada', 'No Presentado', 'Sin Nivel'):
+            RankingController.update_from_result(result)
 
         return result, None
 
@@ -1039,12 +1043,24 @@ class FichaRequestController:
         if FichaRequest.objects.filter(person=person, ficha_code=clean_input, status='PENDIENTE').exists():
             return None, f"Ya tienes una solicitud pendiente para la ficha {clean_input}."
 
+        # Vincular automáticamente al docente responsable de esa ficha/programa si existe
+        assigned_inst = None
+        instructor_qs = User.objects.filter(role_id='INSTRUCTOR').select_related('person')
+        for inst in instructor_qs:
+            inst_prog = (inst.program or '').lower()
+            if clean_input in inst_prog or (matched_name and any(token in inst_prog for token in matched_name.lower().split() if len(token) > 3)):
+                assigned_inst = inst
+                break
+        if not assigned_inst and instructor_qs.exists():
+            assigned_inst = instructor_qs.first()
+
         req = FichaRequest.objects.create(
             user=real_user,
             person=person,
             ficha_code=clean_input,
             program_name=matched_name,
             status='PENDIENTE',
+            assigned_instructor=assigned_inst,
         )
         return req, None
 
@@ -1053,12 +1069,39 @@ class FichaRequestController:
 
     @staticmethod
     def list_all(user):
-        if getattr(user, 'role_id', None) in ('ADMIN', 'SUPERADMIN'):
-            return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person').all()
-        return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person').filter(person=user.person)
+        role = getattr(user, 'role_id', None)
+        if role in ('ADMIN', 'SUPERADMIN'):
+            # Vista de auditoría general para el administrador
+            return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').all()
+        elif role in ('INSTRUCTOR', 'MONITOR'):
+            # Cada docente gestiona los aprendices de sus respectivas fichas
+            inst_prog = (getattr(user, 'program', '') or '').strip().lower()
+            q_filter = models.Q(assigned_instructor=user)
+            if inst_prog:
+                q_filter |= models.Q(program_name__icontains=inst_prog)
+                ficha_digits = [token for token in inst_prog.split() if token.isdigit()]
+                if ficha_digits:
+                    q_filter |= models.Q(ficha_code__in=ficha_digits)
+            qs = FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(q_filter)
+            if not qs.exists():
+                # Si no hay vinculación explícita, listar las asignadas al docente o pendientes generales
+                qs = FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(
+                    models.Q(assigned_instructor=user) | models.Q(assigned_instructor__isnull=True)
+                )
+            return qs
+        return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(person=user.person)
 
     @staticmethod
-    def approve(request_id, admin_user, instructor_id=None, notes=None):
+    def approve(request_id, actor_user, instructor_id=None, notes=None):
+        real_actor = getattr(actor_user, '_user', actor_user) if actor_user else None
+        role = getattr(real_actor, 'role_id', None)
+
+        if role in ('ADMIN', 'SUPERADMIN'):
+            return None, 'Las solicitudes de asignación de ficha deben ser aprobadas única y exclusivamente por el Instructor asignado a esa ficha específica, nunca por el Administrador.'
+
+        if role not in ('INSTRUCTOR', 'MONITOR'):
+            return None, 'Solo los instructores asignados a la ficha pueden aprobar solicitudes de formación.'
+
         try:
             req = FichaRequest.objects.select_related('person', 'user').get(pk=request_id)
         except FichaRequest.DoesNotExist:
@@ -1067,28 +1110,16 @@ class FichaRequestController:
         if req.status != 'PENDIENTE':
             return None, f"La solicitud ya fue procesada anteriormente con estado: {req.status}."
 
-        real_admin = getattr(admin_user, '_user', admin_user) if admin_user else None
         req.status = 'APROBADA'
         req.reviewed_at = timezone.now()
-        req.reviewed_by = real_admin
+        req.reviewed_by = real_actor
+        req.assigned_instructor = real_actor
 
-        update_fields = ['status', 'reviewed_at', 'reviewed_by']
+        inst_name = f"{real_actor.person.first_name} {real_actor.person.last_name}".strip()
+        default_notes = f"Aprobada por el docente responsable: {inst_name}."
+        req.admin_notes = f"{default_notes} {notes or ''}".strip()
 
-        # Asociar instructor si fue seleccionado
-        if instructor_id:
-            try:
-                instructor_user = User.objects.select_related('person').get(pk=instructor_id)
-                req.assigned_instructor = instructor_user
-                inst_name = f"{instructor_user.person.first_name} {instructor_user.person.last_name}"
-                req.admin_notes = f"Instructor asignado: {inst_name}. {notes or ''}".strip()
-                update_fields.extend(['admin_notes', 'assigned_instructor'])
-            except Exception as e:
-                print(f"[FICHA APPROVE] Error asociando instructor {instructor_id}: {e}")
-        elif notes:
-            req.admin_notes = notes
-            update_fields.append('admin_notes')
-
-        req.save(update_fields=update_fields)
+        req.save(update_fields=['status', 'reviewed_at', 'reviewed_by', 'assigned_instructor', 'admin_notes'])
 
         # Vincular programa al aprendiz creando/actualizando el User para esa persona
         if not User.objects.filter(person=req.person, program=req.program_name).exists():
@@ -1103,7 +1134,16 @@ class FichaRequestController:
         return req, None
 
     @staticmethod
-    def reject(request_id, admin_user, notes=None):
+    def reject(request_id, actor_user, notes=None):
+        real_actor = getattr(actor_user, '_user', actor_user) if actor_user else None
+        role = getattr(real_actor, 'role_id', None)
+
+        if role in ('ADMIN', 'SUPERADMIN'):
+            return None, 'Las solicitudes de asignación de ficha deben ser gestionadas única y exclusivamente por el Instructor asignado a esa ficha específica, nunca por el Administrador.'
+
+        if role not in ('INSTRUCTOR', 'MONITOR'):
+            return None, 'Solo los instructores asignados a la ficha pueden rechazar solicitudes de formación.'
+
         try:
             req = FichaRequest.objects.select_related('person', 'user').get(pk=request_id)
         except FichaRequest.DoesNotExist:
@@ -1112,12 +1152,13 @@ class FichaRequestController:
         if req.status != 'PENDIENTE':
             return None, f"La solicitud ya fue procesada anteriormente con estado: {req.status}."
 
-        real_admin = getattr(admin_user, '_user', admin_user) if admin_user else None
         req.status = 'RECHAZADA'
-        req.admin_notes = notes or 'Rechazada por el Administrador.'
         req.reviewed_at = timezone.now()
-        req.reviewed_by = real_admin
-        req.save(update_fields=['status', 'admin_notes', 'reviewed_at', 'reviewed_by'])
+        req.reviewed_by = real_actor
+        req.assigned_instructor = real_actor
+        inst_name = f"{real_actor.person.first_name} {real_actor.person.last_name}".strip()
+        req.admin_notes = notes or f"Rechazada por el docente responsable: {inst_name}."
+        req.save(update_fields=['status', 'admin_notes', 'reviewed_at', 'reviewed_by', 'assigned_instructor'])
         return req, None
 
 

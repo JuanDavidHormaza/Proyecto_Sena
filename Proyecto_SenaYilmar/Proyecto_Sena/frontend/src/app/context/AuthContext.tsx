@@ -306,6 +306,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     localStorage.setItem('userPermissions', JSON.stringify(updatedUser.permissions));
     localStorage.setItem('userProgram', updatedUser.program || '');
+    if (updatedUser.enrolledPrograms) {
+      localStorage.setItem('userEnrolledPrograms', JSON.stringify(updatedUser.enrolledPrograms));
+    }
   };
 
   return (

@@ -22,6 +22,18 @@ const ROLE_DASHBOARDS: Record<string, string> = {
   student: "/dashboard",
 };
 
+const SENA_OFFICIAL_PROGRAMS = [
+  "Análisis y Desarrollo de Software (ADSO)",
+  "Programación para Analítica de Datos",
+  "Mecánica Industrial",
+  "Redes y Telecomunicaciones",
+  "Producción Multimedia",
+  "Seguridad Informática",
+  "Automatización Industrial",
+  "Gestión Empresarial",
+  "Diseño Gráfico",
+];
+
 export function SettingsPage() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
@@ -33,7 +45,8 @@ export function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Estado para solicitudes de vinculación a programa alterno
+  // Estado para solicitudes de vinculación a programa alterno (dos pasos)
+  const [newProgramInput, setNewProgramInput] = useState("Análisis y Desarrollo de Software (ADSO)");
   const [newFichaInput, setNewFichaInput] = useState("");
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [enrollSuccess, setEnrollSuccess] = useState("");
@@ -117,13 +130,20 @@ export function SettingsPage() {
   const handleRequestFicha = async (e: FormEvent) => {
     e.preventDefault();
     const cleanFicha = newFichaInput.trim();
-    if (!cleanFicha) return;
+    if (!cleanFicha) {
+      setEnrollError("El número de ficha es obligatorio.");
+      return;
+    }
+    if (!/^\d{4,9}$/.test(cleanFicha)) {
+      setEnrollError("El número de ficha debe contener entre 4 y 9 dígitos numéricos.");
+      return;
+    }
     setIsEnrolling(true);
     setEnrollError("");
     setEnrollSuccess("");
     try {
-      const req = await api.createFichaRequest(cleanFicha);
-      setEnrollSuccess("Solicitud enviada correctamente. El Administrador validará tu vinculación.");
+      await api.createFichaRequest(cleanFicha, newProgramInput);
+      setEnrollSuccess(`Solicitud enviada para ${newProgramInput} - Ficha ${cleanFicha}. El docente asignado a la ficha validará tu vinculación.`);
       setNewFichaInput("");
       await loadFichaRequests();
     } catch (err: any) {
@@ -305,23 +325,56 @@ export function SettingsPage() {
                 </div>
               </div>
 
-              {/* Formulario de solicitud de vinculación */}
-              <form onSubmit={handleRequestFicha} className="p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4">
-                <div className="flex items-center gap-2 mb-2">
+              {/* Formulario de solicitud de vinculación en dos pasos */}
+              <form onSubmit={handleRequestFicha} className="p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 space-y-3">
+                <div className="flex items-center gap-2">
                   <Plus className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
                   <span className="text-xs font-bold text-slate-800">Solicitar vinculación de nueva ficha extra:</span>
                 </div>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Ingresa el código numérico de la ficha adicional que cursas. El Administrador verificará y autorizará tu vinculación.
+                <p className="text-xs text-muted-foreground">
+                  Selecciona el programa de formación e ingresa el código numérico de tu ficha. El docente asignado a esa ficha validará y autorizará tu vinculación.
                 </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newFichaInput}
-                    onChange={(e) => setNewFichaInput(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Número de ficha (ej. 2670142)"
-                    className="flex-1 px-3.5 py-2 bg-white border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Paso 1: Programa de Formación */}
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                      1. Programa de Formación
+                    </label>
+                    <select
+                      value={newProgramInput}
+                      onChange={(e) => setNewProgramInput(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white font-medium text-foreground cursor-pointer"
+                    >
+                      {SENA_OFFICIAL_PROGRAMS.map((progName) => (
+                        <option key={progName} value={progName}>
+                          {progName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Paso 2: Número de Ficha */}
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                      2. Número de Ficha
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      required
+                      placeholder="Código numérico (ej. 2670142)"
+                      value={newFichaInput}
+                      onChange={(e) => {
+                        setNewFichaInput(e.target.value.replace(/\D/g, ""));
+                        setEnrollError("");
+                        setEnrollSuccess("");
+                      }}
+                      className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white font-medium text-foreground"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
                   <button
                     type="submit"
                     disabled={isEnrolling || !newFichaInput.trim()}
@@ -331,6 +384,7 @@ export function SettingsPage() {
                     <span>Enviar Solicitud</span>
                   </button>
                 </div>
+
                 {enrollSuccess && (
                   <div className="mt-2 text-xs text-emerald-700 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.8} />

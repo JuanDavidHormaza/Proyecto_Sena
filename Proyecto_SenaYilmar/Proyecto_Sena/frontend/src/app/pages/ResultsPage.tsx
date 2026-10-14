@@ -140,6 +140,11 @@ export function ResultsPage() {
   const duration = resultsState?.duration ?? lastTestSummary?.duration ?? localStorage.getItem("quizDuration") ?? "00:00";
   const levelReached = resultsState?.levelReached ?? lastTestSummary?.finalLevel ?? lastTestResult?.level ?? "A1";
 
+  const isIncomplete =
+    levelReached === "Incompleto" ||
+    Boolean((resultsState as any)?.is_abandoned) ||
+    Boolean((resultsState as any)?.is_incomplete);
+
   const isCancelled =
     totalQuestions === 0 ||
     answers.length === 0 ||
@@ -147,7 +152,7 @@ export function ResultsPage() {
     (resultsState as any)?.status === "no_presentado";
 
   const levelInfo = getLevelFromScore(finalScore);
-  const passed = !isCancelled && (resultsState?.passed ?? lastTestSummary?.passed ?? (finalScore >= 60));
+  const passed = !isCancelled && !isIncomplete && (resultsState?.passed ?? lastTestSummary?.passed ?? (finalScore >= 60));
   const threshold = resultsState?.threshold ?? 60;
   const breakdown = resultsState?.breakdown ?? lastTestResult?.breakdown;
   const autoFeedback = resultsState?.auto_feedback ?? lastTestSummary?.autoFeedback;
@@ -367,17 +372,17 @@ export function ResultsPage() {
               animate={{ scale: 1 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
               className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-lg rounded-full text-sm font-medium mb-6 ${
-                isCancelled ? "bg-amber-500/20 text-amber-100" : "bg-white/20 text-white"
+                isCancelled ? "bg-amber-500/20 text-amber-100" : isIncomplete ? "bg-rose-500/30 text-rose-100 border border-rose-300/40" : "bg-white/20 text-white"
               }`}
             >
               <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white">
-                {isCancelled ? (
+                {isCancelled || isIncomplete ? (
                   <AlertCircle className="w-4 h-4 text-amber-200" strokeWidth={2} />
                 ) : (
                   <CheckCircle className="w-4 h-4 text-emerald-200" strokeWidth={2} />
                 )}
               </div>
-              {isCancelled ? "Prueba no presentada / Cancelada" : "Evaluación enviada con éxito"}
+              {isCancelled ? "Prueba no presentada / Cancelada" : isIncomplete ? "Evaluación Incompleta (Abandonada)" : "Evaluación enviada con éxito"}
             </motion.div>
 
             <motion.div
@@ -392,18 +397,22 @@ export function ResultsPage() {
               <div className="flex items-center justify-center gap-2 mb-3">
                 <Award className="w-7 h-7 text-amber-300" strokeWidth={1.8} />
                 <span className="text-2xl lg:text-3xl font-bold">
-                  {isCancelled ? "Sin Nivel Registrado" : `Nivel Obtenido: ${levelReached}`}
+                  {isCancelled ? "Sin Nivel Registrado" : isIncomplete ? "Estado: Incompleto (Sin Nivel Asignado)" : `Nivel Obtenido: ${levelReached}`}
                 </span>
               </div>
 
               <p className="text-lg text-white/90 mb-2">
                 {isCancelled
                   ? "La prueba fue finalizada sin respuestas registradas."
+                  : isIncomplete
+                  ? "La prueba no fue finalizada en su totalidad por el aprendiz."
                   : levelInfo.description}
               </p>
               <p className="text-white/80 max-w-md mx-auto">
                 {isCancelled
                   ? "Para diagnosticar tu nivel oficial según el Marco CEFR, inicia una nueva prueba y responde las preguntas de cada habilidad."
+                  : isIncomplete
+                  ? "Las preguntas no contestadas se calificaron como 0%. No se aprueban niveles automáticamente en intentos incompletos."
                   : levelInfo.message}
               </p>
             </motion.div>

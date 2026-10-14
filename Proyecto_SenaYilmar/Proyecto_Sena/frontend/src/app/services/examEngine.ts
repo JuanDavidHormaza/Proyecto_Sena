@@ -673,9 +673,11 @@ export class ExamEngine {
   /**
    * Genera el resumen final del examen compatible con TestResult
    */
-  public generateFinalSummary(elapsedSeconds = 0): ExamFinalSummary {
+  public generateFinalSummary(elapsedSeconds = 0, isAbandoned = false): ExamFinalSummary {
     const totalAnswered = this.answers.length;
     const correctCount = this.answers.filter((a) => a.isCorrect).length;
+    const plannedLevelQuestions = Math.max(this.currentLevelQuestionList.length, this.QUESTIONS_PER_LEVEL);
+    const effectiveTotalQuestions = isAbandoned ? Math.max(plannedLevelQuestions, totalAnswered) : Math.max(totalAnswered, 1);
 
     // Calcular puntajes por nivel CEFR
     const levelScores: Record<CEFRLevel, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
@@ -683,7 +685,8 @@ export class ExamEngine {
       const lvlAnswers = this.answers.filter((a) => a.level === lvl);
       if (lvlAnswers.length > 0) {
         const correct = lvlAnswers.filter((a) => a.isCorrect).length;
-        levelScores[lvl] = Math.round((correct / lvlAnswers.length) * 100);
+        const denominator = isAbandoned && lvl === this.currentLevel ? Math.max(lvlAnswers.length, plannedLevelQuestions) : lvlAnswers.length;
+        levelScores[lvl] = Math.round((correct / denominator) * 100);
       }
     });
 
@@ -702,33 +705,47 @@ export class ExamEngine {
       }
     });
 
-    // Ponderación global (0-100)
-    const overallScore = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
+    // Ponderación global (0-100): si abandona, las no contestadas valen 0 y cuentan en el denominador
+    const overallScore = effectiveTotalQuestions > 0 ? Math.round((correctCount / effectiveTotalQuestions) * 100) : 0;
 
-    // Nivel final alcanzado (no asignar A1 por defecto si no respondió o abandonó)
+    // Nivel final alcanzado (si abandona o no termina todos los reactivos, marcar Incompleto sin aprobación automática)
     let finalLevel: string = "Sin Nivel";
-    if (totalAnswered === 0 || (correctCount === 0 && overallScore === 0)) {
+    let passed = false;
+    let character = "No Presentado";
+
+    if (isAbandoned) {
+      finalLevel = "Incompleto";
+      character = "Incompleto";
+      passed = false;
+    } else if (totalAnswered === 0 || (correctCount === 0 && overallScore === 0)) {
       finalLevel = "Sin Nivel";
+      character = "No Presentado";
+      passed = false;
     } else if (levelScores.B2 >= LEVEL_PASS_THRESHOLDS.B2) {
       finalLevel = "B2";
+      character = "Experto";
+      passed = overallScore >= LEVEL_PASS_THRESHOLDS.B2;
     } else if (levelScores.B1 >= LEVEL_PASS_THRESHOLDS.B1) {
       finalLevel = "B1";
+      character = "Avanzado";
+      passed = overallScore >= LEVEL_PASS_THRESHOLDS.B1;
     } else if (levelScores.A2 >= LEVEL_PASS_THRESHOLDS.A2) {
       finalLevel = "A2";
+      character = "Intermedio";
+      passed = overallScore >= LEVEL_PASS_THRESHOLDS.A2;
+    } else if (overallScore >= (LEVEL_PASS_THRESHOLDS.A1 || 60)) {
+      finalLevel = "A1";
+      character = "Principiante";
+      passed = true;
     } else if (overallScore >= 20 || correctCount > 0) {
       finalLevel = "A1";
+      character = "Principiante";
+      passed = false;
     } else {
       finalLevel = "Sin Nivel";
+      character = "No Presentado";
+      passed = false;
     }
-
-    const passed = finalLevel !== "Sin Nivel" && overallScore >= (LEVEL_PASS_THRESHOLDS[finalLevel as CEFRLevel] || 60);
-
-    // Character descriptivo
-    let character = "No Presentado";
-    if (finalLevel === "B2") character = "Experto";
-    else if (finalLevel === "B1") character = "Avanzado";
-    else if (finalLevel === "A2") character = "Intermedio";
-    else if (finalLevel === "A1") character = "Principiante";
 
     // Duración formateada MM:SS
     const mins = Math.floor(elapsedSeconds / 60);
@@ -786,7 +803,7 @@ export class ExamEngine {
       finalLevel,
       character,
       correctAnswers: correctCount,
-      totalQuestions: totalAnswered,
+      totalQuestions: isAbandoned ? effectiveTotalQuestions : totalAnswered,
       speakingScore,
       writingScore,
       levelScores,

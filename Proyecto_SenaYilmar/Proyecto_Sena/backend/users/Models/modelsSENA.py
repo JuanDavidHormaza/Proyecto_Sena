@@ -210,6 +210,7 @@ class TestResult(models.Model):
         ('Sin Nivel', 'Sin Nivel / No Presentado'),
         ('Invalidada', 'Prueba Invalidada'),
         ('No Presentado', 'No Presentado'),
+        ('Incompleto', 'Incompleto'),
     ]
 
     level = models.CharField(max_length=25, choices=LEVEL_CHOICES, default='Sin Nivel')

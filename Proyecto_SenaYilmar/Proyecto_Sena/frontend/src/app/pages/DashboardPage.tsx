@@ -915,6 +915,29 @@ function StudentVocabCard({
   );
 }
 
+export function formatProgramFichaHeader(raw?: string | null): string {
+  if (!raw) return "Programa: SENA - Ficha: General";
+  const str = raw.trim();
+  if (str.toLowerCase().startsWith("programa:") && str.toLowerCase().includes("ficha:")) {
+    return str;
+  }
+  // Check pattern "Programa Name - Ficha 123456" or "Programa Name - 123456"
+  const match = str.match(/^(.*?)\s*[-–—]\s*(?:ficha\s*:?\s*)?(\d+.*)$/i);
+  if (match) {
+    const prog = match[1].replace(/^programa\s*:?\s*/i, "").trim();
+    const ficha = match[2].trim();
+    return `Programa: ${prog} - Ficha: ${ficha}`;
+  }
+  // Check pattern "ADSO (2670142)"
+  const matchParen = str.match(/^(.*?)\s*\((?:ficha\s*:?\s*)?(\d+.*)\)$/i);
+  if (matchParen) {
+    const prog = matchParen[1].replace(/^programa\s*:?\s*/i, "").trim();
+    const ficha = matchParen[2].trim();
+    return `Programa: ${prog} - Ficha: ${ficha}`;
+  }
+  return `Programa: ${str}`;
+}
+
 export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study" } = {}) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -951,6 +974,10 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     try {
       const updated = await api.switchProgram(targetProg);
       updateUser(updated);
+      setSelectedDictProgram(targetProg);
+      localStorage.setItem("activeProgram", targetProg);
+      localStorage.setItem("userProgram", targetProg);
+      toast.success(`Ficha activa: ${targetProg}`);
     } catch (err) {
       console.error("Error al conmutar programa SENA:", err);
     }
@@ -1175,18 +1202,40 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   const displayTotalQuestions = latestResult?.totalQuestions ?? lastTotalQuestions;
   const displayDuration = latestResult?.duration ?? lastDuration;
 
+  // Filtrado de evaluaciones por el programa/ficha activo
+  const activeProgramFilteredResults = useMemo(() => {
+    if (!activeProgram) return testResults;
+    const cleanActive = activeProgram.toLowerCase().trim();
+    const fichaMatch = cleanActive.match(/\d{4,8}/);
+    const fichaCode = fichaMatch ? fichaMatch[0] : null;
+
+    const hasTaggedResults = testResults.some(
+      (r) => Boolean(r.studentProgram || (r as any).student_program || (r as any).program)
+    );
+    if (!hasTaggedResults) return testResults;
+
+    return testResults.filter((r) => {
+      const prog = (r.studentProgram || (r as any).student_program || (r as any).program || "").toLowerCase().trim();
+      if (!prog) return true;
+      if (fichaCode && prog.includes(fichaCode)) return true;
+      return prog.includes(cleanActive) || cleanActive.includes(prog);
+    });
+  }, [testResults, activeProgram]);
+
   // Protección del Promedio Histórico y Nivel del Estudiante:
-  // Solo se computan pruebas formalmente completadas (excluyendo 'Sin Nivel', 'No Presentado' e 'Invalidada')
+  // Solo se computan pruebas formalmente completadas (excluyendo 'Sin Nivel', 'No Presentado', 'Invalidada' e 'Incompleto')
   const validFinishedTests = useMemo(() => {
-    return testResults.filter(
+    return activeProgramFilteredResults.filter(
       (r) =>
         r.level !== "Sin Nivel" &&
         r.level !== "No Presentado" &&
         r.level !== "Invalidada" &&
+        r.level !== "Incompleto" &&
         r.character !== "No Presentado" &&
+        r.character !== "Incompleto" &&
         (r.totalQuestions > 0 || r.score > 0)
     );
-  }, [testResults]);
+  }, [activeProgramFilteredResults]);
 
   const latestValidResult = validFinishedTests[0] || (hasQuizResult && lastScore > 0 ? latestResult : null);
   const currentLevel = latestValidResult?.level ?? (hasQuizResult && lastScore > 0 ? getLevelFromScore(displayScore).level : "Sin nivel");
@@ -1436,25 +1485,15 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 </div>
               </button>
 
-              {/* Selector de Programa Activo (List Box) */}
+              {/* Indicador Dinámico de Ficha y Programa Activo */}
               <div
-                className="relative hidden md:flex items-center bg-muted/60 hover:bg-muted border border-border/80 rounded-xl px-2.5 py-1 transition-colors"
-                title="Programa de formación SENA activo. Haz clic para cambiar entre tus programas matriculados sin cerrar sesión."
+                className="relative hidden md:flex items-center bg-muted/70 border border-border/80 rounded-xl px-3 py-1.5 transition-colors"
+                title={`Ficha y Programa activo: ${activeProgram}`}
               >
-                <GraduationCap className="w-4 h-4 text-sena-blue mr-1.5 flex-shrink-0" strokeWidth={1.8} />
-                <span className="text-[11px] text-muted-foreground mr-1">Ficha:</span>
-                <select
-                  value={activeProgram}
-                  onChange={(e) => handleProgramSwitch(e.target.value)}
-                  className="text-xs font-semibold bg-transparent text-foreground focus:outline-none cursor-pointer max-w-[200px] truncate"
-                  aria-label="Seleccionar programa activo"
-                >
-                  {enrolledPrograms.map((prog) => (
-                    <option key={prog} value={prog} className="bg-white text-foreground">
-                      {prog}
-                    </option>
-                  ))}
-                </select>
+                <GraduationCap className="w-4 h-4 text-sena-blue mr-2 flex-shrink-0" strokeWidth={1.8} />
+                <span className="text-xs font-semibold text-foreground truncate max-w-[280px]">
+                  {formatProgramFichaHeader(activeProgram)}
+                </span>
               </div>
             </div>
 
@@ -1488,20 +1527,9 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
               >
                 <div className="flex items-center justify-between p-2.5 bg-muted/50 rounded-xl text-xs">
                   <span className="font-medium text-muted-foreground">Programa Activo:</span>
-                  <select
-                    value={activeProgram}
-                    onChange={(e) => {
-                      handleProgramSwitch(e.target.value);
-                      setShowMobileMenu(false);
-                    }}
-                    className="font-semibold bg-transparent text-foreground focus:outline-none max-w-[200px]"
-                  >
-                    {enrolledPrograms.map((prog) => (
-                      <option key={prog} value={prog}>
-                        {prog}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="font-semibold text-foreground truncate max-w-[200px]" title={activeProgram}>
+                    {formatProgramFichaHeader(activeProgram)}
+                  </span>
                 </div>
               </motion.div>
             )}
@@ -1531,7 +1559,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
             title={`Programa SENA actualmente seleccionado: ${activeProgram}`}
           >
             <ShieldCheck className="w-4 h-4 flex-shrink-0" strokeWidth={1.8} />
-            <span className="truncate max-w-[280px]">Programa Activo: {activeProgram}</span>
+            <span className="truncate max-w-[340px]">{formatProgramFichaHeader(activeProgram)}</span>
           </div>
         </motion.div>
 
@@ -1581,20 +1609,20 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
         {/* VISTA 1: EVALUACIÓN Y PROGRESO (REDISEÑO: JERARQUÍA LIMPIA SIN SOBRECARGA)  */}
         {/* ═════════════════════════════════════════════════════════════════════════ */}
         {activeMainTab === "overview" && (
-          <div className="space-y-8">
+          <div className="space-y-5">
             {/* 1. Tarjeta Heroica: Progreso del programa seleccionado + CTA Examen */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-sena-green via-emerald-600 to-sena-blue rounded-3xl p-6 lg:p-8 text-white shadow-lg overflow-hidden relative"
+              className="bg-gradient-to-br from-sena-green via-emerald-600 to-sena-blue rounded-3xl p-6 lg:p-7 text-white shadow-lg overflow-hidden relative"
             >
               <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                <div className="space-y-3 max-w-xl">
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="space-y-2.5 max-w-xl">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold tracking-wide">
-                      Programa: {activeProgram}
+                      {formatProgramFichaHeader(activeProgram)}
                     </span>
                     <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold tracking-wide">
                       Evaluación Adaptativa A1 → B2
@@ -1609,7 +1637,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                   </p>
 
                   {/* Progreso del nivel actual */}
-                  <div className="pt-2 flex items-center gap-4">
+                  <div className="pt-1.5 flex items-center gap-3.5">
                     <div className="bg-white/20 backdrop-blur-md px-3.5 py-2 rounded-xl">
                       <p className="text-[11px] text-white/80 font-medium">Nivel Registrado</p>
                       <p className="text-xl font-black">{stats.currentLevel}</p>
@@ -1619,10 +1647,10 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                         <span className="text-white/80">Puntuación Promedio</span>
                         <span className="font-bold">{stats.averageScore}%</span>
                       </div>
-                      <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                      <div className="w-full h-2.5 bg-black/20 rounded-full overflow-hidden p-0.5">
                         <div
-                          className="h-full bg-white rounded-full transition-all duration-500"
-                          style={{ width: `${Math.max(stats.averageScore, 8)}%` }}
+                          className="h-full bg-white rounded-full transition-all duration-500 shadow-xs"
+                          style={{ width: `${Math.min(Math.max(stats.averageScore, 0), 100)}%` }}
                         />
                       </div>
                     </div>
@@ -1630,11 +1658,11 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 </div>
 
                 {/* Botón de Acción Principal */}
-                <div className="flex flex-col sm:flex-row lg:flex-col gap-3 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 flex-shrink-0">
                   <motion.button
                     onClick={() => navigate("/quiz")}
                     title="Haz clic para iniciar tu evaluación de nivel con instrucciones previas y temporizador adaptativo"
-                    className="flex items-center justify-center gap-2.5 bg-white text-sena-green hover:bg-white/95 px-8 py-4 rounded-2xl font-extrabold text-base shadow-xl transition-all cursor-pointer whitespace-nowrap"
+                    className="flex items-center justify-center gap-2.5 bg-white text-sena-green hover:bg-white/95 px-8 py-3.5 rounded-2xl font-extrabold text-base shadow-xl transition-all cursor-pointer whitespace-nowrap"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -1648,7 +1676,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                       histEl?.scrollIntoView({ behavior: "smooth" });
                     }}
                     title="Ver el historial de intentos anteriores y detalles de puntuación"
-                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-all cursor-pointer"
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-all cursor-pointer"
                   >
                     <History className="w-4 h-4" strokeWidth={1.8} />
                     Ver Mis Intentos Anteriores
@@ -1658,11 +1686,11 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
             </motion.div>
 
             {/* 2. Accesos Directos al Diccionario Técnico */}
-            <div className="bg-white rounded-2xl border border-border p-6 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+            <div className="bg-white rounded-2xl border border-border p-5 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
-                    <BookOpen className="w-6 h-6" strokeWidth={1.8} />
+                  <div className="w-10 h-10 rounded-xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
+                    <BookOpen className="w-5 h-5" strokeWidth={1.8} />
                   </div>
                   <div>
                     <h4 className="font-bold text-foreground text-base">
@@ -1678,7 +1706,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                   type="button"
                   onClick={() => setIsDictModalOpen(true)}
                   title="Seleccionar ficha y abrir el catálogo técnico de términos especializados"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sena-blue text-white text-xs font-semibold hover:bg-sena-blue/90 transition-all cursor-pointer shadow-xs self-start sm:self-auto"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-sena-blue text-white text-xs font-semibold hover:bg-sena-blue/90 transition-all cursor-pointer shadow-xs self-start sm:self-auto"
                 >
                   <span>Abrir Diccionario Completo</span>
                   <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.8} />
@@ -1686,7 +1714,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
               </div>
 
               {/* Atajos por Competencia Lingüística */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
                 {[
                   { comp: "Speaking", label: "Speaking", desc: "Pronunciación y fluidez", color: "cyan" },
                   { comp: "Writing", label: "Writing", desc: "Redacción y ortografía", color: "rose" },
@@ -1702,7 +1730,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                       setSearchParams({ tab: "study" });
                     }}
                     title={`Explorar términos de ${item.label}`}
-                    className="p-3.5 rounded-xl border border-border hover:border-sena-blue/40 bg-muted/30 hover:bg-muted/70 text-left cursor-pointer group hover:-translate-y-1 hover:shadow-md transition-all duration-300"
+                    className="p-3 rounded-xl border border-border hover:border-sena-blue/40 bg-muted/30 hover:bg-muted/70 text-left cursor-pointer group hover:-translate-y-0.5 hover:shadow-xs transition-all duration-200"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <p className="font-semibold text-xs text-foreground group-hover:text-sena-blue transition-colors">
@@ -1717,7 +1745,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
             </div>
 
             {/* 3. SECCIÓN ORDENADA EN LA PARTE INFERIOR: RENDIMIENTO, MÉTRICAS Y HISTORIAL */}
-            <div id="historial-pruebas-section" className="space-y-6 pt-2">
+            <div id="historial-pruebas-section" className="space-y-3.5 pt-0">
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-sena-green/10 text-sena-green flex items-center justify-center">
@@ -1744,8 +1772,8 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 </button>
               </div>
 
-              {/* Cuadrícula de 4 Métricas Dinámicas */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Cuadrícula de 4 Métricas Dinámicas Compactas y Alineadas */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
                 {[
                   {
                     label: "Pruebas Realizadas",
@@ -1778,19 +1806,19 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 ].map((stat, index) => (
                   <motion.div
                     key={index}
-                    initial={{ opacity: 0, y: 15 }}
+                    initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
+                    transition={{ delay: index * 0.04 }}
                     title={stat.tip}
-                    className="bg-white rounded-2xl p-5 border border-border shadow-xs hover:border-sena-green/40 hover:-translate-y-1 hover:shadow-md cursor-pointer transition-all duration-300 group"
+                    className="bg-white rounded-2xl p-4 border border-border shadow-xs hover:border-sena-green/40 hover:-translate-y-0.5 hover:shadow-md cursor-pointer transition-all duration-200 group flex items-center justify-between"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className={`w-11 h-11 bg-${stat.color}/10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform`}>
-                        <stat.icon className={`w-5 h-5 text-${stat.color}`} strokeWidth={1.8} />
-                      </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                      <p className="text-2xl font-black text-foreground mt-0.5">{stat.value}</p>
                     </div>
-                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                    <div className={`w-10 h-10 bg-${stat.color}/10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shrink-0`}>
+                      <stat.icon className={`w-5 h-5 text-${stat.color}`} strokeWidth={1.8} />
+                    </div>
                   </motion.div>
                 ))}
               </div>

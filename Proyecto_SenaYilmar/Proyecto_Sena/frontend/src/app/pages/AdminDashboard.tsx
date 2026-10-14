@@ -2200,7 +2200,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                             <th className="py-3.5 px-4">Ficha Solicitada</th>
                             <th className="py-3.5 px-4">Fecha Solicitud</th>
                             <th className="py-3.5 px-4">Estado</th>
-                            <th className="py-3.5 px-4 text-right">Acciones</th>
+                            <th className="py-3.5 px-4 text-right">Instructor Responsable / Auditoría</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border text-xs">
@@ -2243,31 +2243,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                               </td>
                               <td className="py-3.5 px-4 text-right">
                                 {req.status === "PENDIENTE" ? (
-                                  <div className="flex items-center justify-end gap-2">
-                                    <button
-                                      type="button"
-                                      disabled={processingRequestId === req.request_id}
-                                      onClick={() => handleOpenApproveModal(req)}
-                                      className="px-3.5 py-1.5 bg-sena-green hover:bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                                      title="Aprobar vinculación del aprendiz y asignar instructor"
-                                    >
-                                      <Check className="w-3.5 h-3.5" strokeWidth={2.2} />
-                                      <span>Aprobar</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={processingRequestId === req.request_id}
-                                      onClick={() => handleRejectFichaRequest(req.request_id)}
-                                      className="px-3.5 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
-                                      title="Rechazar vinculación"
-                                    >
-                                      <X className="w-3.5 h-3.5" strokeWidth={2.2} />
-                                      <span>Rechazar</span>
-                                    </button>
-                                  </div>
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+                                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>Gestión del Instructor: {req.assigned_instructor_name || "Docente de Ficha"}</span>
+                                  </span>
                                 ) : (
-                                  <span className="text-xs text-muted-foreground italic">
-                                    {req.reviewed_by_name ? `Procesada por ${req.reviewed_by_name}` : "Procesada"}
+                                  <span className="text-xs text-muted-foreground font-medium">
+                                    {req.reviewed_by_name ? `Procesada por instructor: ${req.reviewed_by_name}` : `Instructor: ${req.assigned_instructor_name || "Docente"}`}
                                   </span>
                                 )}
                               </td>

@@ -1309,12 +1309,19 @@ class FichaRequestViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post', 'patch'])
     def approve(self, request, pk=None):
-        if getattr(request.user, 'role_id', None) not in ('ADMIN', 'SUPERADMIN'):
-            return Response({'error': 'No tienes permisos de administrador para aprobar solicitudes.'}, status=status.HTTP_403_FORBIDDEN)
+        if getattr(request.user, 'role_id', None) in ('ADMIN', 'SUPERADMIN'):
+            return Response(
+                {'error': 'Las solicitudes de asignación de ficha deben ser aprobadas única y exclusivamente por el Instructor asignado a esa ficha específica, nunca por el Administrador.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        if getattr(request.user, 'role_id', None) not in ('INSTRUCTOR', 'MONITOR'):
+            return Response(
+                {'error': 'Solo los instructores autorizados pueden aprobar solicitudes de vinculación a sus fichas.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-        instructor_id = request.data.get('instructor_id') or request.data.get('instructorId')
         notes = request.data.get('admin_notes') or request.data.get('notes')
-        req, err = FichaRequestController.approve(pk, request.user, instructor_id=instructor_id, notes=notes)
+        req, err = FichaRequestController.approve(pk, request.user, notes=notes)
         if err:
             return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1322,8 +1329,16 @@ class FichaRequestViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post', 'patch'])
     def reject(self, request, pk=None):
-        if getattr(request.user, 'role_id', None) not in ('ADMIN', 'SUPERADMIN'):
-            return Response({'error': 'No tienes permisos de administrador para rechazar solicitudes.'}, status=status.HTTP_403_FORBIDDEN)
+        if getattr(request.user, 'role_id', None) in ('ADMIN', 'SUPERADMIN'):
+            return Response(
+                {'error': 'Las solicitudes de asignación de ficha deben ser gestionadas única y exclusivamente por el Instructor asignado a esa ficha específica, nunca por el Administrador.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        if getattr(request.user, 'role_id', None) not in ('INSTRUCTOR', 'MONITOR'):
+            return Response(
+                {'error': 'Solo los instructores autorizados pueden rechazar solicitudes de vinculación a sus fichas.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         notes = request.data.get('admin_notes') or request.data.get('notes')
         req, err = FichaRequestController.reject(pk, request.user, notes=notes)

@@ -65,6 +65,18 @@ const countries = [
   "Panamá",
 ];
 
+export const SENA_OFFICIAL_PROGRAMS = [
+  "Análisis y Desarrollo de Software (ADSO)",
+  "Programación para Analítica de Datos",
+  "Mecánica Industrial",
+  "Redes y Telecomunicaciones",
+  "Producción Multimedia",
+  "Seguridad Informática",
+  "Automatización Industrial",
+  "Gestión Empresarial",
+  "Diseño Gráfico",
+];
+
 function getProgramIcon(program: string) {
   const norm = program.toLowerCase();
   if (norm.includes("mecánica") || norm.includes("mecanica")) {
@@ -684,6 +696,10 @@ export function RegisterPage() {
     e.preventDefault();
     const cleanFicha = manualFichaInput.trim();
     if (!cleanFicha) return;
+    if (!/^\d{4,9}$/.test(cleanFicha)) {
+      setManualEnrollError("El número de ficha debe contener entre 4 y 9 dígitos numéricos.");
+      return;
+    }
     setIsManualEnrolling(true);
     setManualEnrollError("");
     try {
@@ -1424,40 +1440,41 @@ export function RegisterPage() {
               )}
 
               <form onSubmit={handleManualEnrollSubmit} className="space-y-4">
+                {/* Paso 1: Programa de Formación */}
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
-                    Número / Código de Ficha
+                    1. Programa de Formación *
+                  </label>
+                  <select
+                    value={manualProgramInput}
+                    onChange={(e) => setManualProgramInput(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-sm font-semibold cursor-pointer"
+                  >
+                    {SENA_OFFICIAL_PROGRAMS.map((progName) => (
+                      <option key={progName} value={progName}>
+                        {progName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Paso 2: Número de Ficha */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                    2. Número de Ficha *
                   </label>
                   <input
                     type="text"
                     inputMode="numeric"
                     required
                     value={manualFichaInput}
-                    onChange={(e) => setManualFichaInput(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) => {
+                      setManualFichaInput(e.target.value.replace(/\D/g, ""));
+                      setManualEnrollError("");
+                    }}
                     placeholder="Número de ficha (ej. 2670142)"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-sm font-semibold"
                   />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
-                    Programa de Formación
-                  </label>
-                  <select
-                    value={manualProgramInput}
-                    onChange={(e) => setManualProgramInput(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-sm font-semibold"
-                  >
-                    <option value="Análisis y Desarrollo de Software (ADSO)">Análisis y Desarrollo de Software (ADSO)</option>
-                    <option value="Análisis de Datos">Análisis de Datos</option>
-                    <option value="Mecánica Industrial">Mecánica Industrial</option>
-                    <option value="Redes y Telecomunicaciones">Redes y Telecomunicaciones</option>
-                    <option value="Producción Multimedia">Producción Multimedia</option>
-                    <option value="Seguridad Informática">Seguridad Informática</option>
-                    <option value="Automatización Industrial">Automatización Industrial</option>
-                    <option value="Gestión Empresarial">Gestión Empresarial</option>
-                    <option value="Diseño Gráfico">Diseño Gráfico</option>
-                  </select>
                 </div>
 
                 <button

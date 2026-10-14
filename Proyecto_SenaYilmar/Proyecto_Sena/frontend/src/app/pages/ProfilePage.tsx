@@ -84,6 +84,18 @@ function formatDate(dateString?: string): string {
   }
 }
 
+const SENA_OFFICIAL_PROGRAMS = [
+  "Análisis y Desarrollo de Software (ADSO)",
+  "Programación para Analítica de Datos",
+  "Mecánica Industrial",
+  "Redes y Telecomunicaciones",
+  "Producción Multimedia",
+  "Seguridad Informática",
+  "Automatización Industrial",
+  "Gestión Empresarial",
+  "Diseño Gráfico",
+];
+
 export function ProfilePage() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
@@ -109,6 +121,14 @@ export function ProfilePage() {
     phoneNum: "",
     avatar: "",
   });
+
+  // Estado para solicitudes de vinculación a programa alterno (dos pasos)
+  const [selectedProgramInput, setSelectedProgramInput] = useState<string>("Análisis y Desarrollo de Software (ADSO)");
+  const [newFichaInput, setNewFichaInput] = useState("");
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [enrollSuccess, setEnrollSuccess] = useState("");
+  const [enrollError, setEnrollError] = useState("");
+  const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -603,13 +623,6 @@ export function ProfilePage() {
   ];
   const currentDayIndex = new Date().getDay(); // 0 is Sunday
 
-  // Estado para solicitudes de vinculación a programa alterno
-  const [newFichaInput, setNewFichaInput] = useState("");
-  const [isEnrolling, setIsEnrolling] = useState(false);
-  const [enrollSuccess, setEnrollSuccess] = useState("");
-  const [enrollError, setEnrollError] = useState("");
-  const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
-
   const loadRequests = async () => {
     try {
       const res = await api.getFichaRequests();
@@ -679,10 +692,12 @@ export function ProfilePage() {
   const handleRequestFichaEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanFicha = newFichaInput.trim();
-    if (!cleanFicha) return;
-
-    if (enrolledPrograms.map((p) => p.toLowerCase()).includes(cleanFicha.toLowerCase())) {
-      setEnrollError("Ya te encuentras vinculado a este programa de formación.");
+    if (!cleanFicha) {
+      setEnrollError("El número de ficha es obligatorio.");
+      return;
+    }
+    if (!/^\d{4,9}$/.test(cleanFicha)) {
+      setEnrollError("El número de ficha debe contener entre 4 y 9 dígitos numéricos.");
       return;
     }
 
@@ -690,8 +705,8 @@ export function ProfilePage() {
     setEnrollError("");
     setEnrollSuccess("");
     try {
-      await api.requestFichaEnrollment(cleanFicha, `Solicitud desde Mi Perfil por ${name}`);
-      setEnrollSuccess(`Solicitud enviada correctamente para la ficha ${cleanFicha}. Queda pendiente de aprobación.`);
+      await api.createFichaRequest(cleanFicha, selectedProgramInput);
+      setEnrollSuccess(`Solicitud enviada para ${selectedProgramInput} - Ficha ${cleanFicha}. Queda pendiente de aprobación por el instructor asignado.`);
       setNewFichaInput("");
       loadRequests();
     } catch (err: any) {
@@ -1327,32 +1342,66 @@ export function ProfilePage() {
                   })}
                 </div>
 
-                {/* Formulario de solicitud de nueva ficha */}
+                {/* Formulario de solicitud en dos pasos (Programa y Código) */}
                 <div className="p-4 bg-muted/40 border border-border rounded-xl">
-                  <h4 className="text-xs font-bold text-foreground mb-1">¿Estás en otra ficha o programa de formación?</h4>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <GraduationCap className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
+                    <h4 className="text-xs font-bold text-foreground">Solicitud de Vinculación a Nueva Ficha SENA</h4>
+                  </div>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Ingresa el nombre o código de tu ficha para solicitar la vinculación académica:
+                    Selecciona tu programa de formación e ingresa el código numérico exacto de tu ficha para remitir la solicitud al docente responsable:
                   </p>
-                  <form onSubmit={handleRequestFichaEnroll} className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Número de ficha (ej. 2670142)"
-                      value={newFichaInput}
-                      onChange={(e) => {
-                        setNewFichaInput(e.target.value.replace(/\D/g, ""));
-                        setEnrollError("");
-                        setEnrollSuccess("");
-                      }}
-                      className="flex-1 px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isEnrolling || !newFichaInput.trim()}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                    >
-                      {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                      <span>Solicitar</span>
-                    </button>
+                  <form onSubmit={handleRequestFichaEnroll} className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Paso 1: Programa de Formación */}
+                      <div>
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                          1. Programa de Formación
+                        </label>
+                        <select
+                          value={selectedProgramInput}
+                          onChange={(e) => setSelectedProgramInput(e.target.value)}
+                          className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white font-medium text-foreground cursor-pointer"
+                        >
+                          {SENA_OFFICIAL_PROGRAMS.map((progName) => (
+                            <option key={progName} value={progName}>
+                              {progName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Paso 2: Número de Ficha */}
+                      <div>
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                          2. Número de Ficha
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          required
+                          placeholder="Código numérico (ej. 2670142)"
+                          value={newFichaInput}
+                          onChange={(e) => {
+                            setNewFichaInput(e.target.value.replace(/\D/g, ""));
+                            setEnrollError("");
+                            setEnrollSuccess("");
+                          }}
+                          className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white font-medium text-foreground"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={isEnrolling || !newFichaInput.trim()}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        <span>Enviar Solicitud al Docente</span>
+                      </button>
+                    </div>
                   </form>
                   {enrollError && <p className="text-xs text-destructive mt-2">{enrollError}</p>}
                   {enrollSuccess && <p className="text-xs text-sena-green mt-2 font-medium">{enrollSuccess}</p>}

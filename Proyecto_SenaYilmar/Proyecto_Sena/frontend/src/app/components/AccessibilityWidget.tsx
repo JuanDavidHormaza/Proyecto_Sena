@@ -22,7 +22,7 @@ export function AccessibilityWidget() {
   const isOpen = accessibilityOpen;
   const setIsOpen = setAccessibilityOpen;
 
-  // 1. Escala tipográfica relativa (% sobre rem del documentElement)
+  // 1. Escala tipográfica relativa (% sobre rem del documentElement: 100%, 112.5%, 125%)
   const [fontScale, setFontScale] = useState<number>(() => {
     const saved = localStorage.getItem("worklex_font_scale");
     return saved ? Number(saved) : 100;
@@ -34,9 +34,27 @@ export function AccessibilityWidget() {
     return (saved as ContrastMode) || "default";
   });
 
-  // Aplicar escala de fuente al DOM en unidades relativas
+  // Aplicar escala tipográfica real mediante clases y font-size relativo al documentElement (Sin zoom de ventana)
   useEffect(() => {
-    document.documentElement.style.fontSize = `${fontScale}%`;
+    // Garantizar ausencia total de style.zoom o transform: scale en el body o root
+    if (document.body.style.zoom) {
+      document.body.style.zoom = "";
+    }
+    if ((document.body.style as any).transform) {
+      (document.body.style as any).transform = "";
+    }
+
+    document.documentElement.classList.remove("font-scale-100", "font-scale-112", "font-scale-125");
+    if (fontScale === 112.5 || fontScale === 112) {
+      document.documentElement.classList.add("font-scale-112");
+      document.documentElement.style.fontSize = "112.5%";
+    } else if (fontScale >= 125) {
+      document.documentElement.classList.add("font-scale-125");
+      document.documentElement.style.fontSize = "125%";
+    } else {
+      document.documentElement.classList.add("font-scale-100");
+      document.documentElement.style.fontSize = "100%";
+    }
     localStorage.setItem("worklex_font_scale", String(fontScale));
   }, [fontScale]);
 
@@ -51,8 +69,22 @@ export function AccessibilityWidget() {
     localStorage.setItem("worklex_contrast_mode", contrastMode);
   }, [contrastMode]);
 
-  const handleIncreaseFont = () => setFontScale((prev) => Math.min(prev + 10, 140));
-  const handleDecreaseFont = () => setFontScale((prev) => Math.max(prev - 10, 80));
+  const handleIncreaseFont = () => {
+    setFontScale((prev) => {
+      if (prev <= 100) return 112.5;
+      if (prev <= 112.5) return 125;
+      return 125;
+    });
+  };
+
+  const handleDecreaseFont = () => {
+    setFontScale((prev) => {
+      if (prev >= 125) return 112.5;
+      if (prev >= 112.5) return 100;
+      return 100;
+    });
+  };
+
   const handleReset = () => {
     setFontScale(100);
     setContrastMode("default");
@@ -124,59 +156,85 @@ export function AccessibilityWidget() {
 
               {/* Contenido */}
               <div className="p-5 space-y-5">
-                {/* 1. Control de Tamaño de Fuente */}
+                {/* 1. Control de Tamaño de Fuente (Escalado Tipográfico Real sin zoom) */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <Type className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
-                      Tamaño de Letra (DOM)
+                      Escalado Tipográfico Real (rem)
                     </span>
                     <span className="text-xs font-bold text-sena-green bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                       {fontScale}%
                     </span>
                   </div>
+                  <p className="text-[11px] text-muted-foreground mb-3 leading-tight">
+                    Incrementa la fuente proporcionalmente manteniendo contenedores y márgenes intactos, sin distorsión ni zoom de ventana.
+                  </p>
 
-                  {/* Slider */}
-                  <input
-                    type="range"
-                    min="80"
-                    max="140"
-                    step="5"
-                    value={fontScale}
-                    onChange={(e) => setFontScale(Number(e.target.value))}
-                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-sena-green"
-                    aria-label="Ajustar tamaño de fuente"
-                  />
+                  {/* Selector de Presets (100%, 112.5%, 125%) */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFontScale(100)}
+                      className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                        fontScale === 100
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
+                          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
+                      }`}
+                      title="Tamaño normal (100%)"
+                    >
+                      <span className="text-xs font-bold">100%</span>
+                      <span className="text-[10px] text-muted-foreground">Estándar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFontScale(112.5)}
+                      className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                        fontScale === 112.5 || fontScale === 112
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
+                          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
+                      }`}
+                      title="Tamaño mediano (112.5%)"
+                    >
+                      <span className="text-xs font-bold">112.5%</span>
+                      <span className="text-[10px] text-muted-foreground">Mediano</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFontScale(125)}
+                      className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                        fontScale >= 125
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
+                          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
+                      }`}
+                      title="Tamaño grande (125%)"
+                    >
+                      <span className="text-xs font-bold">125%</span>
+                      <span className="text-[10px] text-muted-foreground">Grande</span>
+                    </button>
+                  </div>
 
-                  {/* Botones de acción rápida */}
-                  <div className="grid grid-cols-3 gap-2 mt-2.5">
+                  {/* Acciones de incremento/decremento A- / A+ */}
+                  <div className="grid grid-cols-2 gap-2 mt-2.5">
                     <button
                       type="button"
                       onClick={handleDecreaseFont}
-                      disabled={fontScale <= 80}
+                      disabled={fontScale <= 100}
                       className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground disabled:opacity-40 transition-colors cursor-pointer"
                       title="Disminuir tamaño (A-)"
                     >
                       <ZoomOut className="w-3.5 h-3.5" strokeWidth={1.8} />
-                      <span>A-</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFontScale(100)}
-                      className="py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground transition-colors cursor-pointer"
-                      title="Restablecer tamaño normal (100%)"
-                    >
-                      100%
+                      <span>Reducir (A-)</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleIncreaseFont}
-                      disabled={fontScale >= 140}
+                      disabled={fontScale >= 125}
                       className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground disabled:opacity-40 transition-colors cursor-pointer"
                       title="Aumentar tamaño (A+)"
                     >
                       <ZoomIn className="w-3.5 h-3.5" strokeWidth={1.8} />
-                      <span>A+</span>
+                      <span>Aumentar (A+)</span>
                     </button>
                   </div>
                 </div>

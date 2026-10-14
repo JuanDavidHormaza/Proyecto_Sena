@@ -7,6 +7,7 @@ import {
   Filter,
   Languages,
   LifeBuoy,
+  Inbox, Check, CheckCircle2, RefreshCw, UserCheck
 } from "lucide-react";
 import { mockTestResults, TestResult, mockUsers, User } from "../data/users";
 import * as api from "../services/api";
@@ -22,6 +23,7 @@ function normalizeText(value?: string | null) {
 export function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<"students" | "ficha_requests">("students");
   const [results, setResults] = useState<TestResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<TestResult | null>(null);
   const [feedback, setFeedback] = useState("");
@@ -29,6 +31,12 @@ export function TeacherDashboard() {
   const [filterLevel, setFilterLevel] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<User[]>([]);
+  const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
+  const [requestSearchTerm, setRequestSearchTerm] = useState("");
+  const [requestStatusFilter, setRequestStatusFilter] = useState<"ALL" | "PENDIENTE" | "APROBADA" | "RECHAZADA">("ALL");
+  const [isProcessingRequest, setIsProcessingRequest] = useState<number | null>(null);
+  const [rejectModalRequest, setRejectModalRequest] = useState<api.ApiFichaRequest | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const teacherName = user?.name || localStorage.getItem("userName") || "Instructor";
   const teacherProgram = user?.program || localStorage.getItem("userProgram") || "";
@@ -37,9 +45,13 @@ export function TeacherDashboard() {
   const loadDataFromApi = async () => {
     setIsLoading(true);
     try {
-      const [apiResults, apiUsers] = await Promise.all([
+      const [apiResults, apiUsers, apiRequests] = await Promise.all([
         api.getTestResults(),
         api.getUsers('student'),
+        api.getFichaRequests().catch(err => {
+          console.warn("[TeacherDashboard] Error loading ficha requests:", err);
+          return [] as api.ApiFichaRequest[];
+        }),
       ]);
       
       // Convertir resultados de API
@@ -73,10 +85,12 @@ export function TeacherDashboard() {
       
       setResults(convertedResults);
       setStudents(convertedStudents);
+      setFichaRequests(apiRequests || []);
     } catch (error) {
       console.log("[v0] Failed to load from API, using mock data", error);
       setResults(mockTestResults);
       setStudents(mockUsers.filter(u => u.role === 'student'));
+      setFichaRequests([]);
     }
     setIsLoading(false);
   };
@@ -84,6 +98,37 @@ export function TeacherDashboard() {
   useEffect(() => {
     loadDataFromApi();
   }, []);
+
+  const handleApproveRequest = async (req: api.ApiFichaRequest) => {
+    setIsProcessingRequest(req.request_id);
+    try {
+      await api.approveFichaRequest(req.request_id, String(user?.id || ''));
+      toast.success(`Solicitud de ${req.learner_name} para ficha ${req.ficha_code} aprobada con éxito.`);
+      await loadDataFromApi();
+    } catch (error: any) {
+      console.error("[TeacherDashboard] Error approving ficha request:", error);
+      toast.error(error?.response?.data?.error || error?.message || "No se pudo aprobar la solicitud.");
+    } finally {
+      setIsProcessingRequest(null);
+    }
+  };
+
+  const handleRejectRequest = async () => {
+    if (!rejectModalRequest) return;
+    setIsProcessingRequest(rejectModalRequest.request_id);
+    try {
+      await api.rejectFichaRequest(rejectModalRequest.request_id, rejectReason || "Rechazada por el instructor de ficha.");
+      toast.info(`Solicitud de ${rejectModalRequest.learner_name} rechazada.`);
+      setRejectModalRequest(null);
+      setRejectReason("");
+      await loadDataFromApi();
+    } catch (error: any) {
+      console.error("[TeacherDashboard] Error rejecting ficha request:", error);
+      toast.error(error?.response?.data?.error || error?.message || "No se pudo rechazar la solicitud.");
+    } finally {
+      setIsProcessingRequest(null);
+    }
+  };
 
   const handleViewDetails = (result: TestResult) => {
     setSelectedResult(result);
@@ -109,6 +154,8 @@ export function TeacherDashboard() {
       setFeedback("");
     }
   };
+
+  const pendingRequestsCount = fichaRequests.filter(r => r.status === "PENDIENTE").length;
 
   const teacherProgramKey = normalizeText(teacherProgram);
 
@@ -248,8 +295,47 @@ export function TeacherDashboard() {
           </button>
         </motion.div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 mb-8 border-b border-border pb-3 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab("students")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "students"
+                ? "bg-sena-green text-white shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Aprendices y Evaluaciones</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("ficha_requests")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "ficha_requests"
+                ? "bg-sena-green text-white shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Inbox className="w-4 h-4" />
+            <span>Solicitudes de Ficha</span>
+            {pendingRequestsCount > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-extrabold ${
+                activeTab === "ficha_requests"
+                  ? "bg-white text-sena-green"
+                  : "bg-amber-100 text-amber-800"
+              }`}>
+                {pendingRequestsCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {activeTab === "students" ? (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Aprendices", value: stats.totalStudents, icon: Users, color: "sena-blue" },
             { label: "Pruebas Realizadas", value: stats.totalTests, icon: BarChart3, color: "sena-green" },
@@ -488,7 +574,332 @@ export function TeacherDashboard() {
             <p className="text-muted-foreground">No se encontraron pruebas que coincidan con tu busqueda</p>
           </div>
         )}
+        </>
+        ) : (
+          <div className="space-y-6">
+            {/* Header info */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-sena-green/10 flex items-center justify-center text-sena-green">
+                  <UserCheck className="w-6 h-6" strokeWidth={1.8} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                    Gestión de Solicitudes de Ficha
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Como docente responsable, revisa y aprueba o rechaza a los aprendices postulados para tus fichas formativas.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => loadDataFromApi()}
+                  className="p-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+                  title="Actualizar solicitudes"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                  <span>Actualizar</span>
+                </button>
+              </div>
+            </div>
+
+            {/* KPIs */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pendientes</span>
+                  <h4 className="text-2xl font-extrabold text-amber-600 mt-1">
+                    {fichaRequests.filter(r => r.status === "PENDIENTE").length}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Por validar por ti</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <Clock className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Aprobadas</span>
+                  <h4 className="text-2xl font-extrabold text-emerald-600 mt-1">
+                    {fichaRequests.filter(r => r.status === "APROBADA").length}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Aprendices vinculados</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rechazadas</span>
+                  <h4 className="text-2xl font-extrabold text-rose-600 mt-1">
+                    {fichaRequests.filter(r => r.status === "RECHAZADA").length}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">No matriculadas</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                  <X className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Solicitudes</span>
+                  <h4 className="text-2xl font-extrabold text-foreground mt-1">
+                    {fichaRequests.length}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Tus fichas asignadas</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-sena-blue/10 text-sena-blue flex items-center justify-center font-bold">
+                  <Users className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="bg-white rounded-2xl border border-border p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={requestSearchTerm}
+                  onChange={(e) => setRequestSearchTerm(e.target.value)}
+                  placeholder="Buscar aprendiz, email o código de ficha..."
+                  className="w-full pl-9 pr-4 py-2 border border-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-sena-green focus:border-transparent bg-background"
+                />
+                {requestSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setRequestSearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                {(["ALL", "PENDIENTE", "APROBADA", "RECHAZADA"] as const).map((st) => {
+                  const count = st === "ALL" ? fichaRequests.length : fichaRequests.filter(r => r.status === st).length;
+                  const labels: Record<string, string> = {
+                    ALL: "Todas",
+                    PENDIENTE: "Pendientes",
+                    APROBADA: "Aprobadas",
+                    RECHAZADA: "Rechazadas",
+                  };
+                  const isActive = requestStatusFilter === st;
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setRequestStatusFilter(st)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                        isActive
+                          ? "bg-sena-green text-white shadow-xs"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <span>{labels[st]}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+              {(() => {
+                const filtered = fichaRequests.filter((req) => {
+                  const matchesStatus = requestStatusFilter === "ALL" || req.status === requestStatusFilter;
+                  const term = requestSearchTerm.toLowerCase().trim();
+                  if (!term) return matchesStatus;
+                  const matchesSearch =
+                    (req.learner_name || "").toLowerCase().includes(term) ||
+                    (req.learner_email || "").toLowerCase().includes(term) ||
+                    (req.ficha_code || "").toLowerCase().includes(term) ||
+                    (req.program_name || "").toLowerCase().includes(term);
+                  return matchesStatus && matchesSearch;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="py-16 text-center text-muted-foreground space-y-2">
+                      <Inbox className="w-10 h-10 mx-auto text-slate-300" strokeWidth={1.5} />
+                      <p className="text-sm font-semibold">No hay solicitudes de ficha pendientes o con los filtros seleccionados</p>
+                      <p className="text-xs text-muted-foreground">Las solicitudes de aprendices para tus fichas asignadas aparecerán aquí.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
+                          <th className="py-3.5 px-4">Aprendiz</th>
+                          <th className="py-3.5 px-4">Programa Actual</th>
+                          <th className="py-3.5 px-4">Ficha Solicitada</th>
+                          <th className="py-3.5 px-4">Fecha Solicitud</th>
+                          <th className="py-3.5 px-4">Estado</th>
+                          <th className="py-3.5 px-4 text-right">Acciones de Docente</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border text-xs">
+                        {filtered.map((req) => (
+                          <tr key={req.request_id} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-3.5 px-4 min-w-0 max-w-[240px]">
+                              <p className="font-bold text-foreground text-sm truncate" title={req.learner_name}>{req.learner_name}</p>
+                              <p className="text-muted-foreground text-xs truncate" title={req.learner_email}>{req.learner_email}</p>
+                            </td>
+                            <td className="py-3.5 px-4 text-muted-foreground font-medium">
+                              {req.current_program || "Programa inicial"}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="font-bold text-sena-blue text-xs">{req.ficha_code}</span>
+                              <p className="text-xs text-muted-foreground truncate max-w-xs">{req.program_name}</p>
+                            </td>
+                            <td className="py-3.5 px-4 text-muted-foreground">
+                              {new Date(req.created_at).toLocaleDateString("es-CO", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${
+                                  req.status === "APROBADA"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : req.status === "RECHAZADA"
+                                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                                    : "bg-amber-50 text-amber-700 border-amber-200"
+                                }`}
+                              >
+                                {req.status === "APROBADA"
+                                  ? "Aprobada"
+                                  : req.status === "RECHAZADA"
+                                  ? "Rechazada"
+                                  : "Pendiente"}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              {req.status === "PENDIENTE" ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={isProcessingRequest === req.request_id}
+                                    onClick={() => handleApproveRequest(req)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sena-green hover:bg-sena-green-dark text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                                    title="Aprobar ingreso a la ficha"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Aprobar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isProcessingRequest === req.request_id}
+                                    onClick={() => {
+                                      setRejectModalRequest(req);
+                                      setRejectReason("");
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/10 hover:bg-destructive/20 text-destructive font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
+                                    title="Rechazar solicitud"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>Rechazar</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  {req.status === "APROBADA" ? "Matriculado en tu ficha" : (req.admin_notes || "Solicitud rechazada")}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Reject Modal */}
+      <AnimatePresence>
+        {rejectModalRequest && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                    <X className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-foreground text-base">Rechazar Solicitud de Ficha</h3>
+                </div>
+                <button
+                  onClick={() => setRejectModalRequest(null)}
+                  className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Estás a punto de rechazar la solicitud de <strong className="text-foreground">{rejectModalRequest.learner_name}</strong> para la ficha <strong className="text-sena-blue">{rejectModalRequest.ficha_code}</strong> ({rejectModalRequest.program_name}).
+                </p>
+
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">
+                    Motivo o Justificación (Opcional):
+                  </label>
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    rows={3}
+                    placeholder="Ej. Cupo completo, ficha no correspondiente, prerrequisitos pendientes..."
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-rose-500/50 resize-none bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 p-4 border-t border-border bg-muted/20">
+                <button
+                  type="button"
+                  onClick={() => setRejectModalRequest(null)}
+                  className="px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted rounded-xl transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={isProcessingRequest === rejectModalRequest.request_id}
+                  onClick={handleRejectRequest}
+                  className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
+                >
+                  Confirmar Rechazo
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Detail Modal */}
       <AnimatePresence>

@@ -103,10 +103,33 @@ export function QuizPage() {
   const handleConfirmExit = async () => {
     setIsFinishing(true);
     setShowExitConfirm(false);
-    await finalizeExam();
+    await finalizeExam(true);
     if (blocker?.state === "blocked") {
       blocker.proceed();
     }
+  };
+
+  // ── Omitir pregunta de speaking sin micrófono ──────────────────────────────
+  const handleSkipSpeakingWithoutMic = () => {
+    if (answerState !== "idle" || currentQuestion?.type !== "speaking") return;
+    cleanupRecording();
+    setAnswerState("submitted");
+    setMediaError(null);
+    engineRef.current.submitSpeakingAnswer("", undefined, {
+      score: 0,
+      isCorrect: false,
+      feedback: "Ejercicio omitido por el usuario sin micrófono disponible (0%).",
+      transcription: "Omitido sin micrófono",
+    });
+    refreshEngine();
+    toast.info("Pregunta de speaking omitida (0%). Avanzando al siguiente ejercicio...");
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+    advanceTimerRef.current = setTimeout(() => {
+      advanceStep();
+    }, 600);
   };
 
   // Multimedia states
@@ -285,7 +308,23 @@ export function QuizPage() {
       if (recordedAudioBlob && !speakingEvaluation) {
         handleEvaluateSpeaking();
       } else if (!recordedAudioBlob) {
-        setMediaError("El tiempo para esta pregunta está por agotarse. Por favor graba tu pronunciación.");
+        // Al expirar el tiempo sin audio, pasar automáticamente registrando puntaje 0 sin bloquear el temporizador
+        setAnswerState("submitted");
+        setMediaError("Tiempo agotado. Calificando reactivo con 0% y avanzando...");
+        engineRef.current.submitSpeakingAnswer("", undefined, {
+          score: 0,
+          isCorrect: false,
+          feedback: "Tiempo agotado sin respuesta oral registrada (0%).",
+          transcription: "Tiempo agotado",
+        });
+        refreshEngine();
+        if (advanceTimerRef.current) {
+          clearTimeout(advanceTimerRef.current);
+          advanceTimerRef.current = null;
+        }
+        advanceTimerRef.current = setTimeout(() => {
+          advanceStep();
+        }, 1200);
       }
     }
   };
@@ -346,9 +385,20 @@ export function QuizPage() {
           }
         }
       }
-    } catch (error) {
-      setMediaError("No se ha podido acceder al micrófono. Por favor concede permisos.");
+    } catch (error: any) {
       console.error("Error accediendo al micrófono:", error);
+      setIsRecording(false);
+      let errorMsg = "No se ha podido acceder al micrófono. Por favor concede permisos.";
+      if (error?.name === "NotFoundError" || error?.name === "DevicesNotFoundError") {
+        errorMsg = "No se detectó ningún micrófono conectado en tu equipo. Puedes pulsar 'Omitir pregunta (sin micrófono)' para continuar con la evaluación.";
+      } else if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") {
+        errorMsg = "Permiso de micrófono denegado. Habilita los permisos en tu navegador o selecciona 'Omitir pregunta (sin micrófono)'.";
+      } else if (error?.name === "NotReadableError" || error?.name === "TrackStartError") {
+        errorMsg = "El micrófono está siendo utilizado por otra aplicación o el hardware no responde. Puedes continuar omitiendo este reactivo.";
+      } else if (error?.name === "OverconstrainedError") {
+        errorMsg = "Las restricciones del micrófono no son compatibles con este dispositivo. Puedes omitir la pregunta.";
+      }
+      setMediaError(errorMsg);
     }
   };
 
@@ -685,13 +735,13 @@ export function QuizPage() {
     }
   };
 
-  const finalizeExam = async () => {
+  const finalizeExam = async (isAbandoned = false) => {
     setIsFinishing(true);
     const elapsedSeconds = Math.max(
       Math.round((Date.now() - quizStartedAtRef.current) / 1000),
       1
     );
-    const summary = engineRef.current.generateFinalSummary(elapsedSeconds);
+    const summary = engineRef.current.generateFinalSummary(elapsedSeconds, isAbandoned);
 
     const serializableAnswers = summary.answers.map(({ audioBlob, ...item }) => item);
 
@@ -704,13 +754,16 @@ export function QuizPage() {
       speaking_score: summary.speakingScore,
       writing_score: summary.writingScore,
       level_scores: summary.levelScores,
-      feedback: null,
+      feedback: isAbandoned ? "Evaluación finalizada anticipadamente por el aprendiz. Estado: Incompleto." : null,
       duration: summary.duration,
+      is_abandoned: isAbandoned,
+      is_incomplete: isAbandoned,
       process: {
         userAnswers: serializableAnswers,
         masteredTerms: summary.masteredTerms,
         reinforceTerms: summary.reinforceTerms,
         competencyScores: summary.competencyScores,
+        isAbandoned,
       },
       answers: serializableAnswers.map((a) => ({
         questionId: a.questionId,
@@ -1192,10 +1245,20 @@ export function QuizPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-4 rounded-2xl bg-rose-50 border border-rose-200/90 text-rose-800 px-4 py-3 text-sm flex items-center gap-2.5 shadow-2xs"
+                    className="mb-4 rounded-2xl bg-rose-50 border border-rose-200/90 text-rose-800 p-3.5 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
                   >
-                    <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" strokeWidth={2} />
-                    <span className="font-medium">{mediaError}</span>
+                    <div className="flex items-center gap-2.5">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" strokeWidth={2} />
+                      <span className="font-medium text-xs sm:text-sm">{mediaError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSkipSpeakingWithoutMic}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-rose-700 border border-rose-300 hover:bg-rose-100 text-xs font-bold transition shadow-2xs cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                    >
+                      <MicOff className="w-3.5 h-3.5" />
+                      <span>Omitir pregunta (sin micrófono)</span>
+                    </button>
                   </motion.div>
                 )}
 
@@ -1268,6 +1331,21 @@ export function QuizPage() {
                             : "Se evaluará tu exactitud fonética y acentuación frente al modelo de referencia."}
                         </p>
                       </div>
+
+                      {/* Botón secundario accesible para omitir sin micrófono */}
+                      {!isRecording && (
+                        <div className="pt-1">
+                          <button
+                            type="button"
+                            onClick={handleSkipSpeakingWithoutMic}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-card hover:bg-slate-100 dark:hover:bg-muted text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-xs hover:border-slate-400"
+                            title="Calificar este ejercicio oral con 0% y avanzar inmediatamente sin usar micrófono"
+                          >
+                            <MicOff className="w-3.5 h-3.5 text-slate-500" strokeWidth={1.8} />
+                            <span>Omitir pregunta (sin micrófono)</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Reproductor de vista previa "Grabarse y escucharse" */}
@@ -1746,9 +1824,9 @@ export function QuizPage() {
             </div>
             <h3 className="text-xl font-bold text-foreground mb-2">¿Deseas salir del examen?</h3>
             <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-              {engineState.totalAnswered === 0
-                ? "Aún no has respondido preguntas. Si sales en este momento, la prueba se registrará explícitamente como 'Sin Nivel / No Presentado' para no alterar tus promedios ni asignarte un nivel incorrecto."
-                : `Has contestado ${engineState.totalAnswered} preguntas. Tu resultado se consolidará con las respuestas registradas hasta el momento.`}
+              {engineState.totalQuestionsAnswered === 0
+                ? "Aún no has respondido preguntas. Si sales en este momento, la prueba se registrará como 'Sin Nivel / No Presentado'."
+                : `Has contestado ${engineState.totalQuestionsAnswered} preguntas. Si abandonas el examen ahora, se computará tu calificación calculando las preguntas no contestadas como 0% y el intento se marcará como 'Incompleto'.`}
             </p>
             <div className="flex items-center gap-3">
               <button

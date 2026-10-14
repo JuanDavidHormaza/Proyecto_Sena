@@ -288,3 +288,19 @@
   --muted-foreground: #6b6354;
   --border: #e8ddc4;
 }
+
+/* ─── Escalado Tipográfico Real (Accesibilidad Universal sin deformación ni Zoom) ─── */
+html.font-scale-100,
+:root.font-scale-100 {
+  font-size: 100% !important;
+}
+
+html.font-scale-112,
+:root.font-scale-112 {
+  font-size: 112.5% !important;
+}
+
+html.font-scale-125,
+:root.font-scale-125 {
+  font-size: 125% !important;
+}
