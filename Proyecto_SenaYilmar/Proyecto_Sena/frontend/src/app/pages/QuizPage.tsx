@@ -5,12 +5,14 @@ import {
   Check,
   Clock,
   Mic,
+  MicOff,
   Square,
   Star,
   Trophy,
   Zap,
   X,
   Volume2,
+  VolumeX,
   Loader2,
   Sparkles,
   RefreshCw,
@@ -293,7 +295,7 @@ export function QuizPage() {
     if (timeLeft > 0 && answerState === "idle" && !isPaused) {
       const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && answerState === "idle" && !isPaused) {
+    } else if (timeLeft <= 0 && answerState === "idle" && !isPaused) {
       handleTimeout();
     }
   }, [hasStartedExam, timeLeft, answerState, isRecording, isUploadingAudio, isEvaluatingSpeaking, isPlayingAudio, speakingEvaluation]);

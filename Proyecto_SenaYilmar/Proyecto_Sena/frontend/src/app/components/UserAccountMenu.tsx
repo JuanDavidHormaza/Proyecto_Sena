@@ -43,7 +43,16 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
 
   // Multi-ficha: Obtener programas aprobados/activos sin duplicados
   const enrolledPrograms = useMemo(() => {
-    const list = user?.enrolledPrograms || [];
+    let list: string[] = user?.enrolledPrograms || [];
+    if (!list || list.length === 0) {
+      try {
+        const stored = localStorage.getItem("userEnrolledPrograms");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) list = parsed;
+        }
+      } catch {}
+    }
     return Array.from(new Set(list.filter(Boolean)));
   }, [user?.enrolledPrograms]);
 
@@ -71,6 +80,7 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
       updateUser(updatedUser);
       localStorage.setItem("userProgram", targetProg);
       localStorage.setItem("activeProgram", targetProg);
+      window.dispatchEvent(new Event("programChanged"));
       toast.success(`Ficha activa cambiada a: ${targetProg}`);
       setShowMenu(false);
       setShowFichaPicker(false);
@@ -195,16 +205,18 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
                 Mis diccionarios
               </button>
             )}
-            <button
-              onClick={() => {
-                setShowMenu(false);
-                setShowTicketModal(true);
-              }}
-              className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-sena-green font-medium cursor-pointer"
-            >
-              <LifeBuoy className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
-              Soporte y PQRS
-            </button>
+            {role !== "superadmin" && role !== "admin" && (
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  setShowTicketModal(true);
+                }}
+                className="w-full px-4 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm text-sena-green font-medium cursor-pointer"
+              >
+                <LifeBuoy className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
+                Soporte y PQRS
+              </button>
+            )}
             <div className="border-t border-border mt-2 pt-2">
               <button
                 onClick={handleLogout}

@@ -25,15 +25,20 @@ export type FontSizeLevel = 'normal' | 'large' | 'extra-large';
 // Niveles de fuente estrictos:
 export const setFontSizeLevel = (level: 'normal' | 'large' | 'extra-large') => {
   const root = document.documentElement;
+  // Limpiar propiedades residuales
+  document.body.style.zoom = '';
+  document.documentElement.style.zoom = '';
+  document.body.style.transform = '';
+
   switch (level) {
     case 'normal':
       root.style.fontSize = '16px';
       break;
     case 'large':
-      root.style.fontSize = '18px';
+      root.style.fontSize = '18.5px';
       break;
     case 'extra-large':
-      root.style.fontSize = '20px';
+      root.style.fontSize = '21px';
       break;
   }
 };
@@ -47,13 +52,13 @@ export function AccessibilityWidget() {
 
   // 1. Escala tipográfica real (Niveles estrictos: 'normal' | 'large' | 'extra-large')
   const [fontSizeLevel, setFontSizeLevelState] = useState<FontSizeLevel>(() => {
-    const saved = localStorage.getItem("worklex_font_level") as FontSizeLevel | null;
+    const saved = (localStorage.getItem("worklex_font_size") || localStorage.getItem("worklex_font_level")) as FontSizeLevel | null;
     if (saved && ["normal", "large", "extra-large"].includes(saved)) {
       return saved;
     }
-    const legacyScale = localStorage.getItem("worklex_font_scale");
-    if (legacyScale === "125") return "extra-large";
-    if (legacyScale === "112.5" || legacyScale === "112") return "large";
+    const legacy = localStorage.getItem("worklex_font_scale");
+    if (legacy === "125" || legacy === "130") return "extra-large";
+    if (legacy === "112.5" || legacy === "115" || legacy === "112") return "large";
     return "normal";
   });
 
@@ -74,6 +79,11 @@ export function AccessibilityWidget() {
 
   // Aplicar escala tipográfica real mediante font-size en documentElement (Sin zoom de ventana)
   useEffect(() => {
+    // Limpiar propiedades residuales al montar/actualizar
+    document.body.style.zoom = '';
+    document.documentElement.style.zoom = '';
+    document.body.style.transform = '';
+
     setFontSizeLevel(fontSizeLevel);
     document.documentElement.classList.remove(
       "font-level-normal",
@@ -90,8 +100,8 @@ export function AccessibilityWidget() {
     } else {
       document.documentElement.classList.add("font-level-normal", "font-scale-100");
     }
+    localStorage.setItem("worklex_font_size", fontSizeLevel);
     localStorage.setItem("worklex_font_level", fontSizeLevel);
-    localStorage.setItem("worklex_font_scale", fontSizeLevel === "normal" ? "100" : fontSizeLevel === "large" ? "112.5" : "125");
   }, [fontSizeLevel]);
 
   // Aplicar modo de contraste al elemento raíz
@@ -345,14 +355,14 @@ export function AccessibilityWidget() {
                       Escalado Tipográfico Real
                     </span>
                     <span className="text-xs font-bold text-sena-green bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
-                      {fontSizeLevel === "normal" ? "16px (Normal)" : fontSizeLevel === "large" ? "18px (Grande)" : "20px (Extra Grande)"}
+                      {fontSizeLevel === "normal" ? "16px (100%)" : fontSizeLevel === "large" ? "18.5px (115%)" : "21px (130%)"}
                     </span>
                   </div>
                   <p className="text-[11px] text-muted-foreground mb-3 leading-tight">
                     Incrementa la fuente proporcionalmente mediante unidades relativas (rem), sin escalar la ventana ni deformar botones o tarjetas.
                   </p>
 
-                  {/* Selector de Presets (Normal: 16px, Grande: 18px, Extra Grande: 20px) */}
+                  {/* Selector de Presets (Normal: 16px, Grande: 18.5px, Extra Grande: 21px) */}
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
@@ -362,10 +372,10 @@ export function AccessibilityWidget() {
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                       }`}
-                      title="Tamaño normal (16px base)"
+                      title="Tamaño normal (16px - 100%)"
                     >
                       <span className="text-xs font-bold">16px</span>
-                      <span className="text-[10px] text-muted-foreground">Normal</span>
+                      <span className="text-[10px] text-muted-foreground">Normal (100%)</span>
                     </button>
                     <button
                       type="button"
@@ -375,10 +385,10 @@ export function AccessibilityWidget() {
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                       }`}
-                      title="Tamaño grande (18px base)"
+                      title="Tamaño grande (18.5px - 115%)"
                     >
-                      <span className="text-xs font-bold">18px</span>
-                      <span className="text-[10px] text-muted-foreground">Grande</span>
+                      <span className="text-xs font-bold">18.5px</span>
+                      <span className="text-[10px] text-muted-foreground">Grande (115%)</span>
                     </button>
                     <button
                       type="button"
@@ -388,10 +398,10 @@ export function AccessibilityWidget() {
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                       }`}
-                      title="Tamaño extra grande (20px base)"
+                      title="Tamaño extra grande (21px - 130%)"
                     >
-                      <span className="text-xs font-bold">20px</span>
-                      <span className="text-[10px] text-muted-foreground">Extra</span>
+                      <span className="text-xs font-bold">21px</span>
+                      <span className="text-[10px] text-muted-foreground">Extra (130%)</span>
                     </button>
                   </div>
 

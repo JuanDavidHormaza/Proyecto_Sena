@@ -959,13 +959,37 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
 
 
   // Soporte Multiprograma SENA
+  const [activeProgramKey, setActiveProgramKey] = useState(0);
+
+  useEffect(() => {
+    const handleProgChanged = () => {
+      setActiveProgramKey((k) => k + 1);
+    };
+    window.addEventListener("programChanged", handleProgChanged);
+    window.addEventListener("storage", handleProgChanged);
+    return () => {
+      window.removeEventListener("programChanged", handleProgChanged);
+      window.removeEventListener("storage", handleProgChanged);
+    };
+  }, []);
+
   const enrolledPrograms = useMemo(() => {
-    if (user?.enrolledPrograms && user.enrolledPrograms.length > 0) {
-      return user.enrolledPrograms;
+    let list: string[] = user?.enrolledPrograms || [];
+    if (!list || list.length === 0) {
+      try {
+        const stored = localStorage.getItem("userEnrolledPrograms");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) list = parsed;
+        }
+      } catch {}
+    }
+    if (list.length > 0) {
+      return Array.from(new Set(list.filter(Boolean)));
     }
     const prog = user?.program || localStorage.getItem("userProgram") || "ADSO";
     return [prog];
-  }, [user]);
+  }, [user, activeProgramKey]);
 
   const activeProgram = user?.program || localStorage.getItem("userProgram") || enrolledPrograms[0] || "ADSO";
 
@@ -1144,7 +1168,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     };
 
     fetchResults();
-  }, [userId]);
+  }, [userId, activeProgram, activeProgramKey]);
 
   // Cargar términos del Diccionario Digital filtrado estrictamente por la ficha seleccionada
   useEffect(() => {
@@ -1242,13 +1266,16 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
 
   const stats = {
     testsCompleted: validFinishedTests.length > 0 ? validFinishedTests.length : (hasQuizResult && lastScore > 0 ? 1 : 0),
-    averageScore:
-      validFinishedTests.length > 0
-        ? Math.round(
-            validFinishedTests.reduce((sum: number, result: api.ApiTestResult) => sum + result.score, 0) /
-              validFinishedTests.length
-          )
-        : (hasQuizResult && lastScore > 0 ? displayScore : 0),
+    averageScore: (() => {
+      const val =
+        validFinishedTests.length > 0
+          ? Math.round(
+              validFinishedTests.reduce((sum: number, result: api.ApiTestResult) => sum + result.score, 0) /
+                validFinishedTests.length
+            )
+          : (hasQuizResult && lastScore > 0 ? displayScore : 0);
+      return Number.isFinite(val) ? Math.min(Math.max(val, 0), 100) : 0;
+    })(),
     currentLevel,
     currentStreak: 3, // Preservar indicador de racha activa
     quizDuration: displayDuration,
