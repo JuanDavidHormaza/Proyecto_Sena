@@ -48,6 +48,7 @@ function getProgramIcon(program: string) {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const reason = searchParams.get("reason");
   const isIdleTimeout = reason === "timeout" || reason === "idle_timeout";
   const { login, updateUser } = useAuth();
