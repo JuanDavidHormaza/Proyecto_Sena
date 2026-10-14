@@ -1,2 +1,89 @@
 @import './tailwind.css';
 @import './theme.css';
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOTOR DE ESCALADO TIPOGRÁFICO BASADO EN VARIABLES PURAS (--text-scale)
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --text-scale: 1;
+
+  /* Variables tipográficas estándar de Tailwind */
+  --text-xs: calc(0.75rem * var(--text-scale));
+  --text-sm: calc(0.875rem * var(--text-scale));
+  --text-base: calc(1rem * var(--text-scale));
+  --text-lg: calc(1.125rem * var(--text-scale));
+  --text-xl: calc(1.25rem * var(--text-scale));
+  --text-2xl: calc(1.5rem * var(--text-scale));
+  --text-3xl: calc(1.875rem * var(--text-scale));
+  --text-4xl: calc(2.25rem * var(--text-scale));
+  --text-5xl: calc(3rem * var(--text-scale));
+  --text-6xl: calc(3.75rem * var(--text-scale));
+}
+
+/* Escalado para utilidades tipográficas de Tailwind */
+.text-xs { font-size: calc(0.75rem * var(--text-scale)) !important; }
+.text-sm { font-size: calc(0.875rem * var(--text-scale)) !important; }
+.text-base { font-size: calc(1rem * var(--text-scale)) !important; }
+.text-lg { font-size: calc(1.125rem * var(--text-scale)) !important; }
+.text-xl { font-size: calc(1.25rem * var(--text-scale)) !important; }
+.text-2xl { font-size: calc(1.5rem * var(--text-scale)) !important; }
+.text-3xl { font-size: calc(1.875rem * var(--text-scale)) !important; }
+.text-4xl { font-size: calc(2.25rem * var(--text-scale)) !important; }
+.text-5xl { font-size: calc(3rem * var(--text-scale)) !important; }
+
+/* Aplicar el escalado estrictamente a etiquetas de texto */
+h1:not([class*="text-"]),
+h2:not([class*="text-"]),
+h3:not([class*="text-"]),
+h4:not([class*="text-"]),
+h5:not([class*="text-"]),
+h6:not([class*="text-"]),
+p:not([class*="text-"]),
+span:not(.no-scale):not([class*="text-"]):not([class*="icon"]):not(svg *),
+label:not([class*="text-"]),
+input::placeholder,
+textarea,
+.scale-text {
+  /* Escala de texto limpia y predecible */
+  font-size: calc(1em * var(--text-scale)) !important;
+}
+
+/* Evitar sobre-escalado recursivo en textos anidados */
+span span,
+p span,
+a span,
+button span,
+h1 span,
+h2 span,
+h3 span {
+  font-size: inherit !important;
+}
+
+/* Protecciones estrictas: NUNCA escalar logos, iconos ni el modal de accesibilidad */
+img,
+svg,
+.logo-container,
+.accessibility-panel,
+.accessibility-panel *,
+#accessibility-panel,
+#accessibility-panel * {
+  font-size: initial !important;
+  transform: none !important;
+  zoom: 1 !important;
+  max-width: none;
+}
+
+#accessibility-panel,
+#accessibility-panel *,
+.accessibility-panel,
+.accessibility-panel * {
+  font-size: 14px !important;
+  letter-spacing: normal !important;
+  line-height: normal !important;
+}
+
+#accessibility-panel svg,
+.accessibility-panel svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}

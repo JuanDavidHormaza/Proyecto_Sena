@@ -300,14 +300,6 @@ html, body {
   transform: none !important;
 }
 
-/* Escalado sutil, predecible y que respeta la cuadrícula */
-html[data-font-size="medium"] :where(p, span:not([class*="icon"]), h1, h2, h3, h4, h5, h6, a, button, label, input) {
-  font-size: 1.1em;
-}
-
-html[data-font-size="large"] :where(p, span:not([class*="icon"]), h1, h2, h3, h4, h5, h6, a, button, label, input) {
-  font-size: 1.22em;
-}
 
 /* Espaciado para Dislexia */
 html[data-dyslexia="true"] :where(p, span:not([class*="icon"]), h1, h2, h3, h4, h5, h6, a, button, label, input) {

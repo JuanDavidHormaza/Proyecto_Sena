@@ -19,22 +19,32 @@ import {
 export type FontSizeLevel = "normal" | "medium" | "large";
 export type ContrastMode = "normal" | "high-contrast" | "clean-reading";
 
-// Aplicar escala tipográfica estándar mediante atributo data-font-size en <html>
-export const applyGlobalFontScale = (level: FontSizeLevel) => {
-  // 1. Limpiar cualquier residuo de zoom o transformación en el DOM
+// Aplicar escalado tipográfico aislado mediante variable CSS --text-scale en el :root
+export const applyTextScale = (level: "normal" | "medium" | "large") => {
+  // 1. Restaurar Inmediatamente los Elementos Raíz (inmutables y sin zoom)
+  document.documentElement.style.fontSize = "";
   document.documentElement.style.zoom = "";
   document.body.style.zoom = "";
   document.body.style.transform = "";
 
-  // 2. Establecer atributo estándar data-font-size en <html>
-  document.documentElement.setAttribute("data-font-size", level);
-
-  // 3. Persistir en localStorage
+  const root = document.documentElement;
+  switch (level) {
+    case "normal":
+      root.style.setProperty("--text-scale", "1");
+      break;
+    case "medium":
+      root.style.setProperty("--text-scale", "1.14");
+      break;
+    case "large":
+      root.style.setProperty("--text-scale", "1.25");
+      break;
+  }
+  localStorage.setItem("worklex_text_scale", level);
   localStorage.setItem("worklex_accessibility_font", level);
-  localStorage.setItem("worklex_font_size", level);
 };
 
-export const setFontSizeLevel = applyGlobalFontScale;
+export const applyGlobalFontScale = applyTextScale;
+export const setFontSizeLevel = applyTextScale;
 
 export function AccessibilityWidget() {
   const [mounted, setMounted] = useState(false);
@@ -42,11 +52,10 @@ export function AccessibilityWidget() {
 
   // 1. Tamaño de fuente ('normal' | 'medium' | 'large')
   const [fontSize, setFontSize] = useState<FontSizeLevel>(() => {
-    const saved = localStorage.getItem("worklex_accessibility_font") || localStorage.getItem("worklex_font_size");
+    const saved = localStorage.getItem("worklex_text_scale") || localStorage.getItem("worklex_accessibility_font");
     if (saved === "large" || saved === "medium" || saved === "normal") {
       return saved as FontSizeLevel;
     }
-    if (saved === "extra-large") return "large";
     return "normal";
   });
 
@@ -159,7 +168,7 @@ export function AccessibilityWidget() {
   if (!mounted) return null;
 
   return createPortal(
-    <div id="accessibility-panel">
+    <div id="accessibility-panel" className="accessibility-panel">
       {/* Guía horizontal de lectura interactiva */}
       {readingGuide && (
         <div
@@ -175,7 +184,7 @@ export function AccessibilityWidget() {
         type="button"
         aria-label="Abrir panel de accesibilidad institucional"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-sena-green hover:bg-sena-green-dark text-white shadow-2xl flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-sena-green/30 cursor-pointer z-[99998] transition-transform active:scale-95"
+        className="accessibility-panel fixed bottom-6 right-6 w-14 h-14 rounded-full bg-sena-green hover:bg-sena-green-dark text-white shadow-2xl flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-sena-green/30 cursor-pointer z-[99998] transition-transform active:scale-95"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -190,13 +199,13 @@ export function AccessibilityWidget() {
       {/* Panel Flotante Aislado */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed bottom-24 right-6 z-[99999]">
+          <div className="accessibility-panel fixed bottom-24 right-6 z-[99999]">
             <motion.div
               initial={{ opacity: 0, y: 14, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 14, scale: 0.98 }}
               transition={{ duration: 0.18 }}
-              className="w-84 sm:w-92 bg-card text-card-foreground rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col"
+              className="accessibility-panel w-84 sm:w-92 bg-card text-card-foreground rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col"
               role="dialog"
               aria-modal="true"
               aria-label="Panel de accesibilidad universal Worklex SENA"

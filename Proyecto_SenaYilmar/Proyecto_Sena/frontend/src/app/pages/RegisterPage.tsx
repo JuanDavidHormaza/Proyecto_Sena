@@ -755,11 +755,12 @@ export function RegisterPage() {
             </span>
           </button>
 
-          <div className="flex items-center gap-3.5 mb-6">
+          <div className="flex items-center gap-3.5 mb-6 logo-container">
             <img
               src="/worklex.png"
               alt="WorkLex logo"
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              className="w-12 h-12 rounded-full object-contain border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              style={{ width: "48px", height: "48px", minWidth: "48px", minHeight: "48px" }}
             />
             <div>
               <h1 className="text-xl font-bold text-foreground">Registro de Aprendiz</h1>
@@ -1310,11 +1311,12 @@ export function RegisterPage() {
       >
         <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]" />
         <div className="relative z-10 text-white text-center max-w-sm">
-          <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="flex items-center justify-center gap-3 mb-6 logo-container">
             <img
               src="/worklex.png"
               alt="WorkLex SENA"
-              className="w-14 h-14 rounded-full object-cover border-2 border-white/40 shadow-lg drop-shadow-md"
+              className="w-14 h-14 rounded-full object-contain border-2 border-white/40 shadow-lg drop-shadow-md flex-shrink-0"
+              style={{ width: "56px", height: "56px", minWidth: "56px", minHeight: "56px" }}
             />
             <h3 className="text-3xl font-extrabold tracking-tight">WorkLex SENA</h3>
           </div>
