@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from "react-router";
 import {
   Users, Upload, FileText, Trash2, Plus, Search,
   BarChart3, BookOpen, Settings, X, Clock,
-  Check, Filter, Eye, ToggleLeft, ToggleRight,
+  Check, Filter, Eye, EyeOff, KeyRound, Copy, ToggleLeft, ToggleRight,
   FolderOpen, ZoomIn, Play, Pause, Music, Video,
   Volume2, Film, TrendingUp, PieChart, Activity, Calendar,
   Award, Target, Zap, ChevronUp, ChevronDown, RefreshCw,
@@ -24,7 +24,6 @@ import { questions } from "../data";
 import * as api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
-import { HeaderActionTools } from "../components/HeaderActionTools";
 import { toast } from "../components/Toast";
 import {
   AreaChart, Area, BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
@@ -506,8 +505,20 @@ export function AsignaturaCard({
 // Alias para compatibilidad de código existente
 const DocumentCard = VocabCard;
 
+export const SENA_OFFICIAL_PROGRAMS = [
+  "Análisis y Desarrollo de Software (ADSO)",
+  "Programación para Analítica de Datos",
+  "Mecánica Industrial",
+  "Redes y Telecomunicaciones",
+  "Producción Multimedia",
+  "Seguridad Informática",
+  "Automatización Industrial",
+  "Gestión Empresarial",
+  "Diseño Gráfico",
+];
+
 // ─── Tipos ───────────────────────────────────────────────────────────────────
-type TabType = "overview" | "requests" | "tickets" | "users" | "documents" | "subjects" | "analytics";
+type TabType = "overview" | "tickets" | "users" | "documents" | "subjects" | "analytics";
 type ExtendedDocument = Document & {
   objectUrl?: string;
   category?: FileCategory;
@@ -711,11 +722,10 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const isSuperAdmin = authUser?.role === "superadmin";
 
   const getInitialTab = (): TabType => {
-    if (initialTab) return initialTab;
-    if (location.pathname.includes("solicitudes")) return "requests";
+    if (initialTab && initialTab !== "requests") return initialTab;
     const params = new URLSearchParams(location.search);
     const tabParam = params.get("tab") as TabType;
-    if (tabParam && ["overview", "requests", "users", "documents", "subjects", "analytics"].includes(tabParam)) {
+    if (tabParam && ["overview", "tickets", "users", "documents", "subjects", "analytics"].includes(tabParam)) {
       return tabParam;
     }
     return "overview";
@@ -725,17 +735,15 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
   useEffect(() => {
     if (location.pathname.includes("solicitudes")) {
-      setActiveTab("requests");
-    } else if (initialTab) {
+      navigate("/admin", { replace: true });
+    } else if (initialTab && initialTab !== "requests") {
       setActiveTab(initialTab);
     }
-  }, [location.pathname, initialTab]);
+  }, [location.pathname, initialTab, navigate]);
 
   const handleTabChange = (tabId: TabType) => {
     setActiveTab(tabId);
-    if (tabId === "requests") {
-      navigate("/admin/solicitudes", { replace: true });
-    } else if (location.pathname.includes("solicitudes")) {
+    if (location.pathname.includes("solicitudes")) {
       navigate("/admin", { replace: true });
     }
   };
@@ -763,18 +771,13 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     };
   }, [showNotificationPopover]);
 
-  // Filtros y paginación para la vista dedicada de Bandeja de Solicitudes
-  const [requestSearchTerm, setRequestSearchTerm] = useState("");
-  const [requestStatusFilter, setRequestStatusFilter] = useState<"ALL" | "PENDIENTE" | "APROBADA" | "RECHAZADA">("ALL");
-  const [requestPage, setRequestPage] = useState(1);
-  const requestPageSize = 8;
+
   const [users, setUsers] = useState<User[]>([]);
   const [documents, setDocuments] = useState<ExtendedDocument[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [testResults, setTestResults] = useState<api.ApiTestResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
-  const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
+
 
   // Estados para Mesa de Ayuda (Tickets de Soporte / PQRS)
   const [supportTickets, setSupportTickets] = useState<api.ApiSupportTicket[]>([]);
@@ -797,48 +800,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const [showEditDataModal, setShowEditDataModal] = useState(false);
   const [editUserData, setEditUserData] = useState({ id: "", name: "", email: "", phone_num: "", role: "", program: "" });
 
-  // Modal para aprobar solicitud de ficha con asignación de instructor
-  const [approveModalRequest, setApproveModalRequest] = useState<api.ApiFichaRequest | null>(null);
-  const [selectedInstructorId, setSelectedInstructorId] = useState<string>("");
-  const [approvalNotes, setApprovalNotes] = useState<string>("");
 
-  const handleOpenApproveModal = (req: api.ApiFichaRequest) => {
-    setApproveModalRequest(req);
-    setSelectedInstructorId("");
-    setApprovalNotes("");
-  };
-
-  const handleConfirmApproveFichaRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!approveModalRequest) return;
-    setProcessingRequestId(approveModalRequest.request_id);
-    try {
-      await api.approveFichaRequest(approveModalRequest.request_id, selectedInstructorId || undefined, approvalNotes);
-      await loadDataFromApi();
-      setApproveModalRequest(null);
-      setSelectedInstructorId("");
-      setApprovalNotes("");
-      toast.success("Solicitud aprobada y ficha vinculada al aprendiz con éxito");
-    } catch (err: any) {
-      toast.error(err?.message || "Error al aprobar solicitud de ficha");
-    } finally {
-      setProcessingRequestId(null);
-    }
-  };
-
-  const handleRejectFichaRequest = async (requestId: number) => {
-    const notes = window.prompt("Ingresa la observación o motivo de rechazo (opcional):", "No se evidenció matrícula simultánea");
-    if (notes === null) return;
-    setProcessingRequestId(requestId);
-    try {
-      await api.rejectFichaRequest(requestId, notes);
-      await loadDataFromApi();
-    } catch (err: any) {
-      alert(err?.message || "Error al rechazar solicitud de ficha");
-    } finally {
-      setProcessingRequestId(null);
-    }
-  };
 
   const handleUpdateTicketStatus = async (ticketId: number) => {
     setIsUpdatingTicket(true);
@@ -871,8 +833,19 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const [filterCategory, setFilterCategory] = useState<"all" | FileCategory>("all");
 
   const [newUser, setNewUser] = useState({
-  first_name: "", last_name: "", email: "", password: "",
-  doc_type: "CC", doc_num: "", phone_num: "", role: "student", program: ""});  
+    name: "",
+    email: "",
+    password: "",
+    doc_type: "CC",
+    doc_num: "",
+    phone_num: "",
+    role: "student",
+    program: "Análisis y Desarrollo de Software (ADSO)",
+    ficha: "",
+  });
+  const [showPasswordInModal, setShowPasswordInModal] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [userModalError, setUserModalError] = useState("");  
   const [newSubject, setNewSubject] = useState({ name: "", description: "", color: "#39A900" });
   const [uploadForm, setUploadForm] = useState({
     file: null as File | null,
@@ -929,18 +902,14 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     setIsLoading(true);
     setApiError(null);
     try {
-      const [apiUsers, apiSubjects, apiDocs, apiResults, apiRequests, apiTickets] = await Promise.all([
+      const [apiUsers, apiSubjects, apiDocs, apiResults, apiTickets] = await Promise.all([
         api.getUsers(),
         api.getSubjects(),
         api.getDocuments(),
         api.getTestResults(),
-        api.getFichaRequests().catch(() => []),
         api.getSupportTickets().catch(() => []),
       ]);
 
-      if (Array.isArray(apiRequests)) {
-        setFichaRequests(apiRequests);
-      }
       if (Array.isArray(apiTickets)) {
         setSupportTickets(apiTickets);
       }
@@ -1089,34 +1058,115 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     }
   };
 
-  const handleAddUser = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    // 1. Registrar el usuario (siempre crea como APRENDIZ por defecto en backend)
-    const response = await api.register({
-      email: newUser.email,
-      password: newUser.password,
-      first_name: newUser.first_name,
-      last_name: newUser.last_name,
-      doc_type: newUser.doc_type,
-      doc_num: newUser.doc_num,
-      phone_num: newUser.phone_num ? parseInt(newUser.phone_num) : undefined,
-      program: newUser.role === 'teacher' || newUser.role === 'student' ? newUser.program : '',
-      role_id: ROLE_TO_BACKEND[newUser.role] || 'APRENDIZ',
-    });
+  const handleGeneratePassword = () => {
+    const charsUpper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const charsLower = "abcdefghijkmnpqrstuvwxyz";
+    const charsNum = "23456789";
+    const charsSpecial = "!@#$%*";
 
-    // 2. Si el rol deseado no es student, cambiarlo via API
-    if (newUser.role !== 'student' && response.user?.id) {
-      await api.changeUserRole(response.user.id, newUser.role);
+    let gen = "Sena" + new Date().getFullYear() + "!";
+    gen += charsUpper.charAt(Math.floor(Math.random() * charsUpper.length));
+    gen += charsLower.charAt(Math.floor(Math.random() * charsLower.length));
+    gen += charsNum.charAt(Math.floor(Math.random() * charsNum.length));
+    gen += charsSpecial.charAt(Math.floor(Math.random() * charsSpecial.length));
+
+    setNewUser((prev) => ({ ...prev, password: gen }));
+    setShowPasswordInModal(true);
+    toast.success("Contraseña temporal generada exitosamente", "Seguridad");
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUserModalError("");
+
+    if (!newUser.name.trim()) {
+      setUserModalError("El nombre completo es obligatorio.");
+      return;
+    }
+    if (!newUser.email.trim()) {
+      setUserModalError("El correo institucional es obligatorio.");
+      return;
+    }
+    if (!newUser.doc_num.trim()) {
+      setUserModalError("El número de documento es obligatorio.");
+      return;
+    }
+    if (!newUser.password || newUser.password.length < 6) {
+      setUserModalError("La contraseña temporal debe contener al menos 6 caracteres.");
+      return;
+    }
+    if (newUser.role === "student" && !newUser.ficha.trim()) {
+      setUserModalError("El número de ficha es obligatorio para aprendices.");
+      return;
     }
 
-    await loadDataFromApi();
-    setShowUserModal(false);
-    setNewUser({ first_name: "", last_name: "", email: "", password: "", doc_type: "CC", doc_num: "", phone_num: "", role: "student", program: "" });
-  } catch (err: any) {
-    setApiError(err?.message || "Error al crear usuario");
-  }
-};
+    setIsCreatingUser(true);
+    try {
+      const nameParts = newUser.name.trim().split(/\s+/);
+      const first_name = nameParts[0] || "Usuario";
+      const last_name = nameParts.slice(1).join(" ") || "SENA";
+
+      let fullProgram = newUser.program;
+      if (newUser.ficha.trim() && (newUser.role === "student" || newUser.role === "teacher")) {
+        fullProgram = `${newUser.program} - Ficha ${newUser.ficha.trim()}`;
+      }
+
+      const roleBackend = ROLE_TO_BACKEND[newUser.role] || "APRENDIZ";
+
+      // 1. Crear el usuario en backend mediante el endpoint administrativo
+      try {
+        await api.createUser({
+          email: newUser.email.trim().toLowerCase(),
+          password: newUser.password,
+          first_name,
+          last_name,
+          doc_type: newUser.doc_type,
+          doc_num: newUser.doc_num.trim(),
+          phone_num: newUser.phone_num ? parseInt(newUser.phone_num.replace(/\D/g, "")) : undefined,
+          program: (newUser.role === "teacher" || newUser.role === "student") ? fullProgram : "",
+          role_id: roleBackend,
+          role: newUser.role,
+          ficha: newUser.ficha.trim(),
+        } as any);
+      } catch (createErr: any) {
+        // Fallback a register si el endpoint administrativo no responde
+        const regRes = await api.register({
+          email: newUser.email.trim().toLowerCase(),
+          password: newUser.password,
+          first_name,
+          last_name,
+          doc_type: newUser.doc_type,
+          doc_num: newUser.doc_num.trim(),
+          phone_num: newUser.phone_num ? parseInt(newUser.phone_num.replace(/\D/g, "")) : undefined,
+          program: (newUser.role === "teacher" || newUser.role === "student") ? fullProgram : "",
+          role_id: roleBackend,
+        });
+        if (newUser.role !== "student" && regRes?.user?.id) {
+          await api.changeUserRole(regRes.user.id, newUser.role);
+        }
+      }
+
+      toast.success("Usuario creado exitosamente en el sistema.", "Registro Exitoso");
+      await loadDataFromApi();
+      setShowUserModal(false);
+      setNewUser({
+        name: "",
+        email: "",
+        password: "",
+        doc_type: "CC",
+        doc_num: "",
+        phone_num: "",
+        role: "student",
+        program: "Análisis y Desarrollo de Software (ADSO)",
+        ficha: "",
+      });
+    } catch (err: any) {
+      console.error("Error al registrar usuario:", err);
+      setUserModalError(err?.message || "No se pudo registrar el usuario. Verifica los datos.");
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
 
   const handleAddSubject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1384,11 +1434,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     { label: "Tasa de Aprobacion", value: `${approvalRate}%`, icon: Zap, color: "destructive", trend: `${passedTests}/${testResults.length}`, up: approvalRate >= 60 },
   ];
 
-  const pendingRequestsCount = fichaRequests.filter(r => r.status === "PENDIENTE").length;
 
   const tabs = [
     { id: "overview",   label: "Resumen",                 icon: BarChart3 },
-    { id: "requests",   label: "Bandeja de Aprobación",   icon: Inbox,      badge: pendingRequestsCount },
     { id: "tickets",    label: "Mesa de Ayuda",           icon: LifeBuoy,   badge: pendingTicketsCount },
     { id: "analytics",  label: "Estadísticas",            icon: PieChart  },
     { id: "users",      label: "Usuarios",                icon: Users     },
@@ -1471,13 +1519,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 type="button"
                 onClick={() => setShowNotificationPopover(prev => !prev)}
                 className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer"
-                title="Notificaciones de solicitudes de ficha"
+                title="Notificaciones de Mesa de Ayuda"
                 aria-label="Notificaciones"
               >
                 <Bell className="w-5 h-5" strokeWidth={1.8} />
-                {pendingRequestsCount > 0 && (
+                {pendingTicketsCount > 0 && (
                   <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-2 ring-white animate-pulse">
-                    {pendingRequestsCount}
+                    {pendingTicketsCount}
                   </span>
                 )}
               </button>
@@ -1532,7 +1580,6 @@ const handleSaveUserData = async (e: React.FormEvent) => {
           </div>
 
           <div className="flex items-center gap-3">
-            <HeaderActionTools />
             {/* Campana de Notificaciones en Desktop */}
             <div className="relative" ref={notificationRef}>
               <button
@@ -1543,13 +1590,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                     ? "bg-sena-green/10 text-sena-green border-sena-green/30"
                     : "bg-white border-border text-muted-foreground hover:text-foreground hover:bg-muted/60"
                 }`}
-                title="Notificaciones de solicitudes de ficha"
+                title="Notificaciones de tickets de soporte"
                 aria-label="Notificaciones"
               >
                 <Bell className="w-5 h-5" strokeWidth={1.8} />
-                {pendingRequestsCount > 0 && (
+                {pendingTicketsCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white ring-2 ring-white shadow-xs animate-pulse">
-                    {pendingRequestsCount}
+                    {pendingTicketsCount}
                   </span>
                 )}
               </button>
@@ -1566,48 +1613,48 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   >
                     <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Bell className="w-4 h-4 text-sena-blue" />
-                        <h4 className="font-bold text-sm text-foreground">Notificaciones del Sistema</h4>
+                        <LifeBuoy className="w-4 h-4 text-sena-blue" />
+                        <h4 className="font-bold text-sm text-foreground">Mesa de Ayuda - Soporte</h4>
                       </div>
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                        {pendingRequestsCount} {pendingRequestsCount === 1 ? "pendiente" : "pendientes"}
+                        {pendingTicketsCount} {pendingTicketsCount === 1 ? "abierto" : "abiertos"}
                       </span>
                     </div>
 
                     <div className="max-h-80 overflow-y-auto divide-y divide-border">
-                      {pendingRequestsCount === 0 ? (
+                      {pendingTicketsCount === 0 ? (
                         <div className="p-6 text-center text-muted-foreground space-y-2">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                          <p className="text-xs font-semibold text-foreground">No hay solicitudes de ficha pendientes.</p>
-                          <p className="text-[11px] text-muted-foreground">Todas las solicitudes han sido revisadas.</p>
+                          <p className="text-xs font-semibold text-foreground">No hay tickets de soporte abiertos.</p>
+                          <p className="text-[11px] text-muted-foreground">Todos los casos han sido atendidos.</p>
                         </div>
                       ) : (
-                        fichaRequests
-                          .filter(r => r.status === "PENDIENTE")
+                        supportTickets
+                          .filter(t => t.status === "ABIERTO")
                           .slice(0, 5)
-                          .map((req) => (
+                          .map((t) => (
                             <div
-                              key={req.request_id}
+                              key={t.ticket_id}
                               className="p-3.5 hover:bg-muted/40 transition-colors cursor-pointer group"
                               onClick={() => {
                                 setShowNotificationPopover(false);
-                                handleTabChange("requests");
+                                handleTabChange("tickets");
                               }}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div>
                                   <p className="font-bold text-xs text-foreground group-hover:text-sena-green transition-colors">
-                                    {req.learner_name}
+                                    {t.subject}
                                   </p>
-                                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    Solicita ficha <strong className="text-sena-blue font-bold">{req.ficha_code}</strong> ({req.program_name})
+                                  <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                                    {t.user_name} • {t.category}
                                   </p>
                                   <span className="text-[10px] text-slate-400 mt-1 block">
-                                    {new Date(req.created_at).toLocaleDateString("es-CO")}
+                                    {new Date(t.created_at).toLocaleDateString("es-CO")}
                                   </span>
                                 </div>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 flex-shrink-0">
-                                  Pendiente
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 flex-shrink-0">
+                                  {t.priority}
                                 </span>
                               </div>
                             </div>
@@ -1620,12 +1667,12 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         type="button"
                         onClick={() => {
                           setShowNotificationPopover(false);
-                          handleTabChange("requests");
+                          handleTabChange("tickets");
                         }}
                         className="w-full text-center py-2 px-3 rounded-xl bg-sena-green hover:bg-emerald-700 text-white font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                       >
-                        <Inbox className="w-4 h-4" />
-                        <span>Ver Bandeja de Solicitudes ({fichaRequests.length})</span>
+                        <LifeBuoy className="w-4 h-4" />
+                        <span>Ver Mesa de Ayuda ({supportTickets.length})</span>
                       </button>
                     </div>
                   </motion.div>
@@ -2011,293 +2058,6 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               )}
             </motion.div>
           )}
-
-          {/* ══ Bandeja Dedicada de Solicitudes de Ficha (Multiprograma SENA) ══ */}
-          {activeTab === "requests" && (() => {
-            const filteredFichaRequests = fichaRequests.filter((req) => {
-              const matchesStatus = requestStatusFilter === "ALL" || req.status === requestStatusFilter;
-              const term = requestSearchTerm.toLowerCase().trim();
-              if (!term) return matchesStatus;
-              const matchesSearch =
-                (req.learner_name || "").toLowerCase().includes(term) ||
-                (req.learner_email || "").toLowerCase().includes(term) ||
-                (req.ficha_code || "").toLowerCase().includes(term) ||
-                (req.program_name || "").toLowerCase().includes(term);
-              return matchesStatus && matchesSearch;
-            });
-
-            const totalRequestPages = Math.max(1, Math.ceil(filteredFichaRequests.length / requestPageSize));
-            const safeCurrentPage = Math.min(Math.max(1, requestPage), totalRequestPages);
-            const paginatedFichaRequests = filteredFichaRequests.slice(
-              (safeCurrentPage - 1) * requestPageSize,
-              safeCurrentPage * requestPageSize
-            );
-
-            return (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                {/* Encabezado Principal */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
-                      <Inbox className="w-6 h-6" strokeWidth={1.8} />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-foreground tracking-tight">
-                        Bandeja de Solicitudes de Ficha
-                      </h2>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Validación, aprobación y asignación de instructor para aprendices con matrícula simultánea a programa alterno (Multiprograma SENA)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => loadDataFromApi()}
-                      className="p-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
-                      title="Actualizar bandeja de solicitudes"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                      <span>Actualizar</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* KPIs de Solicitudes */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pendientes</span>
-                      <h4 className="text-2xl font-extrabold text-amber-600 mt-1">
-                        {fichaRequests.filter(r => r.status === "PENDIENTE").length}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Por validar</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Aprobadas</span>
-                      <h4 className="text-2xl font-extrabold text-emerald-600 mt-1">
-                        {fichaRequests.filter(r => r.status === "APROBADA").length}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Fichas vinculadas</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rechazadas</span>
-                      <h4 className="text-2xl font-extrabold text-rose-600 mt-1">
-                        {fichaRequests.filter(r => r.status === "RECHAZADA").length}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Sin matrícula</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-                      <X className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-5 rounded-2xl border border-border shadow-xs flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Solicitudes</span>
-                      <h4 className="text-2xl font-extrabold text-foreground mt-1">
-                        {fichaRequests.length}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Histórico general</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-sena-blue/10 text-sena-blue flex items-center justify-center font-bold">
-                      <GraduationCap className="w-5 h-5" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Filtros y Búsqueda */}
-                <div className="bg-white rounded-2xl border border-border p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="relative w-full sm:w-80">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={requestSearchTerm}
-                      onChange={(e) => {
-                        setRequestSearchTerm(e.target.value);
-                        setRequestPage(1);
-                      }}
-                      placeholder="Buscar aprendiz, email o código de ficha..."
-                      className="w-full pl-9 pr-4 py-2 border border-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-sena-green focus:border-transparent bg-background"
-                    />
-                    {requestSearchTerm && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRequestSearchTerm("");
-                          setRequestPage(1);
-                        }}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-                    {(["ALL", "PENDIENTE", "APROBADA", "RECHAZADA"] as const).map((st) => {
-                      const count = st === "ALL" ? fichaRequests.length : fichaRequests.filter(r => r.status === st).length;
-                      const labels: Record<string, string> = {
-                        ALL: "Todas",
-                        PENDIENTE: "Pendientes",
-                        APROBADA: "Aprobadas",
-                        RECHAZADA: "Rechazadas",
-                      };
-                      const isActive = requestStatusFilter === st;
-                      return (
-                        <button
-                          key={st}
-                          type="button"
-                          onClick={() => {
-                            setRequestStatusFilter(st);
-                            setRequestPage(1);
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                            isActive
-                              ? "bg-sena-green text-white shadow-xs"
-                              : "bg-muted text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <span>{labels[st]}</span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
-                            {count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Tabla de Solicitudes */}
-                <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-                  {filteredFichaRequests.length === 0 ? (
-                    <div className="py-16 text-center text-muted-foreground space-y-2">
-                      <Inbox className="w-10 h-10 mx-auto text-slate-300" strokeWidth={1.5} />
-                      <p className="text-sm font-semibold">No se encontraron solicitudes con los filtros aplicados</p>
-                      <p className="text-xs text-muted-foreground">Prueba modificando los términos de búsqueda o el estado seleccionado.</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
-                            <th className="py-3.5 px-4">Aprendiz</th>
-                            <th className="py-3.5 px-4">Programa Actual</th>
-                            <th className="py-3.5 px-4">Ficha Solicitada</th>
-                            <th className="py-3.5 px-4">Fecha Solicitud</th>
-                            <th className="py-3.5 px-4">Estado</th>
-                            <th className="py-3.5 px-4 text-right">Instructor Responsable / Auditoría</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border text-xs">
-                          {paginatedFichaRequests.map((req) => (
-                            <tr key={req.request_id} className="hover:bg-muted/30 transition-colors">
-                              <td className="py-3.5 px-4 min-w-0 max-w-[240px]">
-                                <p className="font-bold text-foreground text-sm truncate" title={req.learner_name}>{req.learner_name}</p>
-                                <p className="text-muted-foreground text-xs truncate" title={req.learner_email}>{req.learner_email}</p>
-                              </td>
-                              <td className="py-3.5 px-4 text-muted-foreground font-medium">
-                                {req.current_program || "Sin programa principal"}
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className="font-bold text-sena-blue text-xs">{req.ficha_code}</span>
-                                <p className="text-xs text-muted-foreground truncate max-w-xs">{req.program_name}</p>
-                              </td>
-                              <td className="py-3.5 px-4 text-muted-foreground">
-                                {new Date(req.created_at).toLocaleDateString("es-CO", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${
-                                    req.status === "APROBADA"
-                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                      : req.status === "RECHAZADA"
-                                      ? "bg-rose-50 text-rose-700 border-rose-200"
-                                      : "bg-amber-50 text-amber-700 border-amber-200"
-                                  }`}
-                                >
-                                  {req.status === "APROBADA"
-                                    ? "Aprobada"
-                                    : req.status === "RECHAZADA"
-                                    ? "Rechazada"
-                                    : "Pendiente"}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4 text-right">
-                                {req.status === "PENDIENTE" ? (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
-                                    <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                    <span>Gestión del Instructor: {req.assigned_instructor_name || "Docente de Ficha"}</span>
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground font-medium">
-                                    {req.reviewed_by_name ? `Procesada por instructor: ${req.reviewed_by_name}` : `Instructor: ${req.assigned_instructor_name || "Docente"}`}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Controles de Paginación */}
-                    {totalRequestPages > 1 && (
-                      <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-border bg-muted/20 gap-3">
-                        <p className="text-xs text-muted-foreground">
-                          Mostrando <span className="font-semibold text-foreground">{(safeCurrentPage - 1) * requestPageSize + 1}</span> a{" "}
-                          <span className="font-semibold text-foreground">{Math.min(safeCurrentPage * requestPageSize, filteredFichaRequests.length)}</span> de{" "}
-                          <span className="font-semibold text-foreground">{filteredFichaRequests.length}</span> solicitudes
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={safeCurrentPage <= 1}
-                            onClick={() => setRequestPage((p) => Math.max(1, p - 1))}
-                            className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                            title="Página anterior"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <span className="text-xs font-semibold px-2 text-foreground">
-                            Página {safeCurrentPage} de {totalRequestPages}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={safeCurrentPage >= totalRequestPages}
-                            onClick={() => setRequestPage((p) => Math.min(totalRequestPages, p + 1))}
-                            className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                            title="Página siguiente"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-                </div>
-              </motion.div>
-            );
-          })()}
 
           {/* ══ Mesa de Ayuda: Soporte y PQRS (Tickets) ══ */}
           {activeTab === "tickets" && (() => {
@@ -3155,75 +2915,252 @@ const handleSaveUserData = async (e: React.FormEvent) => {
           )}
         </div>
       </main>
-
-      {/* ══ Modal: Agregar Usuario ══ */}
+      {/* ══ Modal Institucional: Crear Usuario ══ */}
       <AnimatePresence>
         {showUserModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-foreground">Agregar Usuario</h3>
-                <button onClick={() => setShowUserModal(false)} className="p-2 hover:bg-muted rounded-lg transition-colors"><X className="w-5 h-5" strokeWidth={1.8} /></button>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 sm:p-7 w-full max-w-lg shadow-2xl border border-border my-8"
+            >
+              {/* Encabezado */}
+              <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-sena-green/10 text-sena-green flex items-center justify-center font-bold shadow-xs">
+                    <Users className="w-5 h-5" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">Crear Nuevo Usuario</h3>
+                    <p className="text-xs text-muted-foreground">Registro institucional en la plataforma WorkLex SENA</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserModal(false);
+                    setUserModalError("");
+                  }}
+                  className="p-2 hover:bg-muted rounded-xl transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-5 h-5" strokeWidth={1.8} />
+                </button>
               </div>
+
+              {/* Banner de Error */}
+              {userModalError && (
+                <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-500" />
+                  <span className="font-medium">{userModalError}</span>
+                </div>
+              )}
+
               <form onSubmit={handleAddUser} className="space-y-4">
-  <div className="grid grid-cols-2 gap-4">
-    <div><label className="block text-sm font-medium text-foreground mb-1.5">Nombre</label>
-      <input type="text" maxLength={45} value={newUser.first_name} onChange={e => setNewUser({ ...newUser, first_name: e.target.value })} required
-        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
-    <div><label className="block text-sm font-medium text-foreground mb-1.5">Apellido</label>
-      <input type="text" maxLength={45} value={newUser.last_name} onChange={e => setNewUser({ ...newUser, last_name: e.target.value })} required
-        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
-  </div>
-  <div><label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
-    <input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} required
-      className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
-  <div><label className="block text-sm font-medium text-foreground mb-1.5">Contraseña</label>
-    <input type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} required minLength={6}
-      className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
-  <div className="grid grid-cols-2 gap-4">
-    <div><label className="block text-sm font-medium text-foreground mb-1.5">Tipo Doc</label>
-      <select value={newUser.doc_type} onChange={e => setNewUser({ ...newUser, doc_type: e.target.value })}
-        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50">
-        <option value="CC">Cédula</option>
-        <option value="CE">Cédula Ext.</option>
-        <option value="TI">Tarjeta Identidad</option>
-        <option value="PS">Pasaporte</option>
-      </select></div>
-    <div><label className="block text-sm font-medium text-foreground mb-1.5">Número Doc</label>
-      <input type="text" value={newUser.doc_num} onChange={e => setNewUser({ ...newUser, doc_num: e.target.value })} required
-        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
-  </div>
-  <div className="grid grid-cols-2 gap-4">
-    <div><label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
-      <input type="text" value={newUser.phone_num} onChange={e => setNewUser({ ...newUser, phone_num: e.target.value })}
-        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50" /></div>
-    <div><label className="block text-sm font-medium text-foreground mb-1.5">Rol</label>
-      <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value, program: "" })}
-        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50">
-        <option value="student">Aprendiz</option>
-        <option value="teacher">Instructor</option>
-        <option value="admin">Administrador</option>
-      </select></div>
-  </div>
-  {(newUser.role === "teacher" || newUser.role === "student") && (
-    <div>
-      <label className="block text-sm font-medium text-foreground mb-1.5">Programa SENA</label>
-      <select
-        value={newUser.program}
-        onChange={e => setNewUser({ ...newUser, program: e.target.value })}
-        required
-        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
-      >
-        <option value="">Seleccionar programa</option>
-        {senaPrograms.map(p => <option key={p} value={p}>{p}</option>)}
-      </select>
-    </div>
-  )}
-  <div className="flex gap-3 pt-4">
-    <button type="submit" className="flex-1 bg-sena-green text-white py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium">Crear Usuario</button>
-    <button type="button" onClick={() => setShowUserModal(false)} className="flex-1 bg-muted text-muted-foreground py-2.5 rounded-xl font-medium">Cancelar</button>
-  </div>
-</form>
+                {/* Nombre Completo */}
+                <div>
+                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                    Nombre Completo <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newUser.name}
+                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                    placeholder="Ej. Juan Carlos Rodríguez"
+                    className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                  />
+                </div>
+
+                {/* Correo Electrónico Institucional */}
+                <div>
+                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                    Correo Electrónico Institucional <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    placeholder="Ej. jcrodriguez@soy.sena.edu.co o @sena.edu.co"
+                    className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                  />
+                </div>
+
+                {/* Tipo de Documento y Número */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                      Tipo de Documento <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={newUser.doc_type}
+                      onChange={(e) => setNewUser({ ...newUser, doc_type: e.target.value })}
+                      className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                    >
+                      <option value="CC">Cédula de Ciudadanía (CC)</option>
+                      <option value="TI">Tarjeta de Identidad (TI)</option>
+                      <option value="CE">Cédula de Extranjería (CE)</option>
+                      <option value="PS">Pasaporte (PS)</option>
+                      <option value="OT">Otro Documento (OT)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                      Número de Documento <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newUser.doc_num}
+                      onChange={(e) => setNewUser({ ...newUser, doc_num: e.target.value.replace(/\D/g, "") })}
+                      placeholder="Ej. 1098765432"
+                      className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Teléfono y Rol */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                      Teléfono Móvil
+                    </label>
+                    <input
+                      type="tel"
+                      value={newUser.phone_num}
+                      onChange={(e) => setNewUser({ ...newUser, phone_num: e.target.value })}
+                      placeholder="Ej. 3001234567"
+                      className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                      Rol Asignado <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                      className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white font-semibold"
+                    >
+                      <option value="student">Aprendiz</option>
+                      <option value="teacher">Instructor</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Programa SENA y Ficha (si aprendiz o instructor) */}
+                {(newUser.role === "student" || newUser.role === "teacher") && (
+                  <div className="bg-muted/30 p-3.5 rounded-xl border border-border space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                        Programa de Formación <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={newUser.program}
+                        onChange={(e) => setNewUser({ ...newUser, program: e.target.value })}
+                        required
+                        className="w-full px-3.5 py-2 text-xs border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                      >
+                        {SENA_OFFICIAL_PROGRAMS.map((prog) => (
+                          <option key={prog} value={prog}>
+                            {prog}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
+                        Número de Ficha {newUser.role === "student" && <span className="text-rose-500">*</span>}
+                      </label>
+                      <input
+                        type="text"
+                        required={newUser.role === "student"}
+                        value={newUser.ficha}
+                        onChange={(e) => setNewUser({ ...newUser, ficha: e.target.value.replace(/\D/g, "") })}
+                        placeholder="Ej. 2711894"
+                        className="w-full px-3.5 py-2 text-xs border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Código numérico único del grupo o ficha de formación SENA.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contraseña Temporal y Generador */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+                      Contraseña Temporal <span className="text-rose-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleGeneratePassword}
+                      className="text-xs font-bold text-sena-green hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Generar Contraseña Segura</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPasswordInModal ? "text" : "password"}
+                      required
+                      minLength={6}
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                      placeholder="Mínimo 6 caracteres"
+                      className="w-full pl-3.5 pr-10 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordInModal((prev) => !prev)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 cursor-pointer"
+                      title={showPasswordInModal ? "Ocultar contraseña" : "Ver contraseña"}
+                    >
+                      {showPasswordInModal ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    El usuario podrá actualizar su contraseña tras iniciar sesión en la plataforma.
+                  </p>
+                </div>
+
+                {/* Botones de Acción */}
+                <div className="flex gap-3 pt-3 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserModal(false);
+                      setUserModalError("");
+                    }}
+                    disabled={isCreatingUser}
+                    className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingUser}
+                    className="flex-1 bg-sena-green hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isCreatingUser ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Creando Usuario...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        <span>Crear Usuario</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
@@ -3349,120 +3286,6 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     </div>
   )}
 </AnimatePresence>
-
-      {/* ══ Modal: Aprobar Vinculación y Asignar Instructor ══ */}
-      <AnimatePresence>
-        {approveModalRequest && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl border border-border"
-            >
-              <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-sena-green/10 text-sena-green flex items-center justify-center">
-                    <GraduationCap className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground">Aprobar Solicitud de Ficha</h3>
-                    <p className="text-xs text-muted-foreground">Confirmación de vinculación y asignación de instructor</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setApproveModalRequest(null)}
-                  className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" strokeWidth={1.8} />
-                </button>
-              </div>
-
-              <div className="bg-muted/40 rounded-xl p-4 mb-4 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground font-medium">Aprendiz:</span>
-                  <span className="font-bold text-foreground">{approveModalRequest.learner_name} ({approveModalRequest.learner_email})</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground font-medium">Ficha a vincular:</span>
-                  <span className="font-bold text-sena-blue">{approveModalRequest.ficha_code}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground font-medium">Programa de Formación:</span>
-                  <span className="font-semibold text-foreground text-right">{approveModalRequest.program_name}</span>
-                </div>
-              </div>
-
-              <form onSubmit={handleConfirmApproveFichaRequest} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
-                    Instructor Asignado a la Ficha
-                  </label>
-                  <select
-                    value={selectedInstructorId}
-                    onChange={(e) => setSelectedInstructorId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white"
-                  >
-                    <option value="">-- Sin instructor específico asignado --</option>
-                    {users
-                      .filter((u) => u.role === "teacher")
-                      .map((instructor) => (
-                        <option key={instructor.id} value={instructor.id}>
-                          {instructor.name} — {instructor.email} {instructor.program ? `(${instructor.program})` : ""}
-                        </option>
-                      ))}
-                  </select>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Selecciona el instructor que acompañará pedagógicamente esta ficha y evaluará al aprendiz.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
-                    Observaciones o Notas de Aprobación (Opcional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={approvalNotes}
-                    onChange={(e) => setApprovalNotes(e.target.value)}
-                    placeholder="Ej. Matrícula y ficha validadas satisfactoriamente en SofiaPlus."
-                    className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 resize-none"
-                  />
-                </div>
-
-                <div className="pt-2 flex items-center justify-end gap-3 border-t border-border">
-                  <button
-                    type="button"
-                    onClick={() => setApproveModalRequest(null)}
-                    disabled={processingRequestId !== null}
-                    className="px-4 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={processingRequestId !== null}
-                    className="px-5 py-2 text-xs font-semibold rounded-xl bg-sena-green hover:bg-emerald-700 text-white transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {processingRequestId ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Aprobando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Confirmar Aprobación</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* ══ Modal: Nueva Competencia Lingüística ══ */}
       <AnimatePresence>

@@ -806,6 +806,70 @@ class RegisterVerifyOTPAPIView(APIView):
 class UserViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
+    def create(self, request):
+        if getattr(request.user, 'role_id', None) not in {'ADMIN', 'SUPERADMIN'}:
+            return Response({'error': 'Solo los administradores pueden crear usuarios directamente.'}, status=status.HTTP_403_FORBIDDEN)
+
+        email = request.data.get('email', '').strip().lower()
+        password = str(request.data.get('password', '')).strip()
+        first_name = (request.data.get('first_name') or request.data.get('firstName') or '').strip()
+        last_name = (request.data.get('last_name') or request.data.get('lastName') or '').strip()
+
+        if not first_name and request.data.get('name'):
+            parts = request.data['name'].strip().split(' ', 1)
+            first_name = parts[0]
+            last_name = parts[1] if len(parts) > 1 else 'SENA'
+
+        doc_type = request.data.get('doc_type') or request.data.get('docType') or 'CC'
+        doc_num = str(request.data.get('doc_num') or request.data.get('docNum') or '').strip()
+        phone_num = request.data.get('phone_num') or request.data.get('phoneNum')
+        raw_role = (request.data.get('role') or request.data.get('role_id') or 'student').lower()
+        program = request.data.get('program') or ''
+        ficha = str(request.data.get('ficha') or request.data.get('ficha_code') or '').strip()
+
+        if not email:
+            return Response({'error': 'El correo electrónico es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not doc_num:
+            return Response({'error': 'El número de documento es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not password:
+            return Response({'error': 'La contraseña temporal es obligatoria.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        role_map = {
+            'student': 'APRENDIZ',
+            'aprendiz': 'APRENDIZ',
+            'teacher': 'INSTRUCTOR',
+            'instructor': 'INSTRUCTOR',
+            'admin': 'ADMIN',
+            'administrador': 'ADMIN',
+            'superadmin': 'SUPERADMIN',
+        }
+        role_id = role_map.get(raw_role, 'APRENDIZ')
+
+        full_program = program
+        if ficha and program:
+            if ficha not in program:
+                full_program = f"{program} - Ficha {ficha}"
+        elif ficha and not program:
+            full_program = f"Ficha {ficha}"
+
+        reg_data = {
+            'email': email,
+            'password': password,
+            'first_name': first_name or 'Usuario',
+            'last_name': last_name or 'SENA',
+            'doc_type': doc_type,
+            'doc_num': doc_num,
+            'phone_num': int(phone_num) if phone_num and str(phone_num).isdigit() else None,
+            'country': request.data.get('country', 'Colombia'),
+            'role_id': role_id,
+            'program': full_program,
+        }
+
+        data, error = AuthController.register(reg_data)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data.get('user', data), status=status.HTTP_201_CREATED)
+
     def partial_update(self, request, pk=None):
         user, error = UserController.get_by_id(pk)
         if error:

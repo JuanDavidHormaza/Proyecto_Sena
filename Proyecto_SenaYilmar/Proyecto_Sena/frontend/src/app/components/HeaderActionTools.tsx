@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LifeBuoy } from "lucide-react";
 import { SupportTicketModal } from "./SupportTicketModal";
+import { useAuth } from "../context/AuthContext";
 
 interface HeaderActionToolsProps {
   className?: string;
@@ -9,6 +10,15 @@ interface HeaderActionToolsProps {
 
 export function HeaderActionTools({ className = "", onTicketCreated }: HeaderActionToolsProps) {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const { user } = useAuth();
+
+  const role = (user?.role || localStorage.getItem("userRole") || "").toLowerCase();
+  const isAdminOrSuperAdmin = role === "admin" || role === "superadmin";
+
+  // El botón superior Soporte / PQRS solo debe existir para Aprendices e Instructores
+  if (isAdminOrSuperAdmin) {
+    return null;
+  }
 
   return (
     <>

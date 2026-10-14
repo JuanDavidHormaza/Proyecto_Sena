@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Accessibility,
@@ -13,6 +13,11 @@ import {
   X,
   BookOpen,
   Sparkles,
+  Volume2,
+  VolumeX,
+  Pause,
+  Play,
+  Square,
 } from "lucide-react";
 
 type ContrastMode = "default" | "high-contrast" | "clean-reading";
@@ -34,15 +39,22 @@ export function AccessibilityWidget() {
     return (saved as ContrastMode) || "default";
   });
 
+  // 3. Lector de Pantalla TalkBack (Web Speech API)
+  const [talkBackEnabled, setTalkBackEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("worklex_talkback") === "true";
+  });
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const talkBackRef = useRef(talkBackEnabled);
+  talkBackRef.current = talkBackEnabled;
+
   // Aplicar escala tipográfica real mediante clases y font-size relativo al documentElement (Sin zoom de ventana)
   useEffect(() => {
-    // Garantizar ausencia total de style.zoom o transform: scale en el body o root
-    if (document.body.style.zoom) {
-      document.body.style.zoom = "";
-    }
-    if ((document.body.style as any).transform) {
-      (document.body.style as any).transform = "";
-    }
+    // Prohibición absoluta de style.zoom o transform: scale
+    if (document.body.style.zoom) document.body.style.zoom = "";
+    if (document.documentElement.style.zoom) document.documentElement.style.zoom = "";
+    (document.body.style as any).transform = "";
+    (document.documentElement.style as any).transform = "";
 
     document.documentElement.classList.remove("font-scale-100", "font-scale-112", "font-scale-125");
     if (fontScale === 112.5 || fontScale === 112) {
@@ -69,6 +81,149 @@ export function AccessibilityWidget() {
     localStorage.setItem("worklex_contrast_mode", contrastMode);
   }, [contrastMode]);
 
+  // Controladores de audio TTS
+  const cancelSpeech = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setIsPaused(false);
+    }
+  };
+
+  const pauseSpeech = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+      }
+    }
+  };
+
+  const resumeSpeech = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+      }
+    }
+  };
+
+  const speakText = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const clean = text.replace(/\s+/g, " ").trim();
+    if (!clean || clean.length < 2) return;
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(clean);
+    const voices = window.speechSynthesis.getVoices();
+    const esVoice =
+      voices.find((v) => v.lang.toLowerCase().startsWith("es-co")) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("es-es")) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("es-419")) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("es"));
+
+    if (esVoice) utterance.voice = esVoice;
+    utterance.lang = esVoice ? esVoice.lang : "es-CO";
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Efecto global para TalkBack / Lector de pantalla al enfocar o pasar el cursor
+  useEffect(() => {
+    localStorage.setItem("worklex_talkback", String(talkBackEnabled));
+    if (!talkBackEnabled) {
+      cancelSpeech();
+      return;
+    }
+
+    let hoverTimeout: any = null;
+    let lastSpokenText = "";
+    let lastSpokenTime = 0;
+
+    const extractElementText = (el: HTMLElement): string => {
+      if (el.closest(".talkback-ignore")) return "";
+
+      const ariaLabel = el.getAttribute("aria-label");
+      if (ariaLabel) return ariaLabel;
+
+      const title = el.getAttribute("title");
+      if (title) return title;
+
+      const alt = el.getAttribute("alt");
+      if (alt) return alt;
+
+      if (el instanceof HTMLInputElement) {
+        if (el.placeholder && !el.value) return `Campo de entrada: ${el.placeholder}`;
+        if (el.value) return `Valor ingresado: ${el.value}`;
+        return "Campo de entrada";
+      }
+
+      if (el instanceof HTMLSelectElement) {
+        const selText = el.options[el.selectedIndex]?.text || "";
+        return `Menú desplegable: ${selText}`;
+      }
+
+      const semantic = el.closest<HTMLElement>(
+        "h1, h2, h3, h4, h5, h6, p, button, a, label, li, th, td, [role='button'], [role='option'], [data-tts]"
+      ) || el;
+      const text = (semantic.innerText || semantic.textContent || "").trim();
+      if (text.length > 0 && text.length <= 400) {
+        return text;
+      }
+      return text.slice(0, 300);
+    };
+
+    const handleFocusIn = (e: FocusEvent) => {
+      if (!talkBackRef.current) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const text = extractElementText(target);
+      if (text) speakText(text);
+    };
+
+    const handleMouseOver = (e: MouseEvent) => {
+      if (!talkBackRef.current) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      hoverTimeout = setTimeout(() => {
+        const text = extractElementText(target);
+        if (!text) return;
+        const now = Date.now();
+        if (text === lastSpokenText && now - lastSpokenTime < 1800) return;
+        lastSpokenText = text;
+        lastSpokenTime = now;
+        speakText(text);
+      }, 160);
+    };
+
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("mouseover", handleMouseOver);
+
+    return () => {
+      if (hoverTimeout) clearTimeout(hoverTimeout);
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("mouseover", handleMouseOver);
+      cancelSpeech();
+    };
+  }, [talkBackEnabled]);
+
   const handleIncreaseFont = () => {
     setFontScale((prev) => {
       if (prev <= 100) return 112.5;
@@ -88,6 +243,8 @@ export function AccessibilityWidget() {
   const handleReset = () => {
     setFontScale(100);
     setContrastMode("default");
+    setTalkBackEnabled(false);
+    cancelSpeech();
   };
 
   useEffect(() => {
@@ -289,6 +446,99 @@ export function AccessibilityWidget() {
                       <span className="text-[11px] font-bold">Lectura Limpia</span>
                     </button>
                   </div>
+                </div>
+
+                {/* 3. Lector de Pantalla / TalkBack (Web Speech API) */}
+                <div className="pt-4 border-t border-border talkback-ignore">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Volume2 className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
+                      <span className="text-xs font-bold text-foreground">
+                        Lector de Pantalla / TalkBack
+                      </span>
+                    </div>
+                    {/* Switch Toggle */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={talkBackEnabled}
+                      onClick={() => {
+                        const next = !talkBackEnabled;
+                        setTalkBackEnabled(next);
+                        if (!next) cancelSpeech();
+                      }}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-sena-green/50 ${
+                        talkBackEnabled ? "bg-sena-green" : "bg-muted-foreground/30"
+                      }`}
+                      title={talkBackEnabled ? "Desactivar TalkBack" : "Activar TalkBack"}
+                    >
+                      <span
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-xs ${
+                          talkBackEnabled ? "translate-x-4.5" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mb-2.5 leading-tight">
+                    Sintetiza la voz en español al pasar el cursor (hover) o enfocar títulos, preguntas y botones.
+                  </p>
+
+                  {talkBackEnabled && (
+                    <div className="p-3 rounded-2xl bg-muted/40 border border-border space-y-2.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-foreground flex items-center gap-1.5">
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              isSpeaking ? "bg-emerald-500 animate-ping" : isPaused ? "bg-amber-500" : "bg-emerald-500"
+                            }`}
+                          />
+                          {isSpeaking
+                            ? "Leyendo en voz alta..."
+                            : isPaused
+                            ? "Lectura en pausa"
+                            : "Listo (pasa el cursor o selecciona)"}
+                        </span>
+                        <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                          es-CO
+                        </span>
+                      </div>
+
+                      {/* Botones de acción rápida: Pausar/Reanudar y Detener */}
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        {isPaused ? (
+                          <button
+                            type="button"
+                            onClick={resumeSpeech}
+                            className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[11px] font-bold transition-colors cursor-pointer"
+                            title="Reanudar lectura de voz"
+                          >
+                            <Play className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>Reanudar</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={pauseSpeech}
+                            disabled={!isSpeaking}
+                            className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-white hover:bg-muted border border-border text-foreground text-[11px] font-semibold disabled:opacity-40 transition-colors cursor-pointer"
+                            title="Pausar lectura actual"
+                          >
+                            <Pause className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span>Pausar</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={cancelSpeech}
+                          className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-bold transition-colors cursor-pointer"
+                          title="Detener lectura inmediatamente"
+                        >
+                          <Square className="w-3 h-3 text-rose-600" />
+                          <span>Detener</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
