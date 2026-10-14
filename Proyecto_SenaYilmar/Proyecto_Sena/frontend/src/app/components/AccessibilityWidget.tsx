@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Accessibility,
   Type,
-  ZoomIn,
-  ZoomOut,
+  AArrowDown,
+  AArrowUp,
   RotateCcw,
   Sun,
   Eye,
@@ -20,6 +20,24 @@ import {
   Square,
 } from "lucide-react";
 
+export type FontSizeLevel = 'normal' | 'large' | 'extra-large';
+
+// Niveles de fuente estrictos:
+export const setFontSizeLevel = (level: 'normal' | 'large' | 'extra-large') => {
+  const root = document.documentElement;
+  switch (level) {
+    case 'normal':
+      root.style.fontSize = '16px';
+      break;
+    case 'large':
+      root.style.fontSize = '18px';
+      break;
+    case 'extra-large':
+      root.style.fontSize = '20px';
+      break;
+  }
+};
+
 type ContrastMode = "default" | "high-contrast" | "clean-reading";
 
 export function AccessibilityWidget() {
@@ -27,10 +45,16 @@ export function AccessibilityWidget() {
   const isOpen = accessibilityOpen;
   const setIsOpen = setAccessibilityOpen;
 
-  // 1. Escala tipográfica relativa (% sobre rem del documentElement: 100%, 112.5%, 125%)
-  const [fontScale, setFontScale] = useState<number>(() => {
-    const saved = localStorage.getItem("worklex_font_scale");
-    return saved ? Number(saved) : 100;
+  // 1. Escala tipográfica real (Niveles estrictos: 'normal' | 'large' | 'extra-large')
+  const [fontSizeLevel, setFontSizeLevelState] = useState<FontSizeLevel>(() => {
+    const saved = localStorage.getItem("worklex_font_level") as FontSizeLevel | null;
+    if (saved && ["normal", "large", "extra-large"].includes(saved)) {
+      return saved;
+    }
+    const legacyScale = localStorage.getItem("worklex_font_scale");
+    if (legacyScale === "125") return "extra-large";
+    if (legacyScale === "112.5" || legacyScale === "112") return "large";
+    return "normal";
   });
 
   // 2. Modo de contraste y lectura visual
@@ -48,27 +72,27 @@ export function AccessibilityWidget() {
   const talkBackRef = useRef(talkBackEnabled);
   talkBackRef.current = talkBackEnabled;
 
-  // Aplicar escala tipográfica real mediante clases y font-size relativo al documentElement (Sin zoom de ventana)
+  // Aplicar escala tipográfica real mediante font-size en documentElement (Sin zoom de ventana)
   useEffect(() => {
-    // Prohibición absoluta de style.zoom o transform: scale
-    if (document.body.style.zoom) document.body.style.zoom = "";
-    if (document.documentElement.style.zoom) document.documentElement.style.zoom = "";
-    (document.body.style as any).transform = "";
-    (document.documentElement.style as any).transform = "";
-
-    document.documentElement.classList.remove("font-scale-100", "font-scale-112", "font-scale-125");
-    if (fontScale === 112.5 || fontScale === 112) {
-      document.documentElement.classList.add("font-scale-112");
-      document.documentElement.style.fontSize = "112.5%";
-    } else if (fontScale >= 125) {
-      document.documentElement.classList.add("font-scale-125");
-      document.documentElement.style.fontSize = "125%";
+    setFontSizeLevel(fontSizeLevel);
+    document.documentElement.classList.remove(
+      "font-level-normal",
+      "font-level-large",
+      "font-level-extra-large",
+      "font-scale-100",
+      "font-scale-112",
+      "font-scale-125"
+    );
+    if (fontSizeLevel === "large") {
+      document.documentElement.classList.add("font-level-large", "font-scale-112");
+    } else if (fontSizeLevel === "extra-large") {
+      document.documentElement.classList.add("font-level-extra-large", "font-scale-125");
     } else {
-      document.documentElement.classList.add("font-scale-100");
-      document.documentElement.style.fontSize = "100%";
+      document.documentElement.classList.add("font-level-normal", "font-scale-100");
     }
-    localStorage.setItem("worklex_font_scale", String(fontScale));
-  }, [fontScale]);
+    localStorage.setItem("worklex_font_level", fontSizeLevel);
+    localStorage.setItem("worklex_font_scale", fontSizeLevel === "normal" ? "100" : fontSizeLevel === "large" ? "112.5" : "125");
+  }, [fontSizeLevel]);
 
   // Aplicar modo de contraste al elemento raíz
   useEffect(() => {
@@ -225,23 +249,23 @@ export function AccessibilityWidget() {
   }, [talkBackEnabled]);
 
   const handleIncreaseFont = () => {
-    setFontScale((prev) => {
-      if (prev <= 100) return 112.5;
-      if (prev <= 112.5) return 125;
-      return 125;
+    setFontSizeLevelState((prev) => {
+      if (prev === "normal") return "large";
+      if (prev === "large") return "extra-large";
+      return "extra-large";
     });
   };
 
   const handleDecreaseFont = () => {
-    setFontScale((prev) => {
-      if (prev >= 125) return 112.5;
-      if (prev >= 112.5) return 100;
-      return 100;
+    setFontSizeLevelState((prev) => {
+      if (prev === "extra-large") return "large";
+      if (prev === "large") return "normal";
+      return "normal";
     });
   };
 
   const handleReset = () => {
-    setFontScale(100);
+    setFontSizeLevelState("normal");
     setContrastMode("default");
     setTalkBackEnabled(false);
     cancelSpeech();
@@ -318,56 +342,56 @@ export function AccessibilityWidget() {
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <Type className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
-                      Escalado Tipográfico Real (rem)
+                      Escalado Tipográfico Real
                     </span>
                     <span className="text-xs font-bold text-sena-green bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
-                      {fontScale}%
+                      {fontSizeLevel === "normal" ? "16px (Normal)" : fontSizeLevel === "large" ? "18px (Grande)" : "20px (Extra Grande)"}
                     </span>
                   </div>
                   <p className="text-[11px] text-muted-foreground mb-3 leading-tight">
-                    Incrementa la fuente proporcionalmente manteniendo contenedores y márgenes intactos, sin distorsión ni zoom de ventana.
+                    Incrementa la fuente proporcionalmente mediante unidades relativas (rem), sin escalar la ventana ni deformar botones o tarjetas.
                   </p>
 
-                  {/* Selector de Presets (100%, 112.5%, 125%) */}
+                  {/* Selector de Presets (Normal: 16px, Grande: 18px, Extra Grande: 20px) */}
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
-                      onClick={() => setFontScale(100)}
+                      onClick={() => setFontSizeLevelState("normal")}
                       className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
-                        fontScale === 100
+                        fontSizeLevel === "normal"
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                       }`}
-                      title="Tamaño normal (100%)"
+                      title="Tamaño normal (16px base)"
                     >
-                      <span className="text-xs font-bold">100%</span>
-                      <span className="text-[10px] text-muted-foreground">Estándar</span>
+                      <span className="text-xs font-bold">16px</span>
+                      <span className="text-[10px] text-muted-foreground">Normal</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFontScale(112.5)}
+                      onClick={() => setFontSizeLevelState("large")}
                       className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
-                        fontScale === 112.5 || fontScale === 112
+                        fontSizeLevel === "large"
                           ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
                           : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
                       }`}
-                      title="Tamaño mediano (112.5%)"
+                      title="Tamaño grande (18px base)"
                     >
-                      <span className="text-xs font-bold">112.5%</span>
-                      <span className="text-[10px] text-muted-foreground">Mediano</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFontScale(125)}
-                      className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
-                        fontScale >= 125
-                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
-                          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
-                      }`}
-                      title="Tamaño grande (125%)"
-                    >
-                      <span className="text-xs font-bold">125%</span>
+                      <span className="text-xs font-bold">18px</span>
                       <span className="text-[10px] text-muted-foreground">Grande</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFontSizeLevelState("extra-large")}
+                      className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                        fontSizeLevel === "extra-large"
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-sena-green text-emerald-900 dark:text-emerald-100 font-bold shadow-xs ring-2 ring-sena-green/30"
+                          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
+                      }`}
+                      title="Tamaño extra grande (20px base)"
+                    >
+                      <span className="text-xs font-bold">20px</span>
+                      <span className="text-[10px] text-muted-foreground">Extra</span>
                     </button>
                   </div>
 
@@ -376,21 +400,21 @@ export function AccessibilityWidget() {
                     <button
                       type="button"
                       onClick={handleDecreaseFont}
-                      disabled={fontScale <= 100}
+                      disabled={fontSizeLevel === "normal"}
                       className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground disabled:opacity-40 transition-colors cursor-pointer"
                       title="Disminuir tamaño (A-)"
                     >
-                      <ZoomOut className="w-3.5 h-3.5" strokeWidth={1.8} />
+                      <AArrowDown className="w-3.5 h-3.5" strokeWidth={1.8} />
                       <span>Reducir (A-)</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleIncreaseFont}
-                      disabled={fontScale >= 125}
+                      disabled={fontSizeLevel === "extra-large"}
                       className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-muted/60 hover:bg-muted border border-border rounded-xl text-xs font-semibold text-foreground disabled:opacity-40 transition-colors cursor-pointer"
                       title="Aumentar tamaño (A+)"
                     >
-                      <ZoomIn className="w-3.5 h-3.5" strokeWidth={1.8} />
+                      <AArrowUp className="w-3.5 h-3.5" strokeWidth={1.8} />
                       <span>Aumentar (A+)</span>
                     </button>
                   </div>

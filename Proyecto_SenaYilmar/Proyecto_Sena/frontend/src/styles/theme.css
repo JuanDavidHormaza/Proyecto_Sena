@@ -289,18 +289,24 @@
   --border: #e8ddc4;
 }
 
-/* ─── Escalado Tipográfico Real (Accesibilidad Universal sin deformación ni Zoom) ─── */
+/* ─── Escalado Tipográfico Real (Accesibilidad Universal sin Zoom) ─── */
+html.font-level-normal,
+:root.font-level-normal,
 html.font-scale-100,
 :root.font-scale-100 {
-  font-size: 100% !important;
+  font-size: 16px !important;
 }
 
+html.font-level-large,
+:root.font-level-large,
 html.font-scale-112,
 :root.font-scale-112 {
-  font-size: 112.5% !important;
+  font-size: 18px !important;
 }
 
+html.font-level-extra-large,
+:root.font-level-extra-large,
 html.font-scale-125,
 :root.font-scale-125 {
-  font-size: 125% !important;
+  font-size: 20px !important;
 }
