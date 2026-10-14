@@ -48,16 +48,16 @@ function getProgramIcon(program: string) {
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const isIdleTimeout = searchParams.get("reason") === "idle_timeout";
+  const reason = searchParams.get("reason");
+  const isIdleTimeout = reason === "timeout" || reason === "idle_timeout";
   const { login, updateUser } = useAuth();
   const toast = useToast();
 
   useEffect(() => {
     if (isIdleTimeout) {
       toast.warning(
-        "Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.",
-        "Sesión Expirada"
+        "Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.",
+        "Sesión Finalizada"
       );
     }
   }, [isIdleTimeout]);
@@ -371,7 +371,7 @@ export function LoginPage() {
                     className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-6 text-amber-800 dark:text-amber-200 text-sm font-medium"
                   >
                     <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={1.8} />
-                    <p className="leading-snug">Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.</p>
+                    <p className="leading-snug">Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.</p>
                   </motion.div>
                 )}
 

@@ -1,7 +1,7 @@
-// frontend/src/components/ProtectedRoute.tsx
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useIdleTimeout } from "../hooks/useIdleTimeout";
 
 interface Props {
   children: ReactNode;
@@ -10,6 +10,7 @@ interface Props {
 
 export function ProtectedRoute({ children, allowedRoles }: Props) {
   const { user, isLoading } = useAuth();
+  useIdleTimeout();
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
 

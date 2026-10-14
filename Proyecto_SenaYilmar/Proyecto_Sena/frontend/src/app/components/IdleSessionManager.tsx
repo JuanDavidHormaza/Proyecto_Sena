@@ -16,15 +16,19 @@ export function IdleSessionManager() {
   const { user, isAuthenticated, logout } = useAuth();
 
   const handleTimeout = useCallback(() => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_data');
+    sessionStorage.clear();
     logout("idle_timeout");
     try {
-      router.navigate("/login?reason=idle_timeout");
+      router.navigate("/login?reason=timeout");
     } catch {
-      window.location.href = "/login?reason=idle_timeout";
+      window.location.href = "/login?reason=timeout";
     }
     toast.warning(
-      "Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.",
-      "Sesión Expirada"
+      "Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.",
+      "Sesión Finalizada"
     );
   }, [logout]);
 

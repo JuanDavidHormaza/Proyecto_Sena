@@ -167,8 +167,12 @@ export function clearAllTokens(): void {
   try {
     const authKeys = [
       'accessToken',
+      'access_token',
       'refreshToken',
+      'refresh_token',
       'token',
+      'user_data',
+      'userData',
       'userId',
       'userName',
       'userRole',
