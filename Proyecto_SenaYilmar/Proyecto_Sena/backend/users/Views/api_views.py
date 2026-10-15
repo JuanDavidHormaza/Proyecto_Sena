@@ -1042,7 +1042,7 @@ class UserViewSet(viewsets.ViewSet):
             if not User.objects.filter(person=person).exists():
                 person.delete()
 
-        return Response({"detail": "Usuario eliminado correctamente de la base de datos."}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

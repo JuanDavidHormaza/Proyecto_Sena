@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, FC } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import {
-  Users, Search, RefreshCw, Plus, Trash2,
+  Users, Search, RefreshCw, Plus, Trash2, Pencil,
   ChevronLeft, ChevronRight, AlertTriangle, ArrowLeft
 } from "lucide-react";
 import * as api from "../services/api";
@@ -33,9 +33,10 @@ interface UserToolbarProps {
   onRoleChange: (role: string) => void;
   filterUserStatus: string;
   onStatusChange: (status: string) => void;
-  onRefresh: () => void;
+  totalUsersCount: number;
+  pageSize: number | "all";
+  onPageSizeChange: (size: number | "all") => void;
   onNewUser: () => void;
-  isLoading: boolean;
 }
 
 const UserToolbar: FC<UserToolbarProps> = ({
@@ -45,38 +46,40 @@ const UserToolbar: FC<UserToolbarProps> = ({
   onRoleChange,
   filterUserStatus,
   onStatusChange,
-  onRefresh,
+  totalUsersCount,
+  pageSize,
+  onPageSizeChange,
   onNewUser,
-  isLoading,
 }) => {
   const rolePills = [
-    { id: "all", label: "Todos" },
+    { id: "all", label: `Todos (${totalUsersCount})` },
     { id: "student", label: "Aprendices" },
     { id: "teacher", label: "Instructores" },
     { id: "admin", label: "Administradores" },
   ];
 
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 flex-wrap bg-white dark:bg-slate-900 p-4 rounded-2xl border border-border shadow-xs">
-      <div className="relative flex-1 min-w-[260px]">
+    <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 flex-wrap bg-white dark:bg-slate-900 p-4 rounded-2xl border border-border shadow-xs">
+      <div className="relative flex-1 min-w-[240px]">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
         <input
           type="text"
-          placeholder="Buscar por nombre, correo, documento o ficha..."
+          placeholder="Buscar por nombre, correo o número de documento..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm shadow-2xs"
+          className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 text-sm shadow-2xs"
         />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
+        {/* Pestañas/Píldoras de filtro rápido */}
         <div className="inline-flex rounded-xl border border-border bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
           {rolePills.map((pill) => (
             <button
               key={pill.id}
               type="button"
               onClick={() => onRoleChange(pill.id)}
-              className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 filterRole === pill.id
                   ? "bg-white dark:bg-slate-900 text-foreground font-bold shadow-xs border border-border/60"
                   : "text-muted-foreground hover:text-foreground hover:bg-white/50"
@@ -87,17 +90,33 @@ const UserToolbar: FC<UserToolbarProps> = ({
           ))}
         </div>
 
-        <div className="relative">
-          <select
-            value={filterUserStatus}
-            onChange={(e) => onStatusChange(e.target.value)}
-            className="pl-3 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground shadow-2xs"
-          >
-            <option value="all">Todos los estados</option>
-            <option value="active">Activo</option>
-            <option value="inactive">Inactivo</option>
-          </select>
+        {/* Selector de cantidad de registros visibles: [ 10 | 25 | 50 | Todos ] */}
+        <div className="inline-flex items-center rounded-xl border border-border bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
+          {([10, 25, 50, "all"] as const).map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => onPageSizeChange(size)}
+              className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                pageSize === size
+                  ? "bg-[#39A900] text-white font-bold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/50"
+              }`}
+            >
+              {size === "all" ? "Todos" : size}
+            </button>
+          ))}
         </div>
+
+        {/* Botón institucional SENA: + Nuevo Usuario */}
+        <button
+          type="button"
+          onClick={onNewUser}
+          className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2 cursor-pointer text-xs sm:text-sm transition-all"
+        >
+          <Plus className="w-4 h-4" strokeWidth={2} />
+          <span>+ Nuevo Usuario</span>
+        </button>
       </div>
     </div>
   );
@@ -107,9 +126,9 @@ const UserToolbar: FC<UserToolbarProps> = ({
 const UserTableHeader: FC = () => (
   <thead>
     <tr className="border-b border-border bg-muted/40 text-muted-foreground text-xs uppercase tracking-wider">
-      <th className="text-left py-3.5 px-5 font-semibold">Usuario (Nombre y Correo)</th>
+      <th className="text-left py-3.5 px-5 font-semibold">Usuario</th>
       <th className="text-left py-3.5 px-5 font-semibold">Documento</th>
-      <th className="text-left py-3.5 px-5 font-semibold">Rol Institucional</th>
+      <th className="text-left py-3.5 px-5 font-semibold">Rol</th>
       <th className="text-left py-3.5 px-5 font-semibold">Programa / Ficha</th>
       <th className="text-left py-3.5 px-5 font-semibold">Estado</th>
       <th className="text-left py-3.5 px-5 font-semibold">Acciones</th>
@@ -123,6 +142,7 @@ interface UserTableRowProps {
   isSelf: boolean;
   onToggleStatus: (userId: string) => void;
   onDeleteClick: (user: User) => void;
+  onEditClick: (user: User) => void;
 }
 
 const UserTableRow: FC<UserTableRowProps> = ({
@@ -130,16 +150,17 @@ const UserTableRow: FC<UserTableRowProps> = ({
   isSelf,
   onToggleStatus,
   onDeleteClick,
+  onEditClick,
 }) => {
   const isTargetSuperAdmin = user.role === "superadmin";
 
   return (
     <tr className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-      {/* Columna 1: Usuario con Avatar y Tooltip Truncado */}
+      {/* Columna 1: Usuario con Avatar Circular y Tooltip Truncado */}
       <td className="py-3.5 px-5">
         <div className="flex items-center gap-3.5">
           <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-xs ${
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-xs ${
               user.role === "superadmin" || user.role === "admin"
                 ? "bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20"
                 : user.role === "teacher"
@@ -149,10 +170,10 @@ const UserTableRow: FC<UserTableRowProps> = ({
           >
             {user.name.charAt(0).toUpperCase()}
           </div>
-          <div className="min-w-0 max-w-[220px]">
+          <div className="min-w-0 max-w-[200px]">
             <div className="flex items-center gap-2">
               <span
-                className="truncate max-w-[220px] font-semibold text-slate-900 dark:text-slate-100 text-sm inline-block"
+                className="truncate max-w-[200px] font-semibold text-slate-900 dark:text-slate-100 text-sm inline-block"
                 title={user.name}
               >
                 {user.name}
@@ -163,7 +184,7 @@ const UserTableRow: FC<UserTableRowProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 font-normal truncate max-w-[220px]" title={user.email}>
+            <p className="text-xs text-slate-500 font-normal truncate max-w-[200px]" title={user.email}>
               {user.email}
             </p>
           </div>
@@ -177,7 +198,7 @@ const UserTableRow: FC<UserTableRowProps> = ({
         </span>
       </td>
 
-      {/* Columna 3: Rol Institucional */}
+      {/* Columna 3: Rol */}
       <td className="py-3.5 px-5 whitespace-nowrap">
         <span className={`rounded-full px-3 py-1 text-xs font-semibold inline-block ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}>
           {ROLE_LABELS[user.role] || user.role}
@@ -208,9 +229,18 @@ const UserTableRow: FC<UserTableRowProps> = ({
         </button>
       </td>
 
-      {/* Columna 6: Acciones */}
+      {/* Columna 6: Acciones (Editar y Papelera agrupados con hover carmesí) */}
       <td className="py-3.5 px-5 whitespace-nowrap">
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onEditClick(user)}
+            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+            title={`Editar ${user.name}`}
+            aria-label={`Editar ${user.name}`}
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
           {!isSelf && !isTargetSuperAdmin && (
             <button
               type="button"
@@ -572,9 +602,13 @@ export const UsersPage = () => {
             setFilterUserStatus(status);
             setUserCurrentPage(1);
           }}
-          onRefresh={loadUsersData}
+          totalUsersCount={users.length}
+          pageSize={userPageSize}
+          onPageSizeChange={(size) => {
+            setUserPageSize(size);
+            setUserCurrentPage(1);
+          }}
           onNewUser={() => navigate("/admin")}
-          isLoading={isLoading}
         />
 
         {/* Tabla Modular de Usuarios */}
@@ -596,6 +630,9 @@ export const UsersPage = () => {
                       isSelf={user.id === authUser?.id}
                       onToggleStatus={handleToggleUserStatus}
                       onDeleteClick={setUserToDelete}
+                      onEditClick={(u) => {
+                        toast.info(`Editando perfil de ${u.name}`);
+                      }}
                     />
                   ))}
                   {filteredUsers.length === 0 && (

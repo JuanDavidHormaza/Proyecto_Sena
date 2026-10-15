@@ -456,7 +456,10 @@ export async function getUsers(roleOrParams?: string | { role?: string; search?:
     headers: getAuthHeaders(),
   });
   
-  return handleResponse<ApiUser[]>(response);
+  const data = await handleResponse<any>(response);
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.results)) return data.results;
+  return [];
 }
 
 export async function createUser(userData: Partial<ApiUser> & { password: string }): Promise<ApiUser> {

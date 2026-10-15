@@ -221,15 +221,15 @@ export function AccessibilityWidget() {
         type="button"
         aria-label="Abrir panel de accesibilidad institucional"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="accessibility-panel fixed bottom-6 right-6 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#39A900] hover:bg-[#2d8500] text-white shadow-2xl flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-[#39A900]/30 cursor-pointer z-50 hover:scale-110 active:scale-95 transition-transform duration-200"
+        className="accessibility-panel fixed bottom-6 right-6 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#39A900] hover:bg-[#2d8500] text-white shadow-2xl flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-[#39A900]/30 cursor-pointer z-50 hover:scale-105 active:scale-95 transition-all duration-200"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="currentColor"
           stroke="currentColor"
-          strokeWidth={2.5}
-          className="w-10 h-10 text-white"
+          strokeWidth={2.4}
+          className="w-10 h-10 sm:w-12 sm:h-12 text-white"
         >
           <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z" />
         </svg>
