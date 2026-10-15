@@ -256,3 +256,13 @@ MINIO_BUCKETS = {
 # ─── ElevenLabs (Backend Only - Zero Leak) ───────────────────────────────────
 ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY', '')
 ELEVENLABS_VOICE_ID = os.getenv('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
+
+# ─── Resend API / Email Settings (HTTPS Puerto 443 - Inmune a bloqueos SMTP) ──
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', 'WorkLex SENA <registro@worklexsena.shop>')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', RESEND_FROM_EMAIL)
+DEV_RETURN_OTP = os.getenv('DEV_RETURN_OTP', 'false').lower() in ('1', 'true', 'yes')
+
+# Fallback seguro para llamadas residuales a send_mail de Django (evita colgar en puertos 25/465/587)
+EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+

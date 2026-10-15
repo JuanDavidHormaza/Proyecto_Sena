@@ -9,14 +9,18 @@ import string
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.mail import send_mail
 from django.utils import timezone
 from rest_framework import viewsets, status, permissions, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
-from ..services.email_service import send_otp_email_async, build_institutional_email_html
+from ..services.email_service import (
+    send_otp_email,
+    send_otp_email_async,
+    send_transactional_email,
+    build_institutional_email_html,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +54,11 @@ _build_institutional_email_html = build_institutional_email_html
 
 
 def _send_otp_email(email: str, code: str, reason: str = "verificación de acceso", first_name: str = "Usuario"):
-    """Envía el OTP por correo de forma asíncrona no bloqueante con failover."""
-    send_otp_email_async(email=email, code=code, reason=reason, is_registration=False, first_name=first_name)
+    """Envía el OTP mediante la API REST HTTPS de Resend (puerto 443)."""
+    try:
+        send_otp_email(recipient_email=email, otp_code=code)
+    except Exception as exc:
+        logger.exception("Error al despachar OTP para %s: %s", email, exc)
 
 
 def _is_valid_email_domain(email: str) -> tuple[bool, str]:
@@ -709,15 +716,11 @@ class RegisterSendOTPAPIView(APIView):
             expires_at=timezone.now() + timedelta(minutes=10),
         )
 
-        # Despacho asíncrono no bloqueante (evita congelar Gunicorn si los puertos SMTP están bloqueados en el VPS)
-        first_name = serializer.validated_data.get('first_name', 'Usuario')
-        send_otp_email_async(
-            email=email,
-            code=code,
-            reason="registro de aprendiz",
-            is_registration=True,
-            first_name=first_name
-        )
+        # Despacho mediante Resend API HTTPS (puerto 443) inmune a bloqueos SMTP
+        try:
+            send_otp_email(recipient_email=email, otp_code=code)
+        except Exception as exc:
+            logger.exception("Error al despachar OTP de registro a %s: %s", email, exc)
 
         dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
         return Response({
@@ -1332,12 +1335,10 @@ class TestResultViewSet(viewsets.ViewSet):
                         f"Puedes ingresar al panel de instructor y enviarle retroalimentación personalizada.",
                         f"ID del resultado: {result.pk}",
                     ]
-                    send_mail(
+                    send_transactional_email(
+                        recipient_email=instructor_emails,
                         subject=f'[WorkLex SENA] Aprendiz reprobó nivel {level} – {student_name}',
                         message='\n'.join(msg_lines),
-                        from_email=None,
-                        recipient_list=instructor_emails,
-                        fail_silently=True,
                     )
             except Exception as e:
                 print(f"[QUIZ] Error notificando instructor: {e}")
@@ -1368,7 +1369,8 @@ class TestResultViewSet(viewsets.ViewSet):
         try:
             student_email = result.user.person.email
             student_name = f"{result.user.person.first_name} {result.user.person.last_name}"
-            send_mail(
+            send_transactional_email(
+                recipient_email=student_email,
                 subject=f'[WorkLex SENA] Tu instructor te dejó retroalimentación',
                 message=(
                     f"Hola {student_name},\n\n"
@@ -1377,9 +1379,6 @@ class TestResultViewSet(viewsets.ViewSet):
                     f"{feedback}\n\n"
                     f"Ingresa a la plataforma para ver tus resultados completos."
                 ),
-                from_email=None,
-                recipient_list=[student_email],
-                fail_silently=True,
             )
         except Exception as e:
             print(f"[FEEDBACK] Error notificando aprendiz: {e}")
