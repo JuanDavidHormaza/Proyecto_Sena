@@ -233,7 +233,7 @@ const UserTableRow: FC<UserTableRowProps> = ({
             <select
               value={user.role}
               onChange={(e) => onRoleChange(user.id, e.target.value as UserRole)}
-              className={`rounded-full pl-3 pr-7 py-1 text-xs font-semibold appearance-none cursor-pointer transition-all border border-transparent hover:border-black/10 dark:hover:border-white/10 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
+              className={`rounded-full pl-3 pr-7 py-1 text-xs font-semibold cursor-pointer transition-all border border-slate-200/80 dark:border-slate-700/80 hover:border-black/20 dark:hover:border-white/20 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
               title="Cambiar rol institucional"
             >
               <option value="student">Aprendiz</option>

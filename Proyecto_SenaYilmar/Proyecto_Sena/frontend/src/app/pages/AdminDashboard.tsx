@@ -1014,20 +1014,61 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   };
 
   const handleToggleUserStatus = async (userId: string) => {
+    const target = users.find(u => u.id === userId);
+    if (!target) return;
+    if (target.role === "superadmin" || userId === authUser?.id) {
+      toast.error("No es posible desactivar tu propia cuenta o un Super Administrador");
+      return;
+    }
+
+    const previousStatus = target.status;
+    const nextStatus = previousStatus === "active" ? "inactive" : "active";
+    const nextIsActive = nextStatus === "active";
+
+    // 1. Actualización optimista inmediata en 0 milisegundos sin loaders ni recarga de tabla
+    setUsers(prev =>
+      prev.map(u => (u.id === userId ? { ...u, status: nextStatus, is_active: nextIsActive } : u))
+    );
+
     try {
-      await api.toggleUserStatus(userId);
-      await loadDataFromApi();
-    } catch {
-      setApiError("Error al cambiar estado del usuario");
+      // 2. Petición en segundo plano: PATCH /api/users/<id>/ con { "is_active": nuevo_estado }
+      await api.updateUser(userId, { is_active: nextIsActive } as any);
+      toast.success("Estado actualizado", "Éxito");
+    } catch (err: any) {
+      // 3. Reversión si falló la API
+      setUsers(prev =>
+        prev.map(u => (u.id === userId ? { ...u, status: previousStatus, is_active: previousStatus === "active" } : u))
+      );
+      toast.error(err?.message || "No se pudo actualizar el estado del usuario");
     }
   };
 
   const handleChangeUserRole = async (userId: string, newRole: string) => {
+    const target = users.find(u => u.id === userId);
+    if (!target) return;
+    if (target.role === newRole) return;
+    if (target.role === "superadmin" || userId === authUser?.id) {
+      toast.error("No es posible modificar el rol del Super Administrador o tu propia cuenta");
+      return;
+    }
+
+    const previousRole = target.role;
+
+    // 1. Actualización optimista inmediata en 0 milisegundos
+    setUsers(prev =>
+      prev.map(u => (u.id === userId ? { ...u, role: newRole as any } : u))
+    );
+
     try {
-      await api.changeUserRole(userId, newRole);
-      await loadDataFromApi();
-    } catch {
-      setApiError("Error al cambiar rol del usuario");
+      // 2. Petición en segundo plano: PATCH /api/users/<id>/ con { "role": nuevo_rol }
+      await api.updateUser(userId, { role: newRole } as any);
+      toast.success(`Rol actualizado a ${ROLE_LABELS[newRole as UserRole] || newRole}`, "Rol Actualizado");
+    } catch (err: any) {
+      // 3. Reversión si falló la API
+      setUsers(prev =>
+        prev.map(u => (u.id === userId ? { ...u, role: previousRole } : u))
+      );
+      toast.error(err?.message || "Error al actualizar rol del usuario");
     }
   };
 
@@ -1048,34 +1089,55 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
 
   // Abre el modal con los datos del usuario
-const handleEditUserData = (user: User) => {
-  setEditUserData({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    phone_num: user.phoneNum || "", // mapeamos phoneNum a phone_num
-    role: user.role,
-    program: user.program || "",
-  });
-  setShowEditDataModal(true);
-};
-
-// Guarda los cambios (solo name y email, según el paso a paso)
-const handleSaveUserData = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    await api.updateUser(editUserData.id, {
-      name: editUserData.name,
-      email: editUserData.email,
-      phone_num: editUserData.phone_num,
-      program: editUserData.role === 'teacher' || editUserData.role === 'student' ? editUserData.program : '',
+  const handleEditUserData = (user: User) => {
+    setEditUserData({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone_num: user.phoneNum || "",
+      role: user.role,
+      program: user.program || "",
     });
-    await loadDataFromApi(); // recarga la lista
+    setShowEditDataModal(true);
+  };
+
+  // Guarda los cambios con actualización optimista inmediata
+  const handleSaveUserData = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetId = editUserData.id;
+    const previousUsers = users;
+
+    // Actualización optimista local en 0ms
+    setUsers(prev =>
+      prev.map(u =>
+        u.id === targetId
+          ? {
+              ...u,
+              name: editUserData.name,
+              email: editUserData.email,
+              phoneNum: editUserData.phone_num,
+              role: editUserData.role as any,
+              program: editUserData.role === 'teacher' || editUserData.role === 'student' ? editUserData.program : '',
+            }
+          : u
+      )
+    );
     setShowEditDataModal(false);
-  } catch {
-    setApiError("Error al actualizar usuario");
-  }
-};
+
+    try {
+      await api.updateUser(targetId, {
+        name: editUserData.name,
+        email: editUserData.email,
+        phone_num: editUserData.phone_num,
+        role: editUserData.role,
+        program: editUserData.role === 'teacher' || editUserData.role === 'student' ? editUserData.program : '',
+      } as any);
+      toast.success("Usuario actualizado correctamente", "Perfil Actualizado");
+    } catch (err: any) {
+      setUsers(previousUsers);
+      toast.error(err?.message || "Error al actualizar usuario");
+    }
+  };
 
 
   
@@ -2115,9 +2177,29 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                 </span>
                               </td>
                               <td className="py-3.5 px-5 whitespace-nowrap">
-                                <span className={`rounded-full px-3 py-1 text-xs font-semibold inline-block ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
-                                  {ROLE_LABELS[user.role] || user.role}
-                                </span>
+                                {isSelf || isTargetSuperAdmin ? (
+                                  <span
+                                    className={`rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5 opacity-90 cursor-not-allowed ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}
+                                    title={isSelf ? "Tu cuenta activa (No modificable)" : "Super Administrador (Protegido)"}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                                    {ROLE_LABELS[user.role] || user.role}
+                                  </span>
+                                ) : (
+                                  <div className="relative inline-block text-left">
+                                    <select
+                                      value={user.role}
+                                      onChange={(e) => handleChangeUserRole(user.id, e.target.value)}
+                                      className={`rounded-full pl-3 pr-7 py-1 text-xs font-semibold cursor-pointer transition-all border border-slate-200/80 dark:border-slate-700/80 hover:border-black/20 dark:hover:border-white/20 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}
+                                      title="Cambiar rol institucional"
+                                    >
+                                      <option value="student">Aprendiz</option>
+                                      <option value="teacher">Instructor</option>
+                                      <option value="admin">Administrador</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none opacity-60" />
+                                  </div>
+                                )}
                               </td>
                               <td className="py-3.5 px-5">
                                 <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate max-w-[200px] inline-block" title={user.program || "Sin asignar"}>
@@ -3579,6 +3661,24 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       }
                       className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white dark:bg-slate-800"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Rol Institucional
+                    </label>
+                    <select
+                      value={editUserData.role}
+                      disabled={editUserData.role === 'superadmin' || editUserData.id === authUser?.id}
+                      onChange={(e) =>
+                        setEditUserData({ ...editUserData, role: e.target.value as any })
+                      }
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white dark:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <option value="student">Aprendiz</option>
+                      <option value="teacher">Instructor</option>
+                      <option value="admin">Administrador</option>
+                      {editUserData.role === 'superadmin' && <option value="superadmin">Super Administrador</option>}
+                    </select>
                   </div>
                   {(editUserData.role === "teacher" || editUserData.role === "student") && (
                     <div>

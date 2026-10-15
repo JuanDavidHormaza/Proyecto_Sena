@@ -315,7 +315,8 @@ html[data-dyslexia="true"] :where(p, span:not([class*="icon"]), h1, h2, h3, h4, 
   line-height: 1.4 !important;
 }
 
-#accessibility-panel svg {
-  width: 1rem;
-  height: 1rem;
+.accessibility-trigger-btn svg,
+#accessibility-trigger-btn svg {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
 }

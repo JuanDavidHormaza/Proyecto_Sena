@@ -21,11 +21,12 @@ export const AccessibilityButton: FC<AccessibilityButtonProps> = ({
   return (
     <button
       type="button"
+      id="accessibility-trigger-btn"
       aria-label="Abrir panel de accesibilidad institucional"
       onClick={handleClick}
-      className={`accessibility-panel w-16 h-16 rounded-full bg-[#39A900] shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 fixed bottom-6 right-6 z-50 focus:outline-none focus:ring-4 focus:ring-[#39A900]/30 transition-all ${className}`}
+      className={`accessibility-trigger-btn fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-[#39A900] shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all focus:outline-none focus:ring-4 focus:ring-[#39A900]/30 ${className}`}
     >
-      <Accessibility className="w-10 h-10 text-white stroke-[2.5]" size={40} strokeWidth={2.5} />
+      <Accessibility className="w-10 h-10 text-white stroke-[2.4]" size={40} strokeWidth={2.4} />
     </button>
   );
 };

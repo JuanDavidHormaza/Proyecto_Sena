@@ -82,8 +82,15 @@ svg,
   line-height: normal !important;
 }
 
-#accessibility-panel svg,
-.accessibility-panel svg {
-  width: 1rem !important;
-  height: 1rem !important;
+.accessibility-trigger-btn,
+#accessibility-trigger-btn {
+  width: 4rem !important;
+  height: 4rem !important;
+}
+
+.accessibility-trigger-btn svg,
+#accessibility-trigger-btn svg,
+button.accessibility-trigger-btn svg {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
 }
