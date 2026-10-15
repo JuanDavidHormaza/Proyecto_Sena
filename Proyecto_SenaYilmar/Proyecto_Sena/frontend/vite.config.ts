@@ -11,9 +11,18 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      host: '0.0.0.0',
+      host: true,
       port: 5173,
+      strictPort: true,
       allowedHosts: true,
+      hmr: {
+        host: 'worklexsena.shop',
+        clientPort: 443,
+        protocol: 'wss'
+      },
+      watch: {
+        usePolling: true
+      },
       proxy: {
         '/api': {
           target: backendTarget,
