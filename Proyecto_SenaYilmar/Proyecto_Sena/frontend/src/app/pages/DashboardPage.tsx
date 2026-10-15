@@ -17,6 +17,7 @@ import {
   Volume2,
   Mic,
   MicOff,
+  PenTool,
   Search,
   CheckCircle,
   GraduationCap,
@@ -799,8 +800,12 @@ function StudentVocabCard({
             <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-xs ${levelBadge}`}>
               {lvl}
             </span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-xs ${compBadge}`}>
-              {competence}
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-xs inline-flex items-center gap-1 ${compBadge}`}>
+              {competence === "Speaking" && <Mic className="w-3 h-3 shrink-0" />}
+              {competence === "Writing" && <PenTool className="w-3 h-3 shrink-0" />}
+              {competence === "Grammar" && <Languages className="w-3 h-3 shrink-0" />}
+              {competence === "Reading" && <BookOpen className="w-3 h-3 shrink-0" />}
+              <span>{competence}</span>
             </span>
           </div>
         </div>
@@ -1743,31 +1748,37 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
               {/* Atajos por Competencia Lingüística */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
                 {[
-                  { comp: "Speaking", label: "Speaking", desc: "Pronunciación y fluidez", color: "cyan" },
-                  { comp: "Writing", label: "Writing", desc: "Redacción y ortografía", color: "rose" },
-                  { comp: "Grammar", label: "Grammar", desc: "Estructuras y sintaxis", color: "purple" },
-                  { comp: "Reading", label: "Reading", desc: "Comprensión de lectura", color: "amber" },
-                ].map((item) => (
-                  <button
-                    key={item.comp}
-                    type="button"
-                    onClick={() => {
-                      setActiveMainTab("study");
-                      setSelectedCompetence(item.comp);
-                      setSearchParams({ tab: "study" });
-                    }}
-                    title={`Explorar términos de ${item.label}`}
-                    className="p-3 rounded-xl border border-border hover:border-sena-blue/40 bg-muted/30 hover:bg-muted/70 text-left cursor-pointer group hover:-translate-y-0.5 hover:shadow-xs transition-all duration-200"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-semibold text-xs text-foreground group-hover:text-sena-blue transition-colors">
-                        {item.label}
-                      </p>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" strokeWidth={1.8} />
-                    </div>
-                    <p className="text-[11px] text-muted-foreground line-clamp-1">{item.desc}</p>
-                  </button>
-                ))}
+                  { comp: "Speaking", label: "Speaking", desc: "Pronunciación y fluidez", icon: Mic, color: "cyan" },
+                  { comp: "Writing", label: "Writing", desc: "Redacción y ortografía", icon: PenTool, color: "rose" },
+                  { comp: "Grammar", label: "Grammar", desc: "Estructuras y sintaxis", icon: Languages, color: "purple" },
+                  { comp: "Reading", label: "Reading", desc: "Comprensión de lectura", icon: BookOpen, color: "amber" },
+                ].map((item) => {
+                  const CompIcon = item.icon;
+                  return (
+                    <button
+                      key={item.comp}
+                      type="button"
+                      onClick={() => {
+                        setActiveMainTab("study");
+                        setSelectedCompetence(item.comp);
+                        setSearchParams({ tab: "study" });
+                      }}
+                      title={`Explorar términos de ${item.label}`}
+                      className="p-3 rounded-xl border border-border hover:border-sena-blue/40 bg-muted/30 hover:bg-muted/70 text-left cursor-pointer group hover:-translate-y-0.5 hover:shadow-xs transition-all duration-200"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <CompIcon className="w-4 h-4 text-sena-blue group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+                          <p className="font-semibold text-xs text-foreground group-hover:text-sena-blue transition-colors">
+                            {item.label}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" strokeWidth={1.8} />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground line-clamp-1">{item.desc}</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

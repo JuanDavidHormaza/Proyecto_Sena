@@ -600,7 +600,7 @@ export function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-tr from-[#39A900]/80 via-slate-900/75 to-slate-900/90" />
 
         {/* Tarjeta de información con ancho máximo controlado frosted-glass */}
-        <div className="relative z-10 max-w-md w-full p-8 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20 text-white shadow-2xl space-y-6">
+        <div className="relative z-10 max-w-md w-full p-8 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20 text-white shadow-2xl space-y-4">
           {/* Badge institucional */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-semibold uppercase tracking-wider shadow-xs">
             <GraduationCap className="w-4 h-4 text-white" />

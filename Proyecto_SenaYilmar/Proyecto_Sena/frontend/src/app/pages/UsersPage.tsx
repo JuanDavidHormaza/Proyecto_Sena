@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Users, Search, RefreshCw, Plus, Trash2, Pencil, Shield,
   ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, ArrowLeft, X, Check,
-  UserCheck, UserX, Filter
+  UserCheck, UserX, Filter, GraduationCap, Presentation, ShieldCheck
 } from "lucide-react";
 import * as api from "../services/api";
 import { User, UserRole } from "../data/users";
@@ -42,6 +42,16 @@ const ROLE_LABELS: Record<string, string> = {
   student: "Aprendiz",
 };
 
+export const getRoleIcon = (role: string) => {
+  if (role === "student") {
+    return <GraduationCap className="w-4 h-4 text-emerald-600 shrink-0" />;
+  }
+  if (role === "teacher") {
+    return <Presentation className="w-4 h-4 text-blue-600 shrink-0" />;
+  }
+  return <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />;
+};
+
 // ─── 1. Subcomponente Modular: Toolbar de Usuarios ──────────────────────────
 interface UserToolbarProps {
   searchTerm: string;
@@ -69,10 +79,10 @@ const UserToolbar: FC<UserToolbarProps> = ({
   onNewUser,
 }) => {
   const rolePills = [
-    { id: "all", label: `Todos (${totalUsersCount})` },
-    { id: "student", label: "Aprendices" },
-    { id: "teacher", label: "Instructores" },
-    { id: "admin", label: "Administradores" },
+    { id: "all", label: `Todos (${totalUsersCount})`, icon: null },
+    { id: "student", label: "Aprendices", icon: <GraduationCap className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> },
+    { id: "teacher", label: "Instructores", icon: <Presentation className="w-3.5 h-3.5 text-blue-600 shrink-0" /> },
+    { id: "admin", label: "Administradores", icon: <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" /> },
   ];
 
   return (
@@ -97,13 +107,14 @@ const UserToolbar: FC<UserToolbarProps> = ({
               key={pill.id}
               type="button"
               onClick={() => onRoleChange(pill.id)}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 filterRole === pill.id
                   ? "bg-white dark:bg-slate-900 text-foreground font-bold shadow-xs border border-border/60"
                   : "text-muted-foreground hover:text-foreground hover:bg-white/50"
               }`}
             >
-              {pill.label}
+              {pill.icon}
+              <span>{pill.label}</span>
             </button>
           ))}
         </div>
@@ -220,22 +231,25 @@ const UserTableRow: FC<UserTableRowProps> = ({
         </span>
       </td>
 
-      {/* Columna 3: Rol (Badge Desplegable Refinado) */}
+      {/* Columna 3: Rol (Badge Desplegable Refinado con Icono Temático) */}
       <td className="py-3.5 px-5 whitespace-nowrap">
         {isSelf || isTargetSuperAdmin ? (
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5 opacity-90 cursor-not-allowed ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
             title={isSelf ? "Tu cuenta activa (No modificable)" : "Super Administrador (Protegido)"}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-            {ROLE_LABELS[user.role] || user.role}
+            {getRoleIcon(user.role)}
+            <span>{ROLE_LABELS[user.role] || user.role}</span>
           </span>
         ) : (
-          <div className="relative inline-block text-left">
+          <div className="relative inline-flex items-center text-left">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+              {getRoleIcon(user.role)}
+            </span>
             <select
               value={user.role}
               onChange={(e) => onRoleChange(user.id, e.target.value as UserRole)}
-              className={`rounded-full pl-3 pr-7 py-1 text-xs font-semibold cursor-pointer transition-all border border-slate-200/80 dark:border-slate-700/80 hover:border-black/20 dark:hover:border-white/20 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
+              className={`rounded-full pl-8 pr-7 py-1 text-xs font-semibold cursor-pointer transition-all border border-slate-200/80 dark:border-slate-700/80 hover:border-black/20 dark:hover:border-white/20 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
               title="Cambiar rol institucional"
             >
               <option value="student">Aprendiz</option>
@@ -514,19 +528,24 @@ const EditUserModal: FC<EditUserModalProps> = ({
               <label className="block text-xs font-semibold text-foreground mb-1">
                 Rol Asignado {isSuperAdmin ? "(SuperAdmin protegido)" : isSelf ? "(Tu cuenta)" : ""}
               </label>
-              <select
-                value={role}
-                disabled={isSuperAdmin || isSelf}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 cursor-pointer ${
-                  isSuperAdmin || isSelf ? "opacity-60 cursor-not-allowed" : ""
-                }`}
-              >
-                {isSuperAdmin && <option value="superadmin">Super Administrador</option>}
-                <option value="student">Aprendiz</option>
-                <option value="teacher">Instructor</option>
-                <option value="admin">Administrador</option>
-              </select>
+              <div className="relative flex items-center">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  {getRoleIcon(role)}
+                </span>
+                <select
+                  value={role}
+                  disabled={isSuperAdmin || isSelf}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
+                  className={`w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 cursor-pointer ${
+                    isSuperAdmin || isSelf ? "opacity-60 cursor-not-allowed" : ""
+                  }`}
+                >
+                  {isSuperAdmin && <option value="superadmin">Super Administrador</option>}
+                  <option value="student">Aprendiz</option>
+                  <option value="teacher">Instructor</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
             </div>
 
             <div>

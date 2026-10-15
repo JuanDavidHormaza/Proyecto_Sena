@@ -219,8 +219,12 @@ function VocabCard({
             <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-xs ${levelBadge}`}>
               {level}
             </span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-xs ${compBadge}`}>
-              {competence}
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-xs inline-flex items-center gap-1 ${compBadge}`}>
+              {competence === "Speaking" && <Mic className="w-3 h-3 shrink-0" />}
+              {competence === "Writing" && <PenTool className="w-3 h-3 shrink-0" />}
+              {competence === "Grammar" && <Languages className="w-3 h-3 shrink-0" />}
+              {competence === "Reading" && <BookOpen className="w-3 h-3 shrink-0" />}
+              <span>{competence}</span>
             </span>
           </div>
 

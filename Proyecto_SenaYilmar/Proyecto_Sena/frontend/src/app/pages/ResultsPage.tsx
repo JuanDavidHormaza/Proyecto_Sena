@@ -33,6 +33,7 @@ import {
   Search,
   History,
   Calendar,
+  Languages,
 } from "lucide-react";
 import { getLevelFromScore } from "../data/questionsA1";
 import { questions } from "../data";
@@ -539,9 +540,10 @@ export function ResultsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {compPerformance.map((comp) => {
               const icons: Record<string, any> = {
-                Reading: FileCheck,
+                Reading: BookOpen,
                 Writing: PenTool,
                 Speaking: Mic,
+                Grammar: Languages,
                 Listening: Headphones,
               };
               const CompIcon = icons[comp.name] || Target;

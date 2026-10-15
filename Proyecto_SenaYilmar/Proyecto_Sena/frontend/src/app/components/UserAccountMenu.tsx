@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
-import { BookOpen, LogOut, Settings, User, LifeBuoy, GraduationCap, ChevronDown, ChevronUp, Check, Loader2 } from "lucide-react";
+import { BookOpen, LogOut, Settings, User, LifeBuoy, GraduationCap, Presentation, ShieldCheck, ChevronDown, ChevronUp, Check, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { SupportTicketModal } from "./SupportTicketModal";
 import * as api from "../services/api";
@@ -109,7 +109,12 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
           <div className="hidden sm:block text-left min-w-0">
             <p className="font-medium text-foreground text-sm truncate max-w-40" title={userName}>{userName}</p>
             {showRole && (
-              <p className="text-xs text-muted-foreground truncate max-w-40" title={subtitle}>{subtitle}</p>
+              <p className="text-xs text-muted-foreground truncate max-w-40 flex items-center gap-1" title={subtitle}>
+                {role === "student" && <GraduationCap className="w-3.5 h-3.5 text-emerald-600 inline shrink-0" />}
+                {role === "teacher" && <Presentation className="w-3.5 h-3.5 text-blue-600 inline shrink-0" />}
+                {(role === "admin" || role === "superadmin") && <ShieldCheck className="w-3.5 h-3.5 text-purple-600 inline shrink-0" />}
+                <span className="truncate">{subtitle}</span>
+              </p>
             )}
           </div>
         )}
@@ -125,7 +130,12 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
           >
             <div className="px-4 py-3 border-b border-border">
               <p className="font-medium text-foreground truncate">{userName}</p>
-              <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
+              <p className="text-sm text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
+                {role === "student" && <GraduationCap className="w-4 h-4 text-emerald-600 shrink-0" />}
+                {role === "teacher" && <Presentation className="w-4 h-4 text-blue-600 shrink-0" />}
+                {(role === "admin" || role === "superadmin") && <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />}
+                <span className="truncate">{subtitle}</span>
+              </p>
             </div>
             <button
               onClick={() => handleNavigate("/profile")}

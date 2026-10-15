@@ -19,6 +19,8 @@ import {
   Loader2,
   GraduationCap,
   Languages,
+  Mic,
+  PenTool,
 } from "lucide-react";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
@@ -460,8 +462,12 @@ export function TeacherDictionariesPage() {
                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sena-green/10 text-sena-green">
                           {doc.level || "A1"}
                         </span>
-                        <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                          {doc.competence || "Grammar"}
+                        <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground inline-flex items-center gap-1">
+                          {doc.competence === "Speaking" && <Mic className="w-3 h-3 shrink-0" />}
+                          {doc.competence === "Writing" && <PenTool className="w-3 h-3 shrink-0" />}
+                          {(!doc.competence || doc.competence === "Grammar") && <Languages className="w-3 h-3 shrink-0" />}
+                          {doc.competence === "Reading" && <BookOpen className="w-3 h-3 shrink-0" />}
+                          <span>{doc.competence || "Grammar"}</span>
                         </span>
                       </div>
                     </div>
