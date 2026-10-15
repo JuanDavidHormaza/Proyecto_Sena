@@ -144,7 +144,6 @@ def _send_via_resend(email: str, subject: str, plain_msg: str, html_msg: str, ap
                 "from": from_email,
                 "to": [email],
                 "subject": subject,
-                "html": html_msg,
                 "text": plain_msg,
             }
             resp = resend.Emails.send(params)
@@ -166,7 +165,6 @@ def _send_via_resend(email: str, subject: str, plain_msg: str, html_msg: str, ap
                 "from": from_email,
                 "to": [email],
                 "subject": subject,
-                "html": html_msg,
                 "text": plain_msg,
             },
             timeout=6
@@ -190,7 +188,7 @@ def _send_via_resend(email: str, subject: str, plain_msg: str, html_msg: str, ap
 
 def _send_via_brevo(email: str, subject: str, plain_msg: str, html_msg: str, api_key: str) -> bool:
     """
-    Envía correo vía API HTTPS de Brevo / Sendinblue (Puerto 443 - Inmune a bloqueos de VPS).
+    Envía correo vía API HTTPS de Brevo / Sendinblue en texto plano directo (Puerto 443).
     """
     api_key = api_key.strip()
     if not api_key:
@@ -221,7 +219,6 @@ def _send_via_brevo(email: str, subject: str, plain_msg: str, html_msg: str, api
                 "sender": {"name": sender_name, "email": sender_email},
                 "to": [{"email": email}],
                 "subject": subject,
-                "htmlContent": html_msg,
                 "textContent": plain_msg,
             },
             timeout=6
@@ -239,7 +236,7 @@ def _send_via_brevo(email: str, subject: str, plain_msg: str, html_msg: str, api
 
 def _send_via_sendgrid(email: str, subject: str, plain_msg: str, html_msg: str, api_key: str) -> bool:
     """
-    Envía correo vía API HTTPS de SendGrid (Puerto 443 - Inmune a bloqueos de VPS).
+    Envía correo vía API HTTPS de SendGrid en texto plano directo (Puerto 443).
     """
     api_key = api_key.strip()
     if not api_key:
@@ -267,8 +264,7 @@ def _send_via_sendgrid(email: str, subject: str, plain_msg: str, html_msg: str, 
                 "from": {"email": from_email, "name": "WorkLex SENA"},
                 "subject": subject,
                 "content": [
-                    {"type": "text/plain", "value": plain_msg},
-                    {"type": "text/html", "value": html_msg}
+                    {"type": "text/plain", "value": plain_msg}
                 ]
             },
             timeout=6
@@ -401,23 +397,10 @@ WorkLex SENA - Centro de Teleinformática y Producción Industrial (CTPI)
 """
     plain_msg = mensaje.strip()
 
-    headline = "Verificación de Registro de Aprendiz" if is_registration else "Código de Verificación de Seguridad"
-    html_message = (
-        f"Bienvenido a <strong>WorkLex SENA</strong>. Para continuar con tu proceso institucional de {reason}, "
-        f"ingresa el siguiente código de 6 dígitos:"
-    )
-
-    html_msg = build_institutional_email_html(
-        title=subject,
-        headline=headline,
-        message=html_message,
-        otp_code=code,
-    )
-
-    # Iniciar envío en hilo daemon desacoplado (cero latencia para la petición web)
+    # Iniciar envío en hilo daemon desacoplado sin dependencias de plantillas HTML
     t = threading.Thread(
         target=_send_otp_task,
-        args=(email, code, subject, plain_msg, html_msg, reason),
+        args=(email, code, subject, plain_msg, plain_msg, reason),
         daemon=True
     )
     t.start()

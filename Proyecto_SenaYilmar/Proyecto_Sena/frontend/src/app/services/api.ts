@@ -441,8 +441,17 @@ export async function privilegedMe(): Promise<{ user: ApiUser }> {
 
 // ─── Users API ───────────────────────────────────────────────────────────────
 
-export async function getUsers(role?: string): Promise<ApiUser[]> {
-  const url = role ? `${API_BASE}/users/?role=${role}` : `${API_BASE}/users/`;
+export async function getUsers(roleOrParams?: string | { role?: string; search?: string }): Promise<ApiUser[]> {
+  let url = `${API_BASE}/users/`;
+  if (typeof roleOrParams === 'string' && roleOrParams) {
+    url += `?role=${encodeURIComponent(roleOrParams)}`;
+  } else if (roleOrParams && typeof roleOrParams === 'object') {
+    const query = new URLSearchParams();
+    if (roleOrParams.role && roleOrParams.role !== 'all') query.set('role', roleOrParams.role);
+    if (roleOrParams.search) query.set('search', roleOrParams.search);
+    const qs = query.toString();
+    if (qs) url += `?${qs}`;
+  }
   const response = await fetch(url, {
     headers: getAuthHeaders(),
   });
@@ -476,6 +485,10 @@ export async function deleteUser(userId: string): Promise<void> {
     headers: getAuthHeaders(),
   });
   
+  if (response.status === 204) {
+    return;
+  }
+
   if (!response.ok) {
     let errorMsg = 'Error al eliminar usuario';
     try {
@@ -1304,11 +1317,23 @@ export interface AdminMetrics {
 }
 
 export async function getAdminMetrics(): Promise<AdminMetrics> {
-  const response = await fetch(`${API_BASE}/admin/metrics/`, {
+  try {
+    const response = await fetch(`${API_BASE}/metrics/`, {
+      headers: getAuthHeaders(),
+    });
+    if (response.ok) {
+      return await handleResponse<AdminMetrics>(response);
+    }
+  } catch {
+    // fallback to /admin/metrics/
+  }
+  const fallback = await fetch(`${API_BASE}/admin/metrics/`, {
     headers: getAuthHeaders(),
   });
-  return handleResponse<AdminMetrics>(response);
+  return handleResponse<AdminMetrics>(fallback);
 }
+
+export const getMetrics = getAdminMetrics;
 
 export interface DayStreakItem {
   day: string;
@@ -1364,6 +1389,7 @@ export const api = {
   getDocuments,
   createDocument,
   getAdminMetrics,
+  getMetrics,
   getStudyStreak,
   recordStreakActivity,
   updateDocument,

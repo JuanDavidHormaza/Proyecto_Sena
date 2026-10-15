@@ -327,13 +327,25 @@ class PersonController:
 class UserController:
 
     @staticmethod
-    def list_all(role_filter=None, program_filter=None):
+    def list_all(role_filter=None, program_filter=None, search=None):
         queryset = User.objects.select_related('person').all()
-        if role_filter:
-            backend_role = ROLE_MAP_REVERSE.get(role_filter, role_filter.upper())
-            queryset = queryset.filter(role_id=backend_role)
+        if role_filter and role_filter != 'all':
+            if role_filter == 'admin':
+                queryset = queryset.filter(role_id__in=['ADMIN', 'SUPERADMIN'])
+            else:
+                backend_role = ROLE_MAP_REVERSE.get(role_filter, role_filter.upper())
+                queryset = queryset.filter(role_id=backend_role)
         if program_filter:
             queryset = queryset.filter(program__iexact=program_filter.strip())
+        if search:
+            s = search.strip()
+            queryset = queryset.filter(
+                models.Q(person__first_name__icontains=s) |
+                models.Q(person__last_name__icontains=s) |
+                models.Q(person__email__icontains=s) |
+                models.Q(person__doc_num__icontains=s) |
+                models.Q(program__icontains=s)
+            )
 
         users = []
         for user in queryset:

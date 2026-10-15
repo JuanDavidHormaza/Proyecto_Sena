@@ -99,6 +99,8 @@ urlpatterns = [
     # ── Métricas Administrativas del Sistema ───────────────────────────
     path('admin/metrics/',                          AdminMetricsAPIView.as_view(),       name='admin-metrics-slash'),
     path('admin/metrics',                           AdminMetricsAPIView.as_view(),       name='admin-metrics'),
+    path('metrics/',                                AdminMetricsAPIView.as_view(),       name='metrics-slash'),
+    path('metrics',                                 AdminMetricsAPIView.as_view(),       name='metrics'),
 
     # ── Racha de Estudio Dinámica (Study Streak Engine) ────────────────
     path('profile/streak/',                         StudyStreakAPIView.as_view(),        name='study-streak-slash'),

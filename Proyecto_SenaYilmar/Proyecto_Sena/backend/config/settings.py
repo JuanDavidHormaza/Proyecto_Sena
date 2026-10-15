@@ -162,17 +162,36 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 import os
+from urllib.parse import urlparse, unquote
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'SENA'),
-        'USER': os.getenv('POSTGRES_USER', 'admin'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Admin123*'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
-        'OPTIONS': {
-            'options': '-c search_path=worklex,public'
+database_url = os.getenv('DATABASE_URL', '').strip()
+
+if database_url:
+    parsed_db = urlparse(database_url)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': unquote(parsed_db.path.lstrip('/')) or os.getenv('POSTGRES_DB', os.getenv('DB_NAME', 'SENA')),
+            'USER': unquote(parsed_db.username or '') or os.getenv('POSTGRES_USER', os.getenv('DB_USER', 'admin')),
+            'PASSWORD': unquote(parsed_db.password or '') or os.getenv('POSTGRES_PASSWORD', os.getenv('DB_PASSWORD', 'Admin123*')),
+            'HOST': parsed_db.hostname or os.getenv('POSTGRES_HOST', os.getenv('DB_HOST', 'localhost')),
+            'PORT': str(parsed_db.port or os.getenv('POSTGRES_PORT', os.getenv('DB_PORT', '5432'))),
+            'OPTIONS': {
+                'options': '-c search_path=worklex,public'
+            },
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', os.getenv('DB_NAME', 'SENA')),
+            'USER': os.getenv('POSTGRES_USER', os.getenv('DB_USER', 'admin')),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', os.getenv('DB_PASSWORD', 'Admin123*')),
+            'HOST': os.getenv('POSTGRES_HOST', os.getenv('DB_HOST', 'localhost')),
+            'PORT': os.getenv('POSTGRES_PORT', os.getenv('DB_PORT', '5432')),
+            'OPTIONS': {
+                'options': '-c search_path=worklex,public'
             },
         }
     }

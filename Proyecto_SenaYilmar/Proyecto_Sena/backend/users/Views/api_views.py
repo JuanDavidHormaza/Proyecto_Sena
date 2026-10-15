@@ -981,9 +981,12 @@ class UserViewSet(viewsets.ViewSet):
         if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
             program_filter = getattr(request.user, 'program', None)
 
+        search = request.query_params.get('search') or request.query_params.get('q')
+
         return Response(UserController.list_all(
             role_filter=request.query_params.get('role'),
             program_filter=program_filter,
+            search=search,
         ))
 
     def retrieve(self, request, pk=None):
