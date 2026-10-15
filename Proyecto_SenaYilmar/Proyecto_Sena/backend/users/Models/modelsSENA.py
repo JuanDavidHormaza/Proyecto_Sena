@@ -43,6 +43,16 @@ class Person(models.Model):
         from django.contrib.auth.hashers import make_password
         self.password = make_password(raw_password)
 
+    def delete(self, *args, **kwargs):
+        email = self.email
+        super().delete(*args, **kwargs)
+        if email:
+            try:
+                EmailOTP.objects.filter(email__iexact=email).delete()
+                RegisterPendingOTP.objects.filter(email__iexact=email).delete()
+            except Exception:
+                pass
+
 
 class User(models.Model):
     user_id = models.AutoField(primary_key=True)
@@ -80,6 +90,12 @@ class User(models.Model):
         if self.person:
             self.person.set_password(raw_password)
             self.person.save(update_fields=['password'])
+
+    def delete(self, *args, **kwargs):
+        person = self.person
+        super().delete(*args, **kwargs)
+        if person and not User.objects.filter(person=person).exists():
+            person.delete()
 
 
 class RoleAccess(models.Model):

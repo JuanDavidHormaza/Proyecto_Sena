@@ -1009,19 +1009,24 @@ class UserViewSet(viewsets.ViewSet):
             return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
         return Response({'role': role})
 
-    def destroy(self, request, pk=None):
-        target_user, error = UserController.get_by_id(pk)
-        if error:
-            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
-        if target_user.role_id == 'SUPERADMIN':
-            return Response(
-                {'error': 'No se puede eliminar al SuperAdmin'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        ok, error = UserController.delete(pk)
-        if error:
-            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def get_object(self):
+        pk = self.kwargs.get('pk')
+        user, error = UserController.get_by_id(pk)
+        if error or not user:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Usuario no encontrado')
+        return user
+
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        current_user_id = getattr(request.user, 'user_id', None) or getattr(request.user, 'pk', None)
+        # Evitar eliminar al propio Super Administrador actual
+        if user == request.user or user.user_id == current_user_id:
+            return Response({"detail": "No puedes eliminar tu propia cuenta de administrador."}, status=status.HTTP_400_BAD_REQUEST)
+        if user.role_id == 'SUPERADMIN':
+            return Response({"detail": "No se puede eliminar al Super Administrador."}, status=status.HTTP_403_FORBIDDEN)
+        user.delete()
+        return Response({"detail": "Usuario eliminado correctamente de la base de datos."}, status=status.HTTP_204_NO_CONTENT)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

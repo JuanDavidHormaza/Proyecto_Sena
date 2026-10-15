@@ -477,7 +477,14 @@ export async function deleteUser(userId: string): Promise<void> {
   });
   
   if (!response.ok) {
-    throw new ApiError('Error al eliminar usuario', response.status);
+    let errorMsg = 'Error al eliminar usuario';
+    try {
+      const data = await response.json();
+      errorMsg = data.detail || data.error || errorMsg;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(errorMsg, response.status);
   }
 }
 

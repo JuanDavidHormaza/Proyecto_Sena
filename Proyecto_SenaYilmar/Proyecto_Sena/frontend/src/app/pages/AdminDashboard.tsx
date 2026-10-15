@@ -980,13 +980,30 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   useEffect(() => { loadDataFromApi(); }, []);
 
   // ── Handlers con API real ─────────────────────────────────────────────────
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm("¿Eliminar este usuario? Esta acción no se puede deshacer.")) return;
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsDeletingUser(true);
     try {
-      await api.deleteUser(userId);
-      await loadDataFromApi();
-    } catch {
-      setApiError("Error al eliminar usuario");
+      await api.deleteUser(userToDelete.id);
+      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+      toast.success("Usuario eliminado correctamente de la base de datos.", "Usuario Eliminado");
+      setUserToDelete(null);
+    } catch (err: any) {
+      console.error("Error al eliminar usuario:", err);
+      const msg = err?.message || "Error al eliminar usuario en la base de datos.";
+      toast.error(msg, "Error de Eliminación");
+    } finally {
+      setIsDeletingUser(false);
+    }
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    const target = users.find(u => u.id === userId);
+    if (target) {
+      setUserToDelete(target);
     }
   };
 
@@ -1699,9 +1716,19 @@ const handleSaveUserData = async (e: React.FormEvent) => {
 
           {/* Error banner */}
           {apiError && (
-            <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-xl flex items-center justify-between">
-              <span className="text-sm font-medium">{apiError}</span>
-              <button onClick={() => setApiError(null)} className="ml-4 font-bold">✕</button>
+            <div className="mb-4 px-3.5 py-2.5 text-sm rounded-xl border border-rose-200 bg-rose-50/90 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800/60 dark:text-rose-300 flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-500" />
+                <span className="font-medium truncate">{apiError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApiError(null)}
+                className="text-rose-500 hover:text-rose-700 dark:hover:text-rose-200 p-1 rounded-md hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors shrink-0"
+                aria-label="Cerrar alerta"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
@@ -1956,66 +1983,107 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                           const canOpenPermissions = canEditUserPermissions(user);
 
                           return (
-                            <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                              <td className="py-4 px-5">
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-medium ${ROLE_COLORS[user.role]?.replace('text-', 'bg-').replace('/10', '') || 'bg-gray-400'}`}
-                                    style={{ background: user.role === 'superadmin' ? '#7c3aed' : user.role === 'admin' ? '#ef4444' : user.role === 'teacher' ? '#1F4E78' : '#39A900' }}>
+                            <tr key={user.id} className="border-b border-border/70 last:border-0 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                              <td className="py-3.5 px-5">
+                                <div className="flex items-center gap-3.5">
+                                  <div
+                                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-xs ${
+                                      user.role === 'superadmin'
+                                        ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20'
+                                        : user.role === 'admin'
+                                        ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/20'
+                                        : user.role === 'teacher'
+                                        ? 'bg-gradient-to-br from-blue-600 to-sky-700 shadow-blue-500/20'
+                                        : 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20'
+                                    }`}
+                                  >
                                     {user.name.charAt(0).toUpperCase()}
                                   </div>
-                                  <div className="min-w-0 max-w-[280px]">
-                                    <p className="font-medium text-foreground flex items-center gap-2 truncate" title={user.name}>
-                                      <span className="truncate">{user.name}</span>
-                                      {isSelf && <span className="text-xs bg-sena-green/10 text-sena-green px-1.5 py-0.5 rounded-full shrink-0">Tú</span>}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground truncate" title={user.email}>{user.email}</p>
+                                  <div className="min-w-0 max-w-[320px]">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate" title={user.name}>
+                                        {user.name}
+                                      </span>
+                                      {isSelf && (
+                                        <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                                          Tú
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-slate-500 truncate" title={user.email}>{user.email}</p>
                                     {(user.role === 'teacher' || user.role === 'student') && user.program && (
-                                      <p className="text-xs text-muted-foreground truncate" title={user.program}>{user.program}</p>
+                                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                        <span className="inline-block bg-slate-100 dark:bg-slate-800 text-[11px] px-2 py-0.5 rounded-md font-mono text-slate-600 dark:text-slate-300 max-w-full truncate" title={user.program}>
+                                          {user.program}
+                                        </span>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-4 px-5">
+                              <td className="py-3.5 px-5">
                                 {canChangeRole ? (
-                                  <select value={user.role} onChange={e => handleChangeUserRole(user.id, e.target.value)}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border-0 cursor-pointer ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
+                                  <select
+                                    value={user.role}
+                                    onChange={e => handleChangeUserRole(user.id, e.target.value)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-0 cursor-pointer shadow-xs ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}
+                                  >
                                     <option value="admin">Administrador</option>
                                     <option value="teacher">Instructor</option>
                                     <option value="student">Aprendiz</option>
                                   </select>
                                 ) : (
-                                  <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
+                                  <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-block ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
                                     {ROLE_LABELS[user.role] || user.role}
                                   </span>
                                 )}
                               </td>
-                              <td className="py-4 px-5">
-                                <button onClick={() => canModify && handleToggleUserStatus(user.id)}
+                              <td className="py-3.5 px-5">
+                                <button
+                                  onClick={() => canModify && handleToggleUserStatus(user.id)}
                                   disabled={!canModify}
-                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${user.status === "active" ? "bg-sena-green/10 text-sena-green hover:bg-sena-green/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
-                                  {user.status === "active" ? <><ToggleRight className="w-4 h-4" strokeWidth={1.8} /> Activo</> : <><ToggleLeft className="w-4 h-4" strokeWidth={1.8} /> Inactivo</>}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                                    user.status === "active"
+                                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20"
+                                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                  }`}
+                                >
+                                  {user.status === "active" ? (
+                                    <><ToggleRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.8} /> Activo</>
+                                  ) : (
+                                    <><ToggleLeft className="w-4 h-4 text-slate-400" strokeWidth={1.8} /> Inactivo</>
+                                  )}
                                 </button>
                               </td>
-                              <td className="py-4 px-5">
-                                <div className="flex items-center gap-2">
+                              <td className="py-3.5 px-5">
+                                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1 rounded-xl w-fit border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
                                   {canModify && (
                                     <button
                                       onClick={() => handleEditUserData(user)}
-                                      className="p-2 text-sena-green hover:bg-sena-green/10 rounded-lg transition-colors cursor-pointer"
-                                      title="Editar datos"
+                                      className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors cursor-pointer"
+                                      title="Editar información del usuario"
+                                      aria-label="Editar usuario"
                                     >
                                       <Edit className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
                                   {canOpenPermissions && (
-                                    <button onClick={() => handleEditUserPermissions(user)}
-                                      className="p-2 text-sena-blue hover:bg-sena-blue/10 rounded-lg transition-colors cursor-pointer" title="Editar permisos">
+                                    <button
+                                      onClick={() => handleEditUserPermissions(user)}
+                                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
+                                      title="Editar permisos de acceso"
+                                      aria-label="Permisos del usuario"
+                                    >
                                       <Settings className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
                                   {canModify && !isTargetSuperAdmin && (
-                                    <button onClick={() => handleDeleteUser(user.id)}
-                                      className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer" title="Eliminar usuario">
+                                    <button
+                                      onClick={() => setUserToDelete(user)}
+                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                                      title="Eliminar usuario permanentemente"
+                                      aria-label="Eliminar usuario"
+                                    >
                                       <Trash2 className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
@@ -2942,15 +3010,28 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       {/* ══ Modal Institucional: Crear Usuario ══ */}
       <AnimatePresence>
         {showUserModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl p-6 sm:p-7 w-full max-w-lg shadow-2xl border border-border my-8"
+              className="max-w-lg w-full max-h-[88vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 shadow-2xl overflow-hidden border border-border relative"
             >
-              {/* Encabezado */}
-              <div className="flex items-center justify-between pb-4 border-b border-border mb-5">
+              {/* Botón de cierre rápido 'X' */}
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowUserModal(false);
+                  setUserModalError("");
+                }} 
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10 cursor-pointer"
+                aria-label="Cerrar"
+              >
+                <X className="w-5 h-5"/>
+              </button>
+
+              {/* Cabecera Fija */}
+              <div className="p-5 sm:p-6 border-b border-border bg-white dark:bg-slate-900 shrink-0 pr-12">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl bg-sena-green/10 text-sena-green flex items-center justify-center font-bold shadow-xs">
                     <Users className="w-5 h-5" strokeWidth={2} />
@@ -2960,27 +3041,29 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                     <p className="text-xs text-muted-foreground">Registro institucional en la plataforma WorkLex SENA</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUserModal(false);
-                    setUserModalError("");
-                  }}
-                  className="p-2 hover:bg-muted rounded-xl transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-5 h-5" strokeWidth={1.8} />
-                </button>
               </div>
 
-              {/* Banner de Error */}
-              {userModalError && (
-                <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-500" />
-                  <span className="font-medium">{userModalError}</span>
-                </div>
-              )}
+              {/* Cuerpo con scroll interno suave */}
+              <div className="overflow-y-auto px-6 py-4 flex-1 space-y-4">
+                {/* Banner de Alerta Compacta tipo Cápsula */}
+                {userModalError && (
+                  <div className="px-3.5 py-2.5 text-sm rounded-xl border border-rose-200 bg-rose-50/90 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800/60 dark:text-rose-300 flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-500" />
+                      <span className="font-medium truncate">{userModalError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUserModalError("")}
+                      className="text-rose-500 hover:text-rose-700 dark:hover:text-rose-200 p-1 rounded-md hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors shrink-0 cursor-pointer"
+                      aria-label="Cerrar alerta"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
 
-              <form onSubmit={handleAddUser} className="space-y-4">
+                <form id="create-user-form" onSubmit={handleAddUser} className="space-y-4">
                 {/* Nombre Completo */}
                 <div>
                   <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1.5">
@@ -3153,38 +3236,120 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   </p>
                 </div>
 
-                {/* Botones de Acción */}
-                <div className="flex gap-3 pt-3 border-t border-border">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUserModal(false);
-                      setUserModalError("");
-                    }}
-                    disabled={isCreatingUser}
-                    className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isCreatingUser}
-                    className="flex-1 bg-sena-green hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isCreatingUser ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Creando Usuario...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        <span>Crear Usuario</span>
-                      </>
-                    )}
-                  </button>
+                </form>
+              </div>
+
+              {/* Pie de formulario fijo con Cancelar y Crear Usuario */}
+              <div className="p-4 sm:p-5 border-t border-border bg-slate-50 dark:bg-slate-900/80 flex gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserModal(false);
+                    setUserModalError("");
+                  }}
+                  disabled={isCreatingUser}
+                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-border hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  form="create-user-form"
+                  disabled={isCreatingUser}
+                  className="flex-1 bg-sena-green hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isCreatingUser ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Creando Usuario...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Crear Usuario</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ Modal de Confirmación: Eliminar Usuario Real (Hard Delete) ══ */}
+      <AnimatePresence>
+        {userToDelete && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="max-w-md w-full rounded-2xl bg-white dark:bg-slate-900 shadow-2xl overflow-hidden border border-border relative p-6 flex flex-col gap-4"
+            >
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Cerrar"
+                disabled={isDeletingUser}
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/60 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-6 h-6" />
                 </div>
-              </form>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Eliminar Usuario</h3>
+                  <p className="text-xs text-muted-foreground">Esta acción eliminará el registro de PostgreSQL permanentemente.</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-border text-sm space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[200px]">{userToDelete.name}</span>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300 capitalize">{userToDelete.role}</span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{userToDelete.email}</p>
+                {userToDelete.program && (
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{userToDelete.program}</p>
+                )}
+              </div>
+
+              <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <span>El usuario y su documento asociado quedarán libres para volver a ser registrados.</span>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setUserToDelete(null)}
+                  disabled={isDeletingUser}
+                  className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted text-muted-foreground font-semibold text-sm transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteUser}
+                  disabled={isDeletingUser}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isDeletingUser ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Eliminando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Eliminar</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
@@ -3194,122 +3359,142 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       <AnimatePresence>
         {showEditUserModal && selectedUser && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <div><h3 className="text-xl font-bold text-foreground">Editar Permisos</h3><p className="text-sm text-muted-foreground">{selectedUser.name}</p></div>
-                <button onClick={() => { setShowEditUserModal(false); setSelectedUser(null); }} className="p-2 hover:bg-muted rounded-lg transition-colors"><X className="w-5 h-5" strokeWidth={1.8} /></button>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg max-h-[88vh] flex flex-col shadow-2xl relative border border-border overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => { setShowEditUserModal(false); setSelectedUser(null); }}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10 cursor-pointer"
+                aria-label="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="p-6 pb-4 border-b border-border pr-12 shrink-0">
+                <h3 className="text-xl font-bold text-foreground">Editar Permisos</h3>
+                <p className="text-sm text-muted-foreground">{selectedUser.name}</p>
               </div>
-              <PermissionsEditor permissions={selectedUser.permissions} onSave={handleSaveUserPermissions} onCancel={() => { setShowEditUserModal(false); setSelectedUser(null); }} />
+              <div className="overflow-y-auto px-6 py-4 flex-1">
+                <PermissionsEditor
+                  permissions={selectedUser.permissions}
+                  onSave={handleSaveUserPermissions}
+                  onCancel={() => { setShowEditUserModal(false); setSelectedUser(null); }}
+                />
+              </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-
-
-{/* ══ Modal: Editar Datos Usuario ══ */}
-<AnimatePresence>
-  {showEditDataModal && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-xl font-bold text-foreground">Editar Usuario</h3>
-            <p className="text-sm text-muted-foreground">Modifica los datos básicos</p>
-          </div>
-          <button
-            onClick={() => setShowEditDataModal(false)}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" strokeWidth={1.8} />
-          </button>
-        </div>
-        <form onSubmit={handleSaveUserData} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Nombre completo
-            </label>
-            <input
-              type="text"
-              maxLength={45}
-              value={editUserData.name}
-              onChange={(e) =>
-                setEditUserData({ ...editUserData, name: e.target.value })
-              }
-              required
-              className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Email
-            </label>
-            <input
-              type="email"
-              value={editUserData.email}
-              onChange={(e) =>
-                setEditUserData({ ...editUserData, email: e.target.value })
-              }
-              required
-              className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Teléfono
-            </label>
-            <input
-              type="text"
-              value={editUserData.phone_num}
-              onChange={(e) =>
-                setEditUserData({ ...editUserData, phone_num: e.target.value })
-              }
-              className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
-            />
-          </div>
-          {(editUserData.role === "teacher" || editUserData.role === "student") && (
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Programa SENA
-              </label>
-              <select
-                value={editUserData.program}
-                onChange={(e) =>
-                  setEditUserData({ ...editUserData, program: e.target.value })
-                }
-                required
-                className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50"
+      {/* ══ Modal: Editar Datos Usuario ══ */}
+      <AnimatePresence>
+        {showEditDataModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md max-h-[88vh] flex flex-col shadow-2xl relative border border-border overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => setShowEditDataModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10 cursor-pointer"
+                aria-label="Cerrar"
               >
-                <option value="">Seleccionar programa</option>
-                {senaPrograms.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="submit"
-              className="flex-1 bg-sena-green text-white py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium"
-            >
-              Guardar
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowEditDataModal(false)}
-              className="flex-1 bg-muted text-muted-foreground py-2.5 rounded-xl font-medium"
-            >
-              Cancelar
-            </button>
+                <X className="w-5 h-5" />
+              </button>
+              <div className="p-6 pb-4 border-b border-border pr-12 shrink-0">
+                <h3 className="text-xl font-bold text-foreground">Editar Usuario</h3>
+                <p className="text-sm text-muted-foreground">Modifica los datos básicos</p>
+              </div>
+              <div className="overflow-y-auto px-6 py-4 flex-1">
+                <form id="edit-user-data-form" onSubmit={handleSaveUserData} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Nombre completo
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={45}
+                      value={editUserData.name}
+                      onChange={(e) =>
+                        setEditUserData({ ...editUserData, name: e.target.value })
+                      }
+                      required
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white dark:bg-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editUserData.email}
+                      onChange={(e) =>
+                        setEditUserData({ ...editUserData, email: e.target.value })
+                      }
+                      required
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white dark:bg-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Teléfono
+                    </label>
+                    <input
+                      type="text"
+                      value={editUserData.phone_num}
+                      onChange={(e) =>
+                        setEditUserData({ ...editUserData, phone_num: e.target.value })
+                      }
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white dark:bg-slate-800"
+                    />
+                  </div>
+                  {(editUserData.role === "teacher" || editUserData.role === "student") && (
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Programa SENA
+                      </label>
+                      <select
+                        value={editUserData.program}
+                        onChange={(e) =>
+                          setEditUserData({ ...editUserData, program: e.target.value })
+                        }
+                        required
+                        className="w-full px-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-white dark:bg-slate-800"
+                      >
+                        <option value="">Seleccionar programa</option>
+                        {senaPrograms.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </form>
+              </div>
+              <div className="p-4 sm:p-5 border-t border-border bg-slate-50 dark:bg-slate-900/80 flex gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowEditDataModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted text-muted-foreground font-medium transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  form="edit-user-data-form"
+                  className="flex-1 bg-sena-green text-white py-2.5 rounded-xl hover:bg-emerald-700 transition-all font-medium cursor-pointer"
+                >
+                  Guardar
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </form>
-      </motion.div>
-    </div>
-  )}
-</AnimatePresence>
+        )}
+      </AnimatePresence>
 
       {/* ══ Modal: Nueva Competencia Lingüística ══ */}
       <AnimatePresence>
