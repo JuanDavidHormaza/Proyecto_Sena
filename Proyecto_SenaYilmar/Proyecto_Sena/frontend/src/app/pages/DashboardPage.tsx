@@ -1487,66 +1487,110 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     <div className="min-h-screen bg-background">
       {/* ─── Encabezado Dinámico y Accesible (Smart Auto-hide con Scroll) ─── */}
       <header
-        className={`sticky top-0 bg-background/95 dark:bg-card/95 backdrop-blur-md border-b border-border z-40 transition-transform duration-300 ease-in-out ${
+        className={`sticky top-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-40 transition-transform duration-300 ease-in-out ${
           isHeaderVisible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
-        <div className="container mx-auto px-4 lg:px-8 py-3.5">
-          <div className="flex items-center justify-between gap-3">
-            {/* Logo SENA con acceso directo al Home */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                title="Ir a la página principal de WorkLex (Inicio)"
-                className="group flex items-center gap-2.5 p-1 rounded-xl hover:bg-muted/60 transition-all text-left"
-              >
-                <img
-                  src="/worklex.png"
-                  alt="Worklex SENA"
-                  className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
-                />
-                <div className="hidden sm:block">
-                  <div className="flex items-center gap-1.5">
-                    <h1 className="font-bold text-slate-900 dark:text-white high-contrast:text-white text-sm leading-none">Worklex SENA</h1>
-                    <span className="p-0.5 rounded text-sena-green group-hover:translate-x-0.5 transition-transform">
-                      <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">Plataforma Institucional</p>
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="h-16 flex items-center justify-between gap-3">
+          {/* Isotipo/Logos a la izquierda */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              title="Ir a la página principal de WorkLex (Inicio)"
+              className="group flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+            >
+              <img
+                src="/worklex.png"
+                alt="Worklex SENA"
+                className="w-10 h-10 rounded-full object-cover border border-emerald-500/30 shadow-xs transition-transform hover:scale-105 flex-shrink-0"
+              />
+              <div className="hidden sm:block">
+                <div className="flex items-center gap-1.5">
+                  <h1 className="font-bold text-slate-900 dark:text-white text-sm leading-none">Worklex SENA</h1>
+                  <span className="p-0.5 rounded text-[#39A900] group-hover:translate-x-0.5 transition-transform">
+                    <Home className="w-3.5 h-3.5" strokeWidth={1.8} />
+                  </span>
                 </div>
-              </button>
-
-              {/* Indicador Dinámico de Ficha y Programa Activo */}
-              <div
-                className="relative hidden md:flex items-center bg-muted/70 border border-border/80 rounded-xl px-3 py-1.5 transition-colors"
-                title={`Ficha y Programa activo: ${activeProgram}`}
-              >
-                <GraduationCap className="w-4 h-4 text-sena-blue mr-2 flex-shrink-0" strokeWidth={1.8} />
-                <span className="text-xs font-semibold text-foreground truncate max-w-[280px]">
-                  {formatProgramFichaHeader(activeProgram)}
-                </span>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Plataforma Institucional</p>
               </div>
-            </div>
+            </button>
 
-            {/* Acciones del Header: Menú y Perfil */}
-            <div className="flex items-center gap-2.5">
-              <HeaderActionTools />
-
-              {/* Botón Móvil Hamburguesa */}
-              <button
-                type="button"
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="md:hidden p-2 rounded-xl border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Abrir menú de navegación móvil"
-                aria-label="Menú móvil"
-              >
-                <Menu className="w-5 h-5" strokeWidth={1.8} />
-              </button>
-
-              <UserAccountMenu accent="green" />
+            {/* Indicador Dinámico de Ficha y Programa Activo */}
+            <div
+              className="relative hidden xl:flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 transition-colors"
+              title={`Ficha y Programa activo: ${activeProgram}`}
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-[#39A900] mr-1.5 flex-shrink-0" strokeWidth={1.8} />
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[220px]">
+                {formatProgramFichaHeader(activeProgram)}
+              </span>
             </div>
           </div>
+
+          {/* Menú de navegación centrado con enlaces en text-slate-600 hover:text-slate-900 text-sm font-medium */}
+          <nav className="hidden md:flex items-center gap-1 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMainTab("overview");
+                setOverviewSubTab("main");
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activeMainTab === "overview" && overviewSubTab === "main"
+                  ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+            >
+              Evaluación y Progreso
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveMainTab("study")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activeMainTab === "study"
+                  ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+            >
+              Diccionario Técnico
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMainTab("overview");
+                setOverviewSubTab("stats");
+                setShowStatsDrawer(true);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activeMainTab === "overview" && overviewSubTab === "stats"
+                  ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              }`}
+            >
+              Historial y Métricas
+            </button>
+          </nav>
+
+          {/* Acciones del Header: Menú y Perfil */}
+          <div className="flex items-center gap-2">
+            <HeaderActionTools />
+
+            {/* Botón Móvil Hamburguesa */}
+            <button
+              type="button"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              title="Abrir menú de navegación móvil"
+              aria-label="Menú móvil"
+            >
+              <Menu className="w-5 h-5" strokeWidth={1.8} />
+            </button>
+
+            <UserAccountMenu accent="green" />
+          </div>
+        </div>
 
           {/* Menú Colapsable Móvil (100% Limpio para Aprendiz) */}
           <AnimatePresence>

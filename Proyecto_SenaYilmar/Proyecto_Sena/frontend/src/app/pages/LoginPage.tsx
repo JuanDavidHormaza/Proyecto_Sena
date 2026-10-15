@@ -20,6 +20,11 @@ import {
   RefreshCw,
   CheckCircle2,
   Loader2,
+  Award,
+  Mic,
+  PenTool,
+  Languages,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
@@ -320,10 +325,10 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col lg:flex-row relative">
-      {/* ── Panel Izquierdo (Formulario) ── */}
-      <div className="flex-1 min-h-screen flex flex-col justify-center items-center px-6 lg:px-12 bg-white dark:bg-slate-900 z-10 min-w-0 border-r border-slate-200/80 dark:border-slate-800">
-        <div className="w-full max-w-sm space-y-6">
+    <div className="min-h-screen bg-white dark:bg-slate-900 grid lg:grid-cols-12 relative">
+      {/* ── Panel Izquierdo (Formulario - 5 cols) ── */}
+      <div className="lg:col-span-5 min-h-screen flex flex-col justify-center p-8 sm:p-12 lg:p-16 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
+        <div className="w-full max-w-sm mx-auto space-y-6">
           <button
             type="button"
             onClick={() => (step === "otp" ? setStep("credentials") : navigate("/"))}
@@ -407,10 +412,10 @@ export function LoginPage() {
                         onChange={(e) => handleEmailChange(e.target.value)}
                         onBlur={handleEmailBlur}
                         placeholder="aprendiz@soy.sena.edu.co"
-                        className={`w-full pl-10 pr-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all ${
+                        className={`w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-slate-800 border rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all ${
                           emailTouched && emailError
                             ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
-                            : "border-slate-200 dark:border-slate-700"
+                            : "border-slate-300 dark:border-slate-700"
                         }`}
                       />
                     </div>
@@ -432,7 +437,7 @@ export function LoginPage() {
                         value={formData.password}
                         onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
                         placeholder="••••••••"
-                        className="w-full pl-10 pr-11 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all"
+                        className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all"
                       />
                       <button
                         type="button"
@@ -466,7 +471,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
-                    className="w-full py-2.5 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full py-2.5 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isLoading ? (
                       <>
@@ -548,7 +553,7 @@ export function LoginPage() {
                           onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           onPaste={handleOtpPaste}
-                          className="w-11 h-13 text-center text-xl font-black font-mono border-2 border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all shadow-2xs"
+                          className="w-11 h-13 text-center text-xl font-black font-mono border-2 border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all shadow-2xs"
                         />
                       ))}
                     </div>
@@ -557,7 +562,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || otpDigits.join("").length < 6}
-                    className="w-full py-2.5 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full py-2.5 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isLoading ? (
                       <>
@@ -591,42 +596,86 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* ── Panel Derecho (Hero Institucional) ── */}
-      <div
-        className="hidden lg:flex flex-1 relative items-center justify-center p-12 bg-cover bg-center overflow-hidden min-w-0"
-        style={{ backgroundImage: "url('/GenteSena.jpg')" }}
-      >
-        {/* Overlay degradado suave */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#39A900]/80 via-slate-900/75 to-slate-900/90" />
+      {/* ── Panel Derecho (Hero Institucional - 7 cols) ── */}
+      <div className="hidden lg:flex lg:col-span-7 relative flex-col justify-between p-12 lg:p-16 bg-slate-900 overflow-hidden min-h-screen">
+        {/* Imagen institucional con cobertura limpia y opacidad 30-35% */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30"
+          style={{ backgroundImage: "url('/GenteSena.jpg')" }}
+        />
 
-        {/* Tarjeta de información con ancho máximo controlado frosted-glass */}
-        <div className="relative z-10 max-w-md w-full p-8 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20 text-white shadow-2xl space-y-4">
-          {/* Badge institucional */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-semibold uppercase tracking-wider shadow-xs">
-            <GraduationCap className="w-4 h-4 text-white" />
+        {/* Degradado oscuro sutil institucional */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40" />
+
+        {/* Top badge */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-200 text-xs font-semibold uppercase tracking-wider">
+            <GraduationCap className="w-4 h-4 text-[#39A900]" />
             <span>SENA • CEFR English Level Test</span>
           </div>
+          <span className="text-xs font-medium text-slate-400">Plataforma Oficial Formativa</span>
+        </div>
 
+        {/* Contenido Central y Tarjetas de Métricas Sólidas y Compactas */}
+        <div className="relative z-10 space-y-6 max-w-xl">
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+            <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
               Aprende, diagnostica y domina el inglés técnico profesional
             </h2>
-            <p className="mt-3 text-sm text-white/85 leading-relaxed font-normal">
-              Plataforma institucional de evaluación diagnóstica de inglés técnico y diccionarios por competencias formativas según el Marco Común Europeo (CEFR).
+            <p className="mt-3 text-sm text-slate-300 leading-relaxed font-normal">
+              Plataforma institucional de evaluación diagnóstica de inglés técnico y diccionarios por competencias formativas según el Marco Común Europeo de Referencia (CEFR).
             </p>
           </div>
 
-          {/* Métricas destacadas */}
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
-            <div>
-              <p className="text-2xl font-black text-white">CEFR A1-B2</p>
-              <p className="text-xs text-white/75 mt-0.5">Estándar internacional</p>
+          {/* Tarjetas de información y métricas sólidas y compactas */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
+              <div className="flex items-center gap-2 text-[#39A900] mb-1">
+                <GraduationCap className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Niveles CEFR</span>
+              </div>
+              <p className="text-2xl font-black text-white">A1 - B2</p>
+              <p className="text-xs text-slate-400 mt-1">Marco internacional estándar</p>
             </div>
-            <div>
-              <p className="text-2xl font-black text-white">4 Competencias</p>
-              <p className="text-xs text-white/75 mt-0.5">Speaking, Writing, Grammar, Reading</p>
+
+            <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
+              <div className="flex items-center gap-2 text-sky-400 mb-1">
+                <Award className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Competencias</span>
+              </div>
+              <p className="text-2xl font-black text-white">4 Habilidades</p>
+              <p className="text-xs text-slate-400 mt-1">Speaking, Writing, Grammar, Reading</p>
             </div>
           </div>
+
+          {/* Desglose de Competencias Educativas con Lucide Icons */}
+          <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
+            <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Evaluación integral por competencias:</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <Mic className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Speaking</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <PenTool className="w-3.5 h-3.5 text-rose-400" />
+                <span>Writing</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <Languages className="w-3.5 h-3.5 text-purple-400" />
+                <span>Grammar</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                <span>Reading</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer institucional */}
+        <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-slate-800">
+          <span>Servicio Nacional de Aprendizaje SENA</span>
+          <span>WorkLex • {new Date().getFullYear()}</span>
         </div>
       </div>
 

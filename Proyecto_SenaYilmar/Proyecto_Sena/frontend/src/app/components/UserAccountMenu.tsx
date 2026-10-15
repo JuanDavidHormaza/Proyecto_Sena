@@ -27,6 +27,13 @@ interface UserAccountMenuProps {
   showRole?: boolean;
 }
 
+const ROLE_BADGE_STYLES: Record<string, { label: string; className: string }> = {
+  superadmin: { label: "Admin", className: "bg-purple-50 text-purple-700 border border-purple-200" },
+  admin: { label: "Admin", className: "bg-purple-50 text-purple-700 border border-purple-200" },
+  teacher: { label: "Instructor", className: "bg-blue-50 text-blue-700 border border-blue-200" },
+  student: { label: "Aprendiz", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
+};
+
 export function UserAccountMenu({ accent = "green", compact = false, showRole = true }: UserAccountMenuProps) {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
@@ -39,6 +46,7 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
   const role = user?.role || localStorage.getItem("userRole") || "student";
   const userProgram = user?.program || localStorage.getItem("userProgram") || "";
   const subtitle = userProgram || ROLE_LABELS[role] || "Usuario";
+  const badgeInfo = ROLE_BADGE_STYLES[role] || { label: "Aprendiz", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
   const accentClass = accent === "blue" ? "bg-sena-blue" : accent === "purple" ? "bg-purple-600" : "bg-sena-green";
 
   // Multi-ficha: Obtener programas aprobados/activos sin duplicados
@@ -95,10 +103,10 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className={`flex items-center gap-3 rounded-xl transition-colors hover:bg-muted ${compact ? "p-1.5" : "p-2"}`}
+        className={`flex items-center gap-2.5 rounded-xl transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 ${compact ? "p-1" : "p-1.5"}`}
         aria-label="Abrir menu de usuario"
       >
-        <div className={`${compact ? "w-9 h-9" : "w-10 h-10"} ${accentClass} rounded-xl flex items-center justify-center text-white font-medium overflow-hidden`}>
+        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 font-semibold text-xs overflow-hidden shrink-0">
           {user?.avatar ? (
             <img src={user.avatar} alt={userName} className="w-full h-full object-cover" />
           ) : (
@@ -106,15 +114,14 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
           )}
         </div>
         {!compact && (
-          <div className="hidden sm:block text-left min-w-0">
-            <p className="font-medium text-foreground text-sm truncate max-w-40" title={userName}>{userName}</p>
+          <div className="hidden sm:flex items-center gap-2 text-left min-w-0">
+            <span className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate max-w-32" title={userName}>
+              {userName}
+            </span>
             {showRole && (
-              <p className="text-xs text-muted-foreground truncate max-w-40 flex items-center gap-1" title={subtitle}>
-                {role === "student" && <GraduationCap className="w-3.5 h-3.5 text-emerald-600 inline shrink-0" />}
-                {role === "teacher" && <Presentation className="w-3.5 h-3.5 text-blue-600 inline shrink-0" />}
-                {(role === "admin" || role === "superadmin") && <ShieldCheck className="w-3.5 h-3.5 text-purple-600 inline shrink-0" />}
-                <span className="truncate">{subtitle}</span>
-              </p>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold tracking-tight ${badgeInfo.className}`}>
+                {badgeInfo.label}
+              </span>
             )}
           </div>
         )}

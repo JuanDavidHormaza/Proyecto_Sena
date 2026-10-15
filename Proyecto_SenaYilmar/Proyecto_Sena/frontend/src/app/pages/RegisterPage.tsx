@@ -24,6 +24,11 @@ import {
   Code,
   Layers,
   ChevronRight,
+  Award,
+  Mic,
+  PenTool,
+  Languages,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
@@ -723,18 +728,18 @@ export function RegisterPage() {
   };
 
   const baseInputClass =
-    "w-full pl-12 pr-4 py-3 bg-muted/40 rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-all text-sm";
-  const inputClass = `${baseInputClass} border border-border focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green`;
+    "w-full pl-12 pr-4 py-2.5 bg-white dark:bg-slate-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none transition-all text-sm";
+  const inputClass = `${baseInputClass} border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900]`;
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* ── Formulario de Registro ── */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+    <div className="min-h-screen bg-white dark:bg-slate-900 grid lg:grid-cols-12 relative">
+      {/* ── Formulario de Registro (5 cols) ── */}
+      <div className="lg:col-span-5 min-h-screen flex flex-col justify-center p-8 sm:p-12 lg:p-16 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-lg"
+          className="w-full max-w-lg mx-auto"
         >
           <button
             type="button"
@@ -743,7 +748,7 @@ export function RegisterPage() {
               else if (step === 2) setStep(1);
               else navigate("/");
             }}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6 cursor-pointer"
+            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-6 cursor-pointer text-xs font-semibold"
           >
             <ArrowLeft className="w-4 h-4" strokeWidth={1.8} />
             <span>
@@ -757,14 +762,18 @@ export function RegisterPage() {
 
           <div className="flex items-center gap-3.5 mb-6 logo-container">
             <img
-              src="/worklex.png"
-              alt="WorkLex logo"
-              className="w-12 h-12 rounded-full object-contain border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
-              style={{ width: "48px", height: "48px", minWidth: "48px", minHeight: "48px" }}
+              src="/logo-sena.png"
+              alt="Logo SENA"
+              className="h-10 w-auto object-contain"
             />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Registro de Aprendiz</h1>
-              <p className="text-xs text-muted-foreground font-medium">Plataforma SENA</p>
+            <div className="h-7 w-[1px] bg-slate-200 dark:bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <img
+                src="/worklex.png"
+                alt="WorkLex logo"
+                className="w-9 h-9 rounded-full object-contain border border-slate-200 dark:border-slate-700 shadow-2xs"
+              />
+              <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">WorkLex</span>
             </div>
           </div>
 
@@ -1304,25 +1313,86 @@ export function RegisterPage() {
         </motion.div>
       </div>
 
-      {/* ── Panel lateral decorativo SENA ── */}
-      <div
-        className="hidden lg:flex flex-1 relative items-center justify-center p-12 bg-cover bg-center"
-        style={{ backgroundImage: "url('/GenteSena.jpg')" }}
-      >
-        <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]" />
-        <div className="relative z-10 text-white text-center max-w-sm">
-          <div className="flex items-center justify-center gap-3 mb-6 logo-container">
-            <img
-              src="/worklex.png"
-              alt="WorkLex SENA"
-              className="w-14 h-14 rounded-full object-contain border-2 border-white/40 shadow-lg drop-shadow-md flex-shrink-0"
-              style={{ width: "56px", height: "56px", minWidth: "56px", minHeight: "56px" }}
-            />
-            <h3 className="text-3xl font-extrabold tracking-tight">WorkLex SENA</h3>
+      {/* ── Panel Derecho (Hero Institucional - 7 cols) ── */}
+      <div className="hidden lg:flex lg:col-span-7 relative flex-col justify-between p-12 lg:p-16 bg-slate-900 overflow-hidden min-h-screen">
+        {/* Imagen institucional con cobertura limpia y opacidad 30-35% */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30"
+          style={{ backgroundImage: "url('/GenteSena.jpg')" }}
+        />
+
+        {/* Degradado oscuro sutil institucional */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40" />
+
+        {/* Top badge */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-200 text-xs font-semibold uppercase tracking-wider">
+            <GraduationCap className="w-4 h-4 text-[#39A900]" />
+            <span>SENA • CEFR English Level Test</span>
           </div>
-          <p className="text-white/85 text-base leading-relaxed">
-            Plataforma institucional de evaluación diagnóstica de inglés técnico para aprendices e instructores del SENA.
-          </p>
+          <span className="text-xs font-medium text-slate-400">Plataforma Oficial Formativa</span>
+        </div>
+
+        {/* Contenido Central y Tarjetas de Métricas Sólidas y Compactas */}
+        <div className="relative z-10 space-y-6 max-w-xl">
+          <div>
+            <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
+              Aprende, diagnostica y domina el inglés técnico profesional
+            </h2>
+            <p className="mt-3 text-sm text-slate-300 leading-relaxed font-normal">
+              Plataforma institucional de evaluación diagnóstica de inglés técnico y diccionarios por competencias formativas según el Marco Común Europeo de Referencia (CEFR).
+            </p>
+          </div>
+
+          {/* Tarjetas de información y métricas sólidas y compactas */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
+              <div className="flex items-center gap-2 text-[#39A900] mb-1">
+                <GraduationCap className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Niveles CEFR</span>
+              </div>
+              <p className="text-2xl font-black text-white">A1 - B2</p>
+              <p className="text-xs text-slate-400 mt-1">Marco internacional estándar</p>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
+              <div className="flex items-center gap-2 text-sky-400 mb-1">
+                <Award className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Competencias</span>
+              </div>
+              <p className="text-2xl font-black text-white">4 Habilidades</p>
+              <p className="text-xs text-slate-400 mt-1">Speaking, Writing, Grammar, Reading</p>
+            </div>
+          </div>
+
+          {/* Desglose de Competencias Educativas con Lucide Icons */}
+          <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
+            <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Evaluación integral por competencias:</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <Mic className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Speaking</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <PenTool className="w-3.5 h-3.5 text-rose-400" />
+                <span>Writing</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <Languages className="w-3.5 h-3.5 text-purple-400" />
+                <span>Grammar</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                <span>Reading</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer institucional */}
+        <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-slate-800">
+          <span>Servicio Nacional de Aprendizaje SENA</span>
+          <span>WorkLex • {new Date().getFullYear()}</span>
         </div>
       </div>
 

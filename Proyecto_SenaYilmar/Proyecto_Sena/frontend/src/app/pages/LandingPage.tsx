@@ -32,8 +32,8 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Responsivo */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 dark:bg-card/95 backdrop-blur-md border-b border-border">
-        <div className="w-full flex items-center justify-between px-4 sm:px-8 py-4 transition-all duration-300">
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div className="w-full h-full flex items-center justify-between px-4 sm:px-8 transition-all duration-300">
           <div className="flex-shrink-0 flex items-center gap-3">
             <img
               src="/worklex.png"

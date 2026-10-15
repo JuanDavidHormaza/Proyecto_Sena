@@ -833,13 +833,13 @@ export function QuizPage() {
   // ── Estilos Corporativos SENA para Opciones ───────────────────────────────
   const getButtonStyle = (index: number) => {
     if (answerState === "idle") {
-      return "bg-white hover:bg-emerald-50/70 border border-slate-200 hover:border-emerald-500 text-slate-800 font-medium shadow-xs";
+      return "bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-800 font-medium shadow-xs";
     }
     if (index === currentQuestion.correctAnswer) {
-      return "bg-emerald-50 border-2 border-emerald-600 text-emerald-950 font-semibold shadow-md ring-1 ring-emerald-600/30";
+      return "bg-emerald-50 border-2 border-emerald-500 text-emerald-900 font-semibold shadow-sm";
     }
     if (index === selectedAnswer && answerState === "incorrect") {
-      return "bg-rose-50 border-2 border-rose-500 text-rose-950 font-semibold shadow-md";
+      return "bg-rose-50 border-2 border-rose-500 text-rose-950 font-semibold shadow-sm";
     }
     return "bg-slate-50/80 border border-slate-200 text-slate-400 opacity-60";
   };
@@ -996,7 +996,7 @@ export function QuizPage() {
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0YzAtMi4yMDkgMS43OTEtNCA0LTRzNCAxLjc5MSA0IDQtMS43OTEgNC00IDQtNC0xLjc5MS00LTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
 
-      <div className="container mx-auto max-w-4xl px-4 py-6 relative">
+      <div className="container mx-auto max-w-3xl px-4 py-6 relative">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -1075,7 +1075,7 @@ export function QuizPage() {
           </div>
           <div className="h-2 bg-black/20 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full shadow-sm"
+              className="h-full bg-[#39A900] rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.4 }}

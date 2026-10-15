@@ -1678,12 +1678,12 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
       {/* ── Main ── */}
       <main className="lg:ml-64 pt-32 lg:pt-0">
         {/* ── Desktop Top Header con Campana de Notificaciones ── */}
-        <header className="hidden lg:flex items-center justify-between px-8 py-4 bg-background/95 dark:bg-card/95 backdrop-blur-md border-b border-border sticky top-0 z-30">
+        <header className="hidden lg:flex items-center justify-between px-8 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white high-contrast:text-white tracking-tight">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
               {tabs.find(t => t.id === activeTab)?.label || "Panel Institucional"}
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               WorkLex SENA • Plataforma de Evaluación Lingüística CEFR y Diccionarios
             </p>
           </div>
@@ -1789,11 +1789,9 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
               </AnimatePresence>
             </div>
 
-            {/* Identificador de Usuario */}
-            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-border">
-              <span className="text-xs font-semibold text-foreground max-w-[200px] truncate" title={authUser?.name || "Administrador"}>
-                {authUser?.name || "Administrador"}
-              </span>
+            {/* Perfil de Usuario */}
+            <div className="pl-3 border-l border-slate-200 dark:border-slate-800">
+              <UserAccountMenu compact={true} accent="purple" />
             </div>
           </div>
         </header>

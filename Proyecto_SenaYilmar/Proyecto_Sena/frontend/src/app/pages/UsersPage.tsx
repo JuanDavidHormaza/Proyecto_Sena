@@ -86,31 +86,31 @@ const UserToolbar: FC<UserToolbarProps> = ({
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 flex-wrap bg-white dark:bg-slate-900 p-4 rounded-2xl border border-border shadow-xs">
+    <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 flex-wrap bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
       <div className="relative flex-1 min-w-[240px]">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
         <input
           type="text"
           placeholder="Buscar por nombre, correo o número de documento..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 text-sm shadow-2xs"
+          className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 text-sm transition-all"
         />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         {/* Pestañas/Píldoras de filtro rápido */}
-        <div className="inline-flex items-center rounded-xl border border-border bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
-          <Filter className="w-3.5 h-3.5 text-muted-foreground ml-2 mr-1 shrink-0" />
+        <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
+          <Filter className="w-3.5 h-3.5 text-slate-400 ml-2 mr-1 shrink-0" />
           {rolePills.map((pill) => (
             <button
               key={pill.id}
               type="button"
               onClick={() => onRoleChange(pill.id)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
                 filterRole === pill.id
-                  ? "bg-white dark:bg-slate-900 text-foreground font-bold shadow-xs border border-border/60"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/50"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200 dark:border-slate-700"
+                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/50"
               }`}
             >
               {pill.icon}
@@ -120,16 +120,16 @@ const UserToolbar: FC<UserToolbarProps> = ({
         </div>
 
         {/* Selector de cantidad de registros visibles: [ 10 | 25 | 50 | Todos ] */}
-        <div className="inline-flex items-center rounded-xl border border-border bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
+        <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
           {([10, 25, 50, "all"] as const).map((size) => (
             <button
               key={size}
               type="button"
               onClick={() => onPageSizeChange(size)}
-              className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer ${
                 pageSize === size
                   ? "bg-[#39A900] text-white font-bold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/50"
+                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/50"
               }`}
             >
               {size === "all" ? "Todos" : size}
@@ -141,7 +141,7 @@ const UserToolbar: FC<UserToolbarProps> = ({
         <button
           type="button"
           onClick={onNewUser}
-          className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2 cursor-pointer text-xs sm:text-sm transition-all"
+          className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2 cursor-pointer text-xs sm:text-sm transition-all"
         >
           <Plus className="w-4 h-4" strokeWidth={2} />
           <span>+ Nuevo Usuario</span>
@@ -154,13 +154,13 @@ const UserToolbar: FC<UserToolbarProps> = ({
 // ─── 2. Subcomponente Modular: Encabezado de la Tabla ─────────────────────────
 const UserTableHeader: FC = () => (
   <thead>
-    <tr className="border-b border-border bg-muted/40 text-muted-foreground text-xs uppercase tracking-wider">
-      <th className="text-left py-3.5 px-5 font-semibold">Usuario</th>
-      <th className="text-left py-3.5 px-5 font-semibold">Documento</th>
-      <th className="text-left py-3.5 px-5 font-semibold">Rol</th>
-      <th className="text-left py-3.5 px-5 font-semibold">Programa / Ficha</th>
-      <th className="text-left py-3.5 px-5 font-semibold">Estado</th>
-      <th className="text-left py-3.5 px-5 font-semibold">Acciones</th>
+    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider">
+      <th className="text-left py-3.5 px-4 font-semibold">Usuario</th>
+      <th className="text-left py-3.5 px-4 font-semibold">Documento</th>
+      <th className="text-left py-3.5 px-4 font-semibold">Rol</th>
+      <th className="text-left py-3.5 px-4 font-semibold">Programa / Ficha</th>
+      <th className="text-left py-3.5 px-4 font-semibold">Estado</th>
+      <th className="text-left py-3.5 px-4 font-semibold">Acciones</th>
     </tr>
   </thead>
 );
@@ -190,7 +190,7 @@ const UserTableRow: FC<UserTableRowProps> = ({
   return (
     <tr className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
       {/* Columna 1: Usuario con Avatar Circular y Tooltip Truncado */}
-      <td className="py-3.5 px-5">
+      <td className="py-3.5 px-4">
         <div className="flex items-center gap-3.5">
           <div
             className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-xs ${
@@ -225,14 +225,14 @@ const UserTableRow: FC<UserTableRowProps> = ({
       </td>
 
       {/* Columna 2: Documento */}
-      <td className="py-3.5 px-5 whitespace-nowrap">
+      <td className="py-3.5 px-4 whitespace-nowrap">
         <span className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
           {user.docType ? `${user.docType} ` : ""}{user.docNum || "—"}
         </span>
       </td>
 
       {/* Columna 3: Rol (Badge Desplegable Refinado con Icono Temático) */}
-      <td className="py-3.5 px-5 whitespace-nowrap">
+      <td className="py-3.5 px-4 whitespace-nowrap">
         {isSelf || isTargetSuperAdmin ? (
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5 opacity-90 cursor-not-allowed ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
@@ -262,7 +262,7 @@ const UserTableRow: FC<UserTableRowProps> = ({
       </td>
 
       {/* Columna 4: Programa / Ficha (Dos líneas limpias sin cortes abruptos) */}
-      <td className="py-3.5 px-5">
+      <td className="py-3.5 px-4">
         {(() => {
           const { programName, fichaNumber } = parseProgramAndFicha(user.program);
           return (
@@ -285,7 +285,7 @@ const UserTableRow: FC<UserTableRowProps> = ({
       </td>
 
       {/* Columna 5: Estado (Optimistic Switch) */}
-      <td className="py-3.5 px-5 whitespace-nowrap">
+      <td className="py-3.5 px-4 whitespace-nowrap">
         <button
           type="button"
           onClick={() => !isSelf && !isTargetSuperAdmin && onToggleStatus(user.id)}
@@ -307,7 +307,7 @@ const UserTableRow: FC<UserTableRowProps> = ({
       </td>
 
       {/* Columna 6: Acciones Claras */}
-      <td className="py-3.5 px-5 whitespace-nowrap">
+      <td className="py-3.5 px-4 whitespace-nowrap">
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -1043,12 +1043,12 @@ export const UsersPage = () => {
 
         {/* Tabla Modular de Usuarios */}
         {isLoading ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border shadow-xs p-12 text-center">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-sena-green border-t-transparent mb-3" />
             <p className="text-sm font-medium text-foreground">Cargando usuarios desde la base de datos...</p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-border shadow-xs overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <UserTableHeader />
