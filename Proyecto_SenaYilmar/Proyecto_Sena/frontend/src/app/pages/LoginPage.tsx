@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
-import { useToast } from "../components/Toast";
+import { toast } from "../components/Toast";
 import {
   validateEmail,
   sanitizeEmail,
@@ -33,7 +33,7 @@ import { FieldError } from "../components/FieldError";
 type LoginStep = "credentials" | "otp";
 
 function getProgramIcon(program: string) {
-  const norm = program.toLowerCase();
+  const norm = (program || "").toLowerCase();
   if (norm.includes("mecánica") || norm.includes("mecanica")) {
     return <Wrench className="w-6 h-6 text-amber-600" strokeWidth={1.8} />;
   }
@@ -49,10 +49,9 @@ function getProgramIcon(program: string) {
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const reason = searchParams.get("reason");
+  const reason = searchParams?.get("reason") ?? (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("reason") : null);
   const isIdleTimeout = reason === "timeout" || reason === "idle_timeout";
   const { login, updateUser } = useAuth();
-  const toast = useToast();
 
   useEffect(() => {
     if (isIdleTimeout) {

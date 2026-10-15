@@ -1,4 +1,3 @@
-// frontend/src/router.tsx
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -16,16 +15,20 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RouteErrorBoundary } from "./components/ErrorBoundary";
 
 export const router = createBrowserRouter([
-  { path: "/", Component: LandingPage },
-  { path: "/login", Component: LoginPage },
-  { path: "/register", Component: RegisterPage },
-  { path: "/recuperar-cuenta", Component: ResetPasswordPage },
-  { path: "/recuperar", Component: ResetPasswordPage },
-  { path: "/reset-password", Component: ResetPasswordPage },
-  { path: "/recover", Component: ResetPasswordPage },
-  { path: "/404", Component: NotFoundPage },
+  {
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      { path: "/", Component: LandingPage },
+      { path: "/login", Component: LoginPage },
+      { path: "/register", Component: RegisterPage },
+      { path: "/recuperar-cuenta", Component: ResetPasswordPage },
+      { path: "/recuperar", Component: ResetPasswordPage },
+      { path: "/reset-password", Component: ResetPasswordPage },
+      { path: "/recover", Component: ResetPasswordPage },
+      { path: "/404", Component: NotFoundPage },
 
   // Estudiante
   {
@@ -128,5 +131,7 @@ export const router = createBrowserRouter([
   },
 
   // Ruta catch-all (404 estilizada)
-  { path: "*", Component: NotFoundPage },
+      { path: "*", Component: NotFoundPage },
+    ],
+  },
 ]);

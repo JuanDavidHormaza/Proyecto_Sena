@@ -21,26 +21,38 @@ export type ContrastMode = "normal" | "high-contrast" | "clean-reading";
 
 // Aplicar escalado tipográfico aislado mediante variable CSS --text-scale en el :root
 export const applyTextScale = (level: "normal" | "medium" | "large") => {
+  if (typeof document === "undefined") return;
+
   // 1. Restaurar Inmediatamente los Elementos Raíz (inmutables y sin zoom)
-  document.documentElement.style.fontSize = "";
-  document.documentElement.style.zoom = "";
-  document.body.style.zoom = "";
-  document.body.style.transform = "";
+  if (document.documentElement) {
+    document.documentElement.style.fontSize = "";
+    document.documentElement.style.zoom = "";
+  }
+  if (document.body) {
+    document.body.style.zoom = "";
+    document.body.style.transform = "";
+  }
 
   const root = document.documentElement;
-  switch (level) {
-    case "normal":
-      root.style.setProperty("--text-scale", "1");
-      break;
-    case "medium":
-      root.style.setProperty("--text-scale", "1.14");
-      break;
-    case "large":
-      root.style.setProperty("--text-scale", "1.25");
-      break;
+  if (root) {
+    switch (level) {
+      case "normal":
+        root.style.setProperty("--text-scale", "1");
+        break;
+      case "medium":
+        root.style.setProperty("--text-scale", "1.14");
+        break;
+      case "large":
+        root.style.setProperty("--text-scale", "1.25");
+        break;
+    }
   }
-  localStorage.setItem("worklex_text_scale", level);
-  localStorage.setItem("worklex_accessibility_font", level);
+  try {
+    localStorage.setItem("worklex_text_scale", level);
+    localStorage.setItem("worklex_accessibility_font", level);
+  } catch {
+    // Safe fallback for restricted storage environments
+  }
 };
 
 export const applyGlobalFontScale = applyTextScale;
@@ -52,30 +64,46 @@ export function AccessibilityWidget() {
 
   // 1. Tamaño de fuente ('normal' | 'medium' | 'large')
   const [fontSize, setFontSize] = useState<FontSizeLevel>(() => {
-    const saved = localStorage.getItem("worklex_text_scale") || localStorage.getItem("worklex_accessibility_font");
-    if (saved === "large" || saved === "medium" || saved === "normal") {
-      return saved as FontSizeLevel;
+    try {
+      const saved = localStorage.getItem("worklex_text_scale") || localStorage.getItem("worklex_accessibility_font");
+      if (saved === "large" || saved === "medium" || saved === "normal") {
+        return saved as FontSizeLevel;
+      }
+    } catch {
+      // Safe fallback
     }
     return "normal";
   });
 
   // 2. Modo de contraste ('normal' | 'high-contrast' | 'clean-reading')
   const [contrastMode, setContrastMode] = useState<ContrastMode>(() => {
-    const saved = localStorage.getItem("worklex_accessibility_contrast") || localStorage.getItem("worklex_contrast_mode");
-    if (saved === "high-contrast" || saved === "clean-reading") {
-      return saved as ContrastMode;
+    try {
+      const saved = localStorage.getItem("worklex_accessibility_contrast") || localStorage.getItem("worklex_contrast_mode");
+      if (saved === "high-contrast" || saved === "clean-reading") {
+        return saved as ContrastMode;
+      }
+    } catch {
+      // Safe fallback
     }
     return "normal";
   });
 
   // 3. Espaciado para Dislexia (boolean)
   const [dyslexiaSpacing, setDyslexiaSpacing] = useState<boolean>(() => {
-    return localStorage.getItem("worklex_accessibility_dyslexia") === "true";
+    try {
+      return localStorage.getItem("worklex_accessibility_dyslexia") === "true";
+    } catch {
+      return false;
+    }
   });
 
   // 4. Guía horizontal de lectura que sigue el cursor (boolean)
   const [readingGuide, setReadingGuide] = useState<boolean>(() => {
-    return localStorage.getItem("worklex_accessibility_guide") === "true";
+    try {
+      return localStorage.getItem("worklex_accessibility_guide") === "true";
+    } catch {
+      return false;
+    }
   });
   const [mouseY, setMouseY] = useState<number>(100);
 
@@ -91,6 +119,7 @@ export function AccessibilityWidget() {
 
   // Efecto: aplicar modo de contraste
   useEffect(() => {
+    if (typeof document === "undefined" || !document.documentElement) return;
     const root = document.documentElement;
     root.setAttribute("data-contrast", contrastMode);
     root.classList.remove("high-contrast", "clean-reading");
@@ -100,21 +129,29 @@ export function AccessibilityWidget() {
     } else if (contrastMode === "clean-reading") {
       root.classList.add("clean-reading");
     }
-    localStorage.setItem("worklex_accessibility_contrast", contrastMode);
+    try {
+      localStorage.setItem("worklex_accessibility_contrast", contrastMode);
+    } catch {}
   }, [contrastMode]);
 
   // Efecto: aplicar espaciado de dislexia
   useEffect(() => {
+    if (typeof document === "undefined" || !document.documentElement) return;
     const root = document.documentElement;
     root.setAttribute("data-dyslexia", dyslexiaSpacing ? "true" : "false");
-    localStorage.setItem("worklex_accessibility_dyslexia", dyslexiaSpacing ? "true" : "false");
+    try {
+      localStorage.setItem("worklex_accessibility_dyslexia", dyslexiaSpacing ? "true" : "false");
+    } catch {}
   }, [dyslexiaSpacing]);
 
   // Efecto: guía de lectura horizontal que sigue el puntero
   useEffect(() => {
+    if (typeof document === "undefined" || !document.documentElement) return;
     const root = document.documentElement;
     root.setAttribute("data-reading-guide", readingGuide ? "true" : "false");
-    localStorage.setItem("worklex_accessibility_guide", readingGuide ? "true" : "false");
+    try {
+      localStorage.setItem("worklex_accessibility_guide", readingGuide ? "true" : "false");
+    } catch {}
 
     if (!readingGuide) return;
 
@@ -165,7 +202,7 @@ export function AccessibilityWidget() {
     };
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted || typeof document === "undefined" || !document.body) return null;
 
   return createPortal(
     <div id="accessibility-panel" className="accessibility-panel">
