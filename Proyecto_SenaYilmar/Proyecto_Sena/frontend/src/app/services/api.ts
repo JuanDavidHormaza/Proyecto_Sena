@@ -1284,10 +1284,23 @@ export async function evaluateAdaptiveStep(
 export interface AdminMetrics {
   total_users: number;
   active_users: number;
+  distribution?: {
+    students: number;
+    instructors: number;
+    admins: number;
+  };
+  dictionaries?: number;
   total_dictionaries: number;
+  terms?: number;
   total_terms: number;
+  competencies?: number;
   competencies_count: number;
-  competencies: string[];
+  competencies_list?: string[];
+  media?: {
+    audios: number;
+    videos: number;
+    images?: number;
+  };
 }
 
 export async function getAdminMetrics(): Promise<AdminMetrics> {
@@ -1295,6 +1308,42 @@ export async function getAdminMetrics(): Promise<AdminMetrics> {
     headers: getAuthHeaders(),
   });
   return handleResponse<AdminMetrics>(response);
+}
+
+export interface DayStreakItem {
+  day: string;
+  day_name: string;
+  date: string;
+  active: boolean;
+  is_today: boolean;
+  is_past: boolean;
+}
+
+export interface StudyStreak {
+  current_streak: number;
+  longest_streak: number;
+  is_at_risk: boolean;
+  practiced_today: boolean;
+  has_activity_today: boolean;
+  last_activity_date: string | null;
+  weekly_activity: DayStreakItem[];
+  status: 'active' | 'inactive';
+}
+
+export async function getStudyStreak(): Promise<StudyStreak> {
+  const response = await fetch(`${API_BASE}/profile/streak/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<StudyStreak>(response);
+}
+
+export async function recordStreakActivity(transaction = 'PRACTICA_VOCABULARIO'): Promise<StudyStreak> {
+  const response = await fetch(`${API_BASE}/profile/streak/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ transaction }),
+  });
+  return handleResponse<StudyStreak>(response);
 }
 
 // ─── Export para compatibilidad ──────────────────────────────────────────────
@@ -1315,6 +1364,8 @@ export const api = {
   getDocuments,
   createDocument,
   getAdminMetrics,
+  getStudyStreak,
+  recordStreakActivity,
   updateDocument,
   deleteDocument,
   getTestResults,

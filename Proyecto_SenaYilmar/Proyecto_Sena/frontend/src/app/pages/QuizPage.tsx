@@ -782,6 +782,7 @@ export function QuizPage() {
     try {
       const savedResult = await api.createTestResult(payload);
       localStorage.setItem("lastTestResult", JSON.stringify(savedResult));
+      await api.recordStreakActivity("EVALUACION_QUIZ_CEFR").catch(() => null);
 
       localStorage.setItem("lastTestSummary", JSON.stringify(summary));
       localStorage.setItem("quizAnswers", JSON.stringify(serializableAnswers));

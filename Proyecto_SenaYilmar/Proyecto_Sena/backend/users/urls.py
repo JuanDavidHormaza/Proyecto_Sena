@@ -15,6 +15,7 @@ from .Views.api_views import (
     UserViewSet, SubjectViewSet,
     DigitalDictionaryViewSet, TestResultViewSet, RankingViewSet,
     FichaRequestViewSet, SupportTicketViewSet, AdminMetricsAPIView,
+    StudyStreakAPIView,
 )
 from .Views.media_views import MediaProxyAPIView, MediaUploadAPIView
 from .Views.exam_views import (
@@ -98,6 +99,12 @@ urlpatterns = [
     # ── Métricas Administrativas del Sistema ───────────────────────────
     path('admin/metrics/',                          AdminMetricsAPIView.as_view(),       name='admin-metrics-slash'),
     path('admin/metrics',                           AdminMetricsAPIView.as_view(),       name='admin-metrics'),
+
+    # ── Racha de Estudio Dinámica (Study Streak Engine) ────────────────
+    path('profile/streak/',                         StudyStreakAPIView.as_view(),        name='study-streak-slash'),
+    path('profile/streak',                          StudyStreakAPIView.as_view(),        name='study-streak'),
+    path('profile/streak/activity/',                StudyStreakAPIView.as_view(),        name='study-streak-activity-slash'),
+    path('profile/streak/activity',                 StudyStreakAPIView.as_view(),        name='study-streak-activity'),
 
     # ── ViewSets ───────────────────────────────────────────────────────
     path('', include(router.urls)),

@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { QuizPage } from "./pages/QuizPage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import { UsersPage } from "./pages/UsersPage";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
 import { TeacherDictionariesPage } from "./pages/TeacherDictionariesPage";
 import { MediaPage } from "./pages/MediaPage";
@@ -96,6 +97,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
         <AdminDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/users",
+    element: (
+      <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+        <UsersPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/users",
+    element: (
+      <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+        <UsersPage />
       </ProtectedRoute>
     ),
   },

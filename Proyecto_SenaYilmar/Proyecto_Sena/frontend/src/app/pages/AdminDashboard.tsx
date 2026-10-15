@@ -795,6 +795,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const [filterUserStatus, setFilterUserStatus] = useState<string>("all");
   const [userCurrentPage, setUserCurrentPage] = useState<number>(1);
   const [userPageSize, setUserPageSize] = useState<number | "all">(25);
+  const [serverMetrics, setServerMetrics] = useState<api.AdminMetrics | null>(null);
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [showEditDataModal, setShowEditDataModal] = useState(false);
@@ -902,13 +903,18 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     setIsLoading(true);
     setApiError(null);
     try {
-      const [apiUsers, apiSubjects, apiDocs, apiResults, apiTickets] = await Promise.all([
+      const [apiUsers, apiSubjects, apiDocs, apiResults, apiTickets, apiMetrics] = await Promise.all([
         api.getUsers(),
         api.getSubjects(),
         api.getDocuments(),
         api.getTestResults(),
         api.getSupportTickets().catch(() => []),
+        api.getAdminMetrics().catch(() => null),
       ]);
+
+      if (apiMetrics) {
+        setServerMetrics(apiMetrics);
+      }
 
       if (Array.isArray(apiTickets)) {
         setSupportTickets(apiTickets);
@@ -1362,8 +1368,11 @@ const handleSaveUserData = async (e: React.FormEvent) => {
       !term ||
       u.name.toLowerCase().includes(term) ||
       u.email.toLowerCase().includes(term) ||
-      Boolean(u.docNum && u.docNum.toLowerCase().includes(term));
-    const matchRole = filterRole === "all" || u.role === filterRole;
+      Boolean(u.docNum && u.docNum.toLowerCase().includes(term)) ||
+      Boolean(u.program && u.program.toLowerCase().includes(term));
+    const matchRole =
+      filterRole === "all" ||
+      (filterRole === "admin" ? (u.role === "admin" || u.role === "superadmin") : u.role === filterRole);
     const matchStatus = filterUserStatus === "all" || u.status === filterUserStatus;
     return matchSearch && matchRole && matchStatus;
   });
@@ -1417,15 +1426,16 @@ const handleSaveUserData = async (e: React.FormEvent) => {
   })();
 
   const stats = {
-    totalUsers: users.length,
-    activeUsers: users.filter(u => u.status === "active").length,
-    totalDocuments: uniqueDictionariesCount,
-    totalTerms: documents.length,
-    totalSubjects: SYSTEM_COMPETENCIAS.length,
-    students: users.filter(u => u.role === "student").length,
-    teachers: users.filter(u => u.role === "teacher").length,
-    audios: documents.filter(d => (d.category ?? getFileCategory(d.name)) === "audio").length,
-    videos: documents.filter(d => (d.category ?? getFileCategory(d.name)) === "video").length,
+    totalUsers: serverMetrics?.total_users ?? users.length,
+    activeUsers: serverMetrics?.active_users ?? users.filter(u => u.status === "active").length,
+    totalDocuments: serverMetrics?.dictionaries ?? serverMetrics?.total_dictionaries ?? uniqueDictionariesCount,
+    totalTerms: serverMetrics?.terms ?? serverMetrics?.total_terms ?? documents.length,
+    totalSubjects: serverMetrics?.competencies ?? serverMetrics?.competencies_count ?? SYSTEM_COMPETENCIAS.length,
+    students: serverMetrics?.distribution?.students ?? users.filter(u => u.role === "student").length,
+    teachers: serverMetrics?.distribution?.instructors ?? users.filter(u => u.role === "teacher").length,
+    admins: serverMetrics?.distribution?.admins ?? users.filter(u => u.role === "admin" || u.role === "superadmin").length,
+    audios: serverMetrics?.media?.audios ?? documents.filter(d => Boolean(d.audioUrl || (d as any).audio)).length,
+    videos: serverMetrics?.media?.videos ?? documents.filter(d => Boolean(d.videoUrl || (d as any).video)).length,
   };
 
   const passedTests = testResults.filter(isPassingResult).length;
@@ -1766,15 +1776,17 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                     badge: `${stats.students} aprendices`,
                   },
                   {
-                    label: "Diccionarios",
-                    value: stats.totalDocuments,
+                    label: "Diccionario Institucional",
+                    value: `${stats.totalDocuments} ${stats.totalDocuments === 1 ? "Diccionario" : "Diccionarios"}`,
+                    subtitle: `(${stats.totalTerms} Términos ADSO)`,
                     icon: BookOpen,
                     color: "warning",
                     badge: `${stats.totalTerms} términos`,
                   },
                   {
-                    label: "Competencias",
-                    value: stats.totalSubjects,
+                    label: "Competencias Evaluadas",
+                    value: `${stats.totalSubjects} Competencias`,
+                    subtitle: "Speaking, Writing, Grammar, Reading",
                     icon: Layers,
                     color: "destructive",
                     badge: "4 CEFR activas",
@@ -1786,29 +1798,48 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <stat.icon className={`w-6 h-6 text-${stat.color}`} strokeWidth={1.8} />
                     </div>
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-2xl lg:text-3xl font-bold text-foreground">{stat.value}</p>
                       {stat.badge && (
-                        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
+                        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full shrink-0">
                           {stat.badge}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                    <p className="text-sm font-semibold text-foreground/80 mt-1">{stat.label}</p>
+                    {stat.subtitle && (
+                      <p className="text-xs text-muted-foreground mt-0.5 font-medium truncate" title={stat.subtitle}>{stat.subtitle}</p>
+                    )}
                   </motion.div>
                 ))}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-border shadow-sm flex items-center gap-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
                     <Music className="w-6 h-6 text-purple-600" strokeWidth={1.8} />
                   </div>
-                  <div><p className="text-2xl font-bold text-foreground">{stats.audios}</p><p className="text-sm text-muted-foreground">Archivos de audio</p></div>
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-bold text-foreground">{stats.audios}</p>
+                      <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+                        Audios nativos
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Recursos de audio procesados</p>
+                  </div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-border shadow-sm flex items-center gap-4">
-                  <div className="w-12 h-12 bg-sena-blue/10 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-sena-blue/10 rounded-xl flex items-center justify-center shrink-0">
                     <Film className="w-6 h-6 text-sena-blue" strokeWidth={1.8} />
                   </div>
-                  <div><p className="text-2xl font-bold text-foreground">{stats.videos}</p><p className="text-sm text-muted-foreground">Archivos de video</p></div>
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-bold text-foreground">{stats.videos}</p>
+                      <span className="text-[11px] font-semibold text-sena-blue bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                        Videos 16:9
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Recursos de video procesados</p>
+                  </div>
                 </div>
               </div>
               <div className="grid lg:grid-cols-2 gap-6">
@@ -1959,41 +1990,61 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="relative sm:col-span-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
-                  <input type="text" placeholder="Buscar por nombre, email o documento..." value={searchTerm}
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 flex-wrap">
+                <div className="relative flex-1 min-w-[260px]">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, correo o número de ficha..."
+                    value={searchTerm}
                     onChange={e => {
                       setSearchTerm(e.target.value);
                       setUserCurrentPage(1);
                     }}
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm" />
+                    className="w-full pl-11 pr-4 py-2.5 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm shadow-2xs"
+                  />
                 </div>
-                <div className="relative">
-                  <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
-                  <select value={filterRole} onChange={e => {
-                    setFilterRole(e.target.value);
-                    setUserCurrentPage(1);
-                  }}
-                    className="w-full pl-12 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer text-sm">
-                    <option value="all">Todos los roles</option>
-                    <option value="superadmin">SuperAdministrador</option>
-                    <option value="admin">Administrador</option>
-                    <option value="teacher">Instructor</option>
-                    <option value="student">Aprendiz</option>
-                  </select>
-                </div>
-                <div className="relative">
-                  <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
-                  <select value={filterUserStatus} onChange={e => {
-                    setFilterUserStatus(e.target.value);
-                    setUserCurrentPage(1);
-                  }}
-                    className="w-full pl-12 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer text-sm">
-                    <option value="all">Todos los estados</option>
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
-                  </select>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="inline-flex rounded-xl border border-border bg-slate-100/80 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
+                    {[
+                      { id: "all", label: "Todos" },
+                      { id: "student", label: "Aprendiz" },
+                      { id: "teacher", label: "Instructor" },
+                      { id: "admin", label: "Admin" },
+                    ].map((pill) => (
+                      <button
+                        key={pill.id}
+                        type="button"
+                        onClick={() => {
+                          setFilterRole(pill.id);
+                          setUserCurrentPage(1);
+                        }}
+                        className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                          filterRole === pill.id
+                            ? "bg-white dark:bg-slate-900 text-foreground font-bold shadow-xs border border-border/60"
+                            : "text-muted-foreground hover:text-foreground hover:bg-white/50"
+                        }`}
+                      >
+                        {pill.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative">
+                    <select
+                      value={filterUserStatus}
+                      onChange={e => {
+                        setFilterUserStatus(e.target.value);
+                        setUserCurrentPage(1);
+                      }}
+                      className="pl-3 pr-8 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground shadow-2xs"
+                    >
+                      <option value="all">Todos los estados</option>
+                      <option value="active">Activo</option>
+                      <option value="inactive">Inactivo</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -2029,10 +2080,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                 <div className="flex items-center gap-3.5">
                                   <div
                                     className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-xs ${
-                                      user.role === 'superadmin'
+                                      user.role === 'superadmin' || user.role === 'admin'
                                         ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20'
-                                        : user.role === 'admin'
-                                        ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/20'
                                         : user.role === 'teacher'
                                         ? 'bg-gradient-to-br from-blue-600 to-sky-700 shadow-blue-500/20'
                                         : 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20'
@@ -2040,9 +2089,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                   >
                                     {user.name.charAt(0).toUpperCase()}
                                   </div>
-                                  <div className="min-w-0 max-w-xs">
+                                  <div className="min-w-0 max-w-[200px]">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-xs inline-block" title={user.name}>
+                                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[200px] inline-block" title={user.name}>
                                         {user.name}
                                       </span>
                                       {isSelf && (
@@ -2051,10 +2100,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-xs text-slate-500 truncate max-w-xs" title={user.email}>{user.email}</p>
+                                    <p className="text-xs text-slate-500 truncate max-w-[200px]" title={user.email}>{user.email}</p>
                                     {(user.role === 'teacher' || user.role === 'student') && user.program && (
                                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                                        <span className="inline-block bg-slate-100 dark:bg-slate-800 text-[11px] px-2 py-0.5 rounded-md font-mono text-slate-600 dark:text-slate-300 max-w-xs truncate" title={user.program}>
+                                        <span className="inline-block bg-slate-100 dark:bg-slate-800 text-[11px] px-2 py-0.5 rounded-md font-mono text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title={user.program}>
                                           {user.program}
                                         </span>
                                       </div>

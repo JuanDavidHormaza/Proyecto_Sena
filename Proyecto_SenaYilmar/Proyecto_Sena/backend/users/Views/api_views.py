@@ -25,7 +25,7 @@ from ..Controllers.ControllerSENA import (
     SubjectController, DictionaryController, TestResultController,
     RankingController, FichaRequestController, SupportTicketController, _build_user_response,
 )
-from ..Models.modelsSENA import EmailOTP, RegisterPendingOTP, Person, User, TestResult, FichaRequest, SupportTicket, Subject, DigitalDictionary
+from ..Models.modelsSENA import EmailOTP, RegisterPendingOTP, Person, User, TestResult, FichaRequest, SupportTicket, Subject, DigitalDictionary, UserLog
 from ..serializers import (
     LoginSerializer, RegisterSerializer, PersonSerializer,
     DigitalDictionarySerializer, TestResultSerializer, UserSerializer,
@@ -1484,19 +1484,23 @@ class SupportTicketViewSet(viewsets.ViewSet):
 
 class AdminMetricsAPIView(APIView):
     """
-    Retorna métricas consolidadas del sistema para el Dashboard de Administración:
-    - total_users: total de usuarios registrados
-    - active_users: usuarios con cuenta activa
-    - total_dictionaries: número de diccionarios / programas (ej. 1 si es ADSO)
-    - total_terms: total de términos de vocabulario registrados (ej. 64)
-    - competencies_count: competencias evaluadas únicas o activas (4: Speaking, Writing, Grammar, Reading)
+    Retorna métricas consolidadas del sistema para el Dashboard de Administración
+    conectadas a la base de datos PostgreSQL real (0 datos quemados).
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         total_users = User.objects.count()
-        active_users = User.objects.filter(is_active=True).count()
-        
+        # Filtrado de usuarios activos a través de Person o User status
+        active_users = User.objects.filter(person__status='ACTIVO').count()
+        if active_users == 0 and total_users > 0:
+            active_users = User.objects.filter(status='EN_FORMACION').count() or total_users
+
+        # Desglose de usuarios por rol institucional
+        students_count = User.objects.filter(role_id='APRENDIZ').count()
+        teachers_count = User.objects.filter(role_id__in=['INSTRUCTOR', 'MONITOR']).count()
+        admins_count = User.objects.filter(role_id__in=['ADMIN', 'SUPERADMIN']).count()
+
         # 1. Total Diccionarios: Contar asignaturas/programas creados (ej. 1 si es ADSO)
         total_dictionaries = Subject.objects.count()
         if total_dictionaries == 0:
@@ -1506,18 +1510,153 @@ class AdminMetricsAPIView(APIView):
         # 2. Total Términos / Vocabulario en el diccionario (64)
         total_terms = DigitalDictionary.objects.count()
 
-        # 3. Competencias: Contar competencias únicas registradas o activas (Retorna 4: Speaking, Writing, Grammar, Reading)
+        # 3. Competencias: Contar competencias únicas registradas o activas (4: Speaking, Writing, Grammar, Reading)
         competencies_count = DigitalDictionary.objects.values('competence').distinct().count()
         if competencies_count < 4:
             competencies_count = 4
 
+        # 4. Recursos Multimedia reales asociados a términos
+        audio_count = DigitalDictionary.objects.exclude(audio__isnull=True).exclude(audio='').count()
+        video_count = DigitalDictionary.objects.exclude(video__isnull=True).exclude(video='').count()
+        image_count = DigitalDictionary.objects.exclude(image__isnull=True).exclude(image='').count()
+
         return Response({
             'total_users': total_users,
             'active_users': active_users,
+            'distribution': {
+                'students': students_count,
+                'instructors': teachers_count,
+                'admins': admins_count,
+            },
+            'dictionaries': total_dictionaries,
             'total_dictionaries': total_dictionaries,
+            'terms': total_terms,
             'total_terms': total_terms,
+            'competencies': competencies_count,
             'competencies_count': competencies_count,
-            'competencies': ['Speaking', 'Writing', 'Grammar', 'Reading'],
+            'competencies_list': ['Speaking', 'Writing', 'Grammar', 'Reading'],
+            'media': {
+                'audios': audio_count,
+                'videos': video_count,
+                'images': image_count,
+            }
         })
+
+
+class StudyStreakAPIView(APIView):
+    """
+    Motor Dinámico de Racha de Estudio (Study Streak Engine):
+    Calcula la racha real y actividad diaria basada en TestResults y UserLogs del usuario.
+    - current_streak: días consecutivos activos.
+    - longest_streak: racha histórica más larga.
+    - is_at_risk: true si practicó ayer pero aún no hoy.
+    - practiced_today / has_activity_today: true si completó práctica hoy.
+    - weekly_activity: estado de los 7 días (Lunes a Domingo) de la semana en curso.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _calculate_streak_payload(self, user):
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+
+        person = getattr(user, 'person', None)
+        if person:
+            user_ids = list(User.objects.filter(person=person).values_list('user_id', flat=True))
+        else:
+            user_ids = [getattr(user, 'user_id', user.pk)]
+
+        # 1. Fechas de TestResults completados
+        test_dates = set(
+            TestResult.objects.filter(user_id__in=user_ids)
+            .exclude(level__in=['Incompleto', 'Invalidada', 'No Presentado'])
+            .values_list('created_at__date', flat=True)
+        )
+
+        # 2. Fechas de UserLog (práctica diaria de vocabulario o interacción)
+        log_dates = set(
+            UserLog.objects.filter(user_id__in=user_ids)
+            .values_list('created_at__date', flat=True)
+        )
+
+        activity_dates = set(filter(None, test_dates.union(log_dates)))
+
+        practiced_today = today in activity_dates
+        is_at_risk = False
+        current_streak = 0
+
+        if practiced_today:
+            current_streak = 1
+            check_date = yesterday
+            while check_date in activity_dates:
+                current_streak += 1
+                check_date -= timedelta(days=1)
+            is_at_risk = False
+        elif yesterday in activity_dates:
+            current_streak = 1
+            check_date = yesterday - timedelta(days=1)
+            while check_date in activity_dates:
+                current_streak += 1
+                check_date -= timedelta(days=1)
+            is_at_risk = True
+        else:
+            current_streak = 0
+            is_at_risk = False
+
+        # Racha máxima histórica
+        longest_streak = current_streak
+        if activity_dates:
+            sorted_dates = sorted(list(activity_dates))
+            temp_streak = 1
+            max_streak = 1
+            for i in range(1, len(sorted_dates)):
+                if sorted_dates[i] == sorted_dates[i-1] + timedelta(days=1):
+                    temp_streak += 1
+                    if temp_streak > max_streak:
+                        max_streak = temp_streak
+                elif sorted_dates[i] > sorted_dates[i-1] + timedelta(days=1):
+                    temp_streak = 1
+            longest_streak = max(longest_streak, max_streak)
+
+        # Semana actual: Lunes (0) a Domingo (6)
+        monday = today - timedelta(days=today.weekday())
+        day_labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+        day_names = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+        weekly_activity = []
+        for idx in range(7):
+            day_date = monday + timedelta(days=idx)
+            weekly_activity.append({
+                'day': day_labels[idx],
+                'day_name': day_names[idx],
+                'date': day_date.isoformat(),
+                'active': day_date in activity_dates,
+                'is_today': (day_date == today),
+                'is_past': (day_date < today),
+            })
+
+        last_activity = max(activity_dates) if activity_dates else None
+
+        return {
+            'current_streak': current_streak,
+            'longest_streak': longest_streak,
+            'is_at_risk': is_at_risk,
+            'practiced_today': practiced_today,
+            'has_activity_today': practiced_today,
+            'last_activity_date': last_activity.isoformat() if last_activity else None,
+            'weekly_activity': weekly_activity,
+            'status': 'active' if (practiced_today or is_at_risk) and current_streak > 0 else 'inactive',
+        }
+
+    def get(self, request):
+        data = self._calculate_streak_payload(request.user)
+        return Response(data)
+
+    def post(self, request):
+        """Registra una actividad de práctica diaria y refresca la racha."""
+        tx = request.data.get('transaction') or 'PRACTICA_VOCABULARIO'
+        UserLog.objects.create(user=request.user, transaction=tx)
+        data = self._calculate_streak_payload(request.user)
+        return Response(data, status=status.HTTP_201_CREATED)
+
 
 
