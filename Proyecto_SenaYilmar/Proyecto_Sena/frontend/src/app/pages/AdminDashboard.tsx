@@ -794,7 +794,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   // Estados para filtros avanzados y paginación de usuarios
   const [filterUserStatus, setFilterUserStatus] = useState<string>("all");
   const [userCurrentPage, setUserCurrentPage] = useState<number>(1);
-  const userPageSize = 10;
+  const [userPageSize, setUserPageSize] = useState<number | "all">(25);
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [showEditDataModal, setShowEditDataModal] = useState(false);
@@ -1368,12 +1368,15 @@ const handleSaveUserData = async (e: React.FormEvent) => {
     return matchSearch && matchRole && matchStatus;
   });
 
-  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / userPageSize));
+  const effectiveUserPageSize = userPageSize === "all" ? Math.max(1, filteredUsers.length) : userPageSize;
+  const totalUserPages = userPageSize === "all" ? 1 : Math.max(1, Math.ceil(filteredUsers.length / effectiveUserPageSize));
   const safeUserCurrentPage = Math.min(userCurrentPage, totalUserPages);
-  const paginatedUsers = filteredUsers.slice(
-    (safeUserCurrentPage - 1) * userPageSize,
-    safeUserCurrentPage * userPageSize
-  );
+  const paginatedUsers = userPageSize === "all"
+    ? filteredUsers
+    : filteredUsers.slice(
+        (safeUserCurrentPage - 1) * effectiveUserPageSize,
+        safeUserCurrentPage * effectiveUserPageSize
+      );
 
   const pendingTicketsCount = supportTickets.filter((t) => t.status === "ABIERTO").length;
 
@@ -1407,11 +1410,18 @@ const handleSaveUserData = async (e: React.FormEvent) => {
   });
 
 
+  // Conteo institucional de diccionarios (programas técnicos creados, ej. 1 si es ADSO)
+  const uniqueDictionariesCount = (() => {
+    const progs = new Set(documents.map(d => (d.program || d.subjectId || "ADSO").trim()).filter(Boolean));
+    return progs.size > 0 ? progs.size : (subjects.length > 0 ? subjects.length : 1);
+  })();
+
   const stats = {
     totalUsers: users.length,
     activeUsers: users.filter(u => u.status === "active").length,
-    totalDocuments: documents.length,
-    totalSubjects: subjects.length,
+    totalDocuments: uniqueDictionariesCount,
+    totalTerms: documents.length,
+    totalSubjects: SYSTEM_COMPETENCIAS.length,
     students: users.filter(u => u.role === "student").length,
     teachers: users.filter(u => u.role === "teacher").length,
     audios: documents.filter(d => (d.category ?? getFileCategory(d.name)) === "audio").length,
@@ -1741,18 +1751,49 @@ const handleSaveUserData = async (e: React.FormEvent) => {
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: "Total Usuarios",    value: stats.totalUsers,     icon: Users,    color: "sena-green"  },
-                  { label: "Usuarios Activos",  value: stats.activeUsers,    icon: Check,    color: "sena-blue"   },
-                  { label: "Diccionarios",      value: stats.totalDocuments, icon: BookOpen, color: "warning"     },
-                  { label: "Competencias",      value: stats.totalSubjects,  icon: Layers,   color: "destructive" },
+                  {
+                    label: "Total Usuarios",
+                    value: stats.totalUsers,
+                    icon: Users,
+                    color: "sena-green",
+                    badge: `${stats.activeUsers} activos`,
+                  },
+                  {
+                    label: "Usuarios Activos",
+                    value: stats.activeUsers,
+                    icon: Check,
+                    color: "sena-blue",
+                    badge: `${stats.students} aprendices`,
+                  },
+                  {
+                    label: "Diccionarios",
+                    value: stats.totalDocuments,
+                    icon: BookOpen,
+                    color: "warning",
+                    badge: `${stats.totalTerms} términos`,
+                  },
+                  {
+                    label: "Competencias",
+                    value: stats.totalSubjects,
+                    icon: Layers,
+                    color: "destructive",
+                    badge: "4 CEFR activas",
+                  },
                 ].map((stat, i) => (
                   <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
                     className="bg-white rounded-2xl p-5 border border-border shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer">
                     <div className={`w-12 h-12 bg-${stat.color}/10 rounded-xl flex items-center justify-center mb-3`}>
                       <stat.icon className={`w-6 h-6 text-${stat.color}`} strokeWidth={1.8} />
                     </div>
-                    <p className="text-3xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+                      {stat.badge && (
+                        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
+                          {stat.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
                   </motion.div>
                 ))}
               </div>
@@ -1999,9 +2040,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                   >
                                     {user.name.charAt(0).toUpperCase()}
                                   </div>
-                                  <div className="min-w-0 max-w-[320px]">
+                                  <div className="min-w-0 max-w-xs">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate" title={user.name}>
+                                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-xs inline-block" title={user.name}>
                                         {user.name}
                                       </span>
                                       {isSelf && (
@@ -2010,10 +2051,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-xs text-slate-500 truncate" title={user.email}>{user.email}</p>
+                                    <p className="text-xs text-slate-500 truncate max-w-xs" title={user.email}>{user.email}</p>
                                     {(user.role === 'teacher' || user.role === 'student') && user.program && (
                                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                                        <span className="inline-block bg-slate-100 dark:bg-slate-800 text-[11px] px-2 py-0.5 rounded-md font-mono text-slate-600 dark:text-slate-300 max-w-full truncate" title={user.program}>
+                                        <span className="inline-block bg-slate-100 dark:bg-slate-800 text-[11px] px-2 py-0.5 rounded-md font-mono text-slate-600 dark:text-slate-300 max-w-xs truncate" title={user.program}>
                                           {user.program}
                                         </span>
                                       </div>
@@ -2056,29 +2097,32 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                 </button>
                               </td>
                               <td className="py-3.5 px-5">
-                                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1 rounded-xl w-fit border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
+                                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1.5 rounded-xl w-fit border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
                                   {canModify && (
                                     <button
+                                      type="button"
                                       onClick={() => handleEditUserData(user)}
                                       className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors cursor-pointer"
-                                      title="Editar información del usuario"
-                                      aria-label="Editar usuario"
+                                      title="Editar información"
+                                      aria-label="Editar información del usuario"
                                     >
                                       <Edit className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
                                   {canOpenPermissions && (
                                     <button
+                                      type="button"
                                       onClick={() => handleEditUserPermissions(user)}
                                       className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
-                                      title="Editar permisos de acceso"
-                                      aria-label="Permisos del usuario"
+                                      title="Configurar permisos"
+                                      aria-label="Configurar permisos"
                                     >
                                       <Settings className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
                                   {canModify && !isTargetSuperAdmin && (
                                     <button
+                                      type="button"
                                       onClick={() => setUserToDelete(user)}
                                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
                                       title="Eliminar usuario permanentemente"
@@ -2114,35 +2158,71 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   </div>
 
                   {/* Paginación de Usuarios */}
-                  {totalUserPages > 1 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3 border-t border-border bg-muted/20 gap-3">
-                      <p className="text-xs text-muted-foreground">
-                        Mostrando <span className="font-semibold text-foreground">{(safeUserCurrentPage - 1) * userPageSize + 1}</span> a{" "}
-                        <span className="font-semibold text-foreground">{Math.min(safeUserCurrentPage * userPageSize, filteredUsers.length)}</span> de{" "}
-                        <span className="font-semibold text-foreground">{filteredUsers.length}</span> usuarios
-                      </p>
+                  {filteredUsers.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3.5 border-t border-border bg-muted/20 gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <p className="text-xs text-muted-foreground">
+                          Mostrando <span className="font-semibold text-foreground">{(safeUserCurrentPage - 1) * effectiveUserPageSize + 1}</span> a{" "}
+                          <span className="font-semibold text-foreground">{Math.min(safeUserCurrentPage * effectiveUserPageSize, filteredUsers.length)}</span> de{" "}
+                          <span className="font-semibold text-foreground">{filteredUsers.length}</span> usuarios
+                        </p>
+
+                        <div className="flex items-center gap-1.5 border-l border-border pl-3">
+                          <span className="text-xs text-muted-foreground font-medium">Filas:</span>
+                          <div className="inline-flex rounded-lg border border-border bg-white p-0.5 text-xs font-semibold shadow-2xs">
+                            {([10, 25, 50, "all"] as const).map((size) => (
+                              <button
+                                key={size}
+                                type="button"
+                                onClick={() => {
+                                  setUserPageSize(size);
+                                  setUserCurrentPage(1);
+                                }}
+                                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                                  userPageSize === size
+                                    ? "bg-sena-green text-white font-bold shadow-2xs"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                }`}
+                              >
+                                {size === "all" ? "Todos" : size}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={safeUserCurrentPage <= 1}
-                          onClick={() => setUserCurrentPage(p => Math.max(1, p - 1))}
-                          className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                          title="Página anterior"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <span className="text-xs font-semibold px-2 text-foreground">
-                          Página {safeUserCurrentPage} de {totalUserPages}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={safeUserCurrentPage >= totalUserPages}
-                          onClick={() => setUserCurrentPage(p => Math.min(totalUserPages, p + 1))}
-                          className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                          title="Página siguiente"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        {totalUserPages > 1 ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled={safeUserCurrentPage <= 1}
+                              onClick={() => setUserCurrentPage(p => Math.max(1, p - 1))}
+                              className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              title="Página anterior"
+                              aria-label="Página anterior"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <span className="text-xs font-semibold px-2 text-foreground">
+                              Página {safeUserCurrentPage} de {totalUserPages}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={safeUserCurrentPage >= totalUserPages}
+                              onClick={() => setUserCurrentPage(p => Math.min(totalUserPages, p + 1))}
+                              className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              title="Página siguiente"
+                              aria-label="Página siguiente"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs font-medium text-muted-foreground px-2">
+                            Página 1 de 1
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}

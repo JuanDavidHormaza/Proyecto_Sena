@@ -14,7 +14,7 @@ from .Views.api_views import (
     PrivilegedLoginAPIView, PrivilegedMeAPIView,
     UserViewSet, SubjectViewSet,
     DigitalDictionaryViewSet, TestResultViewSet, RankingViewSet,
-    FichaRequestViewSet, SupportTicketViewSet,
+    FichaRequestViewSet, SupportTicketViewSet, AdminMetricsAPIView,
 )
 from .Views.media_views import MediaProxyAPIView, MediaUploadAPIView
 from .Views.exam_views import (
@@ -94,6 +94,10 @@ urlpatterns = [
     path('exam/tts',                                ExamTTSAPIView.as_view(),            name='exam-tts'),
     path('exam/history/',                           TestResultViewSet.as_view({'get': 'list'}), name='exam-history-slash'),
     path('exam/history',                            TestResultViewSet.as_view({'get': 'list'}), name='exam-history'),
+
+    # ── Métricas Administrativas del Sistema ───────────────────────────
+    path('admin/metrics/',                          AdminMetricsAPIView.as_view(),       name='admin-metrics-slash'),
+    path('admin/metrics',                           AdminMetricsAPIView.as_view(),       name='admin-metrics'),
 
     # ── ViewSets ───────────────────────────────────────────────────────
     path('', include(router.urls)),

@@ -1281,6 +1281,22 @@ export async function evaluateAdaptiveStep(
   return handleResponse(response);
 }
 
+export interface AdminMetrics {
+  total_users: number;
+  active_users: number;
+  total_dictionaries: number;
+  total_terms: number;
+  competencies_count: number;
+  competencies: string[];
+}
+
+export async function getAdminMetrics(): Promise<AdminMetrics> {
+  const response = await fetch(`${API_BASE}/admin/metrics/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<AdminMetrics>(response);
+}
+
 // ─── Export para compatibilidad ──────────────────────────────────────────────
 
 export const api = {
@@ -1298,6 +1314,7 @@ export const api = {
   deleteSubject,
   getDocuments,
   createDocument,
+  getAdminMetrics,
   updateDocument,
   deleteDocument,
   getTestResults,
