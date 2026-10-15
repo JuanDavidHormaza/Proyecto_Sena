@@ -130,6 +130,9 @@ services:
     depends_on:
       worklex_persistencia:
         condition: service_healthy
+      worklex_minio:
+        condition: service_healthy
+    entrypoint: []
     command: >
       sh -c "
       echo 'Esperando PostgreSQL en worklex_persistencia:5432...' &&
@@ -141,8 +144,8 @@ services:
       echo 'Recopilando archivos estáticos de Django...' &&
       python manage.py collectstatic --noinput &&
       echo 'Inicializando vocabulario ADSO...' &&
-      (python manage.py import_adso_dictionary || python manage.py seed_adso_dictionary) &&
-      python manage.py create_superadmin || true &&
+      (python manage.py import_adso_dictionary || python manage.py seed_adso_dictionary || true) &&
+      (python manage.py create_superadmin || true) &&
       (python manage.py upload_adso_assets || true) &&
       echo 'Iniciando servidor WSGI Gunicorn (2 workers)...' &&
       gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2 --timeout 120
@@ -152,6 +155,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
