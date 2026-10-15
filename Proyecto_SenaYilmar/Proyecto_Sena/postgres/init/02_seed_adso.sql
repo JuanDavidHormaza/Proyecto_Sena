@@ -2,6 +2,9 @@
 -- Insercion idempotente de Vocabulario Tecnico ADSO (64 terminos balanceados A1-B2)
 CREATE SCHEMA IF NOT EXISTS worklex;
 
+ALTER SCHEMA worklex OWNER TO postgres;
+GRANT ALL ON SCHEMA worklex TO postgres;
+
 -- Si la tabla users_subject existe, asegurar asignatura ADSO
 DO $body$
 BEGIN
@@ -210,3 +213,6 @@ BEGIN
         ON CONFLICT (word_id, subject_id) DO UPDATE SET definition = EXCLUDED.definition, synonyms = EXCLUDED.synonyms, audio = EXCLUDED.audio, image = EXCLUDED.image, level = EXCLUDED.level, competence = EXCLUDED.competence;
     END IF;
 END $body$;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA worklex TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA worklex GRANT ALL ON TABLES TO postgres;

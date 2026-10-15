@@ -166,16 +166,16 @@ import os
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'SENA'),
-        'USER': os.getenv('POSTGRES_USER', 'admin'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Admin123*'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        'NAME': os.getenv('POSTGRES_DB', 'postgres'),
+        'USER': os.getenv('POSTGRES_USER', 'postgres'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'WorklexSecurePass2026!'),
+        'HOST': os.getenv('POSTGRES_HOST', 'worklex_persistencia'),
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
         'OPTIONS': {
             'options': '-c search_path=worklex,public'
-            },
-        }
+        },
     }
+}
 
 
 

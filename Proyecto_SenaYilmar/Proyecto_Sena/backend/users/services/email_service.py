@@ -282,44 +282,41 @@ def _send_via_sendgrid(email: str, subject: str, plain_msg: str, html_msg: str, 
 
 def _send_otp_task(email: str, code: str, subject: str, plain_msg: str, html_msg: str, reason: str = ""):
     """
-    Tarea interna en segundo plano que despacha por APIs HTTP (443) o SMTP con fallback limpio.
+    Despacha el código de verificación de 6 dígitos mediante send_mail en texto plano simple e institucional.
     """
-    # 1. Probar Resend si tiene API Key (Puerto 443 HTTPS)
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+
+    # 1. Envío prioritario mediante send_mail en texto plano institucional
+    try:
+        send_mail(
+            subject=subject,
+            message=plain_msg,
+            from_email=from_email,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        logger.info(f"[PLAIN EMAIL SUCCESS] Correo de verificación enviado exitosamente a {email} mediante send_mail.")
+        return
+    except Exception as e:
+        logger.warning(f"[SEND_MAIL NOTICE] Fallback de envío para {email}: {e}")
+
+    # 2. Probar Resend si tiene API Key (Puerto 443 HTTPS)
     resend_key = getattr(settings, 'RESEND_API_KEY', '') or os.getenv('RESEND_API_KEY', '')
     if resend_key:
-        if _send_via_resend(email, subject, plain_msg, html_msg, resend_key):
+        if _send_via_resend(email, subject, plain_msg, plain_msg, resend_key):
             return
 
-    # 2. Probar Brevo si tiene API Key (Puerto 443 HTTPS)
+    # 3. Probar Brevo si tiene API Key (Puerto 443 HTTPS)
     brevo_key = getattr(settings, 'BREVO_API_KEY', '') or os.getenv('BREVO_API_KEY', '')
     if brevo_key:
-        if _send_via_brevo(email, subject, plain_msg, html_msg, brevo_key):
+        if _send_via_brevo(email, subject, plain_msg, plain_msg, brevo_key):
             return
 
-    # 3. Probar SendGrid si tiene API Key (Puerto 443 HTTPS)
+    # 4. Probar SendGrid si tiene API Key (Puerto 443 HTTPS)
     sendgrid_key = getattr(settings, 'SENDGRID_API_KEY', '') or os.getenv('SENDGRID_API_KEY', '')
     if sendgrid_key:
-        if _send_via_sendgrid(email, subject, plain_msg, html_msg, sendgrid_key):
+        if _send_via_sendgrid(email, subject, plain_msg, plain_msg, sendgrid_key):
             return
-
-    # 4. Fallback: Intentar SMTP tradicional solo si está explícitamente configurado
-    email_backend = getattr(settings, 'EMAIL_BACKEND', '') or os.getenv('EMAIL_BACKEND', '')
-    is_console_backend = 'console' in email_backend.lower()
-
-    if not is_console_backend:
-        try:
-            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
-            send_mail(
-                subject=subject,
-                message=plain_msg,
-                from_email=from_email,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-            logger.info(f"[SMTP SUCCESS] Correo de verificación enviado exitosamente a {email}.")
-            return
-        except Exception as e:
-            logger.warning(f"[OTP EMAIL FAILOVER] Bloqueo SMTP en VPS ({e}). Fallback activo para {email}.")
 
     # 5. Registro formateado y limpio en consola para depuración y soporte
     print(f"\n"

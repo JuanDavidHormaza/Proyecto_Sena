@@ -221,9 +221,9 @@ export function AccessibilityWidget() {
         type="button"
         aria-label="Abrir panel de accesibilidad institucional"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="accessibility-panel w-16 h-16 rounded-full bg-[#39A900] shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all fixed bottom-6 right-6 z-50 focus:outline-none focus:ring-4 focus:ring-[#39A900]/30"
+        className="accessibility-panel w-16 h-16 rounded-full bg-[#39A900] shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 fixed bottom-6 right-6 z-50 focus:outline-none focus:ring-4 focus:ring-[#39A900]/30 transition-all"
       >
-        <Accessibility className="w-9 h-9 text-white stroke-[2.5]" size={36} />
+        <Accessibility className="w-10 h-10 text-white stroke-[2.5]" size={40} strokeWidth={2.5} />
       </button>
 
       {/* Panel Flotante Aislado */}
