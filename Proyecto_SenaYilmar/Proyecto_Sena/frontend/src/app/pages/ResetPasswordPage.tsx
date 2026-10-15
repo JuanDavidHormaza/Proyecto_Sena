@@ -378,11 +378,11 @@ export function ResetPasswordPage() {
 
                 <form onSubmit={handleSendRecovery} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                       Correo Electrónico Registrado *
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <input
                         type="email"
                         required
@@ -393,7 +393,7 @@ export function ResetPasswordPage() {
                           setError("");
                         }}
                         placeholder="tu@correo.com"
-                        className="w-full pl-10 pr-3.5 py-2.5 text-sm border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all"
+                        className="h-11 w-full pl-10 pr-3.5 text-sm border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all"
                       />
                     </div>
                   </div>
@@ -401,7 +401,7 @@ export function ResetPasswordPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !email.trim()}
-                    className="w-full bg-[#39A900] hover:bg-[#2e8600] text-white py-2.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm mt-2"
+                    className="w-full h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm mt-2"
                   >
                     {isLoading ? (
                       <span>Validando correo...</span>
@@ -425,19 +425,19 @@ export function ResetPasswordPage() {
                 exit={{ opacity: 0, x: -15 }}
               >
                 <div className="mb-5 text-center">
-                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-emerald-100 shadow-xs">
+                  <div className="w-12 h-12 bg-emerald-50 text-[#39A900] rounded-xl flex items-center justify-center mx-auto mb-3 border border-emerald-100">
                     <KeyRound className="w-6 h-6" strokeWidth={1.8} />
                   </div>
-                  <h2 className="text-xl font-extrabold text-foreground tracking-tight mb-1">
+                  <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">
                     Código de Seguridad y Nueva Contraseña
                   </h2>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                     Hemos enviado un código de 6 dígitos a{" "}
-                    <span className="font-bold text-foreground">{activeEmail}</span>.
+                    <span className="font-bold text-slate-900 dark:text-white">{activeEmail}</span>.
                     <button
                       type="button"
                       onClick={handleBackToEmail}
-                      className="ml-2 text-emerald-700 hover:text-emerald-800 font-semibold underline text-xs cursor-pointer inline-block"
+                      className="ml-2 text-[#39A900] hover:underline font-semibold text-xs cursor-pointer inline-block"
                     >
                       Cambiar correo
                     </button>
@@ -448,10 +448,10 @@ export function ResetPasswordPage() {
                   {/* OTP de 6 dígitos */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-semibold text-foreground text-left">
+                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300 text-left">
                         Código OTP de 6 dígitos *
                       </label>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-[11px] text-slate-400">
                         {otp.filter(Boolean).length}/6 dígitos
                       </span>
                     </div>
@@ -467,7 +467,7 @@ export function ResetPasswordPage() {
                           onChange={(e) => handleOtpChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           onPaste={handleOtpPaste}
-                          className={`w-10 sm:w-11 h-12 sm:h-13 text-center text-lg sm:text-xl font-bold font-mono border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-2xs ${
+                          className={`w-10 sm:w-11 h-12 sm:h-13 text-center text-lg sm:text-xl font-bold font-mono border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all ${
                             digit ? "border-[#39A900]" : "border-slate-300 dark:border-slate-700"
                           }`}
                         />
@@ -477,7 +477,7 @@ export function ResetPasswordPage() {
 
                   {/* Nueva Contraseña */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 text-left">
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5 text-left">
                       Nueva Contraseña *
                     </label>
                     <div className="relative">
@@ -492,9 +492,7 @@ export function ResetPasswordPage() {
                           setError("");
                         }}
                         placeholder="Mínimo 8 caracteres (letras y números)"
-                        className={`w-full pl-10 pr-10 py-2.5 text-sm border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all ${
-                          isPassSecure ? "border-emerald-500/80" : "border-slate-300 dark:border-slate-700"
-                        }`}
+                        className="h-11 w-full pl-10 pr-10 text-sm border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all"
                       />
                       <button
                         type="button"
@@ -528,7 +526,7 @@ export function ResetPasswordPage() {
 
                   {/* Confirmar Nueva Contraseña */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 text-left">
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5 text-left">
                       Confirmar Nueva Contraseña *
                     </label>
                     <div className="relative">
@@ -543,11 +541,9 @@ export function ResetPasswordPage() {
                           setError("");
                         }}
                         placeholder="Repite la nueva contraseña"
-                        className={`w-full pl-10 pr-10 py-2.5 text-sm border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all ${
+                        className={`h-11 w-full pl-10 pr-10 text-sm border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all ${
                           showMismatchError
-                            ? "border-rose-500 focus:border-rose-500 focus:ring-rose-200"
-                            : passwordsMatch
-                            ? "border-emerald-500/80"
+                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
                             : "border-slate-300 dark:border-slate-700"
                         }`}
                       />
@@ -579,7 +575,7 @@ export function ResetPasswordPage() {
                   <button
                     type="submit"
                     disabled={!canSubmit}
-                    className="w-full bg-[#39A900] hover:bg-[#2e8600] text-white py-2.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm mt-3"
+                    className="w-full h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm mt-3"
                   >
                     {isLoading ? (
                       <span>Restableciendo contraseña...</span>
@@ -598,7 +594,7 @@ export function ResetPasswordPage() {
                     type="button"
                     onClick={handleResend}
                     disabled={resendCooldown > 0}
-                    className="text-[#39A900] font-bold hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                    className="text-[#39A900] font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
                   >
                     <RefreshCw className={`w-3 h-3 ${resendCooldown > 0 ? "animate-spin" : ""}`} strokeWidth={1.8} />
                     <span>{resendCooldown > 0 ? `Reenviar en ${resendCooldown}s` : "Reenviar código"}</span>
@@ -627,7 +623,7 @@ export function ResetPasswordPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="w-full bg-[#39A900] hover:bg-[#2e8600] text-white py-2.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow cursor-pointer text-sm"
+                  className="w-full h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow cursor-pointer text-sm"
                 >
                   Iniciar Sesión Ahora
                 </button>
@@ -638,85 +634,19 @@ export function ResetPasswordPage() {
       </div>
 
       {/* ── Panel Derecho (Hero Institucional - 7 cols) ── */}
-      <div className="hidden lg:flex lg:col-span-7 relative flex-col justify-between p-12 lg:p-16 bg-slate-900 overflow-hidden min-h-screen">
-        {/* Imagen institucional con cobertura limpia y opacidad 30-35% */}
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-30"
-          style={{ backgroundImage: "url('/GenteSena.jpg')" }}
+      <div className="hidden lg:block lg:col-span-7 relative bg-slate-900 overflow-hidden min-h-screen">
+        <img
+          src="/GenteSena.jpg"
+          alt="Aprendices SENA"
+          className="absolute inset-0 w-full h-full object-cover object-center"
         />
+        <div className="absolute inset-0 bg-slate-900/40" />
 
-        {/* Degradado oscuro sutil institucional */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40" />
-
-        {/* Top badge */}
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-200 text-xs font-semibold uppercase tracking-wider">
-            <GraduationCap className="w-4 h-4 text-[#39A900]" />
-            <span>SENA • CEFR English Level Test</span>
-          </div>
-          <span className="text-xs font-medium text-slate-400">Plataforma Oficial Formativa</span>
-        </div>
-
-        {/* Contenido Central y Tarjetas de Métricas Sólidas y Compactas */}
-        <div className="relative z-10 space-y-6 max-w-xl">
-          <div>
-            <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
-              Aprende, diagnostica y domina el inglés técnico profesional
-            </h2>
-            <p className="mt-3 text-sm text-slate-300 leading-relaxed font-normal">
-              Plataforma institucional de evaluación diagnóstica de inglés técnico y diccionarios por competencias formativas según el Marco Común Europeo de Referencia (CEFR).
-            </p>
-          </div>
-
-          {/* Tarjetas de información y métricas sólidas y compactas */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
-              <div className="flex items-center gap-2 text-[#39A900] mb-1">
-                <GraduationCap className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Niveles CEFR</span>
-              </div>
-              <p className="text-2xl font-black text-white">A1 - B2</p>
-              <p className="text-xs text-slate-400 mt-1">Marco internacional estándar</p>
-            </div>
-
-            <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
-              <div className="flex items-center gap-2 text-sky-400 mb-1">
-                <Award className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Competencias</span>
-              </div>
-              <p className="text-2xl font-black text-white">4 Habilidades</p>
-              <p className="text-xs text-slate-400 mt-1">Speaking, Writing, Grammar, Reading</p>
-            </div>
-          </div>
-
-          {/* Desglose de Competencias Educativas con Lucide Icons */}
-          <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
-            <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Evaluación integral por competencias:</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <Mic className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Speaking</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <PenTool className="w-3.5 h-3.5 text-rose-400" />
-                <span>Writing</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <Languages className="w-3.5 h-3.5 text-purple-400" />
-                <span>Grammar</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                <span>Reading</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer institucional */}
-        <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-slate-800">
-          <span>Servicio Nacional de Aprendizaje SENA</span>
-          <span>WorkLex • {new Date().getFullYear()}</span>
+        <div className="absolute bottom-12 left-12 right-12 z-10 text-white">
+          <blockquote className="text-xl font-medium leading-relaxed">
+            "Formación profesional integral para el desarrollo tecnológico y lingüístico de Colombia."
+          </blockquote>
+          <p className="mt-3 text-sm text-slate-300 font-light">Servicio Nacional de Aprendizaje — SENA</p>
         </div>
       </div>
     </div>

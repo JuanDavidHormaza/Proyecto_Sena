@@ -399,7 +399,7 @@ export function LoginPage() {
 
                 <form onSubmit={handleCredentialsSubmit} className="space-y-4">
                   <div>
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">
                       Correo electrónico
                     </label>
                     <div className="relative">
@@ -412,7 +412,7 @@ export function LoginPage() {
                         onChange={(e) => handleEmailChange(e.target.value)}
                         onBlur={handleEmailBlur}
                         placeholder="aprendiz@soy.sena.edu.co"
-                        className={`w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-slate-800 border rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all ${
+                        className={`h-11 w-full pl-10 pr-3.5 bg-white dark:bg-slate-800 border rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all ${
                           emailTouched && emailError
                             ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
                             : "border-slate-300 dark:border-slate-700"
@@ -424,7 +424,7 @@ export function LoginPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         Contraseña
                       </label>
                     </div>
@@ -437,7 +437,7 @@ export function LoginPage() {
                         value={formData.password}
                         onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
                         placeholder="••••••••"
-                        className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all"
+                        className="h-11 w-full pl-10 pr-10 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all"
                       />
                       <button
                         type="button"
@@ -471,7 +471,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
-                    className="w-full py-2.5 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="h-11 w-full bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isLoading ? (
                       <>
@@ -510,8 +510,8 @@ export function LoginPage() {
                 transition={{ duration: 0.2 }}
               >
                 <div className="flex justify-center mb-5">
-                  <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/40 text-[#39A900] rounded-2xl flex items-center justify-center shadow-xs border border-emerald-100 dark:border-emerald-800">
-                    <KeyRound className="w-7 h-7" />
+                  <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/40 text-[#39A900] rounded-xl flex items-center justify-center border border-emerald-100 dark:border-emerald-800">
+                    <KeyRound className="w-6 h-6" />
                   </div>
                 </div>
 
@@ -536,7 +536,7 @@ export function LoginPage() {
 
                 <form onSubmit={handleVerifyOtp} className="space-y-5">
                   <div>
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5 block text-center">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2.5 block text-center">
                       Código de 6 dígitos
                     </label>
                     <div className="flex justify-between gap-2 max-w-xs mx-auto">
@@ -553,7 +553,7 @@ export function LoginPage() {
                           onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           onPaste={handleOtpPaste}
-                          className="w-11 h-13 text-center text-xl font-black font-mono border-2 border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all shadow-2xs"
+                          className="w-11 h-12 text-center text-lg font-bold font-mono border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all"
                         />
                       ))}
                     </div>
@@ -562,7 +562,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || otpDigits.join("").length < 6}
-                    className="w-full py-2.5 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="h-11 w-full bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isLoading ? (
                       <>
@@ -596,86 +596,19 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* ── Panel Derecho (Hero Institucional - 7 cols) ── */}
-      <div className="hidden lg:flex lg:col-span-7 relative flex-col justify-between p-12 lg:p-16 bg-slate-900 overflow-hidden min-h-screen">
-        {/* Imagen institucional con cobertura limpia y opacidad 30-35% */}
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-30"
-          style={{ backgroundImage: "url('/GenteSena.jpg')" }}
+      {/* ── Columna Derecha (Hero Institucional - 7 cols) ── */}
+      <div className="hidden lg:block lg:col-span-7 relative overflow-hidden min-h-screen bg-slate-900">
+        <img
+          src="/GenteSena.jpg"
+          alt="Aprendices SENA"
+          className="absolute inset-0 w-full h-full object-cover object-center"
         />
-
-        {/* Degradado oscuro sutil institucional */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40" />
-
-        {/* Top badge */}
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-200 text-xs font-semibold uppercase tracking-wider">
-            <GraduationCap className="w-4 h-4 text-[#39A900]" />
-            <span>SENA • CEFR English Level Test</span>
-          </div>
-          <span className="text-xs font-medium text-slate-400">Plataforma Oficial Formativa</span>
-        </div>
-
-        {/* Contenido Central y Tarjetas de Métricas Sólidas y Compactas */}
-        <div className="relative z-10 space-y-6 max-w-xl">
-          <div>
-            <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
-              Aprende, diagnostica y domina el inglés técnico profesional
-            </h2>
-            <p className="mt-3 text-sm text-slate-300 leading-relaxed font-normal">
-              Plataforma institucional de evaluación diagnóstica de inglés técnico y diccionarios por competencias formativas según el Marco Común Europeo de Referencia (CEFR).
-            </p>
-          </div>
-
-          {/* Tarjetas de información y métricas sólidas y compactas */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
-              <div className="flex items-center gap-2 text-[#39A900] mb-1">
-                <GraduationCap className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Niveles CEFR</span>
-              </div>
-              <p className="text-2xl font-black text-white">A1 - B2</p>
-              <p className="text-xs text-slate-400 mt-1">Marco internacional estándar</p>
-            </div>
-
-            <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
-              <div className="flex items-center gap-2 text-sky-400 mb-1">
-                <Award className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Competencias</span>
-              </div>
-              <p className="text-2xl font-black text-white">4 Habilidades</p>
-              <p className="text-xs text-slate-400 mt-1">Speaking, Writing, Grammar, Reading</p>
-            </div>
-          </div>
-
-          {/* Desglose de Competencias Educativas con Lucide Icons */}
-          <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 text-white">
-            <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Evaluación integral por competencias:</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <Mic className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Speaking</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <PenTool className="w-3.5 h-3.5 text-rose-400" />
-                <span>Writing</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <Languages className="w-3.5 h-3.5 text-purple-400" />
-                <span>Grammar</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                <span>Reading</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer institucional */}
-        <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-slate-800">
-          <span>Servicio Nacional de Aprendizaje SENA</span>
-          <span>WorkLex • {new Date().getFullYear()}</span>
+        <div className="absolute inset-0 bg-slate-900/40" />
+        <div className="absolute bottom-12 left-12 right-12 z-10 text-white">
+          <blockquote className="text-xl font-medium leading-relaxed">
+            "Formación profesional integral para el desarrollo tecnológico y lingüístico de Colombia."
+          </blockquote>
+          <p className="mt-3 text-sm text-slate-300 font-light">Servicio Nacional de Aprendizaje — SENA</p>
         </div>
       </div>
 

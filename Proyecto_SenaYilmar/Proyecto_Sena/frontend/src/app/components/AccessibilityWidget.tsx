@@ -224,7 +224,7 @@ export function AccessibilityWidget() {
         onClick={() => setIsOpen((prev) => !prev)}
         className="fixed bottom-6 right-6 z-50 w-11 h-11 rounded-full bg-[#39A900] hover:bg-[#2e8600] text-white shadow-md hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-white/20"
       >
-        <Accessibility className="w-5 h-5 text-white stroke-[2]"/>
+        <Accessibility className="w-5 h-5 text-white" />
       </button>
 
       {/* Panel Flotante Aislado */}
