@@ -322,19 +322,19 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col lg:flex-row relative">
       {/* ── Panel Izquierdo (Formulario) ── */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 py-10 lg:px-12 lg:py-16 bg-white dark:bg-slate-900 z-10 min-w-0 border-r border-slate-200/80 dark:border-slate-800">
-        <div className="max-w-md w-full px-6 py-10">
+      <div className="flex-1 min-h-screen flex flex-col justify-center items-center px-6 lg:px-12 bg-white dark:bg-slate-900 z-10 min-w-0 border-r border-slate-200/80 dark:border-slate-800">
+        <div className="w-full max-w-sm space-y-6">
           <button
             type="button"
             onClick={() => (step === "otp" ? setStep("credentials") : navigate("/"))}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors mb-6 cursor-pointer"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{step === "otp" ? "Volver a credenciales" : "Volver al inicio"}</span>
           </button>
 
           {/* Header con logo SENA / WorkLex proporcionado */}
-          <div className="flex items-center gap-3.5 mb-8">
+          <div className="flex items-center gap-3.5">
             <img
               src="/logo-sena.png"
               alt="Logo SENA"
@@ -466,7 +466,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
-                    className="w-full py-3 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full py-2.5 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isLoading ? (
                       <>
@@ -557,7 +557,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || otpDigits.join("").length < 6}
-                    className="w-full py-3 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full py-2.5 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isLoading ? (
                       <>
@@ -596,12 +596,11 @@ export function LoginPage() {
         className="hidden lg:flex flex-1 relative items-center justify-center p-12 bg-cover bg-center overflow-hidden min-w-0"
         style={{ backgroundImage: "url('/GenteSena.jpg')" }}
       >
-        {/* Overlay degradado elegante */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#39A900]/90 via-emerald-950/80 to-slate-900/90 mix-blend-multiply" />
-        <div className="absolute inset-0 bg-black/25" />
+        {/* Overlay degradado suave */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#39A900]/80 via-slate-900/75 to-slate-900/90" />
 
-        {/* Tarjeta de información con tipografía legible y diseño limpio */}
-        <div className="relative z-10 max-w-lg text-white space-y-6 p-8 rounded-3xl bg-white/10 dark:bg-black/30 backdrop-blur-md border border-white/20 shadow-2xl">
+        {/* Tarjeta de información con ancho máximo controlado frosted-glass */}
+        <div className="relative z-10 max-w-md w-full p-8 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20 text-white shadow-2xl space-y-6">
           {/* Badge institucional */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-semibold uppercase tracking-wider shadow-xs">
             <GraduationCap className="w-4 h-4 text-white" />

@@ -59,25 +59,14 @@ h3 span {
   font-size: inherit !important;
 }
 
-/* Protecciones estrictas: NUNCA escalar logos, iconos ni el modal de accesibilidad */
+/* Protecciones estrictas: NUNCA escalar logos ni el modal de accesibilidad */
 img,
-svg,
-.logo-container,
-.accessibility-panel,
-.accessibility-panel *,
-#accessibility-panel,
-#accessibility-panel * {
-  font-size: initial !important;
-  transform: none !important;
+.logo-container {
   zoom: 1 !important;
-  max-width: none;
 }
 
-#accessibility-panel,
-#accessibility-panel *,
-.accessibility-panel,
-.accessibility-panel * {
+#accessibility-panel {
   font-size: 14px !important;
   letter-spacing: normal !important;
   line-height: normal !important;
-}
+}
