@@ -312,11 +312,11 @@ def _send_otp_task(email: str, code: str, subject: str, plain_msg: str, html_msg
 
     if not is_console_backend:
         try:
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
             send_mail(
                 subject=subject,
                 message=plain_msg,
-                html_message=html_msg,
-                from_email=None,
+                from_email=from_email,
                 recipient_list=[email],
                 fail_silently=False,
             )
@@ -338,43 +338,79 @@ def _send_otp_task(email: str, code: str, subject: str, plain_msg: str, html_msg
           f"======================================================================\n")
 
 
+def send_plain_verification_email(
+    user_email: str,
+    codigo_verificacion: str,
+    first_name: str = "Usuario"
+) -> bool:
+    """
+    Envío simplificado en texto plano del código de verificación institucional para WorkLex SENA.
+    """
+    mensaje = f"""
+Hola {first_name}:
+
+Tu código de verificación institucional para WorkLex SENA es:
+
+{codigo_verificacion}
+
+Este código tiene una validez de 15 minutos. Si no realizaste esta solicitud, puedes ignorar este mensaje.
+
+---
+WorkLex SENA - Centro de Teleinformática y Producción Industrial (CTPI)
+"""
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+    try:
+        send_mail(
+            subject="Código de Verificación - WorkLex SENA",
+            message=mensaje.strip(),
+            from_email=from_email,
+            recipient_list=[user_email],
+            fail_silently=False,
+        )
+        logger.info(f"[PLAIN EMAIL SUCCESS] Correo enviado exitosamente a {user_email}.")
+        return True
+    except Exception as e:
+        logger.warning(f"[PLAIN EMAIL ERROR] Error al despachar correo a {user_email}: {e}")
+        return False
+
+
 def send_otp_email_async(
     email: str,
     code: str,
     reason: str = "verificación de acceso",
-    is_registration: bool = False
+    is_registration: bool = False,
+    first_name: str = "Usuario"
 ) -> None:
     """
     Despacha el correo de verificación OTP de manera ASÍNCRONA y NO BLOQUEANTE.
     Garantiza que la respuesta HTTP hacia el frontend se retorne en < 50ms sin colgar
     los workers de Gunicorn por timeout de puertos SMTP bloqueados.
     """
-    if is_registration:
-        subject = f'Verifica tu correo ({code}) - WorkLex SENA'
-        headline = "Verificación de Registro de Aprendiz"
-        message = (
-            "Bienvenido a <strong>WorkLex SENA</strong>. Para completar la creación de tu cuenta institucional "
-            "y confirmar tu identidad, ingresa el siguiente código de 6 dígitos:"
-        )
-    else:
-        subject = f'Tu código de verificación ({code}) - WorkLex SENA'
-        headline = "Código de Verificación de Seguridad"
-        message = (
-            f"Has solicitado un código de verificación para <strong>{reason}</strong> en la plataforma "
-            f"WorkLex SENA. Utiliza el siguiente código para continuar:"
-        )
+    subject = "Código de Verificación - WorkLex SENA"
+    mensaje = f"""
+Hola {first_name}:
 
-    plain_msg = (
-        f"WorkLex SENA - Verificación de Seguridad\n\n"
-        f"Tu código de verificación para {reason} es: {code}\n\n"
-        f"Este código expira en 10 minutos.\n\n"
-        f"Si no solicitaste este código, ignora este mensaje."
+Tu código de verificación institucional para WorkLex SENA es:
+
+{code}
+
+Este código tiene una validez de 15 minutos. Si no realizaste esta solicitud, puedes ignorar este mensaje.
+
+---
+WorkLex SENA - Centro de Teleinformática y Producción Industrial (CTPI)
+"""
+    plain_msg = mensaje.strip()
+
+    headline = "Verificación de Registro de Aprendiz" if is_registration else "Código de Verificación de Seguridad"
+    html_message = (
+        f"Bienvenido a <strong>WorkLex SENA</strong>. Para continuar con tu proceso institucional de {reason}, "
+        f"ingresa el siguiente código de 6 dígitos:"
     )
 
     html_msg = build_institutional_email_html(
         title=subject,
         headline=headline,
-        message=message,
+        message=html_message,
         otp_code=code,
     )
 

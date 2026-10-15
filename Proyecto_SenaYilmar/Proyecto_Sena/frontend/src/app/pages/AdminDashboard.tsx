@@ -794,7 +794,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   // Estados para filtros avanzados y paginación de usuarios
   const [filterUserStatus, setFilterUserStatus] = useState<string>("all");
   const [userCurrentPage, setUserCurrentPage] = useState<number>(1);
-  const [userPageSize, setUserPageSize] = useState<number | "all">(25);
+  const [userPageSize, setUserPageSize] = useState<number | "all">(50);
   const [serverMetrics, setServerMetrics] = useState<api.AdminMetrics | null>(null);
 
   const [apiError, setApiError] = useState<string | null>(null);
@@ -1854,6 +1854,10 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                       <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">Instructores</span><span className="font-medium">{stats.teachers}</span></div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-sena-blue rounded-full" style={{ width: `${stats.totalUsers ? (stats.teachers / stats.totalUsers) * 100 : 0}%` }} /></div>
                     </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">Administradores</span><span className="font-medium">{stats.admins}</span></div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-purple-600 rounded-full" style={{ width: `${stats.totalUsers ? (stats.admins / stats.totalUsers) * 100 : 0}%` }} /></div>
+                    </div>
                   </div>
                 </div>
                 <div className="bg-white rounded-2xl p-6 border border-border shadow-sm">
@@ -1984,8 +1988,8 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                     <RefreshCw className="w-4 h-4" strokeWidth={1.8} /> Actualizar
                   </button>
                   <button onClick={() => setShowUserModal(true)}
-                    className="flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium shadow-md shadow-sena-green/20 cursor-pointer">
-                    <Plus className="w-5 h-5" strokeWidth={1.8} /> Crear Usuario
+                    className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2 cursor-pointer text-sm">
+                    <Plus className="w-4 h-4" strokeWidth={1.8} /> + Nuevo Usuario
                   </button>
                 </div>
               </div>
@@ -1995,7 +1999,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
                   <input
                     type="text"
-                    placeholder="Buscar por nombre, correo o número de ficha..."
+                    placeholder="Buscar por nombre, correo, documento o ficha..."
                     value={searchTerm}
                     onChange={e => {
                       setSearchTerm(e.target.value);
@@ -2009,9 +2013,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   <div className="inline-flex rounded-xl border border-border bg-slate-100/80 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
                     {[
                       { id: "all", label: "Todos" },
-                      { id: "student", label: "Aprendiz" },
-                      { id: "teacher", label: "Instructor" },
-                      { id: "admin", label: "Admin" },
+                      { id: "student", label: "Aprendices" },
+                      { id: "teacher", label: "Instructores" },
+                      { id: "admin", label: "Administradores" },
                     ].map((pill) => (
                       <button
                         key={pill.id}
@@ -2059,11 +2063,13 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-border bg-muted/50">
-                          <th className="text-left py-4 px-5 text-sm font-medium text-muted-foreground">Usuario</th>
-                          <th className="text-left py-4 px-5 text-sm font-medium text-muted-foreground">Rol</th>
-                          <th className="text-left py-4 px-5 text-sm font-medium text-muted-foreground">Estado</th>
-                          <th className="text-left py-4 px-5 text-sm font-medium text-muted-foreground">Acciones</th>
+                        <tr className="border-b border-border bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                          <th className="text-left py-4 px-5">Usuario (Nombre y Correo)</th>
+                          <th className="text-left py-4 px-5">Documento</th>
+                          <th className="text-left py-4 px-5">Rol Institucional</th>
+                          <th className="text-left py-4 px-5">Programa / Ficha</th>
+                          <th className="text-left py-4 px-5">Estado</th>
+                          <th className="text-left py-4 px-5">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2071,7 +2077,6 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                           const isSelf = user.id === authUser?.id;
                           const isTargetSuperAdmin = user.role === "superadmin";
                           const canModify = canModifyUserActions(user);
-                          const canChangeRole = isSuperAdmin && !isSelf && !isTargetSuperAdmin;
                           const canOpenPermissions = canEditUserPermissions(user);
 
                           return (
@@ -2089,9 +2094,9 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                   >
                                     {user.name.charAt(0).toUpperCase()}
                                   </div>
-                                  <div className="min-w-0 max-w-[200px]">
+                                  <div className="min-w-0 max-w-[220px]">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[200px] inline-block" title={user.name}>
+                                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[220px] inline-block" title={user.name}>
                                         {user.name}
                                       </span>
                                       {isSelf && (
@@ -2100,35 +2105,26 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-xs text-slate-500 truncate max-w-[200px]" title={user.email}>{user.email}</p>
-                                    {(user.role === 'teacher' || user.role === 'student') && user.program && (
-                                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                                        <span className="inline-block bg-slate-100 dark:bg-slate-800 text-[11px] px-2 py-0.5 rounded-md font-mono text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title={user.program}>
-                                          {user.program}
-                                        </span>
-                                      </div>
-                                    )}
+                                    <p className="text-xs text-slate-500 font-normal truncate max-w-[220px]" title={user.email}>{user.email}</p>
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-3.5 px-5">
-                                {canChangeRole ? (
-                                  <select
-                                    value={user.role}
-                                    onChange={e => handleChangeUserRole(user.id, e.target.value)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-0 cursor-pointer shadow-xs ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}
-                                  >
-                                    <option value="admin">Administrador</option>
-                                    <option value="teacher">Instructor</option>
-                                    <option value="student">Aprendiz</option>
-                                  </select>
-                                ) : (
-                                  <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-block ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
-                                    {ROLE_LABELS[user.role] || user.role}
-                                  </span>
-                                )}
+                              <td className="py-3.5 px-5 whitespace-nowrap">
+                                <span className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
+                                  {user.docType ? `${user.docType} ` : ""}{user.docNum || "—"}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-5 whitespace-nowrap">
+                                <span className={`rounded-full px-3 py-1 text-xs font-semibold inline-block ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}>
+                                  {ROLE_LABELS[user.role] || user.role}
+                                </span>
                               </td>
                               <td className="py-3.5 px-5">
+                                <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate max-w-[200px] inline-block" title={user.program || "Sin asignar"}>
+                                  {user.program || "—"}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-5 whitespace-nowrap">
                                 <button
                                   onClick={() => canModify && handleToggleUserStatus(user.id)}
                                   disabled={!canModify}
@@ -2145,7 +2141,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                                   )}
                                 </button>
                               </td>
-                              <td className="py-3.5 px-5">
+                              <td className="py-3.5 px-5 whitespace-nowrap">
                                 <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1.5 rounded-xl w-fit border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
                                   {canModify && (
                                     <button
@@ -2187,7 +2183,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                         })}
                         {filteredUsers.length === 0 && (
                           <tr>
-                            <td colSpan={4} className="py-16 text-center">
+                            <td colSpan={6} className="py-16 text-center">
                               <div className="flex flex-col items-center justify-center p-6 text-muted-foreground">
                                 <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
                                   <Users className="w-8 h-8 text-muted-foreground/40" strokeWidth={1.5} />
@@ -3431,7 +3427,7 @@ const handleSaveUserData = async (e: React.FormEvent) => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-foreground">Eliminar Usuario</h3>
-                  <p className="text-xs text-muted-foreground">Esta acción eliminará el registro de PostgreSQL permanentemente.</p>
+                  <p className="text-xs text-muted-foreground">¿Deseas eliminar a <strong className="text-foreground">{userToDelete.name}</strong>? Esta acción liberará su correo institucional y borrará sus registros de la base de datos.</p>
                 </div>
               </div>
 

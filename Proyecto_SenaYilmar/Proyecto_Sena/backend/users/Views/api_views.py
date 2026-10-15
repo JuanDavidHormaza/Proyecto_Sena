@@ -49,9 +49,9 @@ def _generate_otp(length=6):
 _build_institutional_email_html = build_institutional_email_html
 
 
-def _send_otp_email(email: str, code: str, reason: str = "verificación de acceso"):
+def _send_otp_email(email: str, code: str, reason: str = "verificación de acceso", first_name: str = "Usuario"):
     """Envía el OTP por correo de forma asíncrona no bloqueante con failover."""
-    send_otp_email_async(email=email, code=code, reason=reason, is_registration=False)
+    send_otp_email_async(email=email, code=code, reason=reason, is_registration=False, first_name=first_name)
 
 
 def _is_valid_email_domain(email: str) -> tuple[bool, str]:
@@ -156,7 +156,9 @@ class LoginAPIView(APIView):
             expires_at=timezone.now() + timedelta(minutes=10),
         )
 
-        _send_otp_email(email, code, reason="inicio de sesión (MFA)")
+        person = Person.objects.filter(email=email).first()
+        first_name = person.first_name if person else "Usuario"
+        _send_otp_email(email, code, reason="inicio de sesión (MFA)", first_name=first_name)
         print(f"[MFA LOGIN] Código de verificación generado para {email}: {code}")
 
         dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
@@ -290,7 +292,9 @@ class ResendOTPAPIView(APIView):
             expires_at=timezone.now() + timedelta(minutes=10),
         )
 
-        _send_otp_email(email, code, reason="reenvío de verificación")
+        person = Person.objects.filter(email=email).first()
+        first_name = person.first_name if person else "Usuario"
+        _send_otp_email(email, code, reason="reenvío de verificación", first_name=first_name)
 
         dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
         return Response({
@@ -706,11 +710,13 @@ class RegisterSendOTPAPIView(APIView):
         )
 
         # Despacho asíncrono no bloqueante (evita congelar Gunicorn si los puertos SMTP están bloqueados en el VPS)
+        first_name = serializer.validated_data.get('first_name', 'Usuario')
         send_otp_email_async(
             email=email,
             code=code,
             reason="registro de aprendiz",
-            is_registration=True
+            is_registration=True,
+            first_name=first_name
         )
 
         dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
@@ -1022,10 +1028,17 @@ class UserViewSet(viewsets.ViewSet):
         current_user_id = getattr(request.user, 'user_id', None) or getattr(request.user, 'pk', None)
         # Evitar eliminar al propio Super Administrador actual
         if user == request.user or user.user_id == current_user_id:
-            return Response({"detail": "No puedes eliminar tu propia cuenta de administrador."}, status=status.HTTP_400_BAD_REQUEST)
-        if user.role_id == 'SUPERADMIN':
+            return Response({"detail": "No es posible eliminar tu propia cuenta de administrador."}, status=status.HTTP_400_BAD_REQUEST)
+        if getattr(user, 'role_id', None) == 'SUPERADMIN':
             return Response({"detail": "No se puede eliminar al Super Administrador."}, status=status.HTTP_403_FORBIDDEN)
+
+        person = getattr(user, 'person', None)
         user.delete()
+        if person:
+            # Si no quedan otros registros de User vinculados a esta persona, liberar email y doc_num
+            if not User.objects.filter(person=person).exists():
+                person.delete()
+
         return Response({"detail": "Usuario eliminado correctamente de la base de datos."}, status=status.HTTP_204_NO_CONTENT)
 
 

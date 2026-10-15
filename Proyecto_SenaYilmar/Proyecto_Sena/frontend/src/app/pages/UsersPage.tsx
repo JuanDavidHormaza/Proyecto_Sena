@@ -36,7 +36,7 @@ export const UsersPage = () => {
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterUserStatus, setFilterUserStatus] = useState<string>("all");
   const [userCurrentPage, setUserCurrentPage] = useState<number>(1);
-  const [userPageSize, setUserPageSize] = useState<number | "all">(25);
+  const [userPageSize, setUserPageSize] = useState<number | "all">(50);
 
   const [serverMetrics, setServerMetrics] = useState<api.AdminMetrics | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -188,9 +188,9 @@ export const UsersPage = () => {
             </button>
             <button
               onClick={() => navigate("/admin")}
-              className="flex items-center gap-2 bg-sena-green text-white px-5 py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium shadow-md shadow-sena-green/20 cursor-pointer text-sm"
+              className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2 cursor-pointer text-sm"
             >
-              <Plus className="w-4 h-4" strokeWidth={1.8} /> Crear Usuario
+              <Plus className="w-4 h-4" strokeWidth={1.8} /> + Nuevo Usuario
             </button>
           </div>
         </div>
@@ -201,7 +201,7 @@ export const UsersPage = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
             <input
               type="text"
-              placeholder="Buscar por nombre, correo o número de ficha..."
+              placeholder="Buscar por nombre, correo, documento o ficha..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -215,9 +215,9 @@ export const UsersPage = () => {
             <div className="inline-flex rounded-xl border border-border bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
               {[
                 { id: "all", label: "Todos" },
-                { id: "student", label: "Aprendiz" },
-                { id: "teacher", label: "Instructor" },
-                { id: "admin", label: "Admin" },
+                { id: "student", label: "Aprendices" },
+                { id: "teacher", label: "Instructores" },
+                { id: "admin", label: "Administradores" },
               ].map((pill) => (
                 <button
                   key={pill.id}
@@ -266,8 +266,10 @@ export const UsersPage = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-muted-foreground text-xs uppercase tracking-wider">
-                    <th className="text-left py-3.5 px-5 font-semibold">Usuario</th>
-                    <th className="text-left py-3.5 px-5 font-semibold">Rol</th>
+                    <th className="text-left py-3.5 px-5 font-semibold">Usuario (Nombre y Correo)</th>
+                    <th className="text-left py-3.5 px-5 font-semibold">Documento</th>
+                    <th className="text-left py-3.5 px-5 font-semibold">Rol Institucional</th>
+                    <th className="text-left py-3.5 px-5 font-semibold">Programa / Ficha</th>
                     <th className="text-left py-3.5 px-5 font-semibold">Estado</th>
                     <th className="text-left py-3.5 px-5 font-semibold">Acciones</th>
                   </tr>
@@ -276,7 +278,6 @@ export const UsersPage = () => {
                   {paginatedUsers.map((user) => {
                     const isSelf = user.id === authUser?.id;
                     const isTargetSuperAdmin = user.role === "superadmin";
-                    const canChangeRole = isSuperAdmin && !isSelf && !isTargetSuperAdmin;
 
                     return (
                       <tr key={user.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
@@ -293,9 +294,9 @@ export const UsersPage = () => {
                             >
                               {user.name.charAt(0).toUpperCase()}
                             </div>
-                            <div className="min-w-0 max-w-[200px]">
+                            <div className="min-w-0 max-w-[220px]">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[200px] inline-block" title={user.name}>
+                                <span className="truncate max-w-[220px] font-semibold text-slate-900 dark:text-slate-100 text-sm inline-block" title={user.name}>
                                   {user.name}
                                 </span>
                                 {isSelf && (
@@ -304,37 +305,30 @@ export const UsersPage = () => {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-slate-500 truncate max-w-[200px]" title={user.email}>{user.email}</p>
-                              {(user.role === "teacher" || user.role === "student") && user.program && (
-                                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                                  <span className="inline-block bg-slate-100 dark:bg-slate-800 text-[11px] px-2 py-0.5 rounded-md font-mono text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title={user.program}>
-                                    {user.program}
-                                  </span>
-                                </div>
-                              )}
+                              <p className="text-xs text-slate-500 font-normal truncate max-w-[220px]" title={user.email}>{user.email}</p>
                             </div>
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-5">
-                          {canChangeRole ? (
-                            <select
-                              value={user.role}
-                              onChange={(e) => handleChangeUserRole(user.id, e.target.value)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-0 cursor-pointer shadow-xs ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
-                            >
-                              <option value="admin">Administrador</option>
-                              <option value="teacher">Instructor</option>
-                              <option value="student">Aprendiz</option>
-                            </select>
-                          ) : (
-                            <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-block ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}>
-                              {ROLE_LABELS[user.role] || user.role}
-                            </span>
-                          )}
+                        <td className="py-3.5 px-5 whitespace-nowrap">
+                          <span className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
+                            {user.docType ? `${user.docType} ` : ""}{user.docNum || "—"}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-5 whitespace-nowrap">
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold inline-block ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}>
+                            {ROLE_LABELS[user.role] || user.role}
+                          </span>
                         </td>
 
                         <td className="py-3.5 px-5">
+                          <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate max-w-[200px] inline-block" title={user.program || "Sin asignar"}>
+                            {user.program || "—"}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-5 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => !isSelf && !isTargetSuperAdmin && handleToggleUserStatus(user.id)}
@@ -350,13 +344,13 @@ export const UsersPage = () => {
                           </button>
                         </td>
 
-                        <td className="py-3.5 px-5">
+                        <td className="py-3.5 px-5 whitespace-nowrap">
                           <div className="flex items-center gap-1">
                             {!isSelf && !isTargetSuperAdmin && (
                               <button
                                 type="button"
                                 onClick={() => setUserToDelete(user)}
-                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
                                 title="Eliminar usuario permanentemente"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -462,8 +456,7 @@ export const UsersPage = () => {
                 </div>
 
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  ¿Estás seguro de que deseas eliminar permanentemente la cuenta de{" "}
-                  <strong>{userToDelete.name}</strong> ({userToDelete.email}) de la base de datos PostgreSQL?
+                  ¿Deseas eliminar a <strong>{userToDelete.name}</strong>? Esta acción liberará su correo institucional y borrará sus registros de la base de datos.
                 </p>
 
                 <div className="flex justify-end gap-2 pt-2">
