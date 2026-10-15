@@ -8,6 +8,7 @@ import {
   Lock,
   LogIn,
   ArrowLeft,
+  ArrowRight,
   AlertCircle,
   GraduationCap,
   Wrench,
@@ -319,35 +320,34 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex relative">
-      {/* ── Formulario de Inicio de Sesión y Código ── */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 min-w-0">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col lg:flex-row relative">
+      {/* ── Panel Izquierdo (Formulario) ── */}
+      <div className="flex-1 flex flex-col justify-center items-center px-6 py-10 lg:px-12 lg:py-16 bg-white dark:bg-slate-900 z-10 min-w-0 border-r border-slate-200/80 dark:border-slate-800">
+        <div className="max-w-md w-full px-6 py-10">
           <button
             type="button"
             onClick={() => (step === "otp" ? setStep("credentials") : navigate("/"))}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8 cursor-pointer"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors mb-6 cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" strokeWidth={1.8} />
+            <ArrowLeft className="w-4 h-4" />
             <span>{step === "otp" ? "Volver a credenciales" : "Volver al inicio"}</span>
           </button>
 
-          {/* Logo Circular Adaptativo Blindado */}
-          <div className="flex items-center gap-3.5 mb-8 logo-container">
+          {/* Header con logo SENA / WorkLex proporcionado */}
+          <div className="flex items-center gap-3.5 mb-8">
             <img
-              src="/worklex.png"
-              alt="WorkLex SENA"
-              className="w-12 h-12 rounded-full object-contain border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
-              style={{ width: "48px", height: "48px", minWidth: "48px", minHeight: "48px" }}
+              src="/logo-sena.png"
+              alt="Logo SENA"
+              className="h-10 w-auto object-contain"
             />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">English Level Test</h1>
-              <p className="text-xs text-muted-foreground font-medium">Plataforma SENA</p>
+            <div className="h-7 w-[1px] bg-slate-200 dark:bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <img
+                src="/worklex.png"
+                alt="WorkLex SENA"
+                className="w-9 h-9 rounded-full object-contain border border-slate-200 dark:border-slate-700 shadow-2xs"
+              />
+              <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">WorkLex</span>
             </div>
           </div>
 
@@ -356,21 +356,27 @@ export function LoginPage() {
             {step === "credentials" && (
               <motion.div
                 key="credentials"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.2 }}
               >
-                <h2 className="text-3xl font-extrabold text-foreground mb-2 tracking-tight">Bienvenido de nuevo</h2>
-                <p className="text-sm text-muted-foreground mb-8">Ingresa tus credenciales para continuar tu formación</p>
+                <div className="mb-6">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Iniciar Sesión
+                  </h1>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Ingresa tus credenciales para continuar tu formación
+                  </p>
+                </div>
 
                 {isIdleTimeout && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-6 text-amber-800 dark:text-amber-200 text-sm font-medium"
+                    className="flex items-center gap-3 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-5 text-amber-800 dark:text-amber-200 text-xs font-medium"
                   >
-                    <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={1.8} />
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                     <p className="leading-snug">Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.</p>
                   </motion.div>
                 )}
@@ -379,18 +385,20 @@ export function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-xl mb-6 text-destructive text-sm"
+                    className="flex items-center gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl mb-5 text-rose-600 dark:text-rose-400 text-xs"
                   >
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     <p className="leading-snug">{error}</p>
                   </motion.div>
                 )}
 
                 <form onSubmit={handleCredentialsSubmit} className="space-y-4">
                   <div>
-                    <label className="text-sm font-semibold text-foreground mb-1.5 block">Correo electrónico</label>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                      Correo electrónico
+                    </label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         type="email"
                         required
@@ -398,12 +406,12 @@ export function LoginPage() {
                         value={formData.email}
                         onChange={(e) => handleEmailChange(e.target.value)}
                         onBlur={handleEmailBlur}
-                        placeholder="tu@correo.com"
-                        className={`w-full pl-10 pr-4 py-3 border rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none transition-all text-sm ${getFieldValidationClass(
-                          emailTouched,
-                          emailError,
-                          formData.email
-                        )}`}
+                        placeholder="aprendiz@soy.sena.edu.co"
+                        className={`w-full pl-10 pr-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all ${
+                          emailTouched && emailError
+                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
+                            : "border-slate-200 dark:border-slate-700"
+                        }`}
                       />
                     </div>
                     <FieldError error={emailTouched ? emailError : undefined} />
@@ -411,10 +419,12 @@ export function LoginPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-sm font-semibold text-foreground">Contraseña</label>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Contraseña
+                      </label>
                     </div>
                     <div className="relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         type={showPassword ? "text" : "password"}
                         required
@@ -422,15 +432,15 @@ export function LoginPage() {
                         value={formData.password}
                         onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
                         placeholder="••••••••"
-                        className="w-full pl-10 pr-12 py-3 border border-input rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all"
+                        className="w-full pl-10 pr-11 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
                         title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" strokeWidth={1.8} /> : <Eye className="w-4 h-4" strokeWidth={1.8} />}
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                     <div className="flex justify-end mt-2">
@@ -446,7 +456,7 @@ export function LoginPage() {
                             navigate("/recuperar-cuenta");
                           }
                         }}
-                        className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold hover:underline transition-colors cursor-pointer"
+                        className="text-xs text-[#39A900] hover:text-[#2e8600] font-semibold hover:underline transition-colors cursor-pointer"
                       >
                         ¿Olvidaste tu contraseña? / Recuperar cuenta
                       </button>
@@ -456,25 +466,28 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
-                    className="w-full bg-sena-green hover:bg-sena-green/90 text-white py-3.5 rounded-xl font-bold transition-all shadow-md shadow-sena-green/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isLoading ? (
-                      <span>Validando credenciales...</span>
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Validando credenciales...</span>
+                      </>
                     ) : (
                       <>
-                        <LogIn className="w-5 h-5" strokeWidth={1.8} />
                         <span>Continuar</span>
+                        <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
                 </form>
 
-                <p className="text-center text-sm text-muted-foreground mt-8">
+                <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
                   ¿No tienes cuenta?{" "}
                   <button
                     type="button"
                     onClick={() => navigate("/register")}
-                    className="text-sena-green font-semibold hover:underline cursor-pointer"
+                    className="text-[#39A900] font-semibold hover:underline cursor-pointer"
                   >
                     Regístrate aquí
                   </button>
@@ -492,37 +505,36 @@ export function LoginPage() {
                 transition={{ duration: 0.2 }}
               >
                 <div className="flex justify-center mb-5">
-                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-xs border border-emerald-100">
-                    <KeyRound className="w-8 h-8" strokeWidth={1.8} />
+                  <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/40 text-[#39A900] rounded-2xl flex items-center justify-center shadow-xs border border-emerald-100 dark:border-emerald-800">
+                    <KeyRound className="w-7 h-7" />
                   </div>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-2 text-center tracking-tight">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white text-center">
                   Verificación de Seguridad
                 </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-1 text-center leading-relaxed max-w-sm mx-auto">
-                  Hemos enviado un código seguro a tu correo registrado. Ingrésalo a continuación para acceder a tu entorno institucional Worklex SENA.
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-1 text-center leading-relaxed">
+                  Hemos enviado un código seguro a tu correo registrado. Ingrésalo para acceder a Worklex SENA.
                 </p>
-                <p className="text-center font-bold text-foreground text-sm mb-6">{otpEmail}</p>
+                <p className="text-center font-bold text-slate-800 dark:text-slate-200 text-xs mb-5">{otpEmail}</p>
 
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-xl mb-6 text-destructive text-sm"
+                    className="flex items-center gap-2.5 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl mb-5 text-rose-600 dark:text-rose-400 text-xs"
                   >
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     <p className="leading-snug">{error}</p>
                   </motion.div>
                 )}
 
-                <form onSubmit={handleVerifyOtp} className="space-y-6">
+                <form onSubmit={handleVerifyOtp} className="space-y-5">
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block text-center">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5 block text-center">
                       Código de 6 dígitos
                     </label>
-                    {/* 6 Casillas Numéricas con Foco Automático Secuencial */}
-                    <div className="flex justify-between gap-2 sm:gap-2.5 max-w-xs mx-auto">
+                    <div className="flex justify-between gap-2 max-w-xs mx-auto">
                       {otpDigits.map((digit, idx) => (
                         <input
                           key={idx}
@@ -536,7 +548,7 @@ export function LoginPage() {
                           onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           onPaste={handleOtpPaste}
-                          className="w-11 h-14 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-black font-mono border-2 border-input rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-sena-green/50 focus:border-sena-green transition-all shadow-2xs"
+                          className="w-11 h-13 text-center text-xl font-black font-mono border-2 border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all shadow-2xs"
                         />
                       ))}
                     </div>
@@ -545,60 +557,77 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || otpDigits.join("").length < 6}
-                    className="w-full bg-sena-green hover:bg-sena-green/90 text-white py-3.5 rounded-xl font-bold transition-all shadow-md shadow-sena-green/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm"
+                    className="w-full py-3 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isLoading ? (
-                      <span>Validando código...</span>
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Validando código...</span>
+                      </>
                     ) : (
                       <>
-                        <CheckCircle2 className="w-5 h-5" strokeWidth={1.8} />
+                        <CheckCircle2 className="w-4 h-4" />
                         <span>Validar y Acceder</span>
                       </>
                     )}
                   </button>
                 </form>
 
-                <div className="flex items-center justify-center gap-2 mt-6">
-                  <p className="text-xs text-muted-foreground">¿No recibiste el código?</p>
+                <div className="flex items-center justify-center gap-2 mt-5">
+                  <p className="text-xs text-slate-500">¿No recibiste el código?</p>
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={resendCooldown > 0}
-                    className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-1 text-xs text-[#39A900] font-bold hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${resendCooldown > 0 ? "animate-spin" : ""}`} strokeWidth={1.8} />
+                    <RefreshCw className={`w-3 h-3 ${resendCooldown > 0 ? "animate-spin" : ""}`} />
                     <span>{resendCooldown > 0 ? `Reenviar (${resendCooldown}s)` : "Reenviar código"}</span>
                   </button>
                 </div>
-
-                <p className="text-center text-[11px] text-muted-foreground mt-3">
-                  Por seguridad, el código tiene una validez de 10 minutos.
-                </p>
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.div>
+        </div>
       </div>
 
-      {/* ── Panel lateral corporativo SENA ── */}
+      {/* ── Panel Derecho (Hero Institucional) ── */}
       <div
-        className="hidden lg:flex flex-1 relative items-center justify-center p-12 bg-cover bg-center min-w-0"
+        className="hidden lg:flex flex-1 relative items-center justify-center p-12 bg-cover bg-center overflow-hidden min-w-0"
         style={{ backgroundImage: "url('/GenteSena.jpg')" }}
       >
-        <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]" />
-        <div className="relative z-10 text-white text-center max-w-sm">
-          <div className="flex items-center justify-center gap-3 mb-6 logo-container">
-            <img
-              src="/worklex.png"
-              alt="WorkLex SENA"
-              className="w-14 h-14 rounded-full object-contain border-2 border-emerald-500/40 shadow-lg transition-transform hover:scale-105 flex-shrink-0"
-              style={{ width: "56px", height: "56px", minWidth: "56px", minHeight: "56px" }}
-            />
-            <h3 className="text-3xl font-extrabold tracking-tight">WorkLex SENA</h3>
+        {/* Overlay degradado elegante */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#39A900]/90 via-emerald-950/80 to-slate-900/90 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-black/25" />
+
+        {/* Tarjeta de información con tipografía legible y diseño limpio */}
+        <div className="relative z-10 max-w-lg text-white space-y-6 p-8 rounded-3xl bg-white/10 dark:bg-black/30 backdrop-blur-md border border-white/20 shadow-2xl">
+          {/* Badge institucional */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-semibold uppercase tracking-wider shadow-xs">
+            <GraduationCap className="w-4 h-4 text-white" />
+            <span>SENA • CEFR English Level Test</span>
           </div>
-          <p className="text-white/85 text-base leading-relaxed">
-            Plataforma institucional de evaluación diagnóstica de inglés técnico y diccionarios por competencias formativas según el Marco Común Europeo (CEFR).
-          </p>
+
+          <div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Aprende, diagnostica y domina el inglés técnico profesional
+            </h2>
+            <p className="mt-3 text-sm text-white/85 leading-relaxed font-normal">
+              Plataforma institucional de evaluación diagnóstica de inglés técnico y diccionarios por competencias formativas según el Marco Común Europeo (CEFR).
+            </p>
+          </div>
+
+          {/* Métricas destacadas */}
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
+            <div>
+              <p className="text-2xl font-black text-white">CEFR A1-B2</p>
+              <p className="text-xs text-white/75 mt-0.5">Estándar internacional</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black text-white">4 Competencias</p>
+              <p className="text-xs text-white/75 mt-0.5">Speaking, Writing, Grammar, Reading</p>
+            </div>
+          </div>
         </div>
       </div>
 

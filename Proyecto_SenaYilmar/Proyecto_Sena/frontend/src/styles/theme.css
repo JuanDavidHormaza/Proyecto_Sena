@@ -314,9 +314,3 @@ html[data-dyslexia="true"] :where(p, span:not([class*="icon"]), h1, h2, h3, h4, 
   letter-spacing: normal !important;
   line-height: 1.4 !important;
 }
-
-.accessibility-trigger-btn svg,
-#accessibility-trigger-btn svg {
-  width: 2.5rem !important;
-  height: 2.5rem !important;
-}

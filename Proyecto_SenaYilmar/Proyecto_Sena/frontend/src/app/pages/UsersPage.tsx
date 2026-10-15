@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo, FC } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import {
-  Users, Search, RefreshCw, Plus, Trash2, Pencil, ShieldCheck,
-  ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, ArrowLeft, X, Check
+  Users, Search, RefreshCw, Plus, Trash2, Pencil, Shield,
+  ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, ArrowLeft, X, Check,
+  UserCheck, UserX, Filter
 } from "lucide-react";
 import * as api from "../services/api";
 import { User, UserRole } from "../data/users";
@@ -89,7 +90,8 @@ const UserToolbar: FC<UserToolbarProps> = ({
 
       <div className="flex items-center gap-2 flex-wrap">
         {/* Pestañas/Píldoras de filtro rápido */}
-        <div className="inline-flex rounded-xl border border-border bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
+        <div className="inline-flex items-center rounded-xl border border-border bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
+          <Filter className="w-3.5 h-3.5 text-muted-foreground ml-2 mr-1 shrink-0" />
           {rolePills.map((pill) => (
             <button
               key={pill.id}
@@ -281,7 +283,11 @@ const UserTableRow: FC<UserTableRowProps> = ({
               : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200/70"
           } ${isSelf || isTargetSuperAdmin ? "opacity-60 cursor-not-allowed" : ""}`}
         >
-          <span className={`w-1.5 h-1.5 rounded-full ${user.status === "active" ? "bg-emerald-500" : "bg-slate-400"}`} />
+          {user.status === "active" ? (
+            <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <UserX className="w-3.5 h-3.5 text-slate-400" />
+          )}
           {user.status === "active" ? "Activo" : "Inactivo"}
         </button>
       </td>
@@ -305,7 +311,7 @@ const UserTableRow: FC<UserTableRowProps> = ({
             title="Permisos"
             aria-label={`Ver permisos de ${user.name}`}
           >
-            <ShieldCheck className="w-4 h-4" />
+            <Shield className="w-4 h-4" />
           </button>
           {!isSelf && !isTargetSuperAdmin && (
             <button

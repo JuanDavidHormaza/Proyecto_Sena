@@ -13,7 +13,7 @@ import {
   Edit,
   Mic, PenTool, Languages, BookMarked, Image as ImageIcon, Layers, RotateCcw,
   Code, MoreVertical, GraduationCap, SlidersHorizontal,
-  Bell, Inbox, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Headphones, ExternalLink, UserCheck, ChevronLeft, ChevronRight,
+  Bell, Inbox, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Headphones, ExternalLink, UserCheck, UserX, Pencil, ChevronLeft, ChevronRight,
   LifeBuoy,
 } from "lucide-react";
 import {
@@ -2217,9 +2217,9 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                   }`}
                                 >
                                   {user.status === "active" ? (
-                                    <><ToggleRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.8} /> Activo</>
+                                    <><UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.8} /> Activo</>
                                   ) : (
-                                    <><ToggleLeft className="w-4 h-4 text-slate-400" strokeWidth={1.8} /> Inactivo</>
+                                    <><UserX className="w-4 h-4 text-slate-400" strokeWidth={1.8} /> Inactivo</>
                                   )}
                                 </button>
                               </td>
@@ -2233,7 +2233,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                       title="Editar información"
                                       aria-label="Editar información del usuario"
                                     >
-                                      <Edit className="w-4 h-4" strokeWidth={1.8} />
+                                      <Pencil className="w-4 h-4" strokeWidth={1.8} />
                                     </button>
                                   )}
                                   {canOpenPermissions && (

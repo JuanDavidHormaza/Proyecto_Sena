@@ -220,17 +220,17 @@ export function AccessibilityWidget() {
       <button
         type="button"
         id="accessibility-trigger-btn"
-        aria-label="Abrir panel de accesibilidad institucional"
+        aria-label="Opciones de accesibilidad"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="accessibility-trigger-btn fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-[#39A900] shadow-2xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all focus:outline-none focus:ring-4 focus:ring-[#39A900]/30"
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#39A900] hover:bg-[#2d8500] text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-white/20 focus:outline-none focus:ring-4 focus:ring-[#39A900]/30"
       >
-        <Accessibility className="w-10 h-10 text-white stroke-[2.4]" size={40} strokeWidth={2.4} />
+        <Accessibility className="w-6 h-6 text-white stroke-[2.2]" />
       </button>
 
       {/* Panel Flotante Aislado */}
       <AnimatePresence>
         {isOpen && (
-          <div className="accessibility-panel fixed bottom-28 right-8 z-[99999]">
+          <div className="accessibility-panel fixed bottom-22 right-6 z-[99999]">
             <motion.div
               initial={{ opacity: 0, y: 14, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
