@@ -2,13 +2,29 @@ import { useState, useEffect, useMemo, FC } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import {
-  Users, Search, RefreshCw, Plus, Trash2, Pencil,
-  ChevronLeft, ChevronRight, AlertTriangle, ArrowLeft
+  Users, Search, RefreshCw, Plus, Trash2, Pencil, ShieldCheck,
+  ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, ArrowLeft, X, Check
 } from "lucide-react";
 import * as api from "../services/api";
-import { User } from "../data/users";
+import { User, UserRole } from "../data/users";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
+
+// Helper institucional: Extrae y formatea programa y ficha en dos líneas sin cortes abruptos
+const parseProgramAndFicha = (programRaw?: string) => {
+  if (!programRaw || !programRaw.trim()) {
+    return { programName: "Sin asignar", fichaNumber: null };
+  }
+  const clean = programRaw.trim();
+  const fichaMatch = clean.match(/(?:ficha|f\.)?\s*[:#-]?\s*(\d{6,8})/i);
+  if (fichaMatch) {
+    const fichaNumber = fichaMatch[1];
+    let programName = clean.replace(fichaMatch[0], "").replace(/[-–()]/g, "").trim();
+    if (!programName) programName = "ADSO";
+    return { programName, fichaNumber: `Ficha: ${fichaNumber}` };
+  }
+  return { programName: clean, fichaNumber: null };
+};
 
 // ─── Mapas de Estilos y Etiquetas de Roles ──────────────────────────────────
 const ROLE_COLORS: Record<string, string> = {
@@ -143,6 +159,8 @@ interface UserTableRowProps {
   onToggleStatus: (userId: string) => void;
   onDeleteClick: (user: User) => void;
   onEditClick: (user: User) => void;
+  onRoleChange: (userId: string, newRole: UserRole) => void;
+  onViewPermissions: (user: User) => void;
 }
 
 const UserTableRow: FC<UserTableRowProps> = ({
@@ -151,6 +169,8 @@ const UserTableRow: FC<UserTableRowProps> = ({
   onToggleStatus,
   onDeleteClick,
   onEditClick,
+  onRoleChange,
+  onViewPermissions,
 }) => {
   const isTargetSuperAdmin = user.role === "superadmin";
 
@@ -198,30 +218,67 @@ const UserTableRow: FC<UserTableRowProps> = ({
         </span>
       </td>
 
-      {/* Columna 3: Rol */}
+      {/* Columna 3: Rol (Badge Desplegable Refinado) */}
       <td className="py-3.5 px-5 whitespace-nowrap">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold inline-block ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}>
-          {ROLE_LABELS[user.role] || user.role}
-        </span>
+        {isSelf || isTargetSuperAdmin ? (
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5 opacity-90 cursor-not-allowed ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
+            title={isSelf ? "Tu cuenta activa (No modificable)" : "Super Administrador (Protegido)"}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+            {ROLE_LABELS[user.role] || user.role}
+          </span>
+        ) : (
+          <div className="relative inline-block text-left">
+            <select
+              value={user.role}
+              onChange={(e) => onRoleChange(user.id, e.target.value as UserRole)}
+              className={`rounded-full pl-3 pr-7 py-1 text-xs font-semibold appearance-none cursor-pointer transition-all border border-transparent hover:border-black/10 dark:hover:border-white/10 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || "bg-muted text-muted-foreground"}`}
+              title="Cambiar rol institucional"
+            >
+              <option value="student">Aprendiz</option>
+              <option value="teacher">Instructor</option>
+              <option value="admin">Administrador</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none opacity-60" />
+          </div>
+        )}
       </td>
 
-      {/* Columna 4: Programa / Ficha */}
+      {/* Columna 4: Programa / Ficha (Dos líneas limpias sin cortes abruptos) */}
       <td className="py-3.5 px-5">
-        <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate max-w-[200px] inline-block" title={user.program || "Sin asignar"}>
-          {user.program || "—"}
-        </span>
+        {(() => {
+          const { programName, fichaNumber } = parseProgramAndFicha(user.program);
+          return (
+            <div className="flex flex-col min-w-0 max-w-[200px]" title={user.program || "Sin asignar"}>
+              <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate inline-block">
+                {programName}
+              </span>
+              {fichaNumber ? (
+                <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5 inline-block">
+                  {fichaNumber}
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-400/70 dark:text-slate-500/70">
+                  General
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </td>
 
-      {/* Columna 5: Estado */}
+      {/* Columna 5: Estado (Optimistic Switch) */}
       <td className="py-3.5 px-5 whitespace-nowrap">
         <button
           type="button"
           onClick={() => !isSelf && !isTargetSuperAdmin && onToggleStatus(user.id)}
           disabled={isSelf || isTargetSuperAdmin}
+          title={isSelf || isTargetSuperAdmin ? "Estado protegido" : `Alternar a ${user.status === "active" ? "Inactivo" : "Activo"}`}
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all ${
             user.status === "active"
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : "bg-slate-100 text-slate-600 border border-slate-200"
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100/80"
+              : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200/70"
           } ${isSelf || isTargetSuperAdmin ? "opacity-60 cursor-not-allowed" : ""}`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${user.status === "active" ? "bg-emerald-500" : "bg-slate-400"}`} />
@@ -229,24 +286,33 @@ const UserTableRow: FC<UserTableRowProps> = ({
         </button>
       </td>
 
-      {/* Columna 6: Acciones (Editar y Papelera agrupados con hover carmesí) */}
+      {/* Columna 6: Acciones Claras */}
       <td className="py-3.5 px-5 whitespace-nowrap">
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => onEditClick(user)}
             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-            title={`Editar ${user.name}`}
-            aria-label={`Editar ${user.name}`}
+            title="Editar usuario"
+            aria-label={`Editar información de ${user.name}`}
           >
             <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewPermissions(user)}
+            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors cursor-pointer"
+            title="Permisos"
+            aria-label={`Ver permisos de ${user.name}`}
+          >
+            <ShieldCheck className="w-4 h-4" />
           </button>
           {!isSelf && !isTargetSuperAdmin && (
             <button
               type="button"
               onClick={() => onDeleteClick(user)}
               className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
-              title="Eliminar usuario permanentemente"
+              title="Eliminar usuario"
               aria-label={`Eliminar cuenta de ${user.name}`}
             >
               <Trash2 className="w-4 h-4" />
@@ -346,7 +412,253 @@ const UserTablePagination: FC<UserTablePaginationProps> = ({
   );
 };
 
-// ─── 5. Subcomponente Modular: Modal de Confirmación de Eliminación ──────────
+// ─── 5. Subcomponente Modular: Modal de Edición de Usuario ───────────────────
+interface EditUserModalProps {
+  user: User | null;
+  currentUserId?: string;
+  isSaving: boolean;
+  onClose: () => void;
+  onSave: (updated: { role: UserRole; name: string; program: string; status: 'active' | 'inactive' }) => void;
+}
+
+const EditUserModal: FC<EditUserModalProps> = ({
+  user,
+  currentUserId,
+  isSaving,
+  onClose,
+  onSave,
+}) => {
+  if (!user) return null;
+
+  const [name, setName] = useState(user.name);
+  const [role, setRole] = useState<UserRole>(user.role);
+  const [program, setProgram] = useState(user.program || "");
+  const [status, setStatus] = useState<'active' | 'inactive'>(user.status);
+
+  const isSelf = user.id === currentUserId;
+  const isSuperAdmin = user.role === 'superadmin';
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ role, name, program, status });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 border border-border shadow-xl space-y-5"
+      >
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#39A900]/10 text-sena-green flex items-center justify-center">
+              <Pencil className="w-5 h-5 text-[#39A900]" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-foreground">Editar Usuario Institucional</h3>
+              <p className="text-xs text-muted-foreground">Actualizar rol asignado, estado y datos del perfil</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">Nombre Completo</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Correo Institucional</label>
+              <input
+                type="text"
+                value={user.email}
+                disabled
+                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-border rounded-xl text-xs text-muted-foreground cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Documento de Identidad</label>
+              <input
+                type="text"
+                value={`${user.docType || 'CC'} ${user.docNum || '—'}`}
+                disabled
+                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-border rounded-xl text-xs text-muted-foreground cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">
+                Rol Asignado {isSuperAdmin ? "(SuperAdmin protegido)" : isSelf ? "(Tu cuenta)" : ""}
+              </label>
+              <select
+                value={role}
+                disabled={isSuperAdmin || isSelf}
+                onChange={(e) => setRole(e.target.value as UserRole)}
+                className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 cursor-pointer ${
+                  isSuperAdmin || isSelf ? "opacity-60 cursor-not-allowed" : ""
+                }`}
+              >
+                {isSuperAdmin && <option value="superadmin">Super Administrador</option>}
+                <option value="student">Aprendiz</option>
+                <option value="teacher">Instructor</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Estado de la Cuenta</label>
+              <select
+                value={status}
+                disabled={isSuperAdmin || isSelf}
+                onChange={(e) => setStatus(e.target.value as 'active' | 'inactive')}
+                className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 cursor-pointer ${
+                  isSuperAdmin || isSelf ? "opacity-60 cursor-not-allowed" : ""
+                }`}
+              >
+                <option value="active">Activo</option>
+                <option value="inactive">Inactivo</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">Programa / Ficha</label>
+            <input
+              type="text"
+              value={program}
+              onChange={(e) => setProgram(e.target.value)}
+              placeholder="Ej. ADSO - Ficha 2670142"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className="px-4 py-2 border border-border rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-5 py-2 bg-[#39A900] hover:bg-[#2d8500] text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isSaving ? "Guardando..." : "Guardar Cambios"}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+// ─── 6. Subcomponente Modular: Modal de Permisos Institucionales ─────────────
+interface PermissionsModalProps {
+  user: User | null;
+  onClose: () => void;
+}
+
+const PermissionsModal: FC<PermissionsModalProps> = ({ user, onClose }) => {
+  if (!user) return null;
+
+  const permissionsList = [
+    { key: "canManageUsers", label: "Gestión de Usuarios", desc: "Crear, editar roles y desactivar cuentas" },
+    { key: "canManageDocuments", label: "Gestión de Diccionario", desc: "Administrar términos, audios e imágenes ADSO" },
+    { key: "canViewStatistics", label: "Métricas y Reportes", desc: "Acceso al panel analítico institucional" },
+    { key: "canGiveFeedback", label: "Retroalimentación Pedagógica", desc: "Evaluar pruebas y enviar comentarios" },
+    { key: "canTakeQuiz", label: "Presentar Evaluaciones", desc: "Presentar pruebas continuas CEFR" },
+    { key: "canViewResults", label: "Historial de Resultados", desc: "Consultar puntajes y métricas de rendimiento" },
+    { key: "canManageSubjects", label: "Gestión de Asignaturas", desc: "Configurar programas y materias" },
+    { key: "canConfigureLevels", label: "Configurar Niveles CEFR", desc: "Ajustar umbrales A1, A2, B1, B2" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 border border-border shadow-xl space-y-4"
+      >
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-foreground">Permisos Institucionales</h3>
+              <p className="text-xs text-muted-foreground">{user.name} ({ROLE_LABELS[user.role] || user.role})</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+          {permissionsList.map((perm) => {
+            const hasPerm = Boolean(user.permissions?.[perm.key as keyof typeof user.permissions]);
+            return (
+              <div
+                key={perm.key}
+                className="flex items-start gap-2.5 p-2.5 rounded-xl border border-border/60 bg-slate-50/60 dark:bg-slate-800/40"
+              >
+                <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                  hasPerm ? "bg-emerald-500 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-400"
+                }`}>
+                  {hasPerm ? <Check className="w-3 h-3 stroke-[3]" /> : <X className="w-3 h-3 stroke-[3]" />}
+                </div>
+                <div>
+                  <p className={`text-xs font-semibold ${hasPerm ? "text-foreground" : "text-muted-foreground"}`}>
+                    {perm.label}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-tight">{perm.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-end pt-2 border-t border-border">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-foreground rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// ─── 7. Subcomponente Modular: Modal de Confirmación de Eliminación ──────────
 interface DeleteUserModalProps {
   user: User | null;
   isDeleting: boolean;
@@ -381,7 +693,7 @@ const DeleteUserModal: FC<DeleteUserModalProps> = ({
         </div>
 
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          ¿Deseas eliminar a <strong>{user.name}</strong>? Esta acción liberará su correo institucional y borrará sus registros de la base de datos.
+          ¿Eliminar al usuario <strong>{user.name}</strong>? Esta acción no se puede deshacer y borrará sus registros de la base de datos.
         </p>
 
         <div className="flex justify-end gap-2 pt-2">
@@ -423,6 +735,9 @@ export const UsersPage = () => {
   const [serverMetrics, setServerMetrics] = useState<api.AdminMetrics | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [isSavingEditUser, setIsSavingEditUser] = useState(false);
+  const [userForPermissions, setUserForPermissions] = useState<User | null>(null);
 
   // Carga inicial desacoplada consumiendo contratos REST limpios
   const loadUsersData = async () => {
@@ -527,17 +842,107 @@ export const UsersPage = () => {
     }
   };
 
+  // 1. Cambio de estado optimista en 0 milisegundos (sin recargas de tabla ni parpadeo)
   const handleToggleUserStatus = async (userId: string) => {
+    const target = users.find((u) => u.id === userId);
+    if (!target) return;
+    if (target.role === "superadmin" || userId === authUser?.id) {
+      toast.error("No es posible desactivar tu propia cuenta o un Super Administrador");
+      return;
+    }
+
+    const previousStatus = target.status;
+    const nextStatus = previousStatus === "active" ? "inactive" : "active";
+    const nextIsActive = nextStatus === "active";
+
+    // Actualización optimista inmediata en 0 milisegundos en estado React
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, status: nextStatus } : u))
+    );
+
+    // Petición en segundo plano: PATCH /api/users/<id>/ con { "is_active": nuevo_estado }
     try {
-      await api.toggleUserStatus(userId);
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, status: u.status === "active" ? "inactive" : "active" } : u
-        )
-      );
-      toast.success("Estado del usuario actualizado correctamente");
+      await api.updateUser(userId, { is_active: nextIsActive } as any);
+      toast.success("Estado actualizado", "Éxito");
     } catch (err: any) {
-      toast.error(err?.message || "Error al cambiar estado del usuario");
+      // Revertir estado si la API devuelve error
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, status: previousStatus } : u))
+      );
+      toast.error(err?.message || "Error al actualizar el estado");
+    }
+  };
+
+  // 2. Cambio de rol directo desde el badge dropdown con optimistic update
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
+    const target = users.find((u) => u.id === userId);
+    if (!target) return;
+    if (target.role === newRole) return;
+    if (target.role === "superadmin" || userId === authUser?.id) {
+      toast.error("No es posible modificar el rol del Super Administrador o tu propia cuenta");
+      return;
+    }
+
+    const previousRole = target.role;
+
+    // Actualización optimista inmediata en 0 milisegundos
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+    );
+
+    // Petición en segundo plano: PATCH /api/users/<id>/ con { "role": nuevo_rol }
+    try {
+      await api.updateUser(userId, { role: newRole } as any);
+      toast.success(`Rol actualizado a ${ROLE_LABELS[newRole]}`, "Rol Actualizado");
+    } catch (err: any) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role: previousRole } : u))
+      );
+      toast.error(err?.message || "Error al actualizar el rol");
+    }
+  };
+
+  // 3. Guardado desde el modal de edición de usuario
+  const handleSaveEditUser = async (updated: {
+    role: UserRole;
+    name: string;
+    program: string;
+    status: "active" | "inactive";
+  }) => {
+    if (!userToEdit) return;
+    const targetId = userToEdit.id;
+    const previousUsers = users;
+
+    // Actualización optimista
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === targetId
+          ? {
+              ...u,
+              role: updated.role,
+              name: updated.name,
+              program: updated.program,
+              status: updated.status,
+            }
+          : u
+      )
+    );
+
+    setIsSavingEditUser(true);
+    try {
+      await api.updateUser(targetId, {
+        role: updated.role,
+        name: updated.name,
+        program: updated.program,
+        is_active: updated.status === "active",
+      } as any);
+      toast.success("Usuario actualizado correctamente", "Perfil Actualizado");
+      setUserToEdit(null);
+    } catch (err: any) {
+      setUsers(previousUsers);
+      toast.error(err?.message || "Error al actualizar usuario");
+    } finally {
+      setIsSavingEditUser(false);
     }
   };
 
@@ -630,9 +1035,9 @@ export const UsersPage = () => {
                       isSelf={user.id === authUser?.id}
                       onToggleStatus={handleToggleUserStatus}
                       onDeleteClick={setUserToDelete}
-                      onEditClick={(u) => {
-                        toast.info(`Editando perfil de ${u.name}`);
-                      }}
+                      onEditClick={setUserToEdit}
+                      onRoleChange={handleRoleChange}
+                      onViewPermissions={setUserForPermissions}
                     />
                   ))}
                   {filteredUsers.length === 0 && (
@@ -674,8 +1079,23 @@ export const UsersPage = () => {
           </div>
         )}
 
-        {/* Modal Modular de Confirmación */}
+        {/* Modales Modulares */}
         <AnimatePresence>
+          {userToEdit && (
+            <EditUserModal
+              user={userToEdit}
+              currentUserId={authUser?.id}
+              isSaving={isSavingEditUser}
+              onClose={() => setUserToEdit(null)}
+              onSave={handleSaveEditUser}
+            />
+          )}
+          {userForPermissions && (
+            <PermissionsModal
+              user={userForPermissions}
+              onClose={() => setUserForPermissions(null)}
+            />
+          )}
           {userToDelete && (
             <DeleteUserModal
               user={userToDelete}

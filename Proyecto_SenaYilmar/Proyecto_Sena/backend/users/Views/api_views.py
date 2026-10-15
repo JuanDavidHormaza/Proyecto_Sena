@@ -876,79 +876,6 @@ class UserViewSet(viewsets.ViewSet):
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(data.get('user', data), status=status.HTTP_201_CREATED)
 
-    def partial_update(self, request, pk=None):
-        user, error = UserController.get_by_id(pk)
-        if error:
-            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
-
-        person = user.person
-        person_data = {}
-
-        # Update de Person
-        if 'name' in request.data:
-            full_name = request.data['name'].strip()
-            parts = full_name.split(' ', 1)
-            person_data['first_name'] = parts[0]
-            person_data['last_name'] = parts[1] if len(parts) > 1 else ''
-        if 'first_name' in request.data or 'firstName' in request.data:
-            person_data['first_name'] = (request.data.get('first_name') or request.data.get('firstName') or '').strip()
-        if 'last_name' in request.data or 'lastName' in request.data:
-            person_data['last_name'] = (request.data.get('last_name') or request.data.get('lastName') or '').strip()
-        if 'doc_type' in request.data or 'docType' in request.data:
-            person_data['doc_type'] = request.data.get('doc_type') or request.data.get('docType')
-        if 'doc_num' in request.data or 'docNum' in request.data:
-            person_data['doc_num'] = str(request.data.get('doc_num') or request.data.get('docNum')).strip()
-        if 'email' in request.data:
-            person_data['email'] = request.data['email'].strip().lower()
-        if 'phone_num' in request.data or 'phoneNum' in request.data:
-            person_data['phone_num'] = str(request.data.get('phone_num') or request.data.get('phoneNum')).strip()
-        if 'country' in request.data:
-            person_data['country'] = request.data['country']
-
-        if 'first_name' in person_data:
-            fn = person_data['first_name']
-            if len(fn) > 50:
-                return Response({'error': 'El nombre no puede exceder 50 caracteres.'}, status=status.HTTP_400_BAD_REQUEST)
-            words = fn.lower().split()
-            if len(words) >= 3:
-                from collections import Counter
-                counts = Counter(words)
-                if any(c >= 3 for c in counts.values()):
-                    return Response({'error': 'El nombre contiene secuencias repetitivas no válidas.'}, status=status.HTTP_400_BAD_REQUEST)
-                if len(words) >= 4 and any(words[i:i+2] == words[i+2:i+4] for i in range(len(words)-3)):
-                    return Response({'error': 'El nombre contiene secuencias repetitivas de spam no válidas.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if 'last_name' in person_data:
-            ln = person_data['last_name']
-            if len(ln) > 50:
-                return Response({'error': 'El apellido no puede exceder 50 caracteres.'}, status=status.HTTP_400_BAD_REQUEST)
-            words = ln.lower().split()
-            if len(words) >= 3:
-                from collections import Counter
-                counts = Counter(words)
-                if any(c >= 3 for c in counts.values()):
-                    return Response({'error': 'El apellido contiene secuencias repetitivas no válidas.'}, status=status.HTTP_400_BAD_REQUEST)
-                if len(words) >= 4 and any(words[i:i+2] == words[i+2:i+4] for i in range(len(words)-3)):
-                    return Response({'error': 'El apellido contiene secuencias repetitivas de spam no válidas.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        updated_person = None
-        if person_data:
-            updated_person, error = PersonController.update(person.person_id, person_data)
-            if error:
-                return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            updated_person = person
-
-        # Update de User (program)
-        if 'program' in request.data:
-            user.program = request.data.get('program') or None
-            user.save(update_fields=['program'])
-
-        resp_data = _build_user_response(user, updated_person)
-        if 'avatar' in request.data:
-            resp_data['avatar'] = request.data.get('avatar')
-        return Response(resp_data)
-
     @action(detail=False, methods=['post'], url_path='switch-program')
     def switch_program(self, request):
         program = request.data.get('program')
@@ -1017,6 +944,113 @@ class UserViewSet(viewsets.ViewSet):
         if error:
             return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
         return Response({'role': role})
+
+    def partial_update(self, request, pk=None):
+        user = self.get_object()
+        current_user_id = getattr(request.user, 'user_id', None) or getattr(request.user, 'pk', None)
+        is_self = user == request.user or user.user_id == current_user_id
+        is_target_superadmin = getattr(user, 'role_id', None) == 'SUPERADMIN'
+
+        # 1. Mutación de Rol
+        if 'role' in request.data:
+            new_role_raw = str(request.data.get('role', '')).strip().lower()
+            role_mapping = {
+                'superadmin': 'SUPERADMIN',
+                'super administrador': 'SUPERADMIN',
+                'admin': 'ADMIN',
+                'administrador': 'ADMIN',
+                'teacher': 'INSTRUCTOR',
+                'instructor': 'INSTRUCTOR',
+                'student': 'APRENDIZ',
+                'aprendiz': 'APRENDIZ',
+                'monitor': 'MONITOR',
+            }
+            backend_role = role_mapping.get(new_role_raw) or ROLE_MAP_REVERSE.get(new_role_raw, new_role_raw.upper())
+            
+            # Regla de Oro: Prohibido modificar o degradar al Super Administrador o la propia cuenta activa
+            if is_target_superadmin and backend_role != 'SUPERADMIN':
+                return Response(
+                    {'error': 'No se puede modificar ni degradar el rol de un Super Administrador'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            if is_self:
+                return Response(
+                    {'error': 'No puedes modificar tu propio rol institucional'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user.role_id = backend_role
+            user.save(update_fields=['role_id'])
+
+        # 2. Estado Activo / Inactivo (is_active o status)
+        if 'is_active' in request.data or 'status' in request.data:
+            if is_target_superadmin or is_self:
+                return Response(
+                    {'error': 'No es posible desactivar la propia cuenta de administrador o un Super Administrador'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            is_active_val = request.data.get('is_active')
+            status_val = request.data.get('status')
+
+            should_be_active = True
+            if is_active_val is not None:
+                should_be_active = bool(is_active_val)
+            elif status_val is not None:
+                status_str = str(status_val).strip().lower()
+                should_be_active = status_str in ('active', 'activo', 'en_formacion')
+
+            person = getattr(user, 'person', None)
+            if person:
+                person.status = 'ACTIVO' if should_be_active else 'INACTIVO'
+                person.save(update_fields=['status'])
+
+            user.status = 'EN_FORMACION' if should_be_active else 'INACTIVO'
+            user.save(update_fields=['status'])
+
+        # 3. Programa o Ficha
+        if 'program' in request.data:
+            user.program = request.data.get('program') or None
+            user.save(update_fields=['program'])
+
+        # 4. Datos de Persona (modal de edición o perfil)
+        person = getattr(user, 'person', None)
+        if person:
+            person_fields = []
+            if 'first_name' in request.data:
+                person.first_name = request.data.get('first_name', '').strip()
+                person_fields.append('first_name')
+            if 'last_name' in request.data:
+                person.last_name = request.data.get('last_name', '').strip()
+                person_fields.append('last_name')
+            if 'name' in request.data and not ('first_name' in request.data):
+                parts = str(request.data.get('name', '')).strip().split(' ', 1)
+                person.first_name = parts[0]
+                person.last_name = parts[1] if len(parts) > 1 else ''
+                person_fields.extend(['first_name', 'last_name'])
+            if 'doc_type' in request.data or 'docType' in request.data:
+                person.doc_type = request.data.get('doc_type') or request.data.get('docType')
+                person_fields.append('doc_type')
+            if 'doc_num' in request.data or 'docNum' in request.data:
+                person.doc_num = str(request.data.get('doc_num') or request.data.get('docNum')).strip()
+                person_fields.append('doc_num')
+            if 'email' in request.data:
+                person.email = request.data['email'].strip().lower()
+                person_fields.append('email')
+            if 'phone_num' in request.data or 'phoneNum' in request.data:
+                person.phone_num = str(request.data.get('phone_num') or request.data.get('phoneNum', '')).strip()
+                person_fields.append('phone_num')
+            if 'country' in request.data:
+                person.country = request.data['country']
+                person_fields.append('country')
+
+            if person_fields:
+                person.save(update_fields=list(set(person_fields)))
+
+        return Response(_build_user_response(user, user.person), status=status.HTTP_200_OK)
+
+    def update(self, request, pk=None):
+        return self.partial_update(request, pk)
 
     def get_object(self):
         pk = self.kwargs.get('pk')
