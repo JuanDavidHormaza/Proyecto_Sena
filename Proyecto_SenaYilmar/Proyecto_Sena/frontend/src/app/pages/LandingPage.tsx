@@ -6,8 +6,7 @@ import {
   Award,
   Sparkles,
   GraduationCap,
-  Layers,
-  Trophy,
+  BookOpen,
   Languages,
   PlayCircle,
   ArrowRight,
@@ -36,18 +35,16 @@ export function LandingPage() {
         <div className="w-full h-full flex items-center justify-between px-4 sm:px-8 transition-all duration-300">
           <div className="flex-shrink-0 flex items-center gap-3">
             <img
+              src="/logo-sena.png"
+              alt="SENA"
+              className="h-9 w-auto object-contain shrink-0"
+            />
+            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
+            <img
               src="/worklex.png"
               alt="WorkLex SENA"
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              className="h-8 w-auto object-contain shrink-0"
             />
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white high-contrast:text-white leading-tight truncate">
-                English Level Test
-              </h1>
-              <p className="text-[11px] sm:text-xs text-muted-foreground font-medium truncate">
-                Plataforma SENA
-              </p>
-            </div>
           </div>
 
           <button
@@ -65,7 +62,7 @@ export function LandingPage() {
                 navigate("/login");
               }
             }}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            className="h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm px-5 rounded-lg shadow-xs transition-all flex items-center gap-2 cursor-pointer"
           >
             <span>{hasValidSession ? "Mi Dashboard" : "Ingresar"}</span>
             <LogIn className="w-4 h-4 ml-1" strokeWidth={2} />
@@ -77,8 +74,6 @@ export function LandingPage() {
       <section className="pt-32 pb-20 px-6 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-gradient-to-br from-sena-green/5 via-transparent to-sena-blue/5" />
-        <div className="absolute top-20 right-0 w-96 h-96 bg-sena-green/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-sena-blue/10 rounded-full blur-3xl" />
 
         <div className="container mx-auto max-w-6xl relative">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -88,152 +83,125 @@ export function LandingPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-sena-green/10 text-sena-green rounded-full text-sm font-medium mb-6">
-                <Sparkles className="w-4 h-4" strokeWidth={2} />
-                Evaluación Interactiva
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-xs font-semibold mb-6">
+                <Sparkles className="w-3.5 h-3.5" strokeWidth={2} />
+                Evaluación Interactiva SENA
               </div>
               
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight text-balance">
+              <h2 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-5 leading-tight text-balance">
                 Evalúa tu Nivel de{" "}
-                <span className="text-sena-green">Inglés</span>
+                <span className="text-[#39A900]">Inglés Técnico</span>
               </h2>
 
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-lg">
+              <p className="text-base text-slate-600 dark:text-slate-400 mb-8 leading-relaxed max-w-lg">
                 Completa un cuestionario interactivo y descubre tu nivel lingüístico en minutos. 
                 Recibe retroalimentación personalizada de tus instructores.
               </p>
 
               {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <motion.button
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
                   onClick={handleStartExamCTA}
-                  className="flex items-center justify-center gap-2 bg-sena-green text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-sena-green-dark transition-all duration-300 shadow-xl shadow-sena-green/30 hover:shadow-sena-green/40 hover:-translate-y-0.5 cursor-pointer"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  className="h-11 px-6 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <PlayCircle className="w-5 h-5 mr-1" strokeWidth={2} />
+                  <PlayCircle className="w-4 h-4" strokeWidth={2} />
                   <span>Comenzar Evaluación</span>
-                  <ArrowRight className="w-5 h-5 ml-1" strokeWidth={2} />
-                </motion.button>
-                <motion.button
+                  <ArrowRight className="w-4 h-4" strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
                   onClick={() => navigate("/login")}
-                  className="flex items-center justify-center gap-2 bg-card text-foreground dark:text-white px-8 py-4 rounded-xl text-lg font-semibold border-2 border-sena-blue/20 hover:border-sena-blue/40 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  className="h-11 px-6 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <UserCheck className="w-5 h-5" strokeWidth={2} />
+                  <UserCheck className="w-4 h-4" strokeWidth={2} />
                   <span>Ya tengo cuenta</span>
-                </motion.button>
+                </button>
               </div>
             </motion.div>
 
-            {/* Right - Stats Cards */}
+            {/* Right - Stats Cards (MatDash Clean Metric Cards) */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
               className="grid grid-cols-2 gap-4"
             >
-              <motion.div
-                className="col-span-2 bg-card rounded-2xl p-6 shadow-xl border border-border"
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.3 }}
-              >
+              <div className="col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 flex items-center justify-center text-blue-600 shadow-xs">
-                    <GraduationCap className="w-6 h-6 text-blue-600" strokeWidth={2} />
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                    <GraduationCap className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-3xl font-bold text-foreground">0</p>
-                    <p className="text-muted-foreground">Aprendices evaluados</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">0</p>
+                    <p className="text-xs font-medium text-slate-500">Aprendices evaluados</p>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
-              <motion.div
-                className="bg-card rounded-2xl p-5 shadow-xl border border-border"
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900 flex items-center justify-center text-green-600 mb-3 shadow-xs">
-                  <Layers className="w-6 h-6 text-green-600" strokeWidth={2} />
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-3 shrink-0">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">0</p>
-                <p className="text-sm text-muted-foreground">Programas SENA</p>
-              </motion.div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">0</p>
+                <p className="text-xs font-medium text-slate-500">Programas SENA</p>
+              </div>
 
-              <motion.div
-                className="bg-card rounded-2xl p-5 shadow-xl border border-border"
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 text-amber-500 rounded-2xl flex items-center justify-center mb-3 shadow-xs">
-                  <Trophy className="w-6 h-6 text-amber-500" strokeWidth={2} />
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
+                <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center mb-3 shrink-0">
+                  <Award className="w-5 h-5 text-amber-500" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">0%</p>
-                <p className="text-sm text-muted-foreground">Satisfacción</p>
-              </motion.div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">0%</p>
+                <p className="text-xs font-medium text-slate-500">Satisfacción</p>
+              </div>
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-6 bg-muted/50">
+      <section className="py-16 px-6 bg-slate-50/70 dark:bg-slate-900/50 border-y border-slate-200 dark:border-slate-800">
         <div className="container mx-auto max-w-6xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4 text-balance">
+          <div className="text-center mb-12">
+            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">
               Cómo funciona la evaluación
             </h3>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Un proceso simple y efectivo para conocer tu nivel de inglés
+            <p className="text-sm text-slate-500 max-w-2xl mx-auto">
+              Un proceso simple y efectivo para conocer tu nivel de inglés técnico
             </p>
-          </motion.div>
+          </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 icon: Clock,
                 title: "Tiempo del quiz",
                 description: "El tiempo se registra automáticamente cuando el aprendiz finaliza la evaluación.",
-                color: "sena-green",
-                delay: 0.1,
+                iconBg: "bg-emerald-50 text-emerald-600",
               },
               {
                 icon: FileQuestion,
                 title: "Preguntas por nivel",
                 description: "La evaluación avanza por A1, A2, B1 y B2 con preguntas, escritura y audio.",
-                color: "sena-blue",
-                delay: 0.2,
+                iconBg: "bg-blue-50 text-blue-600",
               },
               {
                 icon: Award,
                 title: "Resultado",
                 description: "Al terminar el último nivel se muestra la página de resultados con datos reales.",
-                color: "warning",
-                delay: 0.3,
+                iconBg: "bg-amber-50 text-amber-500",
               },
             ].map((feature, index) => (
-              <motion.div
+              <div
                 key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: feature.delay }}
-                className="bg-card rounded-2xl p-8 shadow-lg border border-border hover:shadow-xl transition-all duration-300 group"
+                className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700"
               >
-                <div className={`w-16 h-16 bg-${feature.color}/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className={`w-8 h-8 text-${feature.color}`} strokeWidth={2} />
+                <div className={`w-10 h-10 ${feature.iconBg} rounded-lg flex items-center justify-center mb-4`}>
+                  <feature.icon className="w-5 h-5" />
                 </div>
-                <h4 className="text-xl font-semibold text-foreground mb-3">{feature.title}</h4>
-                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-              </motion.div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">{feature.title}</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{feature.description}</p>
+              </div>
             ))}
           </div>
         </div>

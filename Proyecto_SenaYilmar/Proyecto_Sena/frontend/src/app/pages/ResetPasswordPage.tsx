@@ -329,17 +329,17 @@ export function ResetPasswordPage() {
           </button>
 
           {/* Logo y Encabezado */}
-          <div className="flex items-center gap-3 logo-container">
+          <div className="flex items-center gap-3 mb-6 logo-container">
             <img
               src="/logo-sena.png"
               alt="SENA"
-              className="h-10 w-auto object-contain"
+              className="h-10 w-auto object-contain shrink-0"
             />
-            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700" />
+            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
             <img
               src="/worklex.png"
               alt="WorkLex"
-              className="h-8 w-auto object-contain"
+              className="h-8 w-auto object-contain shrink-0"
             />
           </div>
 

@@ -47,21 +47,19 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
             type="button"
             onClick={() => navigate("/")}
             title="Ir a la página principal de WorkLex"
-            className="group flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+            className="group flex items-center gap-3 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
           >
+            <img
+              src="/logo-sena.png"
+              alt="SENA"
+              className="h-9 w-auto object-contain shrink-0"
+            />
+            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
             <img
               src="/worklex.png"
               alt="Worklex SENA"
-              className="w-10 h-10 rounded-full object-cover border border-emerald-500/30 shadow-sm transition-transform hover:scale-105 flex-shrink-0"
+              className="h-8 w-auto object-contain shrink-0"
             />
-            <div className="hidden sm:block">
-              <h1 className="font-bold text-slate-900 dark:text-white text-sm leading-none">
-                Worklex SENA
-              </h1>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Plataforma Institucional
-              </p>
-            </div>
           </button>
         </div>
 
