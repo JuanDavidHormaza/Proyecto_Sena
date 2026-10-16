@@ -10,6 +10,25 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    optimizeDeps: {
+      noDiscovery: true,
+      include: [
+        'react',
+        'react-dom',
+        'react-dom/client',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'react-router',
+        'react-router-dom',
+        'recharts',
+        'canvas-confetti',
+      ],
+      exclude: ['lucide-react', 'motion', 'tw-animate-css'],
+      esbuildOptions: {
+        target: 'esnext',
+        logLimit: 0,
+      },
+    },
     server: {
       host: true,
       port: 5173,
@@ -21,7 +40,9 @@ export default defineConfig(({ mode }) => {
         protocol: 'wss'
       },
       watch: {
-        usePolling: true
+        usePolling: true,
+        interval: 1000,
+        ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**']
       },
       proxy: {
         '/api': {
@@ -36,4 +57,5 @@ export default defineConfig(({ mode }) => {
     }
   }
 })
+
 
