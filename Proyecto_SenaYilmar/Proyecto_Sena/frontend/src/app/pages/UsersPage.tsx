@@ -188,17 +188,17 @@ const UserTableRow: FC<UserTableRowProps> = ({
   const isTargetSuperAdmin = user.role === "superadmin";
 
   return (
-    <tr className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+    <tr className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
       {/* Columna 1: Usuario con Avatar Circular y Tooltip Truncado */}
       <td className="py-3.5 px-4">
         <div className="flex items-center gap-3.5">
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-xs ${
+            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border ${
               user.role === "superadmin" || user.role === "admin"
-                ? "bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20"
+                ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800"
                 : user.role === "teacher"
-                ? "bg-gradient-to-br from-blue-600 to-sky-700 shadow-blue-500/20"
-                : "bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20"
+                ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800"
+                : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800"
             }`}
           >
             {user.name.charAt(0).toUpperCase()}
@@ -368,17 +368,17 @@ const UserTablePagination: FC<UserTablePaginationProps> = ({
   const toIndex = Math.min(currentPage * effectivePageSize, totalItems);
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3.5 border-t border-border bg-muted/20 gap-3">
+    <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
       <div className="flex items-center gap-3 flex-wrap">
-        <p className="text-xs text-muted-foreground">
-          Mostrando <span className="font-semibold text-foreground">{fromIndex}</span> a{" "}
-          <span className="font-semibold text-foreground">{toIndex}</span> de{" "}
-          <span className="font-semibold text-foreground">{totalItems}</span> usuarios
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Mostrando <span className="font-semibold text-slate-900 dark:text-white">{fromIndex}</span> a{" "}
+          <span className="font-semibold text-slate-900 dark:text-white">{toIndex}</span> de{" "}
+          <span className="font-semibold text-slate-900 dark:text-white">{totalItems}</span> usuarios
         </p>
 
-        <div className="flex items-center gap-1.5 border-l border-border pl-3">
-          <span className="text-xs text-muted-foreground font-medium">Filas:</span>
-          <div className="inline-flex rounded-lg border border-border bg-white dark:bg-slate-900 p-0.5 text-xs font-semibold shadow-2xs">
+        <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Filas:</span>
+          <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 text-xs font-semibold shadow-2xs">
             {([10, 25, 50, "all"] as const).map((size) => (
               <button
                 key={size}
@@ -386,8 +386,8 @@ const UserTablePagination: FC<UserTablePaginationProps> = ({
                 onClick={() => onPageSizeChange(size)}
                 className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                   pageSize === size
-                    ? "bg-sena-green text-white font-bold shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "bg-[#39A900] text-white font-bold shadow-2xs"
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`}
               >
                 {size === "all" ? "Todos" : size}
@@ -404,26 +404,26 @@ const UserTablePagination: FC<UserTablePaginationProps> = ({
               type="button"
               disabled={currentPage <= 1}
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-              className="p-1.5 rounded-lg border border-border bg-white dark:bg-slate-900 text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               title="Página anterior"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-xs font-semibold px-2 text-foreground">
+            <span className="text-xs font-semibold px-2 text-slate-900 dark:text-white">
               Página {currentPage} de {totalPages}
             </span>
             <button
               type="button"
               disabled={currentPage >= totalPages}
               onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-              className="p-1.5 rounded-lg border border-border bg-white dark:bg-slate-900 text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               title="Página siguiente"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </>
         ) : (
-          <span className="text-xs font-medium text-muted-foreground px-2">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 px-2">
             Página 1 de 1
           </span>
         )}
@@ -464,27 +464,27 @@ const EditUserModal: FC<EditUserModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 border border-border shadow-xl space-y-5"
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 shadow-lg space-y-5"
       >
-        <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#39A900]/10 text-sena-green flex items-center justify-center">
-              <Pencil className="w-5 h-5 text-[#39A900]" />
+            <div className="w-9 h-9 rounded-lg bg-[#39A900]/10 text-[#39A900] flex items-center justify-center">
+              <Pencil className="w-4 h-4 text-[#39A900]" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-foreground">Editar Usuario Institucional</h3>
-              <p className="text-xs text-muted-foreground">Actualizar rol asignado, estado y datos del perfil</p>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">Editar Usuario Institucional</h3>
+              <p className="text-xs text-slate-500">Actualizar rol asignado, estado y datos del perfil</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -492,40 +492,40 @@ const EditUserModal: FC<EditUserModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Nombre Completo</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nombre Completo</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50"
+              className="w-full h-10 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent shadow-sm"
               required
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Correo Institucional</label>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Correo Institucional</label>
               <input
                 type="text"
                 value={user.email}
                 disabled
-                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-border rounded-xl text-xs text-muted-foreground cursor-not-allowed"
+                className="w-full h-10 px-3 py-2 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-md text-xs text-slate-500 cursor-not-allowed"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Documento de Identidad</label>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Documento de Identidad</label>
               <input
                 type="text"
                 value={`${user.docType || 'CC'} ${user.docNum || '—'}`}
                 disabled
-                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-border rounded-xl text-xs text-muted-foreground cursor-not-allowed"
+                className="w-full h-10 px-3 py-2 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-md text-xs text-slate-500 cursor-not-allowed"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Rol Asignado {isSuperAdmin ? "(SuperAdmin protegido)" : isSelf ? "(Tu cuenta)" : ""}
               </label>
               <div className="relative flex items-center">
@@ -536,7 +536,7 @@ const EditUserModal: FC<EditUserModalProps> = ({
                   value={role}
                   disabled={isSuperAdmin || isSelf}
                   onChange={(e) => setRole(e.target.value as UserRole)}
-                  className={`w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 cursor-pointer ${
+                  className={`w-full h-10 pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent cursor-pointer shadow-sm ${
                     isSuperAdmin || isSelf ? "opacity-60 cursor-not-allowed" : ""
                   }`}
                 >
@@ -549,12 +549,12 @@ const EditUserModal: FC<EditUserModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Estado de la Cuenta</label>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Estado de la Cuenta</label>
               <select
                 value={status}
                 disabled={isSuperAdmin || isSelf}
                 onChange={(e) => setStatus(e.target.value as 'active' | 'inactive')}
-                className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50 cursor-pointer ${
+                className={`w-full h-10 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent cursor-pointer shadow-sm ${
                   isSuperAdmin || isSelf ? "opacity-60 cursor-not-allowed" : ""
                 }`}
               >
@@ -565,29 +565,29 @@ const EditUserModal: FC<EditUserModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Programa / Ficha</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Programa / Ficha</label>
             <input
               type="text"
               value={program}
               onChange={(e) => setProgram(e.target.value)}
               placeholder="Ej. ADSO - Ficha 2670142"
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900]/50"
+              className="w-full h-10 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent shadow-sm"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="px-4 py-2 border border-border rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="px-5 py-2 bg-[#39A900] hover:bg-[#2d8500] text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 bg-[#39A900] hover:bg-[#2d8500] text-white rounded-md text-xs font-medium shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               {isSaving ? "Guardando..." : "Guardar Cambios"}
             </button>
@@ -619,27 +619,27 @@ const PermissionsModal: FC<PermissionsModalProps> = ({ user, onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 border border-border shadow-xl space-y-4"
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-lg space-y-4"
       >
-        <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-foreground">Permisos Institucionales</h3>
-              <p className="text-xs text-muted-foreground">{user.name} ({ROLE_LABELS[user.role] || user.role})</p>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">Permisos Institucionales</h3>
+              <p className="text-xs text-slate-500">{user.name} ({ROLE_LABELS[user.role] || user.role})</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -651,29 +651,29 @@ const PermissionsModal: FC<PermissionsModalProps> = ({ user, onClose }) => {
             return (
               <div
                 key={perm.key}
-                className="flex items-start gap-2.5 p-2.5 rounded-xl border border-border/60 bg-slate-50/60 dark:bg-slate-800/40"
+                className="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40"
               >
                 <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                  hasPerm ? "bg-emerald-500 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-400"
+                  hasPerm ? "bg-[#39A900] text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-400"
                 }`}>
                   {hasPerm ? <Check className="w-3 h-3 stroke-[3]" /> : <X className="w-3 h-3 stroke-[3]" />}
                 </div>
                 <div>
-                  <p className={`text-xs font-semibold ${hasPerm ? "text-foreground" : "text-muted-foreground"}`}>
+                  <p className={`text-xs font-semibold ${hasPerm ? "text-slate-900 dark:text-white" : "text-slate-500"}`}>
                     {perm.label}
                   </p>
-                  <p className="text-[11px] text-muted-foreground leading-tight">{perm.desc}</p>
+                  <p className="text-[11px] text-slate-500 leading-tight">{perm.desc}</p>
                 </div>
               </div>
             );
           })}
         </div>
 
-        <div className="flex justify-end pt-2 border-t border-border">
+        <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-foreground rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-md text-xs font-medium transition-colors cursor-pointer"
           >
             Cerrar
           </button>
@@ -700,20 +700,20 @@ const DeleteUserModal: FC<DeleteUserModalProps> = ({
   if (!user) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 border border-border shadow-xl space-y-4"
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-lg space-y-4"
       >
         <div className="flex items-center gap-3 text-rose-600">
-          <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950 flex items-center justify-center">
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-foreground">Eliminar Usuario</h3>
-            <p className="text-xs text-muted-foreground">Acción permanente e irreversible</p>
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">Eliminar Usuario</h3>
+            <p className="text-xs text-slate-500">Acción permanente e irreversible</p>
           </div>
         </div>
 
@@ -726,7 +726,7 @@ const DeleteUserModal: FC<DeleteUserModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="px-4 py-2 border border-border rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             Cancelar
           </button>
@@ -734,7 +734,7 @@ const DeleteUserModal: FC<DeleteUserModalProps> = ({
             type="button"
             onClick={onConfirm}
             disabled={isDeleting}
-            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-medium shadow-xs transition-colors cursor-pointer"
           >
             {isDeleting ? "Eliminando..." : "Eliminar permanentemente"}
           </button>
@@ -975,24 +975,24 @@ export const UsersPage = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Cabecera Principal */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-border shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => navigate("/admin")}
-              className="p-2 rounded-xl border border-border hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 transition-colors cursor-pointer"
               title="Volver al Dashboard"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">Gestión de Usuarios</h1>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sena-green/10 text-sena-green border border-sena-green/20">
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white">Gestión de Usuarios</h1>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                   {serverMetrics?.total_users ?? users.length} Registrados
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Administración institucional de aprendices, instructores y directivos SENA
               </p>
             </div>
@@ -1002,13 +1002,13 @@ export const UsersPage = () => {
             <button
               onClick={loadUsersData}
               disabled={isLoading}
-              className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all text-sm cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-sm cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} strokeWidth={1.8} /> Actualizar
             </button>
             <button
               onClick={() => navigate("/admin")}
-              className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2 cursor-pointer text-sm"
+              className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2 rounded-lg font-medium shadow-xs flex items-center gap-2 cursor-pointer text-sm transition-colors"
             >
               <Plus className="w-4 h-4" strokeWidth={1.8} /> + Nuevo Usuario
             </button>
@@ -1044,15 +1044,15 @@ export const UsersPage = () => {
         {/* Tabla Modular de Usuarios */}
         {isLoading ? (
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-sena-green border-t-transparent mb-3" />
-            <p className="text-sm font-medium text-foreground">Cargando usuarios desde la base de datos...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#39A900] border-t-transparent mb-3" />
+            <p className="text-sm font-medium text-slate-900 dark:text-white">Cargando usuarios desde la base de datos...</p>
           </div>
         ) : (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <UserTableHeader />
-                <tbody className="divide-y divide-border/60">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                   {paginatedUsers.map((user) => (
                     <UserTableRow
                       key={user.id}

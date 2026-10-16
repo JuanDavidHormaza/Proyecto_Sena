@@ -24,9 +24,9 @@ export const AccessibilityButton: FC<AccessibilityButtonProps> = ({
       id="accessibility-trigger-btn"
       aria-label="Accesibilidad"
       onClick={handleClick}
-      className={`fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#39A900] hover:bg-[#2d8500] text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-white/20 ${className}`}
+      className={`w-11 h-11 bg-[#39A900] hover:bg-[#2d8500] rounded-full shadow-md fixed bottom-6 right-6 z-50 flex items-center justify-center text-white transition-all cursor-pointer border border-white/20 ${className}`}
     >
-      <Accessibility className="w-6 h-6 text-white stroke-[2]" />
+      <Accessibility className="w-5 h-5 text-white stroke-[2]" />
     </button>
   );
 };

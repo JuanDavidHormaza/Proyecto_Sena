@@ -1558,17 +1558,17 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   return (
     <div className="min-h-screen bg-background">
       {/* ── Sidebar ── */}
-      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-border z-40 hidden lg:block">
+      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 z-40 hidden lg:block">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-6">
             <img
               src="/worklex.png"
               alt="WorkLex"
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              className="w-10 h-10 rounded-full object-cover border border-emerald-500/30 shadow-xs transition-transform hover:scale-105 flex-shrink-0"
             />
             <div className="min-w-0">
-              <h1 className="font-semibold text-foreground tracking-tight truncate">Worklex SENA</h1>
-              <p className="text-xs text-muted-foreground truncate">Gestión Institucional</p>
+              <h1 className="font-semibold text-slate-900 tracking-tight truncate">Worklex SENA</h1>
+              <p className="text-xs text-slate-500 truncate">Gestión Institucional</p>
             </div>
           </div>
           <nav className="space-y-1.5">
@@ -1578,10 +1578,10 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id as TabType)}
-                  className={`w-full h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                  className={`w-full h-11 flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer ${
                     isActive
-                      ? "bg-sena-green text-white shadow-md shadow-sena-green/20 font-semibold"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
+                      ? "bg-[#39A900] text-white shadow-xs font-semibold"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium"
                   }`}
                 >
                   <tab.icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
@@ -1602,22 +1602,22 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
             })}
           </nav>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-border">
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200">
           <button onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-destructive/10 text-destructive rounded-xl hover:bg-destructive/20 transition-all font-medium cursor-pointer">
-            <LogOut className="w-5 h-5" strokeWidth={1.8} /> Cerrar Sesión
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-200/60 rounded-lg hover:bg-rose-100 transition-all font-medium text-sm cursor-pointer">
+            <LogOut className="w-4 h-4" strokeWidth={1.8} /> Cerrar Sesión
           </button>
         </div>
       </aside>
 
       {/* ── Mobile Header ── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 bg-background/95 dark:bg-card/95 border-b border-border z-40 px-4 py-3">
+      <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 z-40 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
               src="/worklex.png"
               alt="WorkLex"
-              className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              className="w-9 h-9 rounded-full object-cover border border-emerald-500/30 shadow-xs transition-transform hover:scale-105 flex-shrink-0"
             />
             <span className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">Worklex SENA</span>
           </div>
@@ -1627,7 +1627,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
               <button
                 type="button"
                 onClick={() => setShowNotificationPopover(prev => !prev)}
-                className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer"
+                className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                 title="Notificaciones de Mesa de Ayuda"
                 aria-label="Notificaciones"
               >
@@ -1640,7 +1640,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
               </button>
             </div>
 
-            <button onClick={handleLogout} className="p-2 text-destructive hover:bg-destructive/10 rounded-xl cursor-pointer">
+            <button onClick={handleLogout} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer">
               <LogOut className="w-5 h-5" strokeWidth={1.8} />
             </button>
           </div>
@@ -1653,7 +1653,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id as TabType)}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg whitespace-nowrap text-xs font-semibold transition-all cursor-pointer ${
-                  isActive ? "bg-sena-green text-white font-bold" : "bg-muted text-muted-foreground"
+                  isActive ? "bg-[#39A900] text-white font-bold" : "bg-slate-100 text-slate-600"
                 }`}
               >
                 <tab.icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.8} />
@@ -1694,10 +1694,10 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
               <button
                 type="button"
                 onClick={() => setShowNotificationPopover(prev => !prev)}
-                className={`relative p-2.5 rounded-xl border transition-all cursor-pointer ${
+                className={`relative p-2 rounded-lg border transition-all cursor-pointer ${
                   showNotificationPopover
-                    ? "bg-sena-green/10 text-sena-green border-sena-green/30"
-                    : "bg-white border-border text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    ? "bg-[#39A900]/10 text-[#39A900] border-[#39A900]/30"
+                    : "bg-white border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                 }`}
                 title="Notificaciones de tickets de soporte"
                 aria-label="Notificaciones"
@@ -2042,25 +2042,25 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground">Gestión de Usuarios</h2>
-                  <p className="text-muted-foreground">
+                  <h2 className="text-2xl font-bold text-slate-900">Gestión de Usuarios</h2>
+                  <p className="text-slate-500 text-sm">
                     {isSuperAdmin ? "Control total — puedes cambiar roles, activar/desactivar y eliminar usuarios" : "Administra usuarios, roles y estados de cuenta"}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={loadDataFromApi} className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-all text-sm cursor-pointer">
+                  <button onClick={loadDataFromApi} className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-lg text-slate-600 hover:bg-slate-50 transition-all text-sm cursor-pointer">
                     <RefreshCw className="w-4 h-4" strokeWidth={1.8} /> Actualizar
                   </button>
                   <button onClick={() => setShowUserModal(true)}
-                    className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm flex items-center gap-2 cursor-pointer text-sm">
+                    className="bg-[#39A900] hover:bg-[#2d8500] text-white px-4 py-2 rounded-lg font-medium shadow-xs flex items-center gap-2 cursor-pointer text-sm transition-colors">
                     <Plus className="w-4 h-4" strokeWidth={1.8} /> + Nuevo Usuario
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 flex-wrap">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 flex-wrap bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
                 <div className="relative flex-1 min-w-[260px]">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                   <input
                     type="text"
                     placeholder="Buscar por nombre, correo, documento o ficha..."
@@ -2069,12 +2069,12 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                       setSearchTerm(e.target.value);
                       setUserCurrentPage(1);
                     }}
-                    className="w-full pl-11 pr-4 py-2.5 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm shadow-2xs"
+                    className="w-full h-10 pl-10 pr-4 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent text-sm shadow-xs"
                   />
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <div className="inline-flex rounded-xl border border-border bg-slate-100/80 dark:bg-slate-800 p-1 text-xs font-semibold gap-1 shadow-2xs">
+                  <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-semibold gap-1">
                     {[
                       { id: "all", label: "Todos" },
                       { id: "student", label: "Aprendices" },
@@ -2088,10 +2088,10 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                           setFilterRole(pill.id);
                           setUserCurrentPage(1);
                         }}
-                        className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
                           filterRole === pill.id
-                            ? "bg-white dark:bg-slate-900 text-foreground font-bold shadow-xs border border-border/60"
-                            : "text-muted-foreground hover:text-foreground hover:bg-white/50"
+                            ? "bg-white text-slate-900 font-bold shadow-xs border border-slate-200"
+                            : "text-slate-500 hover:text-slate-900 hover:bg-white/60"
                         }`}
                       >
                         {pill.label}
@@ -2106,7 +2106,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                         setFilterUserStatus(e.target.value);
                         setUserCurrentPage(1);
                       }}
-                      className="pl-3 pr-8 py-2 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-green/50 appearance-none cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground shadow-2xs"
+                      className="h-9 pl-3 pr-8 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent appearance-none cursor-pointer text-xs font-medium text-slate-700 shadow-xs"
                     >
                       <option value="all">Todos los estados</option>
                       <option value="active">Activo</option>
@@ -2117,26 +2117,26 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
               </div>
 
               {isLoading ? (
-                <div className="bg-white rounded-2xl border border-border shadow-sm p-12 text-center">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-sena-green border-t-transparent mb-3" />
-                  <p className="text-sm font-medium text-foreground">Cargando usuarios desde el servidor...</p>
-                  <p className="text-xs text-muted-foreground mt-1">Conectando con el servicio de autenticación institucional</p>
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#39A900] border-t-transparent mb-3" />
+                  <p className="text-sm font-medium text-slate-900">Cargando usuarios desde el servidor...</p>
+                  <p className="text-xs text-slate-500 mt-1">Conectando con el servicio de autenticación institucional</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-border bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                          <th className="text-left py-4 px-5">Usuario (Nombre y Correo)</th>
-                          <th className="text-left py-4 px-5">Documento</th>
-                          <th className="text-left py-4 px-5">Rol Institucional</th>
-                          <th className="text-left py-4 px-5">Programa / Ficha</th>
-                          <th className="text-left py-4 px-5">Estado</th>
-                          <th className="text-left py-4 px-5">Acciones</th>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-600 font-semibold">
+                          <th className="text-left py-3.5 px-5 font-semibold">Usuario (Nombre y Correo)</th>
+                          <th className="text-left py-3.5 px-5 font-semibold">Documento</th>
+                          <th className="text-left py-3.5 px-5 font-semibold">Rol Institucional</th>
+                          <th className="text-left py-3.5 px-5 font-semibold">Programa / Ficha</th>
+                          <th className="text-left py-3.5 px-5 font-semibold">Estado</th>
+                          <th className="text-left py-3.5 px-5 font-semibold">Acciones</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-slate-200">
                         {paginatedUsers.map(user => {
                           const isSelf = user.id === authUser?.id;
                           const isTargetSuperAdmin = user.role === "superadmin";
@@ -2144,16 +2144,16 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                           const canOpenPermissions = canEditUserPermissions(user);
 
                           return (
-                            <tr key={user.id} className="border-b border-border/70 last:border-0 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                            <tr key={user.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                               <td className="py-3.5 px-5">
                                 <div className="flex items-center gap-3.5">
                                   <div
-                                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-xs ${
+                                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border ${
                                       user.role === 'superadmin' || user.role === 'admin'
-                                        ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20'
+                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
                                         : user.role === 'teacher'
-                                        ? 'bg-gradient-to-br from-blue-600 to-sky-700 shadow-blue-500/20'
-                                        : 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                     }`}
                                   >
                                     {user.name.charAt(0).toUpperCase()}
@@ -2181,7 +2181,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                               <td className="py-3.5 px-5 whitespace-nowrap">
                                 {isSelf || isTargetSuperAdmin ? (
                                   <span
-                                    className={`rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5 opacity-90 cursor-not-allowed ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}
+                                    className={`rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5 opacity-90 cursor-not-allowed ${ROLE_COLORS[user.role] || 'bg-slate-100 text-slate-600'}`}
                                     title={isSelf ? "Tu cuenta activa (No modificable)" : "Super Administrador (Protegido)"}
                                   >
                                     <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
@@ -2192,7 +2192,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                     <select
                                       value={user.role}
                                       onChange={(e) => handleChangeUserRole(user.id, e.target.value)}
-                                      className={`rounded-full pl-3 pr-7 py-1 text-xs font-semibold cursor-pointer transition-all border border-slate-200/80 dark:border-slate-700/80 hover:border-black/20 dark:hover:border-white/20 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || 'bg-muted text-muted-foreground'}`}
+                                      className={`rounded-full pl-3 pr-7 py-1 text-xs font-semibold cursor-pointer transition-all border border-slate-200 hover:border-slate-300 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || 'bg-slate-100 text-slate-600'}`}
                                       title="Cambiar rol institucional"
                                     >
                                       <option value="student">Aprendiz</option>
@@ -2212,26 +2212,26 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                 <button
                                   onClick={() => canModify && handleToggleUserStatus(user.id)}
                                   disabled={!canModify}
-                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                                     user.status === "active"
-                                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100/80"
+                                      : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200/70"
                                   }`}
                                 >
                                   {user.status === "active" ? (
-                                    <><UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.8} /> Activo</>
+                                    <><UserCheck className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.8} /> Activo</>
                                   ) : (
-                                    <><UserX className="w-4 h-4 text-slate-400" strokeWidth={1.8} /> Inactivo</>
+                                    <><UserX className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.8} /> Inactivo</>
                                   )}
                                 </button>
                               </td>
                               <td className="py-3.5 px-5 whitespace-nowrap">
-                                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1.5 rounded-xl w-fit border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
+                                <div className="flex items-center gap-1">
                                   {canModify && (
                                     <button
                                       type="button"
                                       onClick={() => handleEditUserData(user)}
-                                      className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors cursor-pointer"
+                                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                                       title="Editar información"
                                       aria-label="Editar información del usuario"
                                     >
@@ -2242,7 +2242,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                     <button
                                       type="button"
                                       onClick={() => handleEditUserPermissions(user)}
-                                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
+                                      className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
                                       title="Configurar permisos"
                                       aria-label="Configurar permisos"
                                     >
@@ -2253,7 +2253,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                     <button
                                       type="button"
                                       onClick={() => setUserToDelete(user)}
-                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                                       title="Eliminar usuario permanentemente"
                                       aria-label="Eliminar usuario"
                                     >
@@ -2268,12 +2268,12 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                         {filteredUsers.length === 0 && (
                           <tr>
                             <td colSpan={6} className="py-16 text-center">
-                              <div className="flex flex-col items-center justify-center p-6 text-muted-foreground">
-                                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
-                                  <Users className="w-8 h-8 text-muted-foreground/40" strokeWidth={1.5} />
+                              <div className="flex flex-col items-center justify-center p-6 text-slate-500">
+                                <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-3">
+                                  <Users className="w-8 h-8 text-slate-400" strokeWidth={1.5} />
                                 </div>
-                                <p className="text-base font-semibold text-foreground">No se encontraron usuarios</p>
-                                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                                <p className="text-base font-semibold text-slate-900">No se encontraron usuarios</p>
+                                <p className="text-sm text-slate-500 mt-1 max-w-sm">
                                   {searchTerm || filterRole !== 'all' || filterUserStatus !== 'all'
                                     ? "No hay resultados que coincidan con los filtros de búsqueda aplicados."
                                     : "No hay usuarios registrados en el sistema institucional."}
@@ -2288,17 +2288,17 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
                   {/* Paginación de Usuarios */}
                   {filteredUsers.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3.5 border-t border-border bg-muted/20 gap-3">
+                    <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3.5 border-t border-slate-200 bg-slate-50/70 gap-3">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <p className="text-xs text-muted-foreground">
-                          Mostrando <span className="font-semibold text-foreground">{(safeUserCurrentPage - 1) * effectiveUserPageSize + 1}</span> a{" "}
-                          <span className="font-semibold text-foreground">{Math.min(safeUserCurrentPage * effectiveUserPageSize, filteredUsers.length)}</span> de{" "}
-                          <span className="font-semibold text-foreground">{filteredUsers.length}</span> usuarios
+                        <p className="text-xs text-slate-500">
+                          Mostrando <span className="font-semibold text-slate-900">{(safeUserCurrentPage - 1) * effectiveUserPageSize + 1}</span> a{" "}
+                          <span className="font-semibold text-slate-900">{Math.min(safeUserCurrentPage * effectiveUserPageSize, filteredUsers.length)}</span> de{" "}
+                          <span className="font-semibold text-slate-900">{filteredUsers.length}</span> usuarios
                         </p>
 
-                        <div className="flex items-center gap-1.5 border-l border-border pl-3">
-                          <span className="text-xs text-muted-foreground font-medium">Filas:</span>
-                          <div className="inline-flex rounded-lg border border-border bg-white p-0.5 text-xs font-semibold shadow-2xs">
+                        <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                          <span className="text-xs text-slate-500 font-medium">Filas:</span>
+                          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-semibold shadow-2xs">
                             {([10, 25, 50, "all"] as const).map((size) => (
                               <button
                                 key={size}
@@ -2309,8 +2309,8 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                 }}
                                 className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                                   userPageSize === size
-                                    ? "bg-sena-green text-white font-bold shadow-2xs"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    ? "bg-[#39A900] text-white font-bold shadow-2xs"
+                                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                                 }`}
                               >
                                 {size === "all" ? "Todos" : size}
@@ -2327,20 +2327,20 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                               type="button"
                               disabled={safeUserCurrentPage <= 1}
                               onClick={() => setUserCurrentPage(p => Math.max(1, p - 1))}
-                              className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                               title="Página anterior"
                               aria-label="Página anterior"
                             >
                               <ChevronLeft className="w-4 h-4" />
                             </button>
-                            <span className="text-xs font-semibold px-2 text-foreground">
+                            <span className="text-xs font-semibold px-2 text-slate-900">
                               Página {safeUserCurrentPage} de {totalUserPages}
                             </span>
                             <button
                               type="button"
                               disabled={safeUserCurrentPage >= totalUserPages}
                               onClick={() => setUserCurrentPage(p => Math.min(totalUserPages, p + 1))}
-                              className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                               title="Página siguiente"
                               aria-label="Página siguiente"
                             >
@@ -2348,7 +2348,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                             </button>
                           </>
                         ) : (
-                          <span className="text-xs font-medium text-muted-foreground px-2">
+                          <span className="text-xs font-medium text-slate-500 px-2">
                             Página 1 de 1
                           </span>
                         )}
@@ -2528,35 +2528,35 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                 </div>
 
                 {/* Tabla de Tickets */}
-                <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   {filteredTickets.length === 0 ? (
-                    <div className="py-16 text-center text-muted-foreground space-y-2">
+                    <div className="py-16 text-center text-slate-500 space-y-2">
                       <LifeBuoy className="w-10 h-10 mx-auto text-slate-300" strokeWidth={1.5} />
-                      <p className="text-sm font-semibold">No se encontraron tickets con los filtros aplicados</p>
-                      <p className="text-xs text-muted-foreground">Prueba modificando los términos de búsqueda o el estado seleccionado.</p>
+                      <p className="text-sm font-semibold text-slate-900">No se encontraron tickets con los filtros aplicados</p>
+                      <p className="text-xs text-slate-500">Prueba modificando los términos de búsqueda o el estado seleccionado.</p>
                     </div>
                   ) : (
                     <>
                       <div className="overflow-x-auto">
                         <table className="w-full">
                           <thead>
-                            <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
-                              <th className="py-3.5 px-4">Radicado</th>
-                              <th className="py-3.5 px-4">Usuario</th>
-                              <th className="py-3.5 px-4">Categoría</th>
-                              <th className="py-3.5 px-4">Asunto y Descripción</th>
-                              <th className="py-3.5 px-4">Fecha</th>
-                              <th className="py-3.5 px-4">Estado</th>
-                              <th className="py-3.5 px-4 text-right">Acción</th>
+                            <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                              <th className="py-3.5 px-4 font-semibold">Radicado</th>
+                              <th className="py-3.5 px-4 font-semibold">Usuario</th>
+                              <th className="py-3.5 px-4 font-semibold">Categoría</th>
+                              <th className="py-3.5 px-4 font-semibold">Asunto y Descripción</th>
+                              <th className="py-3.5 px-4 font-semibold">Fecha</th>
+                              <th className="py-3.5 px-4 font-semibold">Estado</th>
+                              <th className="py-3.5 px-4 text-right font-semibold">Acción</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-border text-xs">
+                          <tbody className="divide-y divide-slate-200 text-xs">
                             {paginatedTickets.map((ticket) => {
                               const statusStyles: Record<string, string> = {
-                                ABIERTO: "bg-amber-100 text-amber-800 border-amber-200",
-                                EN_PROCESO: "bg-blue-100 text-blue-800 border-blue-200",
-                                RESUELTO: "bg-emerald-100 text-emerald-800 border-emerald-200",
-                                CERRADO: "bg-slate-100 text-slate-700 border-slate-200",
+                                ABIERTO: "bg-amber-50 text-amber-700 border-amber-200",
+                                EN_PROCESO: "bg-blue-50 text-blue-700 border-blue-200",
+                                RESUELTO: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                CERRADO: "bg-slate-100 text-slate-600 border-slate-200",
                               };
                               const statusLabels: Record<string, string> = {
                                 ABIERTO: "Abierto",
@@ -2565,40 +2565,40 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                 CERRADO: "Cerrado",
                               };
                               return (
-                                <tr key={ticket.ticket_id} className="hover:bg-muted/30 transition-colors">
+                                <tr key={ticket.ticket_id} className="hover:bg-slate-50/80 transition-colors">
                                   <td className="py-3.5 px-4 font-mono font-bold text-sena-blue">
                                     #TK-{ticket.ticket_id}
                                   </td>
                                   <td className="py-3.5 px-4">
                                     <div className="min-w-0 max-w-[200px]">
-                                      <p className="font-semibold text-foreground truncate" title={ticket.user_name || "Usuario"}>
+                                      <p className="font-semibold text-slate-900 truncate" title={ticket.user_name || "Usuario"}>
                                         {ticket.user_name || "Usuario SENA"}
                                       </p>
-                                      <p className="text-[11px] text-muted-foreground truncate" title={ticket.user_email}>
+                                      <p className="text-[11px] text-slate-500 truncate" title={ticket.user_email}>
                                         {ticket.user_email || "Sin correo"}
                                       </p>
                                     </div>
                                   </td>
                                   <td className="py-3.5 px-4">
-                                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-800">
+                                    <span className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
                                       {ticket.category}
                                     </span>
                                   </td>
                                   <td className="py-3.5 px-4">
                                     <div className="min-w-0 max-w-[280px]">
-                                      <p className="font-semibold text-foreground truncate" title={ticket.subject}>
+                                      <p className="font-semibold text-slate-900 truncate" title={ticket.subject}>
                                         {ticket.subject}
                                       </p>
-                                      <p className="text-[11px] text-muted-foreground truncate mt-0.5" title={ticket.description}>
+                                      <p className="text-[11px] text-slate-500 truncate mt-0.5" title={ticket.description}>
                                         {ticket.description}
                                       </p>
                                     </div>
                                   </td>
-                                  <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
+                                  <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
                                     {new Date(ticket.created_at).toLocaleDateString("es-CO")}
                                   </td>
                                   <td className="py-3.5 px-4 whitespace-nowrap">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusStyles[ticket.status] || "bg-gray-100 text-gray-800 border-gray-200"}`}>
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${statusStyles[ticket.status] || "bg-slate-100 text-slate-700 border-slate-200"}`}>
                                       {statusLabels[ticket.status] || ticket.status}
                                     </span>
                                   </td>
@@ -2610,7 +2610,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                         setTicketNewStatus(ticket.status);
                                         setTicketAdminNotes(ticket.admin_notes || "");
                                       }}
-                                      className="px-3 py-1.5 rounded-xl bg-sena-green/10 text-sena-green hover:bg-sena-green hover:text-white transition-all font-semibold text-xs cursor-pointer shadow-2xs"
+                                      className="px-3 py-1.5 rounded-lg bg-[#39A900]/10 text-[#39A900] hover:bg-[#39A900] hover:text-white transition-all font-semibold text-xs cursor-pointer"
                                     >
                                       Gestionar
                                     </button>
@@ -2624,30 +2624,30 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
                       {/* Paginación de Tickets */}
                       {totalTicketPages > 1 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-border bg-muted/20 gap-3">
-                          <p className="text-xs text-muted-foreground">
-                            Mostrando <span className="font-semibold text-foreground">{(safeTicketCurrentPage - 1) * ticketPageSize + 1}</span> a{" "}
-                            <span className="font-semibold text-foreground">{Math.min(safeTicketCurrentPage * ticketPageSize, filteredTickets.length)}</span> de{" "}
-                            <span className="font-semibold text-foreground">{filteredTickets.length}</span> tickets
+                        <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50/70 gap-3">
+                          <p className="text-xs text-slate-500">
+                            Mostrando <span className="font-semibold text-slate-900">{(safeTicketCurrentPage - 1) * ticketPageSize + 1}</span> a{" "}
+                            <span className="font-semibold text-slate-900">{Math.min(safeTicketCurrentPage * ticketPageSize, filteredTickets.length)}</span> de{" "}
+                            <span className="font-semibold text-slate-900">{filteredTickets.length}</span> tickets
                           </p>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               disabled={safeTicketCurrentPage <= 1}
                               onClick={() => setTicketCurrentPage((p) => Math.max(1, p - 1))}
-                              className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                               title="Página anterior"
                             >
                               <ChevronLeft className="w-4 h-4" />
                             </button>
-                            <span className="text-xs font-semibold px-2 text-foreground">
+                            <span className="text-xs font-semibold px-2 text-slate-900">
                               Página {safeTicketCurrentPage} de {totalTicketPages}
                             </span>
                             <button
                               type="button"
                               disabled={safeTicketCurrentPage >= totalTicketPages}
                               onClick={() => setTicketCurrentPage((p) => Math.min(totalTicketPages, p + 1))}
-                              className="p-1.5 rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                               title="Página siguiente"
                             >
                               <ChevronRight className="w-4 h-4" />
@@ -2672,17 +2672,17 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
             return (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 {/* 1. Cabecera Principal Institucional */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shadow-2xs">
-                        <BookMarked className="w-6 h-6" strokeWidth={1.8} />
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#39A900]">
+                        <BookMarked className="w-5 h-5" strokeWidth={1.8} />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                        <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                           Gestión de Diccionarios Técnicos por Ficha/Programa
                         </h2>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="text-xs text-slate-500 mt-0.5">
                           Administración institucional de vocabulario técnico, pronunciación nativa y recursos pedagógicos multimedia por programa de formación.
                         </p>
                       </div>
@@ -2697,7 +2697,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                           setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: selectedAdminProgram }));
                           setShowUploadModal(true);
                         }}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        className="px-4 py-2 bg-[#39A900] hover:bg-[#2d8500] text-white text-xs font-medium rounded-lg transition flex items-center gap-1.5 shadow-xs cursor-pointer"
                       >
                         <Plus className="w-4 h-4" strokeWidth={1.8} />
                         <span>+ Agregar Término</span>
@@ -2707,14 +2707,14 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                 </div>
 
                 {/* 2. Barra de Selección de Programa / Ficha Activa */}
-                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-border shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
-                      <GraduationCap className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
+                    <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-700">
+                      <GraduationCap className="w-5 h-5 text-[#39A900]" strokeWidth={1.8} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-foreground">Programa de Formación Activo</h3>
-                      <p className="text-[11px] text-muted-foreground">Selecciona el programa para visualizar o cargar su vocabulario técnico</p>
+                      <h3 className="text-sm font-bold text-slate-900">Programa de Formación Activo</h3>
+                      <p className="text-[11px] text-slate-500">Selecciona el programa para visualizar o cargar su vocabulario técnico</p>
                     </div>
                   </div>
 
@@ -2728,9 +2728,9 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                           key={prog}
                           type="button"
                           onClick={() => setSelectedAdminProgram(prog)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                             isSelected
-                              ? "bg-emerald-600 text-white shadow-xs"
+                              ? "bg-[#39A900] text-white shadow-xs"
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
@@ -2749,7 +2749,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                       <select
                         value={selectedAdminProgram}
                         onChange={(e) => setSelectedAdminProgram(e.target.value)}
-                        className="px-3 py-1.5 bg-slate-50 border border-border rounded-xl text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer max-w-[200px] truncate"
+                        className="h-9 px-3 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent cursor-pointer max-w-[200px] truncate shadow-xs"
                         title="Seleccionar programa de formación SENA"
                       >
                         <option value="ADSO">ADSO (Análisis y Desarrollo de Software)</option>
@@ -2764,21 +2764,21 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                 </div>
 
                 {/* 3. TARJETA CENTRAL ENCAPSULADA DEL PROGRAMA ACTIVO */}
-                <div className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8 space-y-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                        <span className="text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                           PROGRAMA DE FORMACIÓN SENA
                         </span>
                         <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                           CEFR A1 — B2
                         </span>
                       </div>
-                      <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
+                      <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
                         {selectedAdminProgram} — Diccionario Técnico Especializado
                       </h3>
-                      <p className="text-sm text-slate-600 max-w-3xl leading-relaxed">
+                      <p className="text-sm text-slate-500 max-w-3xl leading-relaxed">
                         Repositorio central de vocabulario técnico, pronunciación nativa y recursos pedagógicos multimedia asociados a la ficha de formación.
                       </p>
                     </div>
@@ -2786,30 +2786,30 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
                   {/* Métricas Consolidadas Reales del Programa */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                       <span className="text-xs text-slate-500 font-medium block mb-1">Palabras</span>
-                      <span className="text-2xl font-bold text-slate-800 font-mono">
+                      <span className="text-2xl font-bold text-slate-900 font-mono">
                         {currentProgramDocs.length}
                       </span>
-                      <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Términos Registrados</span>
+                      <span className="text-[10px] text-[#39A900] block mt-0.5 font-medium">Términos Registrados</span>
                     </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                       <span className="text-xs text-slate-500 font-medium block mb-1">Imágenes</span>
-                      <span className="text-2xl font-bold text-slate-800 font-mono">
+                      <span className="text-2xl font-bold text-slate-900 font-mono">
                         {progImages}
                       </span>
-                      <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Recursos Visuales</span>
+                      <span className="text-[10px] text-[#39A900] block mt-0.5 font-medium">Recursos Visuales</span>
                     </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                       <span className="text-xs text-slate-500 font-medium block mb-1">Audios</span>
-                      <span className="text-2xl font-bold text-slate-800 font-mono">
+                      <span className="text-2xl font-bold text-slate-900 font-mono">
                         {progAudios}
                       </span>
-                      <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Pronunciación Nativa</span>
+                      <span className="text-[10px] text-[#39A900] block mt-0.5 font-medium">Pronunciación Nativa</span>
                     </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                       <span className="text-xs text-slate-500 font-medium block mb-1">Videos</span>
-                      <span className="text-2xl font-bold text-slate-800 font-mono">
+                      <span className="text-2xl font-bold text-slate-900 font-mono">
                         {progVideos}
                       </span>
                       <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Videoclips Técnicos</span>
@@ -2818,12 +2818,12 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
                   {/* Botonera de Acción en la Tarjeta o Estado Vacío Formal */}
                   {currentProgramDocs.length === 0 ? (
-                    <div className="bg-slate-50/70 rounded-2xl border border-dashed border-border p-8 sm:p-10 text-center space-y-3">
+                    <div className="bg-slate-50 rounded-xl border border-dashed border-slate-200 p-8 sm:p-10 text-center space-y-3">
                       <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />
-                      <h4 className="text-xl font-bold text-foreground">Diccionario en construcción</h4>
-                      <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                      <h4 className="text-lg font-bold text-slate-900">Diccionario en construcción</h4>
+                      <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto leading-relaxed">
                         Actualmente no hay términos técnicos registrados para el programa{" "}
-                        <strong className="text-foreground">{selectedAdminProgram}</strong>. Tu instructor cargará el vocabulario técnico próximamente.
+                        <strong className="text-slate-900">{selectedAdminProgram}</strong>. Tu instructor cargará el vocabulario técnico próximamente.
                       </p>
                       {(authUser?.role === "admin" || authUser?.role === "superadmin") && (
                         <div className="pt-3 flex items-center justify-center gap-3">
@@ -2833,7 +2833,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                               setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: selectedAdminProgram }));
                               setShowUploadModal(true);
                             }}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sena-green hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#39A900] hover:bg-[#2d8500] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                           >
                             <Plus className="w-4 h-4" />
                             <span>+ Agregar Primer Término para {selectedAdminProgram}</span>
@@ -2846,7 +2846,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                       <button
                         type="button"
                         onClick={() => setShowDictionaryExplorerModal(true)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm cursor-pointer"
+                        className="bg-[#39A900] hover:bg-[#2d8500] text-white font-medium px-5 py-2.5 rounded-lg shadow-xs transition-all flex items-center gap-2 text-sm cursor-pointer"
                       >
                         <BookOpen className="w-4 h-4" strokeWidth={1.8} />
                         <span>Abrir Diccionario</span>
@@ -2859,7 +2859,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                             setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: selectedAdminProgram }));
                             setShowUploadModal(true);
                           }}
-                          className="border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-medium px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5 text-sm shadow-2xs cursor-pointer"
+                          className="border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5 text-sm shadow-2xs cursor-pointer"
                         >
                           <Plus className="w-4 h-4" strokeWidth={1.8} />
                           <span>+ Agregar Término</span>
@@ -2870,13 +2870,13 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                 </div>
 
                 {/* 4. Directorio Institucional de Diccionarios por Programa */}
-                <div className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-6 border-b border-slate-200">
                     <div>
-                      <h4 className="text-base font-bold text-foreground">Directorio Institucional de Diccionarios por Ficha</h4>
-                      <p className="text-xs text-muted-foreground">Monitoreo y administración independiente por cada programa de formación</p>
+                      <h4 className="text-base font-bold text-slate-900">Directorio Institucional de Diccionarios por Ficha</h4>
+                      <p className="text-xs text-slate-500">Monitoreo y administración independiente por cada programa de formación</p>
                     </div>
-                    <span className="text-xs text-muted-foreground font-medium">
+                    <span className="text-xs text-slate-500 font-medium">
                       Total: {documents.length} términos registrados
                     </span>
                   </div>
@@ -2884,15 +2884,15 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-border text-[11px] font-bold text-muted-foreground uppercase tracking-wider bg-slate-50/50">
-                          <th className="py-3 px-4">Programa / Ficha</th>
-                          <th className="py-3 px-4">Términos</th>
-                          <th className="py-3 px-4">Multimedia</th>
-                          <th className="py-3 px-4">Estado</th>
-                          <th className="py-3 px-4 text-right">Acciones</th>
+                        <tr className="border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider bg-slate-50">
+                          <th className="py-3.5 px-5 font-semibold">Programa / Ficha</th>
+                          <th className="py-3.5 px-5 font-semibold">Términos</th>
+                          <th className="py-3.5 px-5 font-semibold">Multimedia</th>
+                          <th className="py-3.5 px-5 font-semibold">Estado</th>
+                          <th className="py-3.5 px-5 text-right font-semibold">Acciones</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border/60 text-xs">
+                      <tbody className="divide-y divide-slate-200 text-xs">
                         {[
                           { name: "ADSO", title: "ADSO (Análisis y Desarrollo de Software)" },
                           { name: "Análisis de Datos", title: "Análisis de Datos" },
@@ -2906,36 +2906,36 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                           const iCount = pDocs.filter(d => Boolean(d.image || d.imageUrl)).length;
 
                           return (
-                            <tr key={progItem.name} className={`hover:bg-slate-50/80 transition-colors ${isCurrent ? "bg-emerald-50/40" : ""}`}>
-                              <td className="py-3 px-4 font-semibold text-foreground">
+                            <tr key={progItem.name} className={`hover:bg-slate-50/80 transition-colors ${isCurrent ? "bg-emerald-50/30" : ""}`}>
+                              <td className="py-3.5 px-5 font-semibold text-slate-900">
                                 <div className="flex items-center gap-2">
                                   <GraduationCap className="w-4 h-4 text-slate-400" />
                                   <span>{progItem.title}</span>
                                   {isCurrent && (
-                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                                    <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold px-2 py-0.5 rounded-full">
                                       Seleccionado
                                     </span>
                                   )}
                                 </div>
                               </td>
-                              <td className="py-3 px-4 font-mono font-medium text-foreground">
+                              <td className="py-3.5 px-5 font-mono font-medium text-slate-900">
                                 {pDocs.length}
                               </td>
-                              <td className="py-3 px-4 text-muted-foreground">
+                              <td className="py-3.5 px-5 text-slate-500">
                                 {hasTerms ? `${aCount} audios • ${iCount} imágenes` : "Sin recursos"}
                               </td>
-                              <td className="py-3 px-4">
+                              <td className="py-3.5 px-5">
                                 {hasTerms ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                     Activo ({pDocs.length})
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                                     En construcción
                                   </span>
                                 )}
                               </td>
-                              <td className="py-3 px-4 text-right">
+                              <td className="py-3.5 px-5 text-right">
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     type="button"
@@ -2945,9 +2945,9 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                         setShowDictionaryExplorerModal(true);
                                       }
                                     }}
-                                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
                                       isCurrent
-                                        ? "bg-emerald-600 text-white"
+                                        ? "bg-[#39A900] text-white"
                                         : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                                     }`}
                                   >
@@ -2961,7 +2961,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                         setUploadForm(prev => ({ ...prev, subjectId: "Speaking", program: progItem.name }));
                                         setShowUploadModal(true);
                                       }}
-                                      className="px-2.5 py-1 text-emerald-700 hover:bg-emerald-50 border border-emerald-300 rounded-lg text-xs font-medium transition cursor-pointer"
+                                      className="px-2.5 py-1.5 text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium transition cursor-pointer"
                                       title={`Agregar término para ${progItem.name}`}
                                     >
                                       + Término

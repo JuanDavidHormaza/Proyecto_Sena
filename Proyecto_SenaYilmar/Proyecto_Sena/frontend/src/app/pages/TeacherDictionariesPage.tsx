@@ -327,14 +327,14 @@ export function TeacherDictionariesPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="bg-white border border-border rounded-xl px-4 py-3 shadow-sm min-w-40">
-                <p className="text-xs text-muted-foreground">Términos Disponibles</p>
-                <p className="text-2xl font-bold text-sena-blue">{teacherDocuments.length}</p>
+              <div className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm min-w-40">
+                <p className="text-xs text-slate-500">Términos Disponibles</p>
+                <p className="text-xl font-bold text-slate-900">{teacherDocuments.length}</p>
               </div>
               <button
                 type="button"
                 onClick={handleOpenCreate}
-                className="inline-flex items-center gap-2 px-4 py-3 bg-sena-green hover:bg-sena-green/90 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#39A900] hover:bg-[#2d8500] text-white rounded-lg text-sm font-semibold shadow-sm transition-colors cursor-pointer whitespace-nowrap"
               >
                 <Plus className="w-4 h-4" strokeWidth={1.8} />
                 <span>Nuevo Término</span>
@@ -348,26 +348,26 @@ export function TeacherDictionariesPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white p-4 rounded-2xl border border-border shadow-sm mb-6 space-y-4"
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 space-y-4"
         >
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
             <input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Buscar por término, definición o sinónimos..."
-              className="w-full pl-12 pr-4 py-2.5 bg-muted/30 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50 text-sm"
+              className="w-full h-10 pl-10 pr-4 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900] text-sm"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-border">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-200">
             {/* Filtro Asignatura */}
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Asignatura</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura</label>
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sena-blue/40"
+                className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900]"
               >
                 <option value="all">Todas las asignaturas</option>
                 {subjects.map((sub) => (
@@ -380,11 +380,11 @@ export function TeacherDictionariesPage() {
 
             {/* Filtro Nivel CEFR */}
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Nivel Marco CEFR</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Nivel Marco CEFR</label>
               <select
                 value={selectedLevel}
                 onChange={(e) => setSelectedLevel(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sena-blue/40"
+                className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900]"
               >
                 <option value="all">Todos los niveles</option>
                 <option value="A1">Nivel A1 (Acceso)</option>
@@ -396,11 +396,11 @@ export function TeacherDictionariesPage() {
 
             {/* Filtro Competencia */}
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Competencia</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Competencia</label>
               <select
                 value={selectedCompetence}
                 onChange={(e) => setSelectedCompetence(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sena-blue/40"
+                className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900]"
               >
                 <option value="all">Todas las competencias</option>
                 <option value="Speaking">Speaking (Habla)</option>
@@ -414,7 +414,7 @@ export function TeacherDictionariesPage() {
 
         {/* Reproductor de Audio Flotante */}
         {activeAudioUrl && (
-          <div className="fixed bottom-6 right-6 z-50 bg-white border border-border rounded-2xl p-4 shadow-2xl max-w-sm w-full">
+          <div className="fixed bottom-6 right-6 z-50 bg-white border border-slate-200 rounded-xl p-4 shadow-xl max-w-sm w-full">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-sena-blue flex items-center gap-1.5">
                 <Volume2 className="w-4 h-4" strokeWidth={1.8} /> Reproduciendo Audio
@@ -434,7 +434,7 @@ export function TeacherDictionariesPage() {
         {isLoading ? (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div key={item} className="bg-white rounded-2xl border border-border p-5 shadow-sm animate-pulse">
+              <div key={item} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm animate-pulse">
                 <div className="w-12 h-12 rounded-xl bg-muted mb-4" />
                 <div className="h-4 bg-muted rounded w-2/3 mb-3" />
                 <div className="h-3 bg-muted rounded w-full mb-2" />
@@ -450,19 +450,19 @@ export function TeacherDictionariesPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
-                className="bg-white rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
                         <BookOpen className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
                       </div>
                       <div>
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sena-green/10 text-sena-green">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                           {doc.level || "A1"}
                         </span>
-                        <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground inline-flex items-center gap-1">
+                        <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 inline-flex items-center gap-1">
                           {doc.competence === "Speaking" && <Mic className="w-3 h-3 shrink-0" />}
                           {doc.competence === "Writing" && <PenTool className="w-3 h-3 shrink-0" />}
                           {(!doc.competence || doc.competence === "Grammar") && <Languages className="w-3 h-3 shrink-0" />}
@@ -477,7 +477,7 @@ export function TeacherDictionariesPage() {
                         type="button"
                         onClick={() => handleOpenEdit(doc)}
                         title="Editar término"
-                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-sena-blue rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-sena-blue rounded-lg transition-colors cursor-pointer"
                       >
                         <Edit3 className="w-4 h-4" strokeWidth={1.8} />
                       </button>
@@ -485,16 +485,16 @@ export function TeacherDictionariesPage() {
                         type="button"
                         onClick={() => handleDeleteTerm(doc.id, doc.name || doc.wordId || "")}
                         title="Eliminar término"
-                        className="p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" strokeWidth={1.8} />
                       </button>
                     </div>
                   </div>
 
-                  <h3 className="font-bold text-lg text-foreground mb-2">{doc.name || doc.wordId}</h3>
+                  <h3 className="font-bold text-lg text-slate-900 mb-2">{doc.name || doc.wordId}</h3>
 
-                  <div className="space-y-1.5 mb-3 text-xs text-muted-foreground">
+                  <div className="space-y-1.5 mb-3 text-xs text-slate-500">
                     <div className="flex items-center gap-2">
                       <FolderOpen className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.8} />
                       <span className="truncate">{doc.program || "Todos los programas"}</span>
@@ -506,20 +506,20 @@ export function TeacherDictionariesPage() {
                   </div>
 
                   {doc.definition && (
-                    <div className="mb-3 bg-muted/40 rounded-xl p-3">
+                    <div className="mb-3 bg-slate-50 border border-slate-200/80 rounded-lg p-3">
                       <p className="text-[11px] font-semibold text-sena-blue mb-0.5">Definición</p>
-                      <p className="text-xs text-foreground leading-relaxed">{doc.definition}</p>
+                      <p className="text-xs text-slate-700 leading-relaxed">{doc.definition}</p>
                     </div>
                   )}
 
                   {doc.synonyms && (
                     <div className="mb-3">
-                      <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">Sinónimos</p>
+                      <p className="text-[11px] font-semibold text-slate-500 mb-1.5">Sinónimos</p>
                       <div className="flex flex-wrap gap-1">
                         {doc.synonyms.split(",").map((synonym) => (
                           <span
                             key={synonym.trim()}
-                            className="text-[11px] bg-sena-blue/10 text-sena-blue px-2 py-0.5 rounded-md"
+                            className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md"
                           >
                             {synonym.trim()}
                           </span>
@@ -531,11 +531,11 @@ export function TeacherDictionariesPage() {
 
                 {/* Recursos multimedia servidos por Django Proxy */}
                 {(doc.audioUrl || doc.videoUrl || doc.imageUrl) && (
-                  <div className="pt-3 border-t border-border mt-2 flex flex-wrap gap-2">
+                  <div className="pt-3 border-t border-slate-200 mt-2 flex flex-wrap gap-2">
                     {doc.audioUrl && (
                       <button
                         onClick={() => setActiveAudioUrl(resolveMediaUrl(doc.audioUrl))}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
                       >
                         <Volume2 className="w-3.5 h-3.5 text-purple-600" strokeWidth={1.8} />
                         Escuchar Audio
@@ -546,16 +546,16 @@ export function TeacherDictionariesPage() {
                         href={resolveMediaUrl(doc.imageUrl)}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-sena-green bg-sena-green/10 hover:bg-sena-green/20 px-2.5 py-1.5 rounded-lg transition-colors"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-lg transition-colors"
                       >
-                        <Image className="w-3.5 h-3.5 text-sena-green" strokeWidth={1.8} />
+                        <Image className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.8} />
                         Ver Ilustración
                       </a>
                     )}
                     {doc.videoUrl && (
                       <div className="w-full mt-2">
                         {api.getEmbedVideoUrl(doc.videoUrl) ? (
-                          <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-border bg-black shadow-xs">
+                          <div className="relative aspect-video w-full rounded-lg overflow-hidden border border-slate-200 bg-black shadow-xs">
                             <iframe
                               src={api.getEmbedVideoUrl(doc.videoUrl)!}
                               title={`Video explicativo de ${doc.wordId}`}
@@ -569,7 +569,7 @@ export function TeacherDictionariesPage() {
                             href={resolveMediaUrl(doc.videoUrl)}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-medium text-sena-blue bg-sena-blue/10 hover:bg-sena-blue/20 px-2.5 py-1.5 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-sena-blue bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1.5 rounded-lg transition-colors"
                           >
                             <Video className="w-3.5 h-3.5 text-sena-blue" strokeWidth={1.8} />
                             Ver Video
@@ -583,7 +583,7 @@ export function TeacherDictionariesPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-white rounded-2xl border border-border">
+          <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
             <BookOpen className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" strokeWidth={1.8} />
             <h3 className="text-lg font-semibold text-foreground mb-2">No hay términos disponibles</h3>
             <p className="text-muted-foreground text-sm">
@@ -601,25 +601,25 @@ export function TeacherDictionariesPage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-border relative my-8 max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-xl max-w-2xl w-full p-6 sm:p-8 shadow-xl border border-slate-200 relative my-8 max-h-[90vh] overflow-y-auto"
             >
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="absolute right-5 top-5 p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted"
+                className="absolute right-5 top-5 p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
               >
                 <X className="w-5 h-5" strokeWidth={1.8} />
               </button>
 
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
-                <div className="w-12 h-12 rounded-xl bg-sena-green/10 text-sena-green flex items-center justify-center flex-shrink-0">
-                  <BookOpen className="w-6 h-6" strokeWidth={1.8} />
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
+                <div className="w-11 h-11 rounded-lg bg-emerald-50 border border-emerald-200 text-[#39A900] flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="w-5 h-5" strokeWidth={1.8} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-foreground">
+                  <h3 className="text-lg font-bold text-slate-900">
                     {modalMode === "create" ? "Registrar Nuevo Término Técnico" : "Editar Término Técnico"}
                   </h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-slate-500">
                     Repositorio centralizado con almacenamiento multimedia en MinIO
                   </p>
                 </div>
@@ -628,7 +628,7 @@ export function TeacherDictionariesPage() {
               <form onSubmit={handleSaveTerm} className="space-y-4">
                 {/* Nombre / Palabra Clave */}
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1.5">
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
                     Término en Inglés *
                   </label>
                   <input
@@ -637,18 +637,18 @@ export function TeacherDictionariesPage() {
                     placeholder="Ej. Polymorphism, Recursion, Microservices..."
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm font-semibold"
+                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900] text-sm font-semibold"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* Nivel */}
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Nivel CEFR</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Nivel CEFR</label>
                     <select
                       value={formData.level}
                       onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sena-green/40"
+                      className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900]"
                     >
                       <option value="A1">A1</option>
                       <option value="A2">A2</option>
@@ -659,11 +659,11 @@ export function TeacherDictionariesPage() {
 
                   {/* Competencia */}
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Competencia</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Competencia</label>
                     <select
                       value={formData.competence}
                       onChange={(e) => setFormData({ ...formData, competence: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sena-green/40"
+                      className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900]"
                     >
                       <option value="Speaking">Speaking</option>
                       <option value="Grammar">Grammar</option>
@@ -674,11 +674,11 @@ export function TeacherDictionariesPage() {
 
                   {/* Asignatura */}
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Asignatura</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Asignatura</label>
                     <select
                       value={formData.subjectId}
                       onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sena-green/40"
+                      className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900]"
                     >
                       {subjects.map((s) => (
                         <option key={s.id} value={s.id}>
@@ -691,7 +691,7 @@ export function TeacherDictionariesPage() {
 
                 {/* Definición */}
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1.5">
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
                     Definición Técnica en Inglés *
                   </label>
                   <textarea
@@ -700,13 +700,13 @@ export function TeacherDictionariesPage() {
                     placeholder="Provide a clear, technical definition in English..."
                     value={formData.definition}
                     onChange={(e) => setFormData({ ...formData, definition: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm leading-relaxed"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900] text-sm leading-relaxed"
                   />
                 </div>
 
                 {/* Sinónimos */}
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
                     Sinónimos o Términos Relacionados (Separados por coma)
                   </label>
                   <input
@@ -714,13 +714,13 @@ export function TeacherDictionariesPage() {
                     placeholder="Ej. subprogram, method, procedure"
                     value={formData.synonyms}
                     onChange={(e) => setFormData({ ...formData, synonyms: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm"
+                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900] text-sm"
                   />
                 </div>
 
                 {/* URL de Video Educativo (YouTube o Vimeo) */}
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
                     <Video className="w-4 h-4 text-sena-blue" strokeWidth={1.8} />
                     <span>URL de Video Educativo (YouTube o Vimeo)</span>
                   </label>
@@ -729,10 +729,10 @@ export function TeacherDictionariesPage() {
                     placeholder="Ej. https://www.youtube.com/watch?v=... o https://vimeo.com/..."
                     value={formData.videoUrl || ""}
                     onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-sena-green/50 text-sm"
+                    className="w-full h-10 px-3.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-[#39A900] text-sm"
                   />
                   {formData.videoUrl && api.getEmbedVideoUrl(formData.videoUrl) && (
-                    <div className="mt-2.5 rounded-xl overflow-hidden border border-border aspect-video max-h-48 bg-black">
+                    <div className="mt-2.5 rounded-lg overflow-hidden border border-slate-200 aspect-video max-h-48 bg-black">
                       <iframe
                         src={api.getEmbedVideoUrl(formData.videoUrl)!}
                         title="Vista previa del video"
@@ -744,10 +744,10 @@ export function TeacherDictionariesPage() {
                 </div>
 
                 {/* Multimedia: Subida a MinIO */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-200">
                   {/* Audio */}
-                  <div className="p-3 bg-muted/20 border border-border rounded-2xl">
-                    <label className="block text-xs font-bold text-foreground mb-1 flex items-center gap-1.5">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                    <label className="block text-xs font-semibold text-slate-800 mb-1 flex items-center gap-1.5">
                       <Volume2 className="w-4 h-4 text-purple-600" strokeWidth={1.8} />
                       <span>Audio de Pronunciación</span>
                     </label>
@@ -755,29 +755,29 @@ export function TeacherDictionariesPage() {
                       type="file"
                       accept="audio/*"
                       onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-                      className="w-full text-xs text-muted-foreground file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
+                      className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
                     />
                     {formData.audioUrl && !audioFile && (
-                      <p className="text-[11px] text-muted-foreground mt-1 truncate">
+                      <p className="text-[11px] text-slate-500 mt-1 truncate">
                         Audio actual: {formData.audioUrl}
                       </p>
                     )}
                   </div>
 
                   {/* Imagen */}
-                  <div className="p-3 bg-muted/20 border border-border rounded-2xl">
-                    <label className="block text-xs font-bold text-foreground mb-1 flex items-center gap-1.5">
-                      <Image className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                    <label className="block text-xs font-semibold text-slate-800 mb-1 flex items-center gap-1.5">
+                      <Image className="w-4 h-4 text-[#39A900]" strokeWidth={1.8} />
                       <span>Ilustración / Diagrama</span>
                     </label>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                      className="w-full text-xs text-muted-foreground file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
+                      className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
                     />
                     {formData.imageUrl && !imageFile && (
-                      <p className="text-[11px] text-muted-foreground mt-1 truncate">
+                      <p className="text-[11px] text-slate-500 mt-1 truncate">
                         Imagen actual: {formData.imageUrl}
                       </p>
                     )}
@@ -785,18 +785,18 @@ export function TeacherDictionariesPage() {
                 </div>
 
                 {/* Botones de acción */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl border border-border text-muted-foreground hover:bg-muted font-medium text-xs transition"
+                    className="h-10 px-5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="px-6 py-2.5 rounded-xl bg-sena-green hover:bg-sena-green/90 text-white font-bold text-xs shadow-md transition flex items-center gap-2 disabled:opacity-60 cursor-pointer"
+                    className="h-10 px-6 rounded-lg bg-[#39A900] hover:bg-[#2d8500] text-white font-semibold text-xs shadow-sm transition flex items-center gap-2 disabled:opacity-60 cursor-pointer"
                   >
                     {isSaving ? (
                       <>

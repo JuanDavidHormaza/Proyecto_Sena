@@ -1351,25 +1351,25 @@ export function RegisterPage() {
           ═══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {showFichaModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-8 overflow-hidden"
+              className="w-full max-w-lg bg-white rounded-xl shadow-lg border border-slate-200 p-6 sm:p-8 overflow-hidden"
               role="dialog"
               aria-modal="true"
               aria-label="Seleccionar Ficha de Formación Activa"
             >
               <div className="text-center mb-6">
-                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-2xs border border-emerald-100">
-                  <Layers className="w-7 h-7" strokeWidth={1.8} />
+                <div className="w-12 h-12 bg-emerald-50 text-[#39A900] rounded-lg flex items-center justify-center mx-auto mb-3 border border-emerald-100">
+                  <Layers className="w-6 h-6" strokeWidth={1.8} />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                   Bienvenido a Worklex SENA
                 </h3>
-                <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
                   {multiPrograms.length === 2
                     ? "Tienes dos programas activos. ¿Con cuál ficha deseas ingresar en esta sesión?"
                     : `Tienes ${multiPrograms.length} programas activos. ¿Con cuál ficha deseas ingresar en esta sesión?`}
@@ -1377,30 +1377,28 @@ export function RegisterPage() {
               </div>
 
               {/* Tarjetas interactivas de cada Ficha */}
-              <div className="space-y-3 mb-6 max-h-72 overflow-y-auto pr-1">
+              <div className="space-y-2.5 mb-5 max-h-72 overflow-y-auto pr-1">
                 {multiPrograms.map((prog, idx) => {
                   const fichaMatch = prog.match(/Ficha\s*(\d+)/i) || prog.match(/(\d{6,8})/);
                   const fichaNum = fichaMatch ? fichaMatch[1] : `Ficha #${idx + 1}`;
                   const cleanName = prog.replace(/\s*-\s*Ficha.*$/i, "").trim();
 
                   return (
-                    <motion.button
+                    <button
                       key={prog}
                       type="button"
                       onClick={() => handleSelectFicha(prog)}
-                      whileHover={{ scale: 1.015, y: -1 }}
-                      whileTap={{ scale: 0.985 }}
-                      className="w-full text-left p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 bg-slate-50/60 hover:bg-emerald-50/40 transition-all flex items-center gap-4 group cursor-pointer shadow-2xs hover:shadow-md"
+                      className="w-full text-left p-3.5 rounded-lg border border-slate-200 hover:border-[#39A900] bg-white hover:bg-slate-50/80 transition-colors flex items-center gap-3.5 group cursor-pointer"
                     >
-                      <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-2xs group-hover:border-emerald-300">
+                      <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0 group-hover:border-emerald-300">
                         {getProgramIcon(prog)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-slate-800 text-sm group-hover:text-emerald-900 truncate">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-semibold text-slate-800 text-sm group-hover:text-[#39A900] truncate">
                             {cleanName}
                           </span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
                             {fichaNum}
                           </span>
                         </div>
@@ -1408,8 +1406,8 @@ export function RegisterPage() {
                           Habilitar panel y vocabulario técnico especializado
                         </p>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all flex-shrink-0" strokeWidth={1.8} />
-                    </motion.button>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#39A900] transition-colors flex-shrink-0" strokeWidth={1.8} />
+                    </button>
                   );
                 })}
               </div>
@@ -1417,7 +1415,7 @@ export function RegisterPage() {
               <button
                 type="button"
                 onClick={() => handleSelectFicha(multiPrograms[0])}
-                className="w-full py-3 px-4 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer text-center"
+                className="w-full py-2.5 px-4 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer text-center"
               >
                 Ingresar con programa predeterminado ({multiPrograms[0]})
               </button>
@@ -1431,31 +1429,31 @@ export function RegisterPage() {
           ═══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {showManualFichaModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-8 overflow-hidden"
+              className="w-full max-w-lg bg-white rounded-xl shadow-lg border border-slate-200 p-6 sm:p-8 overflow-hidden"
               role="dialog"
               aria-modal="true"
               aria-label="Vinculación Inicial de Ficha y Programa"
             >
               <div className="text-center mb-6">
-                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-2xs border border-emerald-100">
-                  <GraduationCap className="w-7 h-7" strokeWidth={1.8} />
+                <div className="w-12 h-12 bg-emerald-50 text-[#39A900] rounded-lg flex items-center justify-center mx-auto mb-3 border border-emerald-100">
+                  <GraduationCap className="w-6 h-6" strokeWidth={1.8} />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                   Bienvenido a Worklex SENA
                 </h3>
-                <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
                   Para habilitar tu entorno de formación y los diccionarios técnicos, por favor ingresa los datos de tu ficha y programa:
                 </p>
               </div>
 
               {manualEnrollError && (
-                <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
+                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-800 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" strokeWidth={1.8} />
                   <span>{manualEnrollError}</span>
                 </div>
@@ -1464,13 +1462,13 @@ export function RegisterPage() {
               <form onSubmit={handleManualEnrollSubmit} className="space-y-4">
                 {/* Paso 1: Programa de Formación */}
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                  <label className="text-xs font-medium text-slate-700 block mb-1.5">
                     1. Programa de Formación *
                   </label>
                   <select
                     value={manualProgramInput}
                     onChange={(e) => setManualProgramInput(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-sm font-semibold cursor-pointer"
+                    className="w-full h-10 px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent text-sm shadow-sm cursor-pointer"
                   >
                     {SENA_OFFICIAL_PROGRAMS.map((progName) => (
                       <option key={progName} value={progName}>
@@ -1482,7 +1480,7 @@ export function RegisterPage() {
 
                 {/* Paso 2: Número de Ficha */}
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                  <label className="text-xs font-medium text-slate-700 block mb-1.5">
                     2. Número de Ficha *
                   </label>
                   <input
@@ -1495,14 +1493,14 @@ export function RegisterPage() {
                       setManualEnrollError("");
                     }}
                     placeholder="Número de ficha (ej. 2670142)"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-sm font-semibold"
+                    className="w-full h-10 px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent text-sm shadow-sm"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isManualEnrolling || !manualFichaInput.trim()}
-                  className="w-full py-3.5 bg-sena-green hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-2"
+                  className="w-full h-10 bg-[#39A900] hover:bg-[#2d8500] text-white font-medium text-sm rounded-md shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-2"
                 >
                   {isManualEnrolling ? (
                     <>
@@ -1520,7 +1518,7 @@ export function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/dashboard")}
-                  className="w-full py-2.5 text-xs text-slate-500 hover:text-slate-800 font-medium transition-colors text-center cursor-pointer"
+                  className="w-full py-2 text-xs text-slate-500 hover:text-slate-800 font-medium transition-colors text-center cursor-pointer"
                 >
                   Continuar al panel y configurar más tarde
                 </button>

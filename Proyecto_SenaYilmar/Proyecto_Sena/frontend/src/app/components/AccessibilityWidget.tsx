@@ -222,33 +222,33 @@ export function AccessibilityWidget() {
         id="accessibility-trigger-btn"
         aria-label="Accesibilidad"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#39A900] hover:bg-[#2d8500] text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-white/20"
+        className="w-11 h-11 bg-[#39A900] hover:bg-[#2d8500] rounded-full shadow-md fixed bottom-6 right-6 z-50 flex items-center justify-center text-white transition-all cursor-pointer border border-white/20"
       >
-        <Accessibility className="w-6 h-6 text-white stroke-[2]" />
+        <Accessibility className="w-5 h-5 text-white stroke-[2]" />
       </button>
 
       {/* Panel Flotante Aislado */}
       <AnimatePresence>
         {isOpen && (
-          <div id="accessibility-panel" className="accessibility-panel fixed bottom-22 right-6 z-[99999]">
+          <div id="accessibility-panel" className="accessibility-panel fixed bottom-20 right-6 z-[99999]">
             <motion.div
               initial={{ opacity: 0, y: 14, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 14, scale: 0.98 }}
               transition={{ duration: 0.18 }}
-              className="accessibility-panel w-84 sm:w-92 bg-card text-card-foreground rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col"
+              className="accessibility-panel w-84 sm:w-92 bg-card text-card-foreground rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col"
               role="dialog"
               aria-modal="true"
               aria-label="Panel de accesibilidad universal Worklex SENA"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-sena-green/15 via-emerald-500/10 to-sena-blue/15 px-5 py-4 border-b border-border flex items-center justify-between">
+              <div className="bg-slate-50 dark:bg-slate-800/60 px-5 py-3.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-sena-green text-white flex items-center justify-center shadow-xs">
-                    <Accessibility className="w-4 h-4" strokeWidth={1.8} />
+                  <div className="w-8 h-8 rounded-lg bg-[#39A900] text-white flex items-center justify-center shadow-xs">
+                    <Accessibility className="w-4 h-4 text-white stroke-[2]" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-foreground">Accesibilidad Visual</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Accesibilidad Visual</h3>
                     <p className="panel-sub text-[11px] text-muted-foreground">Inclusión & Ergonomía Digital</p>
                   </div>
                 </div>

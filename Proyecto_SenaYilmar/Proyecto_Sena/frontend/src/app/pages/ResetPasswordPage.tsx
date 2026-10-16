@@ -453,7 +453,7 @@ export function ResetPasswordPage() {
                         {otp.filter(Boolean).length}/6 dígitos
                       </span>
                     </div>
-                    <div className="flex justify-between gap-1.5 sm:gap-2">
+                    <div className="flex justify-between gap-2 max-w-xs mx-auto">
                       {otp.map((digit, idx) => (
                         <input
                           key={idx}
@@ -465,7 +465,7 @@ export function ResetPasswordPage() {
                           onChange={(e) => handleOtpChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           onPaste={handleOtpPaste}
-                          className={`w-10 sm:w-11 h-12 sm:h-13 text-center text-lg sm:text-xl font-bold font-mono border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all ${
+                          className={`w-11 h-11 text-center text-lg font-bold font-mono border rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm ${
                             digit ? "border-[#39A900]" : "border-slate-300 dark:border-slate-700"
                           }`}
                         />
@@ -479,7 +479,7 @@ export function ResetPasswordPage() {
                       Nueva Contraseña *
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <input
                         type={showNewPassword ? "text" : "password"}
                         required
@@ -490,12 +490,12 @@ export function ResetPasswordPage() {
                           setError("");
                         }}
                         placeholder="Mínimo 8 caracteres (letras y números)"
-                        className="h-11 w-full pl-10 pr-10 text-sm border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all"
+                        className="h-10 w-full pl-9 pr-9 text-sm border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm"
                       />
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
                       >
                         {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -528,7 +528,7 @@ export function ResetPasswordPage() {
                       Confirmar Nueva Contraseña *
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <input
                         type={showConfirmPassword ? "text" : "password"}
                         required
@@ -539,16 +539,16 @@ export function ResetPasswordPage() {
                           setError("");
                         }}
                         placeholder="Repite la nueva contraseña"
-                        className={`h-11 w-full pl-10 pr-10 text-sm border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all ${
+                        className={`h-10 w-full pl-9 pr-9 text-sm border rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm ${
                           showMismatchError
-                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
+                            ? "border-rose-400 focus:ring-rose-500"
                             : "border-slate-300 dark:border-slate-700"
                         }`}
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
                       >
                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -573,7 +573,7 @@ export function ResetPasswordPage() {
                   <button
                     type="submit"
                     disabled={!canSubmit}
-                    className="w-full h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm mt-3"
+                    className="w-full h-10 bg-[#39A900] hover:bg-[#2d8500] text-white rounded-md font-medium transition-all shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm mt-3"
                   >
                     {isLoading ? (
                       <span>Restableciendo contraseña...</span>
@@ -592,7 +592,7 @@ export function ResetPasswordPage() {
                     type="button"
                     onClick={handleResend}
                     disabled={resendCooldown > 0}
-                    className="text-[#39A900] font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                    className="text-[#39A900] font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
                   >
                     <RefreshCw className={`w-3 h-3 ${resendCooldown > 0 ? "animate-spin" : ""}`} strokeWidth={1.8} />
                     <span>{resendCooldown > 0 ? `Reenviar en ${resendCooldown}s` : "Reenviar código"}</span>
@@ -609,8 +609,8 @@ export function ResetPasswordPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-4 space-y-4"
               >
-                <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs border border-emerald-200">
-                  <CheckCircle2 className="w-8 h-8" strokeWidth={2} />
+                <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 text-[#39A900] rounded-xl flex items-center justify-center mx-auto border border-emerald-100">
+                  <CheckCircle2 className="w-6 h-6" strokeWidth={2} />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">¡Contraseña Actualizada!</h3>
@@ -621,7 +621,7 @@ export function ResetPasswordPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="w-full h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow cursor-pointer text-sm"
+                  className="w-full h-10 bg-[#39A900] hover:bg-[#2d8500] text-white rounded-md font-medium transition-all shadow cursor-pointer text-sm"
                 >
                   Iniciar Sesión Ahora
                 </button>
