@@ -24,8 +24,7 @@ export default defineConfig(({ mode }) => {
         'canvas-confetti',
       ],
       exclude: ['lucide-react', 'motion', 'tw-animate-css'],
-      esbuildOptions: {
-        target: 'esnext',
+      rolldownOptions: {
         logLimit: 0,
       },
     },

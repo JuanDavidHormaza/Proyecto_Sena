@@ -6,6 +6,11 @@ import { ToastProvider } from './components/Toast';
 import { IdleSessionManager } from './components/IdleSessionManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
+export const APP_VERSION = "2.1.0-matdash";
+if (typeof window !== "undefined") {
+  (window as any).__WORKLEX_VERSION__ = APP_VERSION;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
