@@ -341,7 +341,7 @@ export function getFieldValidationClass(
   _isValid?: boolean
 ): string {
   if (isTouched && error) {
-    return "border border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all";
+    return "border border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all shadow-sm";
   }
-  return "border border-slate-300 dark:border-slate-700 focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all";
+  return "border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm";
 }

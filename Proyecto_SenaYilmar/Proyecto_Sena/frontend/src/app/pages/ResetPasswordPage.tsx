@@ -316,34 +316,31 @@ export function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900 grid lg:grid-cols-12 relative">
       {/* ── Panel Izquierdo (Formulario - 5 cols) ── */}
-      <div className="lg:col-span-5 min-h-screen flex flex-col justify-center p-8 sm:p-12 lg:p-16 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
-        <div className="w-full max-w-sm mx-auto space-y-6">
+      <div className="lg:col-span-5 min-h-screen flex flex-col justify-center items-center px-6 lg:px-16 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
+        <div className="w-full max-w-sm space-y-5">
           {/* Botón Volver */}
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer text-xs font-semibold"
+            className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer text-xs font-medium"
           >
             <ArrowLeft className="w-4 h-4" strokeWidth={1.8} />
             <span>Volver al inicio de sesión</span>
           </button>
 
           {/* Logo y Encabezado */}
-          <div className="flex items-center gap-3.5 logo-container">
+          <div className="flex items-center gap-3 logo-container">
             <img
               src="/logo-sena.png"
-              alt="Logo SENA"
+              alt="SENA"
               className="h-10 w-auto object-contain"
             />
-            <div className="h-7 w-[1px] bg-slate-200 dark:bg-slate-700" />
-            <div className="flex items-center gap-2">
-              <img
-                src="/worklex.png"
-                alt="WorkLex SENA"
-                className="w-9 h-9 rounded-full object-contain border border-slate-200 dark:border-slate-700 shadow-2xs"
-              />
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">WorkLex</span>
-            </div>
+            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700" />
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="h-8 w-auto object-contain"
+            />
           </div>
 
           {/* Banner de error centralizado y limpio */}
@@ -351,7 +348,7 @@ export function ResetPasswordPage() {
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-start gap-2.5 p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl mb-5 text-rose-800 text-xs font-medium leading-relaxed"
+              className="flex items-start gap-2.5 p-3 bg-rose-50 border border-rose-200/80 rounded-md text-rose-800 text-xs font-medium leading-relaxed"
             >
               <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
               <p className="leading-snug">{error}</p>
@@ -366,12 +363,13 @@ export function ResetPasswordPage() {
                 initial={{ opacity: 0, x: -15 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 15 }}
+                className="space-y-5"
               >
-                <div className="mb-5">
-                  <h2 className="text-xl font-extrabold text-foreground tracking-tight mb-1">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                     ¿Olvidaste tu contraseña?
                   </h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                     Ingresa tu correo institucional registrado para enviarte un código de seguridad y verificar tu identidad.
                   </p>
                 </div>
@@ -382,7 +380,7 @@ export function ResetPasswordPage() {
                       Correo Electrónico Registrado *
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <input
                         type="email"
                         required
@@ -393,7 +391,7 @@ export function ResetPasswordPage() {
                           setError("");
                         }}
                         placeholder="tu@correo.com"
-                        className="h-11 w-full pl-10 pr-3.5 text-sm border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all"
+                        className="h-10 text-sm w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md pl-9 pr-3 py-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm"
                       />
                     </div>
                   </div>
@@ -401,7 +399,7 @@ export function ResetPasswordPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !email.trim()}
-                    className="w-full h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm mt-2"
+                    className="w-full h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm rounded-md shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 mt-2"
                   >
                     {isLoading ? (
                       <span>Validando correo...</span>

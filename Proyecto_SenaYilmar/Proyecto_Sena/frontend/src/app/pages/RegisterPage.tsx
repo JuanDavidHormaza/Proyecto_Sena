@@ -728,18 +728,18 @@ export function RegisterPage() {
   };
 
   const baseInputClass =
-    "h-11 w-full pl-10 pr-3.5 bg-white dark:bg-slate-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none transition-all text-sm";
-  const inputClass = `${baseInputClass} border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900]`;
+    "h-10 text-sm w-full bg-white dark:bg-slate-800 rounded-md pl-9 pr-3 py-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none transition-all shadow-sm";
+  const inputClass = `${baseInputClass} border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-[#39A900] focus:border-transparent`;
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900 grid lg:grid-cols-12 relative">
       {/* ── Formulario de Registro (5 cols) ── */}
-      <div className="lg:col-span-5 min-h-screen flex flex-col justify-center p-8 sm:p-12 lg:p-16 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
+      <div className="lg:col-span-5 min-h-screen flex flex-col justify-center items-center px-6 lg:px-16 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-lg mx-auto"
+          className="w-full max-w-sm space-y-5"
         >
           <button
             type="button"
@@ -748,7 +748,7 @@ export function RegisterPage() {
               else if (step === 2) setStep(1);
               else navigate("/");
             }}
-            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-6 cursor-pointer text-xs font-medium"
+            className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer text-xs font-medium"
           >
             <ArrowLeft className="w-4 h-4" strokeWidth={1.8} />
             <span>
@@ -760,32 +760,31 @@ export function RegisterPage() {
             </span>
           </button>
 
-          <div className="flex items-center gap-3.5 mb-6 logo-container">
+          <div className="flex items-center gap-3 logo-container">
             <img
               src="/logo-sena.png"
-              alt="Logo SENA"
+              alt="SENA"
               className="h-10 w-auto object-contain"
             />
-            <div className="h-7 w-[1px] bg-slate-200 dark:bg-slate-700" />
-            <div className="flex items-center gap-2">
-              <img
-                src="/worklex.png"
-                alt="WorkLex logo"
-                className="w-9 h-9 rounded-full object-contain border border-slate-200 dark:border-slate-700 shadow-2xs"
-              />
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">WorkLex</span>
-            </div>
+            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700" />
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="h-8 w-auto object-contain"
+            />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-1 tracking-tight">
-            Crea tu cuenta WorkLex
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-            Ingresa tus datos personales para acceder a las evaluaciones diagnósticas
-          </p>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              Crea tu cuenta WorkLex
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Ingresa tus datos personales para acceder a las evaluaciones diagnósticas
+            </p>
+          </div>
 
           {/* Indicador de progreso horizontal minimalista y sobrio */}
-          <div className="w-full flex items-center justify-between mb-6 select-none">
+          <div className="w-full flex items-center justify-between select-none">
             {[
               { n: 1, title: "Datos" },
               { n: 2, title: "Acceso" },
@@ -795,7 +794,7 @@ export function RegisterPage() {
               const isCompleted = step > n;
               return (
                 <div key={n} className="flex items-center flex-1 last:flex-initial">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-colors shrink-0 ${
                         isActive
@@ -819,7 +818,7 @@ export function RegisterPage() {
                   </div>
                   {i < 2 && (
                     <div
-                      className={`flex-1 h-[1px] mx-3 transition-colors ${
+                      className={`flex-1 h-[1px] mx-2 transition-colors ${
                         isCompleted ? "bg-[#39A900]/40" : "bg-slate-200 dark:bg-slate-700"
                       }`}
                     />
@@ -833,7 +832,7 @@ export function RegisterPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-lg mb-5 text-rose-700 dark:text-rose-300 text-xs"
+              className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-md text-rose-700 dark:text-rose-300 text-xs"
             >
               <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={1.8} />
               <p className="leading-snug">{error}</p>
@@ -854,11 +853,11 @@ export function RegisterPage() {
                 className="space-y-4"
               >
                 {/* Tipo y número de documento */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Tipo Documento *</label>
                     <div className="relative">
-                      <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <select
                         required
                         value={formData.docType}
@@ -877,7 +876,7 @@ export function RegisterPage() {
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Número Documento *</label>
                     <div className="relative">
-                      <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <input
                         type="text"
                         placeholder="1020304050"
@@ -902,10 +901,10 @@ export function RegisterPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-amber-50 border border-amber-200/90 rounded-lg text-left shadow-xs"
+                    className="p-3.5 bg-amber-50 border border-amber-200/90 rounded-md text-left shadow-xs"
                   >
                     <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
                       <div className="text-xs text-amber-950 space-y-1.5 flex-1">
                         <p className="font-bold">
                           Ya existe un registro con este número de documento.
@@ -916,7 +915,7 @@ export function RegisterPage() {
                         <button
                           type="button"
                           onClick={() => navigate("/login")}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs shadow-xs transition-colors cursor-pointer mt-1"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md font-medium text-xs shadow-xs transition-colors cursor-pointer mt-1"
                         >
                           <span>Iniciar Sesión</span>
                         </button>
@@ -930,10 +929,10 @@ export function RegisterPage() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="p-3.5 bg-sena-blue/10 border border-sena-blue/30 rounded-lg text-left"
+                    className="p-3 bg-sena-blue/10 border border-sena-blue/30 rounded-md text-left"
                   >
                     <div className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-sena-blue flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+                      <Check className="w-4 h-4 text-sena-blue flex-shrink-0 mt-0.5" strokeWidth={1.8} />
                       <div className="text-xs text-foreground space-y-1">
                         <p className="font-bold text-sena-blue">
                           ¡Usuario identificado en la base SENA: {existingData.name}!
@@ -947,11 +946,11 @@ export function RegisterPage() {
                 )}
 
                 {/* Nombres y Apellidos */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nombres *</label>
                     <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <input
                         type="text"
                         placeholder="Juan David"
@@ -974,7 +973,7 @@ export function RegisterPage() {
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Apellidos *</label>
                     <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <input
                         type="text"
                         placeholder="Hormaza Miranda"
@@ -999,7 +998,7 @@ export function RegisterPage() {
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Correo Electrónico *</label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                     <input
                       type="email"
                       placeholder="tu@correo.com"
@@ -1023,10 +1022,10 @@ export function RegisterPage() {
                     <motion.div
                       initial={{ opacity: 0, y: -5 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-4 bg-amber-50 border border-amber-200/90 rounded-lg text-left shadow-xs mt-2"
+                      className="p-3.5 bg-amber-50 border border-amber-200/90 rounded-md text-left shadow-xs mt-2"
                     >
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
                         <div className="text-xs text-amber-950 space-y-1.5 flex-1">
                           <p className="font-bold">
                             Este correo ya se encuentra registrado en Worklex.
@@ -1038,14 +1037,14 @@ export function RegisterPage() {
                             <button
                               type="button"
                               onClick={() => navigate("/login")}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md font-medium text-xs shadow-xs transition-colors cursor-pointer"
                             >
                               <span>Iniciar Sesión</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => navigate("/recuperar-cuenta")}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-md font-medium text-xs shadow-xs transition-colors cursor-pointer"
                             >
                               <span>Recuperar Contraseña</span>
                             </button>
@@ -1057,11 +1056,11 @@ export function RegisterPage() {
                 </div>
 
                 {/* Teléfono y País */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Teléfono Celular *</label>
                     <div className="relative">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <input
                         type="tel"
                         inputMode="numeric"
@@ -1084,7 +1083,7 @@ export function RegisterPage() {
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">País</label>
                     <div className="relative">
-                      <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                       <select
                         value={formData.country}
                         onChange={(e) => handleCountryChange(e.target.value)}
@@ -1103,7 +1102,7 @@ export function RegisterPage() {
                 <button
                   type="submit"
                   disabled={!isStep1Valid || isDocDuplicate || isEmailDuplicate}
-                  className="w-full h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold text-sm transition-all shadow-sm hover:shadow cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm rounded-md shadow transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continuar a Contraseña y Acceso
                 </button>
@@ -1113,7 +1112,7 @@ export function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => navigate("/login")}
-                    className="text-[#39A900] font-semibold hover:underline cursor-pointer"
+                    className="text-[#39A900] hover:underline font-medium text-xs cursor-pointer"
                   >
                     Ingresar aquí
                   </button>
@@ -1134,7 +1133,7 @@ export function RegisterPage() {
                 className="space-y-4"
               >
                 {/* Resumen del aprendiz */}
-                <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-3.5 mb-2">
+                <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-md p-3 mb-2">
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-0.5">Creando cuenta para:</p>
                   <p className="text-sm font-bold text-slate-900 dark:text-white">
                     {formData.firstName} {formData.lastName}
@@ -1146,7 +1145,7 @@ export function RegisterPage() {
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Contraseña *</label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                     <input
                       type={showPassword ? "text" : "password"}
                       required
@@ -1154,12 +1153,12 @@ export function RegisterPage() {
                       placeholder="Mínimo 6 caracteres"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className={inputClass}
+                      className={`${inputClass} pr-9`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
                       title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" strokeWidth={1.8} /> : <Eye className="w-4 h-4" strokeWidth={1.8} />}
@@ -1171,7 +1170,7 @@ export function RegisterPage() {
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Confirmar Contraseña *</label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.8} />
                     <input
                       type={showConfirmPassword ? "text" : "password"}
                       required
@@ -1179,12 +1178,12 @@ export function RegisterPage() {
                       placeholder="Repite tu contraseña"
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      className={inputClass}
+                      className={`${inputClass} pr-9`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
                       title={showConfirmPassword ? "Ocultar contraseña" : "Ver contraseña"}
                     >
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" strokeWidth={1.8} /> : <Eye className="w-4 h-4" strokeWidth={1.8} />}
@@ -1211,22 +1210,22 @@ export function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="flex-1 h-11 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-semibold transition-colors cursor-pointer text-sm"
+                    className="flex-1 h-10 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-md font-medium transition-colors cursor-pointer text-sm"
                   >
                     Atrás
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer text-sm"
+                    className="flex-1 h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm rounded-md shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} />
-                        <span>Enviando código...</span>
+                        <span>Enviando...</span>
                       </>
                     ) : (
-                      <span>Crear Cuenta y Recibir Código</span>
+                      <span>Recibir Código</span>
                     )}
                   </button>
                 </div>
@@ -1249,7 +1248,7 @@ export function RegisterPage() {
                   <div className="w-12 h-12 bg-emerald-50 text-[#39A900] rounded-xl flex items-center justify-center mx-auto border border-emerald-100">
                     <KeyRound className="w-6 h-6" strokeWidth={1.8} />
                   </div>
-                  <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                     Verifica tu cuenta institucional
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm mx-auto">
@@ -1259,7 +1258,7 @@ export function RegisterPage() {
                 </div>
 
                 {/* 6 Casillas Numéricas Independientes */}
-                <div className="flex justify-center gap-2 sm:gap-3 my-4">
+                <div className="flex justify-center gap-2 my-4">
                   {otpDigits.map((digit, index) => (
                     <input
                       key={index}
@@ -1273,7 +1272,7 @@ export function RegisterPage() {
                       onChange={(e) => handleOtpDigitChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
                       onPaste={handleOtpPaste}
-                      className="w-11 h-12 sm:w-12 sm:h-13 text-center text-xl font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 rounded-lg text-slate-900 dark:text-white focus:outline-none transition-all"
+                      className="w-11 h-11 text-center text-lg font-bold font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-[#39A900] focus:border-transparent rounded-md text-slate-900 dark:text-white focus:outline-none transition-all shadow-sm"
                     />
                   ))}
                 </div>
@@ -1290,7 +1289,7 @@ export function RegisterPage() {
                     <button
                       type="button"
                       onClick={handleResendOtp}
-                      className="text-xs text-[#39A900] font-semibold hover:underline cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+                      className="text-[#39A900] hover:underline font-medium text-xs cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                     >
                       <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.8} />
                       ¿No recibiste el código? Reenviar código
@@ -1302,14 +1301,14 @@ export function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setStep(2)}
-                    className="flex-1 h-11 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-semibold transition-colors cursor-pointer text-sm"
+                    className="flex-1 h-10 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-md font-medium transition-colors cursor-pointer text-sm"
                   >
                     Atrás
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading || otpDigits.join("").length < 6}
-                    className="flex-1 h-11 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer text-sm"
+                    className="flex-1 h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm rounded-md shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isLoading ? (
                       <>
@@ -1319,7 +1318,7 @@ export function RegisterPage() {
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" strokeWidth={1.8} />
-                        <span>Verificar y Activar Cuenta</span>
+                        <span>Verificar Cuenta</span>
                       </>
                     )}
                   </button>

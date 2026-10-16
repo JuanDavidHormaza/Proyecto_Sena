@@ -327,33 +327,22 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900 grid lg:grid-cols-12 relative">
       {/* ── Panel Izquierdo (Formulario - 5 cols) ── */}
-      <div className="lg:col-span-5 min-h-screen flex flex-col justify-center p-8 sm:p-12 lg:p-16 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
-        <div className="w-full max-w-sm mx-auto space-y-6">
+      <div className="lg:col-span-5 min-h-screen flex flex-col justify-center items-center px-6 lg:px-16 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
+        <div className="w-full max-w-sm space-y-5">
           <button
             type="button"
             onClick={() => (step === "otp" ? setStep("credentials") : navigate("/"))}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{step === "otp" ? "Volver a credenciales" : "Volver al inicio"}</span>
           </button>
 
-          {/* Header con logo SENA / WorkLex proporcionado */}
-          <div className="flex items-center gap-3.5">
-            <img
-              src="/logo-sena.png"
-              alt="Logo SENA"
-              className="h-10 w-auto object-contain"
-            />
-            <div className="h-7 w-[1px] bg-slate-200 dark:bg-slate-700" />
-            <div className="flex items-center gap-2">
-              <img
-                src="/worklex.png"
-                alt="WorkLex SENA"
-                className="w-9 h-9 rounded-full object-contain border border-slate-200 dark:border-slate-700 shadow-2xs"
-              />
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">WorkLex</span>
-            </div>
+          {/* Header con logo SENA / WorkLex alineados horizontalmente */}
+          <div className="flex items-center gap-3">
+            <img src="/logo-sena.png" alt="SENA" className="h-10 w-auto object-contain" />
+            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700" />
+            <img src="/worklex.png" alt="WorkLex" className="h-8 w-auto object-contain" />
           </div>
 
           <AnimatePresence mode="wait">
@@ -365,8 +354,9 @@ export function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.2 }}
+                className="space-y-5"
               >
-                <div className="mb-6">
+                <div>
                   <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                     Iniciar Sesión
                   </h1>
@@ -379,7 +369,7 @@ export function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-5 text-amber-800 dark:text-amber-200 text-xs font-medium"
+                    className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md text-amber-800 dark:text-amber-200 text-xs font-medium"
                   >
                     <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                     <p className="leading-snug">Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.</p>
@@ -390,7 +380,7 @@ export function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl mb-5 text-rose-600 dark:text-rose-400 text-xs"
+                    className="flex items-center gap-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-600 dark:text-rose-400 text-xs"
                   >
                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     <p className="leading-snug">{error}</p>
@@ -403,7 +393,7 @@ export function LoginPage() {
                       Correo electrónico
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         type="email"
                         required
@@ -412,9 +402,9 @@ export function LoginPage() {
                         onChange={(e) => handleEmailChange(e.target.value)}
                         onBlur={handleEmailBlur}
                         placeholder="aprendiz@soy.sena.edu.co"
-                        className={`h-11 w-full pl-10 pr-3.5 bg-white dark:bg-slate-800 border rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all ${
+                        className={`w-full h-10 text-sm bg-white dark:bg-slate-800 border rounded-md pl-9 pr-3 py-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm ${
                           emailTouched && emailError
-                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
+                            ? "border-rose-400 focus:ring-rose-500"
                             : "border-slate-300 dark:border-slate-700"
                         }`}
                       />
@@ -429,7 +419,7 @@ export function LoginPage() {
                       </label>
                     </div>
                     <div className="relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         type={showPassword ? "text" : "password"}
                         required
@@ -437,12 +427,12 @@ export function LoginPage() {
                         value={formData.password}
                         onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
                         placeholder="••••••••"
-                        className="h-11 w-full pl-10 pr-10 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all"
+                        className="w-full h-10 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md pl-9 pr-9 py-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
                         title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -461,7 +451,7 @@ export function LoginPage() {
                             navigate("/recuperar-cuenta");
                           }
                         }}
-                        className="text-xs text-[#39A900] hover:text-[#2e8600] font-semibold hover:underline transition-colors cursor-pointer"
+                        className="text-[#39A900] hover:underline font-medium text-xs cursor-pointer"
                       >
                         ¿Olvidaste tu contraseña? / Recuperar cuenta
                       </button>
@@ -471,7 +461,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
-                    className="h-11 w-full bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm rounded-md shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <>
@@ -487,12 +477,12 @@ export function LoginPage() {
                   </button>
                 </form>
 
-                <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
+                <p className="text-center text-xs text-slate-500 dark:text-slate-400">
                   ¿No tienes cuenta?{" "}
                   <button
                     type="button"
                     onClick={() => navigate("/register")}
-                    className="text-[#39A900] font-semibold hover:underline cursor-pointer"
+                    className="text-[#39A900] hover:underline font-medium text-xs cursor-pointer"
                   >
                     Regístrate aquí
                   </button>
@@ -508,33 +498,36 @@ export function LoginPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
+                className="space-y-5"
               >
-                <div className="flex justify-center mb-5">
+                <div className="flex justify-center">
                   <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/40 text-[#39A900] rounded-xl flex items-center justify-center border border-emerald-100 dark:border-emerald-800">
                     <KeyRound className="w-6 h-6" />
                   </div>
                 </div>
 
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white text-center">
-                  Verificación de Seguridad
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-1 text-center leading-relaxed">
-                  Hemos enviado un código seguro a tu correo registrado. Ingrésalo para acceder a Worklex SENA.
-                </p>
-                <p className="text-center font-bold text-slate-800 dark:text-slate-200 text-xs mb-5">{otpEmail}</p>
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white text-center">
+                    Verificación de Seguridad
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-1 text-center leading-relaxed">
+                    Hemos enviado un código seguro a tu correo registrado. Ingrésalo para acceder a Worklex SENA.
+                  </p>
+                  <p className="text-center font-bold text-slate-800 dark:text-slate-200 text-xs">{otpEmail}</p>
+                </div>
 
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2.5 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl mb-5 text-rose-600 dark:text-rose-400 text-xs"
+                    className="flex items-center gap-2.5 p-3 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-600 dark:text-rose-400 text-xs"
                   >
                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     <p className="leading-snug">{error}</p>
                   </motion.div>
                 )}
 
-                <form onSubmit={handleVerifyOtp} className="space-y-5">
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div>
                     <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2.5 block text-center">
                       Código de 6 dígitos
@@ -553,7 +546,7 @@ export function LoginPage() {
                           onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           onPaste={handleOtpPaste}
-                          className="w-11 h-12 text-center text-lg font-bold font-mono border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-[#39A900] focus:ring-2 focus:ring-[#39A900]/20 transition-all"
+                          className="w-11 h-11 text-center text-lg font-bold font-mono border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm"
                         />
                       ))}
                     </div>
@@ -562,7 +555,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || otpDigits.join("").length < 6}
-                    className="h-11 w-full bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm rounded-md shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <>
@@ -578,13 +571,13 @@ export function LoginPage() {
                   </button>
                 </form>
 
-                <div className="flex items-center justify-center gap-2 mt-5">
+                <div className="flex items-center justify-center gap-2">
                   <p className="text-xs text-slate-500">¿No recibiste el código?</p>
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={resendCooldown > 0}
-                    className="flex items-center gap-1 text-xs text-[#39A900] font-bold hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-1 text-[#39A900] hover:underline font-medium text-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <RefreshCw className={`w-3 h-3 ${resendCooldown > 0 ? "animate-spin" : ""}`} />
                     <span>{resendCooldown > 0 ? `Reenviar (${resendCooldown}s)` : "Reenviar código"}</span>
