@@ -601,24 +601,22 @@ export function LoginPage() {
         {/* Oscurecimiento suave para legibilidad */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-950/25" />
         
-        {/* Insignia Circular Grande y Nítida Centrada */}
-        <div className="absolute top-[48%] -translate-y-1/2 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white shadow-2xl border-4 border-white/90 p-2 flex items-center justify-center transition-transform hover:scale-105">
-            <img
-              src="/worklex.png"
-              alt="WorkLex"
-              className="w-full h-full object-contain rounded-full scale-110"
-            />
-          </div>
-        </div>
+        {/* Contenedor Unificado Inferior: Logo Flotante y Cita Institucional */}
+        <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center text-center w-full max-w-lg px-6">
+          {/* Logo WorkLex Grande sin fondo blanco */}
+          <img
+            src="/worklex.png"
+            alt="WorkLex"
+            className="w-48 sm:w-56 md:w-64 h-auto object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] mb-3 transition-transform hover:scale-105"
+          />
 
-        <div className="relative z-10 max-w-lg mx-auto text-center">
-          <blockquote className="text-lg sm:text-xl font-medium leading-relaxed drop-shadow-md text-white">
+          {/* Texto pegado y legible con sombra suave */}
+          <p className="text-white text-base sm:text-lg font-medium leading-snug drop-shadow-md">
             "Formación profesional integral para el desarrollo tecnológico y lingüístico de Colombia."
-          </blockquote>
-          <p className="mt-2 text-sm sm:text-base text-slate-200 font-light drop-shadow-sm">
-            Servicio Nacional de Aprendizaje — SENA
           </p>
+          <span className="text-emerald-300 text-sm font-semibold tracking-wide mt-1.5 drop-shadow">
+            Servicio Nacional de Aprendizaje — SENA
+          </span>
         </div>
       </div>
 
