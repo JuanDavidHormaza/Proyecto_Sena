@@ -2,6 +2,31 @@
 @import './theme.css';
 
 /* ══════════════════════════════════════════════════════════════════════════
+   ESTANDARIZACIÓN TIPOGRÁFICA Y RESPONSIVIDAD GLOBAL (SaaS Moderno)
+   ══════════════════════════════════════════════════════════════════════════ */
+@layer base {
+  html {
+    font-size: 16px;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+  @media (min-width: 640px) {
+    html {
+      font-size: 17px;
+    }
+  }
+  body {
+    overflow-x: hidden;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    MOTOR DE ESCALADO TIPOGRÁFICO BASADO EN VARIABLES PURAS (--text-scale)
    ══════════════════════════════════════════════════════════════════════════ */
 :root {
