@@ -342,20 +342,41 @@ async function handleResponse<T>(response: Response): Promise<T> {
     }
 
     const message = extractErrorMessage(rawError, response.status);
-    console.warn("API Error Response:", { status: response.status, url: response.url, message, rawError });
 
-    // Solo intentar refresh si hay token guardado y no es un endpoint de login/registro
+    // Detección de rutas públicas y llamadas de comprobación de privilegios / sesión
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isPublicRoute = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/recover' || pathname.startsWith('/reset-password');
+    const isPrivilegedOrAuthProbe = response.url && (
+      response.url.includes('/auth/privileged-me') ||
+      response.url.includes('/auth/privileged-login') ||
+      response.url.includes('/auth/me')
+    );
+
+    // Si el status es 401 en llamadas de comprobación de privilegios mientras el usuario está en rutas públicas (/, /login, /register),
+    // no arrojar console.warn ni alertas innecesarias
+    const suppressLog = response.status === 401 && (isPublicRoute || isPrivilegedOrAuthProbe);
+
+    if (!suppressLog) {
+      console.warn("API Error Response:", { status: response.status, url: response.url, message, rawError });
+    }
+
+    // Solo intentar refresh si hay token guardado y no es un endpoint de login/registro ni una ruta pública
     const isAuthEndpoint = response.url && (
       response.url.includes("/auth/login") ||
       response.url.includes("/auth/register") ||
       response.url.includes("/auth/check-document") ||
-      response.url.includes("/auth/verify-otp")
+      response.url.includes("/auth/verify-otp") ||
+      response.url.includes("/auth/privileged-me")
     );
-    if (response.status === 401 && localStorage.getItem("accessToken") && !isAuthEndpoint) {
+    const hasToken = typeof window !== 'undefined' && Boolean(
+      localStorage.getItem("accessToken") || localStorage.getItem("access_token") || localStorage.getItem("token")
+    );
+
+    if (response.status === 401 && hasToken && !isAuthEndpoint && !isPublicRoute) {
       const refreshed = await refreshToken();
       if (!refreshed) {
         clearAllTokens();
-        if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/register" && window.location.pathname !== "/") {
+        if (typeof window !== "undefined") {
           window.location.href = "/login?reason=session_expired";
         }
       }
@@ -412,6 +433,14 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
 }
 
 export async function getMe(): Promise<ApiUser> {
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('accessToken')
+    : null;
+
+  if (!token) {
+    throw new ApiError('No hay sesión activa', 401);
+  }
+
   const response = await safeFetch(`${API_BASE}/auth/me/`, {
     headers: getAuthHeaders(),
   });
@@ -442,12 +471,23 @@ export async function privilegedMe(): Promise<{ user: ApiUser } | null> {
     return null;
   }
 
-  const response = await safeFetch(`${API_BASE}/auth/privileged-me/`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
+  try {
+    const response = await safeFetch(`${API_BASE}/auth/privileged-me/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
 
-  return handleResponse<{ user: ApiUser }>(response);
+    if (response.status === 401) {
+      return null;
+    }
+
+    return handleResponse<{ user: ApiUser }>(response);
+  } catch (err: any) {
+    if (err?.status === 401) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 
