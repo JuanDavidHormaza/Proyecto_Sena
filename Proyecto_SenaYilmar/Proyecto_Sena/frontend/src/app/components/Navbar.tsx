@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { IconLayoutDashboard, IconLogin } from "@tabler/icons-react";
 import { UserAccountMenu } from "./UserAccountMenu";
 import { HeaderActionTools } from "./HeaderActionTools";
 import { useAuth } from "../context/AuthContext";
@@ -18,13 +19,21 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+
+  const token = typeof window !== "undefined"
+    ? localStorage.getItem("accessToken") || localStorage.getItem("access_token") || localStorage.getItem("token")
+    : null;
+  const hasValidSession = Boolean(isAuthenticated || (user && token));
 
   const currentPath = activePath || location.pathname;
 
   const defaultLinks: NavLinkItem[] = [
     { label: "Inicio", path: "/" },
-    { label: "Evaluación", path: user?.role === "student" ? "/dashboard" : user?.role === "teacher" ? "/teacher" : "/admin" },
+    {
+      label: "Evaluación",
+      path: user?.role === "student" ? "/dashboard" : user?.role === "teacher" ? "/teacher" : "/admin",
+    },
     { label: "Diccionario Técnico", path: "/dictionary" },
   ];
 
@@ -38,8 +47,15 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
     }
   };
 
+  const getDashboardPath = () => {
+    const role = (user?.role || localStorage.getItem("userRole") || "").toLowerCase();
+    if (role === "admin" || role === "superadmin") return "/admin";
+    if (role === "teacher") return "/teacher";
+    return "/dashboard";
+  };
+
   return (
-    <header className="h-16 sm:h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 transition-colors">
+    <header className="h-16 sm:h-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 transition-colors">
       <div className="container mx-auto px-4 lg:px-8 h-full flex items-center justify-between">
         {/* Identidad de marca WorkLex y SENA a la izquierda */}
         <div className="flex items-center">
@@ -64,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
           </button>
         </div>
 
-        {/* Menú de navegación centrado con enlaces en text-slate-600 hover:text-slate-900 text-sm font-medium */}
+        {/* Menú de navegación centrado */}
         <nav className="hidden md:flex items-center gap-1 sm:gap-2">
           {navLinks.map((link) => {
             const isActive = currentPath === link.path;
@@ -85,10 +101,32 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
           })}
         </nav>
 
-        {/* Perfil con avatar discreto y badge de rol a la derecha */}
+        {/* Controles de usuario a la derecha */}
         <div className="flex items-center gap-2.5">
-          <HeaderActionTools />
-          <UserAccountMenu accent="green" />
+          {hasValidSession ? (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate(getDashboardPath())}
+                className="hidden sm:inline-flex items-center gap-2 h-9 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all cursor-pointer"
+                title="Ir al panel principal"
+              >
+                <IconLayoutDashboard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Ir al Panel</span>
+              </button>
+              <HeaderActionTools />
+              <UserAccountMenu accent="green" />
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 rounded-xl shadow-xs hover:shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+            >
+              <span>Ingresar</span>
+              <IconLogin className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </header>

@@ -14,6 +14,7 @@ import {
   Check,
   MoveHorizontal,
   Baseline,
+  ChevronRight,
 } from "lucide-react";
 
 export type FontSizeLevel = "normal" | "medium" | "large";
@@ -61,6 +62,23 @@ export const setFontSizeLevel = applyTextScale;
 export function AccessibilityWidget() {
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("worklex_accessibility_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleCollapsed = (val?: boolean) => {
+    setIsCollapsed((prev) => {
+      const next = typeof val === "boolean" ? val : !prev;
+      try {
+        localStorage.setItem("worklex_accessibility_collapsed", next ? "true" : "false");
+      } catch {}
+      return next;
+    });
+  };
 
   // 1. Tamaño de fuente ('normal' | 'medium' | 'large')
   const [fontSize, setFontSize] = useState<FontSizeLevel>(() => {
@@ -216,27 +234,54 @@ export function AccessibilityWidget() {
         </div>
       )}
 
-      {/* Botón Flotante de Accesibilidad */}
-      <button
-        type="button"
-        id="accessibility-trigger-btn"
-        aria-label="Accesibilidad"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="fixed bottom-6 right-6 z-50 w-11 h-11 rounded-full bg-[#39A900] hover:bg-[#2e8600] text-white shadow-md hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-white/20"
-      >
-        <Accessibility className="w-5 h-5 text-white stroke-[2]" />
-      </button>
+      {/* Botón de Accesibilidad Discreto y Colapsable */}
+      {isCollapsed ? (
+        <button
+          type="button"
+          onClick={() => toggleCollapsed(false)}
+          className="fixed bottom-5 right-0 z-40 p-1.5 pl-2 rounded-l-xl bg-slate-900/80 hover:bg-slate-900 text-slate-300 hover:text-white backdrop-blur-md shadow-md border-l border-y border-slate-700/60 transition-all cursor-pointer group"
+          title="Mostrar acceso de accesibilidad"
+          aria-label="Expandir botón de accesibilidad"
+        >
+          <Accessibility className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+        </button>
+      ) : (
+        <div className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center shadow-lg rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200/90 dark:border-slate-700 backdrop-blur-md transition-all">
+          <button
+            type="button"
+            id="accessibility-trigger-btn"
+            aria-label="Abrir panel de accesibilidad"
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:text-[#39A900] dark:hover:text-emerald-400 cursor-pointer"
+          >
+            <div className="w-7 h-7 rounded-full bg-emerald-500/15 text-[#39A900] dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Accessibility className="w-4 h-4" strokeWidth={2.2} />
+            </div>
+            <span className="hidden sm:inline text-xs font-bold tracking-tight">Accesibilidad</span>
+          </button>
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+          <button
+            type="button"
+            onClick={() => toggleCollapsed(true)}
+            className="p-1.5 pr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-r-full cursor-pointer"
+            title="Contraer botón a la orilla"
+            aria-label="Contraer botón a la orilla"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Panel Flotante Aislado */}
       <AnimatePresence>
         {isOpen && (
-          <div id="accessibility-panel" className="accessibility-panel fixed bottom-20 right-6 z-[99999]">
+          <div id="accessibility-panel" className="accessibility-panel fixed bottom-18 right-4 sm:right-6 z-[99999] max-w-[calc(100vw-2rem)] sm:max-w-sm">
             <motion.div
               initial={{ opacity: 0, y: 14, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 14, scale: 0.98 }}
               transition={{ duration: 0.18 }}
-              className="accessibility-panel w-84 sm:w-92 bg-card text-card-foreground rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col"
+              className="accessibility-panel w-full sm:w-92 max-h-[85vh] overflow-y-auto bg-card text-card-foreground rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col"
               role="dialog"
               aria-modal="true"
               aria-label="Panel de accesibilidad universal Worklex SENA"
