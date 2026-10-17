@@ -1,20 +1,20 @@
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
-  Users,
-  BookOpen,
-  Award,
-  Sparkles,
-  Clock,
-  HelpCircle,
-  Languages,
-  PlayCircle,
-  ArrowRight,
-  UserCheck,
-  LogIn,
-  LayoutDashboard,
-  Accessibility,
-} from "lucide-react";
+  IconUsers,
+  IconBook2,
+  IconAward,
+  IconPlayerPlay,
+  IconLogin,
+  IconLayoutDashboard,
+  IconArrowRight,
+  IconSparkles,
+  IconClock,
+  IconHelp,
+  IconLanguage,
+  IconAccessible,
+  IconUserCheck,
+} from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
 
 export function LandingPage() {
@@ -72,8 +72,8 @@ export function LandingPage() {
                 className="h-10 sm:h-11 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 rounded-xl shadow-sm hover:shadow-md hover:shadow-[#39A900]/20 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
                 title="Ir a mi panel principal de WorkLex"
               >
-                <LayoutDashboard className="w-4 h-4" />
-                <span>Ir al Panel / Dashboard</span>
+                <span>Ir al Dashboard</span>
+                <IconLayoutDashboard size={20} className="ml-2" />
               </button>
             ) : (
               <button
@@ -82,7 +82,7 @@ export function LandingPage() {
                 className="h-10 sm:h-11 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-xs sm:text-sm px-4 sm:px-6 rounded-xl shadow-sm hover:shadow-md hover:shadow-[#39A900]/20 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
               >
                 <span>Ingresar</span>
-                <LogIn className="w-4 h-4" />
+                <IconLogin size={20} className="ml-1" />
               </button>
             )}
           </div>
@@ -106,7 +106,7 @@ export function LandingPage() {
             >
               {/* Badge temático */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-bold mb-5 shadow-2xs">
-                <Sparkles className="w-4 h-4 text-[#39A900]" />
+                <IconSparkles size={16} stroke={2} className="text-[#39A900]" />
                 <span>Evaluación Interactiva SENA</span>
               </div>
 
@@ -126,29 +126,28 @@ export function LandingPage() {
                 <button
                   type="button"
                   onClick={handleStartExamCTA}
-                  className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-xl text-base font-bold transition-all shadow-md hover:shadow-lg hover:shadow-[#39A900]/25 flex items-center justify-center gap-2.5 cursor-pointer active:scale-98"
+                  className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-xl text-base font-bold transition-all shadow-md hover:shadow-lg hover:shadow-[#39A900]/25 flex items-center justify-center cursor-pointer active:scale-98"
                 >
-                  <PlayCircle className="w-5 h-5 fill-current" />
+                  <IconPlayerPlay size={20} stroke={2} className="mr-2" />
                   <span>Comenzar Evaluación</span>
-                  <ArrowRight className="w-4 h-4" />
                 </button>
 
                 {hasValidSession ? (
                   <button
                     type="button"
                     onClick={() => navigate(getDashboardPath())}
-                    className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-900 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 transition-all flex items-center justify-center gap-2.5 cursor-pointer active:scale-98"
+                    className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-900 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                   >
-                    <LayoutDashboard className="w-5 h-5 text-[#39A900]" />
-                    <span>Mi Espacio de Estudio</span>
+                    <IconLayoutDashboard size={20} stroke={1.8} className="text-[#39A900]" />
+                    <span>Continuar aprendiendo</span>
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => navigate("/login")}
-                    className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-2xs active:scale-98"
+                    className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs active:scale-98"
                   >
-                    <UserCheck className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                    <IconUserCheck size={20} stroke={1.8} className="text-slate-500 dark:text-slate-400" />
                     <span>Ya tengo cuenta</span>
                   </button>
                 )}
@@ -162,13 +161,13 @@ export function LandingPage() {
               transition={{ duration: 0.5, delay: 0.15 }}
               className="lg:col-span-5 w-full"
             >
-              {/* Tarjetas Estadísticas Estilo MatDash */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3.5 w-full">
+              {/* Tarjetas Estadísticas Estilo MatDash (Vertical en móvil < 768px: grid-cols-1 sm:grid-cols-3 lg:grid-cols-1) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4 w-full">
                 {/* Tarjeta 1: Aprendices evaluados */}
                 <div className="bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
-                      <Users className="w-7 h-7" />
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <IconUsers size={24} stroke={1.8} />
                     </div>
                     <div>
                       <p className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">1,250+</p>
@@ -180,8 +179,8 @@ export function LandingPage() {
                 {/* Tarjeta 2: Programas SENA */}
                 <div className="bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 shrink-0">
-                      <BookOpen className="w-7 h-7" />
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <IconBook2 size={24} stroke={1.8} />
                     </div>
                     <div>
                       <p className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">24</p>
@@ -191,10 +190,10 @@ export function LandingPage() {
                 </div>
 
                 {/* Tarjeta 3: Satisfacción */}
-                <div className="bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all sm:col-span-2 lg:col-span-1">
+                <div className="bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 shrink-0">
-                      <Award className="w-7 h-7" />
+                    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                      <IconAward size={24} stroke={1.8} />
                     </div>
                     <div>
                       <p className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">98%</p>
@@ -223,19 +222,19 @@ export function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
-                icon: Clock,
+                icon: IconClock,
                 title: "Tiempo controlado",
                 description: "Cronometraje dinámico por pregunta para simular entornos profesionales reales.",
                 iconBg: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400",
               },
               {
-                icon: HelpCircle,
+                icon: IconHelp,
                 title: "Preguntas por nivel",
                 description: "Evaluación adaptativa estructurada en módulos A1, A2, B1 y B2 con audio y código.",
                 iconBg: "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400",
               },
               {
-                icon: Award,
+                icon: IconAward,
                 title: "Certificación inmediata",
                 description: "Resultados instantáneos con desglose porcentual por competencia y retroalimentación.",
                 iconBg: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400",
@@ -245,8 +244,8 @@ export function LandingPage() {
                 key={index}
                 className="bg-white dark:bg-slate-800/90 rounded-2xl p-6 sm:p-7 shadow-xs hover:shadow-md border border-slate-200/90 dark:border-slate-700/80 transition-all flex flex-col items-start"
               >
-                <div className={`p-3 ${feature.iconBg} rounded-xl flex items-center justify-center mb-5 shrink-0`}>
-                  <feature.icon className="w-6 h-6" />
+                <div className={`w-12 h-12 ${feature.iconBg} rounded-xl flex items-center justify-center mb-5 shrink-0`}>
+                  <feature.icon size={24} stroke={1.8} />
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{feature.title}</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{feature.description}</p>
@@ -348,7 +347,7 @@ export function LandingPage() {
           >
             <div className="relative z-10 flex flex-col items-center">
               <div className="mb-6 h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-xl">
-                <Languages className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                <IconLanguage size={36} stroke={2} className="text-white" />
               </div>
               <h2 className="text-2xl sm:text-4xl font-extrabold mb-4 text-balance tracking-tight">
                 ¿Listo para certificar tus competencias?
@@ -361,9 +360,9 @@ export function LandingPage() {
                 onClick={handleStartExamCTA}
                 className="inline-flex items-center gap-2.5 bg-white text-[#39A900] hover:bg-slate-50 px-8 py-4 rounded-xl text-base sm:text-lg font-bold transition-all shadow-xl hover:scale-105 active:scale-95 cursor-pointer"
               >
-                <PlayCircle className="w-5 h-5 fill-current" />
+                <IconPlayerPlay size={20} stroke={2} className="fill-current" />
                 <span>Comenzar Ahora</span>
-                <ArrowRight className="w-5 h-5" />
+                <IconArrowRight size={20} stroke={2.5} />
               </button>
             </div>
           </motion.div>
@@ -395,7 +394,7 @@ export function LandingPage() {
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 transition-colors cursor-pointer"
                 title="Abrir panel de accesibilidad universal"
               >
-                <Accessibility className="w-4 h-4 text-[#39A900]" />
+                <IconAccessible size={18} stroke={1.8} className="text-[#39A900]" />
                 <span>Accesibilidad Visual</span>
               </button>
               <p className="text-xs text-slate-400 dark:text-slate-500">© 2026 WorkLex</p>
