@@ -2,11 +2,37 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
-  ArrowLeft, Award, BadgeCheck, BookOpen, ClipboardList, Mail,
-  Phone, Shield, UserRound, Globe, Calendar, RefreshCw, CheckCircle2,
-  GraduationCap, Plus, AlertCircle, Sparkles, Loader2, Edit3, X, Save,
-  Camera, Upload, Trash2, Flame, Clock, Bell, Settings, Volume2,
-  Check, ChevronRight, Zap, Layers
+  ArrowLeft,
+  Award,
+  BadgeCheck,
+  BookOpen,
+  ClipboardList,
+  Mail,
+  Phone,
+  Shield,
+  UserRound,
+  Globe,
+  Calendar,
+  RefreshCw,
+  CheckCircle2,
+  GraduationCap,
+  Plus,
+  Sparkles,
+  Loader2,
+  Edit3,
+  Save,
+  Camera,
+  Upload,
+  Trash2,
+  Flame,
+  Clock,
+  Bell,
+  Settings,
+  Volume2,
+  Check,
+  ChevronRight,
+  Zap,
+  Layers,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -655,7 +681,7 @@ export function ProfilePage() {
   const roleLabel = ROLE_LABELS[role] || "Usuario";
   const program = user?.program || localStorage.getItem("userProgram") || "";
   const mainBadgeLabel = isStudent ? (program || "Programa no registrado") : roleLabel;
-  const subtitle = isStudent ? "Aprendiz SENA" : (program || "English Level Test");
+  const subtitle = isStudent ? "Aprendiz SENA" : (program || "Instructor SENA");
   const activePermissions = PERMISSIONS.filter((permission) => Boolean(user?.permissions?.[permission.key as keyof typeof user.permissions]));
 
   const enrolledPrograms = user?.enrolledPrograms && user.enrolledPrograms.length > 0
@@ -730,82 +756,104 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header institucional */}
-      <header className="sticky top-0 bg-background/95 dark:bg-card/95 backdrop-blur-lg border-b border-border z-40">
-        <div className="container mx-auto px-4 lg:px-8 py-4">
-          <div className="flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased selection:bg-[#39A900]/20 selection:text-[#39A900]">
+      {/* ─── Top Header Institucional ─── */}
+      <header className="sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 z-40 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(ROLE_DASHBOARDS[role] || "/dashboard")}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-200/60 dark:hover:border-slate-700"
+              title="Regresar al panel principal"
             >
-              <ArrowLeft className="w-4 h-4" strokeWidth={1.8} />
-              <span className="hidden sm:inline">Volver</span>
+              <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
+              <span className="hidden sm:inline">Regresar al panel</span>
             </button>
-            <div className="flex items-center gap-3">
-              <HeaderActionTools />
-              <UserAccountMenu accent={role === "teacher" ? "blue" : role === "superadmin" ? "purple" : "green"} />
+            <span className="hidden sm:inline-block h-4 w-px bg-slate-200 dark:bg-slate-700" />
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+              <span>Worklex SENA</span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-slate-800 dark:text-slate-200 font-semibold">Perfil de Usuario</span>
             </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <HeaderActionTools />
+            <UserAccountMenu accent={role === "teacher" ? "blue" : role === "superadmin" ? "purple" : "green"} />
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 lg:px-8 py-8">
-        {/* Banner de retroalimentación de cambio */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {/* Banner de retroalimentación dinámico */}
         {feedbackMsg && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-sena-green/10 border border-sena-green/30 rounded-xl flex items-center gap-3 text-sena-green text-sm font-medium"
+            className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/80 rounded-2xl flex items-center gap-3 text-emerald-800 dark:text-emerald-300 text-sm font-medium shadow-xs"
           >
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0" strokeWidth={1.8} />
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" strokeWidth={1.75} />
             <span>{feedbackMsg}</span>
           </motion.div>
         )}
 
-        {/* ─── Hero Section ─── */}
+        {/* ─── Hero Institucional del Perfil (Standard SaaS Card) ─── */}
         <motion.section
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden mb-6"
+          className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden mb-8"
         >
-          <div className="bg-gradient-to-r from-sena-green to-sena-blue p-6 lg:p-8 text-white">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+          {/* Banda decorativa superior con degradado institucional SENA */}
+          <div className="h-28 sm:h-32 bg-gradient-to-r from-[#00324D] via-[#004e79] to-[#39A900] relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+          </div>
+
+          {/* Área principal de Avatar e Información del Usuario */}
+          <div className="px-6 sm:px-8 pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 -mt-12 sm:-mt-14 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-5">
+                {/* Avatar interactivo */}
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative w-24 h-24 rounded-2xl bg-white/20 border-2 border-white/40 flex items-center justify-center text-4xl font-bold shadow-lg overflow-hidden group cursor-pointer"
-                  title="Haz clic para cambiar tu foto de perfil"
+                  className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white dark:bg-slate-900 p-1 shadow-md border-2 border-slate-200/80 dark:border-slate-700 overflow-hidden group cursor-pointer flex-shrink-0 transition-transform hover:scale-[1.02]"
+                  title="Haz clic para subir o actualizar tu foto de perfil"
                 >
-                  {editForm.avatar ? (
-                    <img src={editForm.avatar} alt={name} className="w-full h-full object-cover" />
-                  ) : (
-                    getInitials(name)
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-semibold gap-1">
-                    <Camera className="w-6 h-6" />
+                  <div className="w-full h-full rounded-xl overflow-hidden bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-3xl font-extrabold text-[#39A900]">
+                    {editForm.avatar ? (
+                      <img src={editForm.avatar} alt={name} className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(name)
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-slate-900/60 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-semibold gap-1">
+                    <Camera className="w-5 h-5" strokeWidth={1.75} />
                     <span>Cambiar</span>
                   </div>
                 </div>
 
-                <div className="min-w-0">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-3">
-                    <BadgeCheck className="w-4 h-4" strokeWidth={1.8} />
-                    {mainBadgeLabel}
+                {/* Títulos y Metadatos */}
+                <div className="min-w-0 pt-2 sm:pt-0">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 rounded-full text-xs font-semibold text-emerald-800 dark:text-emerald-300 mb-2">
+                    <BadgeCheck className="w-3.5 h-3.5 text-[#39A900] flex-shrink-0" strokeWidth={1.75} />
+                    <span className="truncate max-w-xs">{mainBadgeLabel}</span>
                   </div>
-                  <h1 className="text-2xl lg:text-3xl font-bold truncate">{name}</h1>
-                  <p className="text-white/80">{subtitle}</p>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                    {name}
+                  </h1>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                    {subtitle}
+                  </p>
                 </div>
               </div>
 
-              {/* Botón de cambio de Rol dual (instructores/admin) */}
+              {/* Botón de cambio de rol para docentes/admin */}
               {canSwitchRole && (
                 <button
                   onClick={handleRoleSwitch}
                   disabled={isSwitchingRole}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/15 text-white border border-white/30 rounded-xl font-semibold hover:bg-white/25 shadow-md transition-all disabled:opacity-60 cursor-pointer self-start sm:self-center"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all disabled:opacity-60 cursor-pointer self-start sm:self-end"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isSwitchingRole ? "animate-spin" : ""}`} strokeWidth={1.8} />
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSwitchingRole ? "animate-spin" : ""}`} strokeWidth={1.75} />
                   <span>
                     {isSwitchingRole
                       ? "Cambiando rol..."
@@ -816,125 +864,140 @@ export function ProfilePage() {
                 </button>
               )}
             </div>
-          </div>
 
-          {/* Barra de métricas rápidas */}
-          <div className="grid md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border">
-            <div className="p-5 flex items-center gap-3">
-              <Mail className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Correo institucional</p>
-                <p className="font-medium text-foreground truncate">{user?.email || "Sin correo"}</p>
+            {/* Fila de métricas rápidas con diseño sobrio y limpio */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-800 border-t border-slate-100 dark:border-slate-800 pt-5 gap-4 sm:gap-0">
+              <div className="flex items-center gap-3 sm:px-4 first:sm:pl-0">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 flex-shrink-0">
+                  <Mail className="w-4 h-4 text-slate-600 dark:text-slate-300" strokeWidth={1.75} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Correo institucional</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 truncate">{user?.email || "Sin correo registrado"}</p>
+                </div>
               </div>
-            </div>
-            <div className="p-5 flex items-center gap-3">
-              <Phone className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
-              <div>
-                <p className="text-xs text-muted-foreground">Teléfono celular</p>
-                <p className="font-medium text-foreground">{user?.phoneNum || "No registrado"}</p>
+
+              <div className="flex items-center gap-3 sm:px-4">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 flex-shrink-0">
+                  <Phone className="w-4 h-4 text-slate-600 dark:text-slate-300" strokeWidth={1.75} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Teléfono celular</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-200">{user?.phoneNum || "No registrado"}</p>
+                </div>
               </div>
-            </div>
-            <div className="p-5 flex items-center gap-3">
-              <Globe className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
-              <div>
-                <p className="text-xs text-muted-foreground">País de origen</p>
-                <p className="font-medium text-foreground">{user?.country || "Colombia"}</p>
+
+              <div className="flex items-center gap-3 sm:px-4">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 flex-shrink-0">
+                  <Globe className="w-4 h-4 text-slate-600 dark:text-slate-300" strokeWidth={1.75} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">País de origen</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-200">{user?.country || "Colombia"}</p>
+                </div>
               </div>
-            </div>
-            <div className="p-5 flex items-center gap-3">
-              <Shield className="w-5 h-5 text-warning" strokeWidth={1.8} />
-              <div>
-                <p className="text-xs text-muted-foreground">Estado de cuenta</p>
-                <p className="font-medium text-foreground">{user?.status === "active" ? "Activo" : "Inactivo"}</p>
+
+              <div className="flex items-center gap-3 sm:px-4 last:sm:pr-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-[#39A900] flex-shrink-0">
+                  <Shield className="w-4 h-4" strokeWidth={1.75} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Estado de cuenta</p>
+                  <div className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#39A900]" />
+                    <p className="text-xs font-semibold text-slate-900 dark:text-slate-200">
+                      {user?.status === "active" ? "Activo" : "Inactivo"}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </motion.section>
 
-        {/* ─── Grid Principal: Área de Contenido + Barras Laterales ─── */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Columna Izquierda: Pestañas de Edición, Preferencias y Fichas (2 columnas) */}
+        {/* ─── Grid Principal: Formularios a la Izquierda + Métricas a la Derecha ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Columna Principal: Navegación de Pestañas + Formularios (2 Columnas) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Navegación por pestañas */}
-            <div className="flex border-b border-border bg-white rounded-2xl p-1.5 shadow-xs gap-1 overflow-x-auto">
+            {/* Barra de Pestañas Estilo SaaS Segmentado */}
+            <div className="flex items-center gap-1 p-1.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-xs overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab("all")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "all"
-                    ? "bg-sena-green text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-900/60"
                 }`}
               >
-                <Layers className="w-4 h-4" />
+                <Layers className="w-4 h-4" strokeWidth={1.75} />
                 <span>Vista Completa</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab("edit")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "edit"
-                    ? "bg-sena-green text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-900/60"
                 }`}
               >
-                <Edit3 className="w-4 h-4" />
+                <Edit3 className="w-4 h-4" strokeWidth={1.75} />
                 <span>Datos Personales</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab("preferences")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "preferences"
-                    ? "bg-sena-green text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-900/60"
                 }`}
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4" strokeWidth={1.75} />
                 <span>Preferencias</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab("fichas")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "fichas"
-                    ? "bg-sena-green text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-900/60"
                 }`}
               >
-                <GraduationCap className="w-4 h-4" />
+                <GraduationCap className="w-4 h-4" strokeWidth={1.75} />
                 <span>Mis Fichas SENA</span>
               </button>
             </div>
 
-            {/* ─── PESTAÑA 1: FORMULARIO COMPLETO DE EDICIÓN DE DATOS PERSONALES ─── */}
+            {/* ─── PESTAÑA 1: FORMULARIO DE DATOS PERSONALES ─── */}
             {(activeTab === "all" || activeTab === "edit") && (
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8"
               >
-                <div className="flex items-center gap-3 pb-4 border-b border-border mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-sena-green/10 flex items-center justify-center text-sena-green">
-                    <UserRound className="w-5 h-5" />
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center justify-center text-[#39A900]">
+                    <UserRound className="w-5 h-5" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-foreground">Edición de Perfil Institucional</h2>
-                    <p className="text-xs text-muted-foreground">Actualiza tus datos registrados en la plataforma Worklex SENA</p>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Edición de Perfil Institucional</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Actualiza tus nombres, documento de identidad e información de contacto</p>
                   </div>
                 </div>
 
                 <form onSubmit={handleSaveProfile} className="space-y-6">
-                  {/* Selector / Carga de Foto de Perfil */}
+                  {/* Selector / Subida de Foto de Perfil */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                      Foto de Perfil / Avatar
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                      Foto de Perfil / Avatar Institucional
                     </label>
 
-                    {/* Input file real oculto */}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -943,10 +1006,10 @@ export function ProfilePage() {
                       className="hidden"
                     />
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl">
                       <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="relative w-20 h-20 rounded-2xl bg-sena-green/10 border-2 border-sena-green/30 flex items-center justify-center overflow-hidden flex-shrink-0 text-xl font-bold text-sena-green group cursor-pointer shadow-xs"
+                        className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200/80 dark:border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0 text-xl font-bold text-[#39A900] group cursor-pointer shadow-xs"
                         title="Haz clic para seleccionar una foto de tu dispositivo"
                       >
                         {editForm.avatar ? (
@@ -954,8 +1017,8 @@ export function ProfilePage() {
                         ) : (
                           getInitials(`${editForm.firstName} ${editForm.lastName}` || name)
                         )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold gap-1">
-                          <Camera className="w-5 h-5" />
+                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold gap-1">
+                          <Camera className="w-4 h-4" strokeWidth={1.75} />
                           <span>Cambiar</span>
                         </div>
                       </div>
@@ -965,9 +1028,9 @@ export function ProfilePage() {
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-2 h-9 px-3.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                           >
-                            <Upload className="w-3.5 h-3.5" />
+                            <Upload className="w-3.5 h-3.5" strokeWidth={1.75} />
                             <span>{editForm.avatar ? "Cambiar foto" : "Subir foto desde dispositivo"}</span>
                           </button>
 
@@ -975,25 +1038,25 @@ export function ProfilePage() {
                             <button
                               type="button"
                               onClick={handleRemoveAvatar}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-semibold border border-rose-200 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1.5 h-9 px-3.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                               <span>Quitar foto</span>
                             </button>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">
-                          Formatos admitidos: JPG, PNG o WebP. Tamaño máximo: 2 MB. Vista previa instantánea.
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Formatos admitidos: JPG, PNG o WebP. Tamaño máximo: 2 MB. La previsualización se aplica de inmediato.
                         </p>
                       </div>
                     </div>
 
                     {/* Avatares rápidos predeterminados */}
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <p className="text-[11px] font-semibold text-slate-700 mb-2">
+                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                      <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-2">
                         O selecciona un avatar institucional rápido:
                       </p>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         {PRESET_AVATARS.map((presetUrl, idx) => (
                           <button
                             key={idx}
@@ -1001,8 +1064,8 @@ export function ProfilePage() {
                             onClick={() => handleSelectPresetAvatar(presetUrl)}
                             className={`w-9 h-9 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
                               editForm.avatar === presetUrl
-                                ? "border-sena-green scale-110 shadow-sm ring-2 ring-sena-green/30"
-                                : "border-transparent opacity-75 hover:opacity-100"
+                                ? "border-[#39A900] scale-105 shadow-xs ring-2 ring-[#39A900]/30"
+                                : "border-slate-200/80 dark:border-slate-700 opacity-75 hover:opacity-100 hover:border-slate-300"
                             }`}
                             title={`Avatar predeterminado ${idx + 1}`}
                           >
@@ -1013,10 +1076,12 @@ export function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* Nombres y Apellidos con validación estricta */}
+                  {/* Nombres y Apellidos */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-foreground mb-1.5">Nombres *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Nombres <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="text"
                         maxLength={45}
@@ -1024,17 +1089,19 @@ export function ProfilePage() {
                         onChange={(e) => handleEditFirstNameChange(e.target.value)}
                         onBlur={handleEditFirstNameBlur}
                         placeholder="Ej. Juan Carlos"
-                        className={`w-full px-3.5 py-2.5 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                        className={`h-11 w-full px-3.5 text-sm bg-white dark:bg-slate-800 border rounded-xl outline-none transition-all placeholder:text-slate-400 ${getFieldValidationClass(
                           Boolean(editTouched.firstName),
                           editErrors.firstName,
                           editForm.firstName
-                        )}`}
+                        )} focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900]`}
                       />
                       <FieldError error={editErrors.firstName} isTouched={editTouched.firstName} />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-foreground mb-1.5">Apellidos *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Apellidos <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="text"
                         maxLength={45}
@@ -1042,11 +1109,11 @@ export function ProfilePage() {
                         onChange={(e) => handleEditLastNameChange(e.target.value)}
                         onBlur={handleEditLastNameBlur}
                         placeholder="Ej. Pérez Gómez"
-                        className={`w-full px-3.5 py-2.5 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                        className={`h-11 w-full px-3.5 text-sm bg-white dark:bg-slate-800 border rounded-xl outline-none transition-all placeholder:text-slate-400 ${getFieldValidationClass(
                           Boolean(editTouched.lastName),
                           editErrors.lastName,
                           editForm.lastName
-                        )}`}
+                        )} focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900]`}
                       />
                       <FieldError error={editErrors.lastName} isTouched={editTouched.lastName} />
                     </div>
@@ -1055,11 +1122,13 @@ export function ProfilePage() {
                   {/* Tipo y Número de Documento */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-foreground mb-1.5">Tipo de Documento *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Tipo de Documento <span className="text-rose-500">*</span>
+                      </label>
                       <select
                         value={editForm.docType}
                         onChange={(e) => handleEditDocTypeChange(e.target.value)}
-                        className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-background cursor-pointer"
+                        className="h-11 w-full px-3.5 text-sm bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none text-slate-800 dark:text-slate-200 cursor-pointer transition-all"
                       >
                         <option value="CC">Cédula de Ciudadanía (CC)</option>
                         <option value="TI">Tarjeta de Identidad (TI)</option>
@@ -1070,18 +1139,20 @@ export function ProfilePage() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-foreground mb-1.5">Número de Documento *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Número de Documento <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="text"
                         value={editForm.docNum}
                         onChange={(e) => handleEditDocNumChange(e.target.value)}
                         onBlur={handleEditDocNumBlur}
                         placeholder={isNumericDocType(editForm.docType) ? "Solo dígitos (ej. 1098765432)" : "Alfanumérico"}
-                        className={`w-full px-3.5 py-2.5 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                        className={`h-11 w-full px-3.5 text-sm bg-white dark:bg-slate-800 border rounded-xl outline-none transition-all placeholder:text-slate-400 ${getFieldValidationClass(
                           Boolean(editTouched.docNum),
                           editErrors.docNum,
                           editForm.docNum
-                        )}`}
+                        )} focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900]`}
                       />
                       <FieldError error={editErrors.docNum} isTouched={editTouched.docNum} />
                     </div>
@@ -1090,46 +1161,50 @@ export function ProfilePage() {
                   {/* Correo y Teléfono */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-foreground mb-1.5">Correo Electrónico *</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Correo Electrónico <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="email"
                         value={editForm.email}
                         onChange={(e) => handleEditEmailChange(e.target.value)}
                         onBlur={handleEditEmailBlur}
                         placeholder="usuario@misena.edu.co"
-                        className={`w-full px-3.5 py-2.5 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                        className={`h-11 w-full px-3.5 text-sm bg-white dark:bg-slate-800 border rounded-xl outline-none transition-all placeholder:text-slate-400 ${getFieldValidationClass(
                           Boolean(editTouched.email),
                           editErrors.email,
                           editForm.email
-                        )}`}
+                        )} focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900]`}
                       />
                       <FieldError error={editErrors.email} isTouched={editTouched.email} />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-foreground mb-1.5">Teléfono Celular</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Teléfono Celular
+                      </label>
                       <input
                         type="tel"
                         value={editForm.phoneNum}
                         onChange={(e) => handleEditPhoneChange(e.target.value)}
                         onBlur={handleEditPhoneBlur}
                         placeholder="Solo números (ej. 3001234567)"
-                        className={`w-full px-3.5 py-2.5 text-sm border rounded-xl outline-none transition-all ${getFieldValidationClass(
+                        className={`h-11 w-full px-3.5 text-sm bg-white dark:bg-slate-800 border rounded-xl outline-none transition-all placeholder:text-slate-400 ${getFieldValidationClass(
                           Boolean(editTouched.phoneNum),
                           editErrors.phoneNum,
                           editForm.phoneNum
-                        )}`}
+                        )} focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900]`}
                       />
                       <FieldError error={editErrors.phoneNum} isTouched={editTouched.phoneNum} />
                     </div>
                   </div>
 
                   {/* Botón de acción Guardar */}
-                  <div className="pt-4 border-t border-border flex items-center justify-end gap-3">
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end">
                     <button
                       type="submit"
                       disabled={isSavingProfile || !isEditFormValid}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      className="inline-flex items-center justify-center gap-2 h-11 px-6 bg-[#39A900] hover:bg-[#2e8600] active:scale-[0.99] text-white rounded-xl text-sm font-semibold shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {isSavingProfile ? (
                         <>
@@ -1138,7 +1213,7 @@ export function ProfilePage() {
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4" />
+                          <Save className="w-4 h-4" strokeWidth={1.75} />
                           <span>Guardar Cambios de Perfil</span>
                         </>
                       )}
@@ -1148,55 +1223,55 @@ export function ProfilePage() {
               </motion.div>
             )}
 
-            {/* ─── PESTAÑA 2: MÓDULO DE PREFERENCIAS DE ESTUDIO E INTERFAZ ─── */}
+            {/* ─── PESTAÑA 2: PREFERENCIAS Y NOTIFICACIONES ─── */}
             {(activeTab === "all" || activeTab === "preferences") && (
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8"
               >
-                <div className="flex items-center gap-3 pb-4 border-b border-border mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-sena-blue/10 flex items-center justify-center text-sena-blue">
-                    <Settings className="w-5 h-5" />
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200/60 dark:border-sky-800/60 flex items-center justify-center text-sky-600 dark:text-sky-400">
+                    <Settings className="w-5 h-5" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-foreground">Preferencias y Notificaciones</h2>
-                    <p className="text-xs text-muted-foreground">Configura recordatorios de estudio, idioma de soporte y visualización</p>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Preferencias y Notificaciones</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Configura recordatorios de racha, idioma de asistencia y modo visual</p>
                   </div>
                 </div>
 
                 <form onSubmit={handleSavePreferences} className="space-y-6">
-                  {/* Recordatorios de estudio y racha */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  {/* Recordatorios de racha y práctica */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       Notificaciones de Racha y Práctica
                     </h3>
 
-                    <label className="flex items-start justify-between gap-4 p-4 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer">
+                    <label className="flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Flame className="w-4 h-4 text-amber-500" />
-                          <span className="text-sm font-bold text-foreground">Recordatorios diarios de Racha</span>
+                          <Flame className="w-4 h-4 text-amber-500" strokeWidth={1.75} />
+                          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Recordatorios diarios de Racha</span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Recibe alertas para no perder tu racha de estudio diaria antes de la medianoche.
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Recibe alertas en la plataforma para no perder tu racha de estudio diaria antes de la medianoche.
                         </p>
                       </div>
                       <input
                         type="checkbox"
                         checked={preferences.studyReminders}
                         onChange={(e) => setPreferences((p) => ({ ...p, studyReminders: e.target.checked }))}
-                        className="w-5 h-5 accent-sena-green rounded-md cursor-pointer mt-0.5"
+                        className="w-5 h-5 accent-[#39A900] rounded-md cursor-pointer mt-0.5"
                       />
                     </label>
 
-                    <label className="flex items-start justify-between gap-4 p-4 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer">
+                    <label className="flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Bell className="w-4 h-4 text-sena-blue" />
-                          <span className="text-sm font-bold text-foreground">Notificaciones por correo electrónico</span>
+                          <Bell className="w-4 h-4 text-[#00324D] dark:text-sky-400" strokeWidth={1.75} />
+                          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Notificaciones por correo electrónico</span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                           Recibe avisos sobre nuevas evaluaciones asignadas, certificaciones y resultados institucionales.
                         </p>
                       </div>
@@ -1204,17 +1279,17 @@ export function ProfilePage() {
                         type="checkbox"
                         checked={preferences.emailNotifications}
                         onChange={(e) => setPreferences((p) => ({ ...p, emailNotifications: e.target.checked }))}
-                        className="w-5 h-5 accent-sena-green rounded-md cursor-pointer mt-0.5"
+                        className="w-5 h-5 accent-[#39A900] rounded-md cursor-pointer mt-0.5"
                       />
                     </label>
 
-                    <label className="flex items-start justify-between gap-4 p-4 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer">
+                    <label className="flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Volume2 className="w-4 h-4 text-emerald-600" />
-                          <span className="text-sm font-bold text-foreground">Efectos de sonido en evaluaciones</span>
+                          <Volume2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Efectos de sonido en evaluaciones</span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                           Reproducir retroalimentación auditiva y confirmaciones en ejercicios de speaking y listening.
                         </p>
                       </div>
@@ -1222,24 +1297,26 @@ export function ProfilePage() {
                         type="checkbox"
                         checked={preferences.soundEffects}
                         onChange={(e) => setPreferences((p) => ({ ...p, soundEffects: e.target.checked }))}
-                        className="w-5 h-5 accent-sena-green rounded-md cursor-pointer mt-0.5"
+                        className="w-5 h-5 accent-[#39A900] rounded-md cursor-pointer mt-0.5"
                       />
                     </label>
                   </div>
 
                   {/* Preferencias de Idioma e Interfaz */}
-                  <div className="pt-4 border-t border-border space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       Interfaz y Visualización
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-foreground mb-1.5">Idioma de Asistencia / Soporte</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Idioma de Asistencia / Soporte
+                        </label>
                         <select
                           value={preferences.supportLanguage}
                           onChange={(e) => setPreferences((p) => ({ ...p, supportLanguage: e.target.value }))}
-                          className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-background cursor-pointer"
+                          className="h-11 w-full px-3.5 text-sm bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none text-slate-800 dark:text-slate-200 cursor-pointer transition-all"
                         >
                           <option value="es">Español (Colombia - SENA)</option>
                           <option value="en">English (Instrucciones en inglés)</option>
@@ -1247,11 +1324,13 @@ export function ProfilePage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-foreground mb-1.5">Modo Visual</label>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Modo Visual
+                        </label>
                         <select
                           value={preferences.theme}
                           onChange={(e) => setPreferences((p) => ({ ...p, theme: e.target.value }))}
-                          className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-background cursor-pointer"
+                          className="h-11 w-full px-3.5 text-sm bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none text-slate-800 dark:text-slate-200 cursor-pointer transition-all"
                         >
                           <option value="system">Automático (Tema del Sistema)</option>
                           <option value="light">Modo Claro Institucional</option>
@@ -1261,11 +1340,11 @@ export function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-border flex items-center justify-end">
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end">
                     <button
                       type="submit"
                       disabled={isSavingPreferences}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md transition-all cursor-pointer"
+                      className="inline-flex items-center justify-center gap-2 h-11 px-6 bg-[#39A900] hover:bg-[#2e8600] active:scale-[0.99] text-white rounded-xl text-sm font-semibold shadow-xs transition-all cursor-pointer"
                     >
                       {isSavingPreferences ? (
                         <>
@@ -1274,7 +1353,7 @@ export function ProfilePage() {
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4" />
+                          <Save className="w-4 h-4" strokeWidth={1.75} />
                           <span>Guardar Preferencias</span>
                         </>
                       )}
@@ -1287,47 +1366,53 @@ export function ProfilePage() {
             {/* ─── PESTAÑA 3: MIS FICHAS / PROGRAMAS DE FORMACIÓN ─── */}
             {(activeTab === "all" || activeTab === "fichas") && (
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8"
               >
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
-                    <h3 className="text-base font-bold text-foreground">Mis Fichas / Programas de Formación</h3>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center justify-center text-[#39A900]">
+                      <GraduationCap className="w-5 h-5" strokeWidth={1.75} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Mis Fichas / Programas de Formación</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Fichas vinculadas para evaluaciones y diccionarios técnicos</p>
+                    </div>
                   </div>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sena-green/10 text-sena-green border border-sena-green/20">
-                    {enrolledPrograms.length} {enrolledPrograms.length === 1 ? "Ficha registrada" : "Fichas matriculadas"}
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80">
+                    {enrolledPrograms.length} {enrolledPrograms.length === 1 ? "Ficha registrada" : "Fichas registradas"}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Administra tus programas activos. Las fichas vinculadas aquí son las que estarán disponibles en el selector del panel y en el modal de diccionarios técnicos:
+
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
+                  Las fichas activadas aquí son las que estarán seleccionadas en tu panel principal y en los diccionarios técnicos especializados.
                 </p>
 
                 {/* Lista de programas vinculados */}
-                <div className="space-y-2 mb-6">
+                <div className="space-y-2.5 mb-6">
                   {enrolledPrograms.map((prog) => {
                     const isActive = prog === program;
                     return (
                       <div
                         key={prog}
-                        className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                        className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl border transition-all ${
                           isActive
-                            ? "bg-sena-green/5 border-sena-green/40 ring-1 ring-sena-green/30"
-                            : "bg-muted/40 border-border hover:bg-muted/70"
+                            ? "bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 ring-1 ring-emerald-300/40 dark:ring-emerald-800/40"
+                            : "bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                              isActive ? "bg-sena-green text-white" : "bg-muted text-muted-foreground"
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold ${
+                              isActive ? "bg-[#39A900] text-white shadow-xs" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                             }`}
                           >
-                            <GraduationCap className="w-4 h-4" />
+                            <GraduationCap className="w-4 h-4" strokeWidth={1.75} />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-foreground">{prog}</p>
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">{prog}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
                               {isActive ? "Programa activo actualmente" : "Programa alterno vinculado"}
                             </p>
                           </div>
@@ -1335,8 +1420,8 @@ export function ProfilePage() {
 
                         <div className="flex items-center gap-2">
                           {isActive ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-bold text-sena-green px-2.5 py-1 rounded-full bg-sena-green/10 border border-sena-green/30">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300 px-3 py-1 rounded-full bg-emerald-100/70 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#39A900]" strokeWidth={1.75} />
                               Activo
                             </span>
                           ) : (
@@ -1344,7 +1429,7 @@ export function ProfilePage() {
                               type="button"
                               onClick={() => handleProgramSwitch(prog)}
                               disabled={isSwitchingProgram}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-border hover:bg-muted text-foreground transition-all cursor-pointer"
+                              className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-xs"
                             >
                               Activar ficha
                             </button>
@@ -1355,26 +1440,28 @@ export function ProfilePage() {
                   })}
                 </div>
 
-                {/* Formulario de solicitud en dos pasos (Programa y Código) */}
-                <div className="p-4 bg-muted/40 border border-border rounded-xl">
+                {/* Formulario de solicitud en dos pasos */}
+                <div className="p-5 bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <GraduationCap className="w-4 h-4 text-sena-green" strokeWidth={1.8} />
-                    <h4 className="text-xs font-bold text-foreground">Solicitud de Vinculación a Nueva Ficha SENA</h4>
+                    <GraduationCap className="w-4 h-4 text-[#39A900]" strokeWidth={1.75} />
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                      Solicitud de Vinculación a Nueva Ficha SENA
+                    </h4>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Selecciona tu programa de formación e ingresa el código numérico exacto de tu ficha para remitir la solicitud al docente responsable:
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                    Selecciona tu programa de formación e ingresa el código numérico de tu ficha para remitir la solicitud al docente responsable:
                   </p>
-                  <form onSubmit={handleRequestFichaEnroll} className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {/* Paso 1: Programa de Formación */}
+
+                  <form onSubmit={handleRequestFichaEnroll} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                        <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
                           1. Programa de Formación
                         </label>
                         <select
                           value={selectedProgramInput}
                           onChange={(e) => setSelectedProgramInput(e.target.value)}
-                          className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white font-medium text-foreground cursor-pointer"
+                          className="h-11 w-full px-3.5 text-xs bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none text-slate-900 dark:text-slate-100 font-medium cursor-pointer transition-all"
                         >
                           {SENA_OFFICIAL_PROGRAMS.map((progName) => (
                             <option key={progName} value={progName}>
@@ -1384,9 +1471,8 @@ export function ProfilePage() {
                         </select>
                       </div>
 
-                      {/* Paso 2: Número de Ficha */}
                       <div>
-                        <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                        <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
                           2. Número de Ficha
                         </label>
                         <input
@@ -1400,7 +1486,7 @@ export function ProfilePage() {
                             setEnrollError("");
                             setEnrollSuccess("");
                           }}
-                          className="w-full px-3 py-2 text-xs border border-border rounded-xl focus:ring-2 focus:ring-sena-green focus:border-transparent outline-none bg-white font-medium text-foreground"
+                          className="h-11 w-full px-3.5 text-xs bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none text-slate-900 dark:text-slate-100 font-medium transition-all placeholder:text-slate-400"
                         />
                       </div>
                     </div>
@@ -1409,56 +1495,66 @@ export function ProfilePage() {
                       <button
                         type="submit"
                         disabled={isEnrolling || !newFichaInput.trim()}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 h-10 px-4 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-xl text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                       >
-                        {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />}
                         <span>Enviar Solicitud al Docente</span>
                       </button>
                     </div>
                   </form>
-                  {enrollError && <p className="text-xs text-destructive mt-2">{enrollError}</p>}
-                  {enrollSuccess && <p className="text-xs text-sena-green mt-2 font-medium">{enrollSuccess}</p>}
+
+                  {enrollError && (
+                    <p className="text-xs text-rose-600 dark:text-rose-400 mt-2.5 font-medium flex items-center gap-1">
+                      <span>•</span> {enrollError}
+                    </p>
+                  )}
+                  {enrollSuccess && (
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-2.5 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#39A900]" />
+                      <span>{enrollSuccess}</span>
+                    </p>
+                  )}
                 </div>
               </motion.div>
             )}
           </div>
 
-          {/* Columna Derecha: Tarjeta de Racha de Estudio + Resumen de Pruebas (1 columna) */}
+          {/* Columna Derecha: Tarjeta de Racha de Estudio + Resumen de Pruebas CEFR (1 Columna) */}
           <div className="space-y-6">
-            {/* ─── 3. MÓDULO DE RACHA DE ESTUDIO (STREAK) Y PROGRESO DIARIO 🔥 ─── */}
+            {/* ─── MÓDULO DE RACHA DE ESTUDIO (STREAK ENGINE) 🔥 ─── */}
             <motion.div
-              initial={{ opacity: 0, y: 18 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="bg-white rounded-2xl border border-border shadow-sm p-6 relative overflow-hidden"
+              transition={{ delay: 0.1 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 relative overflow-hidden"
             >
-              {/* Fondo decorativo sutil */}
+              {/* Resplandor decorativo sutil en esquina */}
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center shadow-xs">
-                    <Flame className="w-5 h-5 fill-amber-500" strokeWidth={1.8} />
+                  <div className="w-10 h-10 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl flex items-center justify-center shadow-xs flex-shrink-0">
+                    <Flame className="w-5 h-5 fill-amber-500 text-amber-500" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <h2 className="font-bold text-foreground text-base">Racha de Estudio</h2>
-                    <p className="text-xs text-muted-foreground">Progreso y constancia diaria</p>
+                    <h2 className="font-bold text-slate-900 dark:text-white text-base tracking-tight">Racha de Estudio</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Progreso y constancia diaria</p>
                   </div>
                 </div>
 
-                {/* Badge de estado de hoy */}
+                {/* Badge de estado de racha */}
                 {hasActivityToday ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>Asegurada hoy ✅</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold">
+                    <CheckCircle2 className="w-3 h-3 text-[#39A900]" />
+                    <span>Asegurada hoy</span>
                   </span>
                 ) : isAtRisk ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold animate-pulse">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[11px] font-bold animate-pulse">
                     <Clock className="w-3 h-3 text-amber-600" />
-                    <span>En riesgo hoy ⏳</span>
+                    <span>En riesgo hoy</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-bold">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold">
                     <Clock className="w-3 h-3 text-slate-500" />
                     <span>Inactiva hoy</span>
                   </span>
@@ -1466,29 +1562,29 @@ export function ProfilePage() {
               </div>
 
               {/* Contador de días de racha */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/80 via-orange-50/50 to-amber-100/30 border border-amber-200/60 mb-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-100/30 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-900/10 border border-amber-200/70 dark:border-amber-800/60 mb-4">
                 <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-4xl font-extrabold text-amber-600 tracking-tight">
+                  <span className="text-4xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight">
                     {streakDays}
                   </span>
-                  <span className="text-sm font-bold text-slate-800">
+                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
                     {streakDays === 1 ? "día consecutivo" : "días consecutivos"}
                   </span>
                 </div>
-                <p className="text-xs text-amber-900/80 leading-relaxed font-medium">
+                <p className="text-xs text-amber-950/80 dark:text-amber-200/80 leading-relaxed font-medium">
                   {streakDays >= 5
                     ? "¡Imparable! Estás construyendo un hábito extraordinario en inglés técnico SENA."
                     : streakDays >= 1
                     ? "¡Gran disciplina! La constancia diaria es la clave para certificar tu nivel B2."
-                    : "¡Enciende tu racha hoy! Una práctica al día hace la diferencia."}
+                    : "¡Enciende tu racha hoy! Una práctica al día marca la diferencia."}
                 </p>
               </div>
 
               {/* Indicador de los 7 días de la semana */}
               <div className="mb-4">
-                <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground mb-2">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2.5">
                   <span>Semana actual</span>
-                  <span className="text-foreground">Meta diaria: 1 prueba</span>
+                  <span className="text-slate-700 dark:text-slate-300">Meta: 1 práctica diaria</span>
                 </div>
                 <div className="grid grid-cols-7 gap-1.5 text-center">
                   {(streakData?.weekly_activity && streakData.weekly_activity.length === 7
@@ -1505,26 +1601,30 @@ export function ProfilePage() {
                     const isToday = item.is_today;
                     const isActive = item.active;
 
-                    let statusClass = "bg-slate-100 text-slate-400 border-slate-200";
+                    let statusClass = "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700";
                     if (isToday) {
                       statusClass = hasActivityToday || isActive
-                        ? "bg-emerald-500 text-white border-emerald-600 shadow-xs"
-                        : "bg-amber-100 text-amber-800 border-amber-400 ring-2 ring-amber-300/50";
+                        ? "bg-[#39A900] text-white border-[#39A900] shadow-xs"
+                        : "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 border-amber-400 ring-2 ring-amber-300/50";
                     } else if (isActive) {
-                      statusClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+                      statusClass = "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700";
                     }
 
                     return (
-                      <div key={item.day + idx} className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] font-bold text-muted-foreground">{item.day}</span>
+                      <div key={item.day + idx} className="flex flex-col items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.day}</span>
                         <div
-                          className={`w-7 h-7 rounded-xl border flex items-center justify-center text-[10px] font-bold transition-all ${statusClass}`}
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border flex items-center justify-center text-[10px] font-bold transition-all ${statusClass}`}
                           title={`${item.day_name}${item.date ? ` (${item.date})` : ""}${isToday ? " (Hoy)" : ""}: ${isActive || (isToday && hasActivityToday) ? "Práctica completada" : (isToday ? "Pendiente hoy" : "Sin actividad")}`}
                         >
                           {isToday ? (
-                            hasActivityToday || isActive ? <Check className="w-3.5 h-3.5" /> : <Flame className="w-3.5 h-3.5 fill-amber-500" />
+                            hasActivityToday || isActive ? (
+                              <Check className="w-3.5 h-3.5 stroke-2" />
+                            ) : (
+                              <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                            )
                           ) : isActive ? (
-                            <Check className="w-3.5 h-3.5" />
+                            <Check className="w-3.5 h-3.5 stroke-2" />
                           ) : (
                             "•"
                           )}
@@ -1535,17 +1635,17 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              {/* Regla de racha requerida por el usuario */}
-              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl mb-4 text-xs text-slate-700 leading-relaxed">
+              {/* Caja informativa de regla de racha */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-xl mb-4 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                 <p className="flex items-start gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                   <span>
-                    <strong>Cómo mantener tu racha:</strong> Completa al menos una práctica o evaluación diaria antes de la medianoche para mantener tu racha activa.
+                    <strong className="text-slate-900 dark:text-slate-200">Cómo mantener tu racha:</strong> Completa al menos una práctica o quiz antes de la medianoche.
                   </span>
                 </p>
               </div>
 
-              {/* Botón de acción para salvar o mantener la racha */}
+              {/* Botón de acción para salvar o continuar la racha */}
               <button
                 type="button"
                 onClick={async () => {
@@ -1554,40 +1654,40 @@ export function ProfilePage() {
                   } catch {}
                   navigate("/quiz");
                 }}
-                className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer ${
+                className={`w-full h-11 px-4 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer ${
                   hasActivityToday
-                    ? "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200"
+                    ? "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
                     : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-500/20 shadow-md"
                 }`}
               >
-                <Zap className="w-3.5 h-3.5" />
+                <Zap className="w-3.5 h-3.5" strokeWidth={1.75} />
                 <span>{hasActivityToday ? "Continuar practicando hoy" : "Salvar mi racha (Practicar ahora)"}</span>
               </button>
             </motion.div>
 
-            {/* ─── 4. RESUMEN DE PRUEBAS CEFR REALES ─── */}
+            {/* ─── RESUMEN DE PRUEBAS CEFR REALES ─── */}
             {isStudent && (
               <motion.div
-                initial={{ opacity: 0, y: 18 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-2xl border border-border shadow-sm p-6"
+                transition={{ delay: 0.15 }}
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6"
               >
                 <div className="flex items-center justify-between gap-3 mb-5">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-sena-blue/10 rounded-xl flex items-center justify-center">
-                      <ClipboardList className="w-5 h-5 text-sena-blue" strokeWidth={1.8} />
+                    <div className="w-10 h-10 bg-[#00324D]/10 dark:bg-sky-950/60 border border-[#00324D]/15 dark:border-sky-800/60 rounded-xl flex items-center justify-center text-[#00324D] dark:text-sky-400 flex-shrink-0">
+                      <ClipboardList className="w-5 h-5" strokeWidth={1.75} />
                     </div>
                     <div>
-                      <h2 className="font-semibold text-foreground">Resumen de Pruebas</h2>
-                      <p className="text-xs text-muted-foreground">Historial y diagnóstico CEFR</p>
+                      <h2 className="font-bold text-slate-900 dark:text-white text-base tracking-tight">Resumen de Pruebas</h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Diagnóstico CEFR y métricas</p>
                     </div>
                   </div>
                   {examHistory.hasAttempt && (
                     <button
                       type="button"
                       onClick={() => navigate("/results")}
-                      className="text-xs font-semibold text-sena-blue hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-[#00324D] dark:text-sky-400 hover:underline cursor-pointer"
                     >
                       Ver detalles
                     </button>
@@ -1595,76 +1695,76 @@ export function ProfilePage() {
                 </div>
 
                 {examHistory.isLoading ? (
-                  <div className="py-8 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <Loader2 className="w-5 h-5 animate-spin text-sena-blue" />
+                  <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-500">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#00324D] dark:text-sky-400" />
                     <span className="text-xs">Cargando métricas de pruebas...</span>
                   </div>
                 ) : examHistory.hasAttempt && examHistory.lastScore !== null ? (
                   <div className="space-y-4">
-                    {/* Tarjeta de Última Puntuación y Estado */}
-                    <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
+                    {/* Tarjeta de Última Calificación */}
+                    <div className="p-4 bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-xl flex items-center justify-between">
                       <div>
-                        <span className="text-xs text-muted-foreground block">Última calificación</span>
-                        <span className="text-xl font-bold text-foreground">{examHistory.lastScore}%</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Última calificación</span>
+                        <span className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">{examHistory.lastScore}%</span>
                       </div>
                       <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                        className={`text-xs font-bold px-3 py-1 rounded-full border ${
                           examHistory.lastScore >= 60
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
+                            ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                            : "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                         }`}
                       >
                         {examHistory.lastScore >= 60 ? "Aprobado" : "Por reforzar"}
                       </span>
                     </div>
 
-                    {/* Grid de Métricas Reales */}
+                    {/* Grid de 4 Métricas Reales */}
                     <div className="grid grid-cols-2 gap-2.5">
-                      <div className="p-3 bg-muted/30 rounded-xl">
-                        <span className="text-[11px] text-muted-foreground font-medium block">Total Pruebas</span>
-                        <span className="text-sm font-bold text-foreground">
+                      <div className="p-3 bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-xl">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">Total Pruebas</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">
                           {examHistory.totalExams ? `${examHistory.totalExams} realizadas` : "1 realizada"}
                         </span>
                       </div>
-                      <div className="p-3 bg-muted/30 rounded-xl">
-                        <span className="text-[11px] text-muted-foreground font-medium block">Promedio General</span>
-                        <span className="text-sm font-bold text-sena-blue">
+                      <div className="p-3 bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-xl">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">Promedio General</span>
+                        <span className="text-sm font-bold text-[#00324D] dark:text-sky-400">
                           {examHistory.avgScore !== null ? `${examHistory.avgScore}%` : `${examHistory.lastScore}%`}
                         </span>
                       </div>
-                      <div className="p-3 bg-muted/30 rounded-xl">
-                        <span className="text-[11px] text-muted-foreground font-medium block">Nivel Actual CEFR</span>
-                        <span className="text-sm font-bold text-sena-green">
+                      <div className="p-3 bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-xl">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">Nivel Actual CEFR</span>
+                        <span className="text-sm font-bold text-[#39A900]">
                           {examHistory.currentLevel || "A1"}
                         </span>
                       </div>
-                      <div className="p-3 bg-muted/30 rounded-xl">
-                        <span className="text-[11px] text-muted-foreground font-medium block">Tiempo Promedio</span>
-                        <span className="text-sm font-bold text-foreground">
-                          {examHistory.avgDuration || "Real / Adaptativo"}
+                      <div className="p-3 bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-xl">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">Tiempo Promedio</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                          {examHistory.avgDuration || "Adaptativo"}
                         </span>
                       </div>
                     </div>
 
                     {examHistory.completedAt && (
-                      <div className="pt-3 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.8} />
+                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
                         <span>Última evaluación: {formatDate(examHistory.completedAt)}</span>
                       </div>
                     )}
 
-                    <div className="pt-2 flex gap-2">
+                    <div className="pt-2 flex gap-2.5">
                       <button
                         type="button"
                         onClick={() => navigate("/results")}
-                        className="flex-1 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted text-foreground transition-colors cursor-pointer text-center"
+                        className="flex-1 h-10 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer text-center"
                       >
                         Ver Resultados
                       </button>
                       <button
                         type="button"
                         onClick={() => navigate("/quiz")}
-                        className="flex-1 py-2 text-xs font-semibold rounded-xl bg-sena-green hover:bg-emerald-700 text-white transition-colors cursor-pointer text-center"
+                        className="flex-1 h-10 text-xs font-semibold rounded-xl bg-[#39A900] hover:bg-[#2e8600] text-white transition-colors cursor-pointer text-center shadow-xs"
                       >
                         Nueva Prueba
                       </button>
@@ -1672,21 +1772,21 @@ export function ProfilePage() {
                   </div>
                 ) : (
                   <div className="py-6 px-3 text-center">
-                    <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 mb-3">
-                      <Award className="w-6 h-6" strokeWidth={1.8} />
+                    <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-3">
+                      <Award className="w-6 h-6" strokeWidth={1.75} />
                     </div>
-                    <h3 className="font-bold text-foreground text-sm mb-1">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-1">
                       Sin pruebas realizadas
                     </h3>
-                    <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
                       Aún no has presentado tu primera prueba diagnóstica en Worklex SENA.
                     </p>
                     <button
                       type="button"
                       onClick={() => navigate("/quiz")}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-sena-green hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                      className="inline-flex items-center gap-2 h-10 px-4 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
                     >
-                      <BookOpen className="w-3.5 h-3.5" />
+                      <BookOpen className="w-3.5 h-3.5" strokeWidth={1.75} />
                       <span>Comenzar Examen</span>
                     </button>
                   </div>
