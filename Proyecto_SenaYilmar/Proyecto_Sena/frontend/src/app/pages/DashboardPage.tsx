@@ -15,6 +15,7 @@ import {
   BookOpen,
   BookMarked,
   Volume2,
+  VolumeX,
   Mic,
   MicOff,
   PenTool,
@@ -27,6 +28,10 @@ import {
   ArrowRight,
   RotateCcw,
   Code,
+  Code2,
+  Terminal,
+  FileCode,
+  Cpu,
   ZoomIn,
   Home,
   Menu,
@@ -36,6 +41,7 @@ import {
   Layers,
   Languages,
   LifeBuoy,
+  Plus,
 } from "lucide-react";
 import { getLevelFromScore } from "../data/questionsA1";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -81,6 +87,18 @@ const getOptionSemanticText = (ans: any, answerValue: any): string => {
     return ans.writingAnswer;
   }
   return typeof answerValue === "number" ? `Respuesta #${idx + 1}` : String(answerValue);
+};
+
+// ── Validación Estricta de Ficha ADSO (Análisis y Desarrollo de Software) ────
+export const isAdsoFicha = (prog?: string | null): boolean => {
+  if (!prog) return false;
+  const p = prog.toLowerCase().trim();
+  return (
+    (p.includes("adso") || p.includes("software") || p.includes("2670142")) &&
+    !p.includes("datos") &&
+    !p.includes("data") &&
+    !p.includes("analítica")
+  );
 };
 
 // ── Banco de Respaldo de 32 Términos Técnicos ADSO (CEFR A1-B2) ─────────────────
@@ -734,13 +752,14 @@ const FALLBACK_ADSO_TERMS: api.ApiDocument[] = [
   },
 ];
 
-// ─── Tarjeta de Vocabulario para Aprendiz (16:9, Audio en 1 Clic, Práctica de Voz, Sin Edición) ───
+// ─── Tarjeta de Vocabulario para Aprendiz (16:9, Audio Resiliente 404, Práctica de Voz, Sin Edición) ───
 function StudentVocabCard({
   term,
   index,
   isPlaying,
   isListening,
   feedback,
+  isAudioUnavailable,
   onPlayPronunciation,
   onVoicePractice,
   onOpenLightbox,
@@ -750,10 +769,12 @@ function StudentVocabCard({
   isPlaying: boolean;
   isListening: boolean;
   feedback?: { success: boolean; heard: string; message: string };
+  isAudioUnavailable?: boolean;
   onPlayPronunciation: (term: api.ApiDocument) => void;
   onVoicePractice: (term: api.ApiDocument) => void;
   onOpenLightbox?: (term: api.ApiDocument) => void;
 }) {
+  const [imgError, setImgError] = useState(false);
   const termKey = term.wordId || term.name;
   const lvl = (term.level || "A1").toUpperCase();
   const competence = term.competence || "Grammar";
@@ -774,33 +795,63 @@ function StudentVocabCard({
   };
   const compBadge = compColors[competence] || "bg-purple-50 text-purple-700 border-purple-200";
 
+  const FallbackIcons = [Code2, Terminal, FileCode, Layers, Cpu];
+  const FallbackIcon = FallbackIcons[Math.abs(index) % FallbackIcons.length];
+
+  const rawImageSrc = term.imageUrl || term.image;
   const imageKey = term.image || (term.imageUrl ? term.imageUrl.replace(/^\/api\/media\/dictionary-images\//, "") : `${termKey.toLowerCase().replace(/\s+/g, "_")}.png`);
-  const imageSrc = resolveMediaUrl(imageKey, "dictionary-images");
+  const imageSrc = rawImageSrc ? resolveMediaUrl(rawImageSrc, "dictionary-images") : resolveMediaUrl(imageKey, "dictionary-images");
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.4) }}
-      className="bg-white rounded-2xl border border-border shadow-xs hover:shadow-md hover:border-emerald-500/40 transition-all flex flex-col justify-between overflow-hidden"
+      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-emerald-500/40 transition-all flex flex-col justify-between overflow-hidden"
     >
       <div>
-        {/* 1. Imagen Técnica Superior con SafeImage, Skeleton Shimmer, Hover Zoom y Lightbox al Clic */}
-        <div className="relative h-44 w-full bg-slate-50 overflow-hidden flex items-center justify-center border-b border-slate-100">
-          <SafeImage
-            src={imageSrc}
-            alt={termKey}
-            fallbackText={termKey}
-            showHoverZoom={true}
-            onClick={() => onOpenLightbox && onOpenLightbox(term)}
-          />
+        {/* 1. Imagen Técnica Superior con Manejo Resiliente de Fallback SVG (Evita Layout Shift) */}
+        <div className="relative aspect-video w-full bg-slate-50 dark:bg-slate-800/40 overflow-hidden flex items-center justify-center border-b border-slate-100 dark:border-slate-800">
+          {!imgError && imageSrc ? (
+            <div className="relative w-full h-full group flex items-center justify-center">
+              <img
+                src={imageSrc}
+                alt={termKey}
+                loading="lazy"
+                decoding="async"
+                onError={() => {
+                  console.warn(`[MediaProxy 404] Imagen no encontrada para ${termKey}: ${imageSrc}`);
+                  setImgError(true);
+                }}
+                onClick={() => onOpenLightbox && onOpenLightbox(term)}
+                className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+              />
+              {onOpenLightbox && (
+                <div
+                  onClick={() => onOpenLightbox(term)}
+                  className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer pointer-events-none"
+                  title="Clic para ampliar imagen"
+                >
+                  <div className="w-8 h-8 rounded-full bg-white/95 text-slate-800 flex items-center justify-center shadow-md">
+                    <ZoomIn className="w-4 h-4 text-emerald-700" strokeWidth={1.8} />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-700/80 text-slate-400 dark:text-slate-500">
+              <FallbackIcon className="w-9 h-9 mb-1.5 text-slate-400 dark:text-slate-500 stroke-[1.5]" />
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 tracking-tight">{termKey}</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">Recurso institucional</span>
+            </div>
+          )}
 
           {/* Badges de Clasificación sobre la imagen */}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10 pointer-events-none">
-            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-xs ${levelBadge}`}>
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${levelBadge}`}>
               {lvl}
             </span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-xs inline-flex items-center gap-1 ${compBadge}`}>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1 ${compBadge}`}>
               {competence === "Speaking" && <Mic className="w-3 h-3 shrink-0" />}
               {competence === "Writing" && <PenTool className="w-3 h-3 shrink-0" />}
               {competence === "Grammar" && <Languages className="w-3 h-3 shrink-0" />}
@@ -810,22 +861,33 @@ function StudentVocabCard({
           </div>
         </div>
 
-        {/* 2. Fila de Título y Botón de Altavoz en 1 Clic */}
+        {/* 2. Fila de Título y Botón de Altavoz en 1 Clic con Tolerancia 404 */}
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="text-lg font-bold text-foreground tracking-tight">{termKey}</h4>
-            <button
-              type="button"
-              onClick={() => onPlayPronunciation(term)}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                isPlaying
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 animate-pulse ring-4 ring-emerald-100"
-                  : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-              }`}
-              title={`Escuchar pronunciación de ${termKey}`}
-            >
-              <Volume2 className={`w-4 h-4 ${isPlaying ? "animate-bounce" : ""}`} strokeWidth={1.8} />
-            </button>
+            <h4 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">{termKey}</h4>
+            {isAudioUnavailable ? (
+              <button
+                type="button"
+                disabled={true}
+                title="Pronunciación temporalmente no disponible"
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all bg-slate-100 dark:bg-slate-800 text-slate-400 opacity-40 cursor-not-allowed border border-slate-200 dark:border-slate-700"
+              >
+                <VolumeX className="w-4 h-4 text-slate-400" strokeWidth={1.8} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onPlayPronunciation(term)}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  isPlaying
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 animate-pulse ring-4 ring-emerald-100"
+                    : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                }`}
+                title={`Escuchar pronunciación de ${termKey}`}
+              >
+                <Volume2 className={`w-4 h-4 ${isPlaying ? "animate-bounce" : ""}`} strokeWidth={1.8} />
+              </button>
+            )}
           </div>
 
           <p className="text-xs text-foreground/90 leading-relaxed min-h-[2.8rem]">
@@ -1106,8 +1168,11 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     }
   };
 
-  // Estados del Espacio de Estudio de Vocabulario ADSO
-  const [studyTerms, setStudyTerms] = useState<api.ApiDocument[]>(FALLBACK_ADSO_TERMS);
+  // Estados del Espacio de Estudio de Vocabulario (Aislamiento Estricto por Ficha)
+  const [studyTerms, setStudyTerms] = useState<api.ApiDocument[]>(() => {
+    const isTargetAdso = isAdsoFicha(activeProgram);
+    return isTargetAdso ? FALLBACK_ADSO_TERMS : [];
+  });
   const [isLoadingTerms, setIsLoadingTerms] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [selectedCompetence, setSelectedCompetence] = useState<string>("all");
@@ -1115,8 +1180,9 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
   const [showDictionaryModal, setShowDictionaryModal] = useState<boolean>(false);
 
-  // Estados de audio y pronunciación por voz
+  // Estados de audio y pronunciación por voz (con mapa de errores 404 resiliente)
   const [playingTermId, setPlayingTermId] = useState<string | null>(null);
+  const [audioErrorMap, setAudioErrorMap] = useState<Record<string, boolean>>({});
   const [listeningTerm, setListeningTerm] = useState<string | null>(null);
   const [speechFeedback, setSpeechFeedback] = useState<
     Record<string, { success: boolean; heard: string; message: string }>
@@ -1189,11 +1255,9 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
         if (Array.isArray(docs) && docs.length > 0) {
           setStudyTerms(docs);
         } else {
-          // Si es ADSO o el programa principal con semillas, usar respaldo seguro
-          const progLower = (selectedDictProgram || "").toLowerCase();
-          const isAdso = (progLower.includes("adso") || progLower.includes("software") || progLower.includes("2670142")) &&
-            !progLower.includes("datos") && !progLower.includes("data") && !progLower.includes("analítica");
-          if (isAdso) {
+          // Si es ADSO y el usuario está en ADSO, cargar banco de respaldo; de lo contrario estado vacío formal
+          const isTargetAdso = isAdsoFicha(selectedDictProgram) || isAdsoFicha(activeProgram);
+          if (isTargetAdso) {
             setStudyTerms(FALLBACK_ADSO_TERMS);
           } else {
             // Programa sin términos en BD -> Estado Vacío formal sin fallos
@@ -1203,10 +1267,8 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
       } catch (err) {
         console.warn("Fallo al conectar con diccionario en API:", err);
         if (isCancelled) return;
-        const progLower = (selectedDictProgram || "").toLowerCase();
-        const isAdso = (progLower.includes("adso") || progLower.includes("software") || progLower.includes("2670142")) &&
-          !progLower.includes("datos") && !progLower.includes("data") && !progLower.includes("analítica");
-        if (isAdso) {
+        const isTargetAdso = isAdsoFicha(selectedDictProgram) || isAdsoFicha(activeProgram);
+        if (isTargetAdso) {
           setStudyTerms(FALLBACK_ADSO_TERMS);
         } else {
           setStudyTerms([]);
@@ -1222,7 +1284,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     return () => {
       isCancelled = true;
     };
-  }, [selectedDictProgram]);
+  }, [selectedDictProgram, activeProgram]);
 
   const latestResult = testResults[0];
   const hasQuizResult = Boolean(latestResult) || lastTotalQuestions > 0;
@@ -1365,9 +1427,14 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     });
   }, [studyTerms, selectedLevel, selectedCompetence, searchQuery]);
 
-  // Reproducir pronunciación con fallback a SpeechSynthesis en inglés
+  // Reproducir pronunciación con fallback resiliente y tolerancia a fallos 404
   const handlePlayPronunciation = (term: api.ApiDocument) => {
     const termKey = term.wordId || term.name;
+    if (audioErrorMap[termKey]) {
+      toast.warning("Pronunciación temporalmente no disponible", "Audio no encontrado (404)");
+      return;
+    }
+
     setPlayingTermId(termKey);
 
     const mediaPath = term.audioUrl || term.audio;
@@ -1376,12 +1443,16 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
       const audio = new Audio(url);
       audio.onended = () => setPlayingTermId(null);
       audio.onerror = () => {
-        speakWord(termKey);
+        console.warn(`[MediaProxy 404] Audio no encontrado en bucket: ${url}`);
+        setAudioErrorMap((prev) => ({ ...prev, [termKey]: true }));
         setPlayingTermId(null);
+        toast.warning("Pronunciación temporalmente no disponible", "Audio no encontrado (404)");
       };
-      audio.play().catch(() => {
-        speakWord(termKey);
+      audio.play().catch((err) => {
+        console.warn(`Error al reproducir audio para ${termKey}:`, err);
+        setAudioErrorMap((prev) => ({ ...prev, [termKey]: true }));
         setPlayingTermId(null);
+        toast.warning("Pronunciación temporalmente no disponible", "Audio no encontrado (404)");
       });
     } else {
       speakWord(termKey);
@@ -1474,8 +1545,9 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   };
 
   // Conteo de términos por nivel
-  const levelCounts = useMemo(() => {
-    const counts: Record<string, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
+  // Conteo de términos dinámico por nivel y por competencia lingüística
+  const dynamicLevelCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: studyTerms.length, A1: 0, A2: 0, B1: 0, B2: 0 };
     studyTerms.forEach((t) => {
       const lvl = (t.level || "A1").toUpperCase();
       if (counts[lvl] !== undefined) counts[lvl]++;
@@ -1483,100 +1555,118 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     return counts;
   }, [studyTerms]);
 
+  const dynamicCompCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: studyTerms.length, Speaking: 0, Writing: 0, Grammar: 0, Reading: 0, Listening: 0 };
+    studyTerms.forEach((t) => {
+      const c = t.competence || "Grammar";
+      if (counts[c] !== undefined) counts[c]++;
+      else if (c.toLowerCase().includes("listen")) counts.Listening++;
+    });
+    return counts;
+  }, [studyTerms]);
+
+  const levelCounts = dynamicLevelCounts;
+
   return (
     <div className="min-h-screen bg-background">
       {/* ─── Encabezado Dinámico y Accesible (Smart Auto-hide con Scroll) ─── */}
       <header
-        className={`sticky top-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-40 transition-transform duration-300 ease-in-out ${
+        className={`sticky top-0 h-16 sm:h-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 transition-transform duration-300 ease-in-out ${
           isHeaderVisible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="h-16 flex items-center justify-between gap-3">
-          {/* Isotipo/Logos a la izquierda */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              title="Ir a la página principal de WorkLex (Inicio)"
-              className="group flex items-center gap-3 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
-            >
-              <img
-                src="/logo-sena.png"
-                alt="SENA"
-                className="h-9 w-auto object-contain shrink-0"
-              />
-              <span className="h-6 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
-              <img
-                src="/worklex.png"
-                alt="Worklex SENA"
-                className="h-8 w-auto object-contain shrink-0"
-              />
-            </button>
+          <div className="h-16 sm:h-20 flex items-center justify-between gap-3">
+            {/* Isotipo/Logos e Identidad Institucional Worklex */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                title="Ir a la página principal de WorkLex (Inicio)"
+                className="group flex items-center gap-2.5 sm:gap-3.5 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left cursor-pointer"
+              >
+                <img
+                  src="/logo-sena.png"
+                  alt="SENA"
+                  className="h-9 sm:h-10 w-auto object-contain shrink-0"
+                />
+                <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+                <img
+                  src="/worklex.png"
+                  alt="Worklex SENA"
+                  className="h-10 sm:h-12 md:h-14 w-auto object-contain shrink-0 transition-transform group-hover:scale-105"
+                />
+              </button>
+              <div className="hidden lg:flex items-center">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Ecosistema Digital Worklex
+                </span>
+              </div>
+            </div>
+
+            {/* Menú de navegación centrado con enlaces limpios */}
+            <nav className="hidden md:flex items-center gap-1 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMainTab("overview");
+                  setOverviewSubTab("main");
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeMainTab === "overview" && overviewSubTab === "main"
+                    ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                }`}
+              >
+                Evaluación y Progreso
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMainTab("study")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeMainTab === "study"
+                    ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                }`}
+              >
+                Diccionario Técnico
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMainTab("overview");
+                  setOverviewSubTab("stats");
+                  setShowStatsDrawer(true);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeMainTab === "overview" && overviewSubTab === "stats"
+                    ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                }`}
+              >
+                Historial y Métricas
+              </button>
+            </nav>
+
+            {/* Acciones del Header: Menú y Perfil */}
+            <div className="flex items-center gap-2">
+              <HeaderActionTools />
+
+              {/* Botón Móvil Hamburguesa */}
+              <button
+                type="button"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="md:hidden p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                title="Abrir menú de navegación móvil"
+                aria-label="Menú móvil"
+              >
+                <Menu className="w-5 h-5" strokeWidth={1.8} />
+              </button>
+
+              <UserAccountMenu accent="green" />
+            </div>
           </div>
-
-          {/* Menú de navegación centrado con enlaces en text-slate-600 hover:text-slate-900 text-sm font-medium */}
-          <nav className="hidden md:flex items-center gap-1 sm:gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveMainTab("overview");
-                setOverviewSubTab("main");
-              }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeMainTab === "overview" && overviewSubTab === "main"
-                  ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              }`}
-            >
-              Evaluación y Progreso
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveMainTab("study")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeMainTab === "study"
-                  ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              }`}
-            >
-              Diccionario Técnico
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveMainTab("overview");
-                setOverviewSubTab("stats");
-                setShowStatsDrawer(true);
-              }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeMainTab === "overview" && overviewSubTab === "stats"
-                  ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-              }`}
-            >
-              Historial y Métricas
-            </button>
-          </nav>
-
-          {/* Acciones del Header: Menú y Perfil */}
-          <div className="flex items-center gap-2">
-            <HeaderActionTools />
-
-            {/* Botón Móvil Hamburguesa */}
-            <button
-              type="button"
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="md:hidden p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-              title="Abrir menú de navegación móvil"
-              aria-label="Menú móvil"
-            >
-              <Menu className="w-5 h-5" strokeWidth={1.8} />
-            </button>
-
-            <UserAccountMenu accent="green" />
-          </div>
-        </div>
 
           {/* Menú Colapsable Móvil (100% Limpio para Aprendiz) */}
           <AnimatePresence>
@@ -1585,7 +1675,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="md:hidden mt-3 pt-3 border-t border-slate-200 flex flex-col gap-2"
+                className="md:hidden mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2"
               >
                 <button
                   type="button"
@@ -1593,7 +1683,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                     setActiveMainTab("overview");
                     setShowMobileMenu(false);
                   }}
-                  className="text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className="text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   Evaluación y Progreso
                 </button>
@@ -1603,7 +1693,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                     setActiveMainTab("study");
                     setShowMobileMenu(false);
                   }}
-                  className="text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className="text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   Diccionario Técnico
                 </button>
@@ -1615,28 +1705,36 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
 
       {/* Main Content */}
       <main className="container mx-auto px-4 lg:px-8 py-6">
-        {/* Welcome Section (Única etiqueta sutil de programa debajo del saludo) */}
+        {/* Welcome Section */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-5"
+          className="mb-6 space-y-2"
         >
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Hola, {userName.split(" ")[0]}
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Continúa fortaleciendo tus competencias en inglés técnico para desarrollo de software.
-          </p>
-          <div
-            className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-slate-700"
-            title={`Programa SENA actualmente seleccionado: ${activeProgram}`}
-          >
-            <GraduationCap className="w-3.5 h-3.5 text-[#39A900] flex-shrink-0" strokeWidth={1.8} />
-            <span className="truncate max-w-[420px]">{formatProgramFichaHeader(activeProgram)}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2 mb-2 px-3.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 text-xs sm:text-sm font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Plataforma Inteligente de Aprendizaje
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                Hola, {userName.split(" ")[0]}
+              </h1>
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mt-1">
+                Continúa fortaleciendo tus competencias en inglés técnico para desarrollo de software.
+              </p>
+            </div>
+            <div
+              className="inline-flex items-center gap-2 self-start sm:self-auto px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-medium border border-slate-200 dark:border-slate-700"
+              title={`Programa SENA actualmente seleccionado: ${activeProgram}`}
+            >
+              <GraduationCap className="w-4 h-4 text-[#39A900] flex-shrink-0" strokeWidth={1.8} />
+              <span className="truncate max-w-[420px]">{formatProgramFichaHeader(activeProgram)}</span>
+            </div>
           </div>
         </motion.div>
 
-        {/* Sistema de Pestañas (Tabs) Formal y Plano estilo MatDash */}
+        {/* Sistema de Pestañas (Tabs) Formal y Plano */}
         <div className="flex items-center gap-6 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
           <button
             type="button"
@@ -1657,9 +1755,9 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
           <button
             type="button"
             onClick={() => {
-              setIsDictModalOpen(true);
+              setActiveMainTab("study");
             }}
-            title="Seleccionar ficha y explorar su Diccionario Técnico especializado"
+            title="Explorar el Diccionario Técnico especializado de tu ficha"
             className={`inline-flex items-center gap-2 pb-3 px-1 border-b-2 text-sm transition-colors whitespace-nowrap cursor-pointer -mb-px ${
               activeMainTab === "study"
                 ? "border-[#39A900] text-slate-900 dark:text-white font-bold"
@@ -1681,78 +1779,111 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
         </div>
 
         {/* ═════════════════════════════════════════════════════════════════════════ */}
-        {/* VISTA 1: EVALUACIÓN Y PROGRESO (MATDASH LIMPIO Y COMPACTO)                */}
+        {/* VISTA 1: EVALUACIÓN Y PROGRESO                                            */}
         {/* ═════════════════════════════════════════════════════════════════════════ */}
         {activeMainTab === "overview" && (
           <div className="space-y-5">
-            {/* 1. Tarjeta Compacta y Sobria de "Prueba de Nivel" */}
+            {/* 1. Tarjeta de "Prueba de Nivel" (Con Bloqueo Condicional si no hay Diccionario Asignado) */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 border-l-[#39A900] rounded-xl p-5 shadow-sm"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 border-l-[#39A900] rounded-2xl p-6 sm:p-7 shadow-sm"
             >
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                <div className="space-y-1.5 max-w-2xl">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-[#39A900] uppercase tracking-wider">
-                      Evaluación Adaptativa A1 → B2
-                    </span>
+              {studyTerms.length === 0 ? (
+                /* Estado bloqueado si no hay diccionario asignado a la ficha */
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                  <div className="space-y-2 max-w-2xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        Evaluación Pendiente de Asignación
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      Prueba de Nivel de Inglés Técnico
+                    </h3>
+                    <p className="p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs sm:text-sm leading-relaxed">
+                      No hay un diccionario asignado a tu ficha actualmente. El examen estará disponible una vez tu instructor asigne el contenido.
+                    </p>
                   </div>
 
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                    Prueba de Nivel de Inglés Técnico
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Diagnostica y certifica tus competencias comunicativas en inglés con nuestro motor adaptativo y retroalimentación pedagógica instantánea.
-                  </p>
-                </div>
-
-                {/* Progreso compacto y Botón de Acción a la derecha */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 lg:gap-6 flex-shrink-0">
-                  <div className="flex items-center gap-4 sm:border-r sm:border-slate-200 dark:sm:border-slate-700 sm:pr-5">
-                    <div>
-                      <p className="text-[11px] text-slate-500 font-medium">Nivel actual</p>
-                      <p className="text-lg font-bold text-slate-900 dark:text-white">{stats.currentLevel}</p>
-                    </div>
-                    <div className="w-32">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-500 font-medium">Promedio</span>
-                        <span className="font-semibold text-slate-900 dark:text-white">{stats.averageScore}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#39A900] rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min(Math.max(stats.averageScore, 0), 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-shrink-0">
                     <button
                       type="button"
-                      onClick={() => navigate("/quiz")}
-                      title="Haz clic para iniciar tu evaluación de nivel con instrucciones previas y temporizador adaptativo"
-                      className="h-10 px-5 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap shadow-xs"
+                      disabled={true}
+                      title="No hay un diccionario asignado a tu ficha actualmente. El examen estará disponible una vez tu instructor asigne el contenido."
+                      className="h-12 px-6 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2.5 cursor-not-allowed opacity-50 shadow-none border border-slate-200 dark:border-slate-700"
                     >
-                      <FileQuestion className="w-4 h-4" strokeWidth={1.8} />
+                      <FileQuestion className="w-5 h-5" strokeWidth={1.8} />
                       <span>Comenzar Prueba de Nivel</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const histEl = document.getElementById("historial-pruebas-section");
-                        histEl?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                      title="Ver el historial de intentos anteriores y detalles de puntuación"
-                      className="h-10 px-3.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      <History className="w-4 h-4" strokeWidth={1.8} />
-                      <span className="hidden sm:inline">Intentos</span>
-                    </button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                  <div className="space-y-1.5 max-w-2xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-[#39A900] uppercase tracking-wider">
+                        Evaluación Adaptativa A1 → B2
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      Prueba de Nivel de Inglés Técnico
+                    </h3>
+                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                      Diagnostica y certifica tus competencias comunicativas en inglés con nuestro motor adaptativo y retroalimentación pedagógica instantánea.
+                    </p>
+                  </div>
+
+                  {/* Progreso compacto y Botón de Acción a la derecha */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 lg:gap-6 flex-shrink-0">
+                    <div className="flex items-center gap-4 sm:border-r sm:border-slate-200 dark:sm:border-slate-700 sm:pr-5">
+                      <div>
+                        <p className="text-[11px] text-slate-500 font-medium">Nivel actual</p>
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">{stats.currentLevel}</p>
+                      </div>
+                      <div className="w-32">
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-slate-500 font-medium">Promedio</span>
+                          <span className="font-semibold text-slate-900 dark:text-white">{stats.averageScore}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#39A900] rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(Math.max(stats.averageScore, 0), 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => navigate("/quiz")}
+                        title="Haz clic para iniciar tu evaluación de nivel con instrucciones previas y temporizador adaptativo"
+                        className="h-12 px-6 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap shadow-sm"
+                      >
+                        <FileQuestion className="w-5 h-5" strokeWidth={1.8} />
+                        <span>Comenzar Prueba de Nivel</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const histEl = document.getElementById("historial-pruebas-section");
+                          histEl?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        title="Ver el historial de intentos anteriores y detalles de puntuación"
+                        className="h-12 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        <History className="w-4 h-4" strokeWidth={1.8} />
+                        <span className="hidden sm:inline">Intentos</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* 2. Accesos Directos al Diccionario Técnico */}
@@ -2284,62 +2415,62 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                   </div>
 
                   {/* Barra de Filtros y Búsqueda Directa en la Página */}
-                  <div className="bg-slate-50/80 rounded-2xl border border-border p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                  <div className="bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 sm:p-5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                     {/* Buscador en Vivo */}
                     <div className="relative flex-1">
-                      <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
+                      <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
                       <input
                         type="text"
                         placeholder="Buscar por término técnico o definición (ej. Polymorphism, Database, API)..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-9 py-2 rounded-xl border border-border bg-white text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                        className="w-full h-12 pl-12 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm sm:text-base text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 focus:border-[#39A900] transition-all"
                       />
                       {searchQuery && (
                         <button
                           type="button"
                           onClick={() => setSearchQuery("")}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                         >
-                          <X className="w-4 h-4" strokeWidth={1.8} />
+                          <X className="w-5 h-5" strokeWidth={1.8} />
                         </button>
                       )}
                     </div>
 
-                    {/* Filtro por Competencia */}
+                    {/* Filtro por Competencia con Contadores Dinámicos */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                      <span className="text-xs text-muted-foreground font-medium mr-1">Competencia:</span>
+                      <span className="text-xs text-slate-500 font-medium mr-1 whitespace-nowrap">Habilidad:</span>
                       {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
                         <button
                           key={comp}
                           type="button"
                           onClick={() => setSelectedCompetence(comp)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          className={`h-10 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
                             selectedCompetence === comp
-                              ? "bg-emerald-600 text-white shadow-xs font-semibold"
-                              : "bg-white text-muted-foreground hover:text-foreground border border-slate-200"
+                              ? "bg-[#39A900] text-white shadow-xs font-semibold"
+                              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                           }`}
                         >
-                          {comp === "all" ? "Todas" : comp}
+                          {comp === "all" ? `Todas (${studyTerms.length})` : `${comp} (${dynamicCompCounts[comp] || 0})`}
                         </button>
                       ))}
                     </div>
 
-                    {/* Filtro por Nivel CEFR */}
+                    {/* Filtro por Nivel CEFR con Contadores Dinámicos */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                      <span className="text-xs text-muted-foreground font-medium mr-1">Nivel:</span>
+                      <span className="text-xs text-slate-500 font-medium mr-1 whitespace-nowrap">Nivel:</span>
                       {["all", "A1", "A2", "B1", "B2"].map(lvl => (
                         <button
                           key={lvl}
                           type="button"
                           onClick={() => setSelectedLevel(lvl)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          className={`h-10 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
                             selectedLevel === lvl
-                              ? "bg-emerald-600 text-white shadow-xs font-semibold"
-                              : "bg-white text-muted-foreground hover:text-foreground border border-slate-200"
+                              ? "bg-[#39A900] text-white shadow-xs font-semibold"
+                              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                           }`}
                         >
-                          {lvl === "all" ? "Todos" : lvl}
+                          {lvl === "all" ? `Todos (${studyTerms.length})` : `${lvl} (${dynamicLevelCounts[lvl] || 0})`}
                         </button>
                       ))}
 
@@ -2353,7 +2484,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                           }}
                           className="ml-2 text-xs text-rose-600 hover:underline flex items-center gap-1 font-medium whitespace-nowrap cursor-pointer"
                         >
-                          <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
+                          <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
                           Restablecer
                         </button>
                       )}
@@ -2373,6 +2504,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                             isPlaying={playingTermId === termKey}
                             isListening={listeningTerm === termKey}
                             feedback={speechFeedback[termKey]}
+                            isAudioUnavailable={Boolean(audioErrorMap[termKey])}
                             onPlayPronunciation={handlePlayPronunciation}
                             onVoicePractice={handleVoicePractice}
                             onOpenLightbox={(t) => setSelectedLightboxDoc(t)}
@@ -2411,10 +2543,10 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                             <BookOpen className="w-5 h-5" strokeWidth={1.8} />
                           </div>
                           <div>
-                            <h3 className="text-xl font-bold text-foreground tracking-tight">
-                              Vocabulario Técnico {selectedDictProgram || activeProgram || "SENA"} — {studyTerms.length || 222} Términos
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                              Vocabulario Técnico {selectedDictProgram || activeProgram || "SENA"} — {filteredTerms.length === studyTerms.length ? `${studyTerms.length} Términos` : `${filteredTerms.length} de ${studyTerms.length} Términos`}
                             </h3>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-slate-500">
                               Explorador multimedia de pronunciación nativa, conceptos técnicos y recursos gráficos
                             </p>
                           </div>
@@ -2430,62 +2562,62 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                       </div>
 
                       {/* Filtros: Buscador en Vivo, Filtro por Asignatura y Nivel CEFR */}
-                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1">
+                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pt-1">
                         {/* Buscador en Vivo */}
                         <div className="relative flex-1">
-                          <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
+                          <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
                           <input
                             type="text"
                             placeholder="Buscar por término técnico o definición (ej. Polymorphism, Database, API)..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-9 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            className="w-full h-12 pl-12 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm sm:text-base text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 focus:border-[#39A900] transition-all"
                           />
                           {searchQuery && (
                             <button
                               type="button"
                               onClick={() => setSearchQuery("")}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                             >
-                              <X className="w-4 h-4" strokeWidth={1.8} />
+                              <X className="w-5 h-5" strokeWidth={1.8} />
                             </button>
                           )}
                         </div>
 
-                        {/* Filtro por Competencia Lingüística */}
+                        {/* Filtro por Competencia Lingüística con Contadores Dinámicos */}
                         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                          <span className="text-xs text-muted-foreground font-medium mr-1">Competencia:</span>
+                          <span className="text-xs text-slate-500 font-medium mr-1 whitespace-nowrap">Habilidad:</span>
                           {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
                             <button
                               key={comp}
                               type="button"
                               onClick={() => setSelectedCompetence(comp)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                              className={`h-10 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
                                 selectedCompetence === comp
-                                  ? "bg-emerald-600 text-white shadow-xs font-semibold"
-                                  : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  ? "bg-[#39A900] text-white shadow-xs font-semibold"
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                               }`}
                             >
-                              {comp === "all" ? "Todas" : comp}
+                              {comp === "all" ? `Todas (${studyTerms.length})` : `${comp} (${dynamicCompCounts[comp] || 0})`}
                             </button>
                           ))}
                         </div>
 
-                        {/* Filtro por Nivel CEFR */}
+                        {/* Filtro por Nivel CEFR con Contadores Dinámicos */}
                         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                          <span className="text-xs text-muted-foreground font-medium mr-1">Nivel:</span>
+                          <span className="text-xs text-slate-500 font-medium mr-1 whitespace-nowrap">Nivel:</span>
                           {["all", "A1", "A2", "B1", "B2"].map(lvl => (
                             <button
                               key={lvl}
                               type="button"
                               onClick={() => setSelectedLevel(lvl)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                              className={`h-10 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
                                 selectedLevel === lvl
-                                  ? "bg-emerald-600 text-white shadow-xs font-semibold"
-                                  : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  ? "bg-[#39A900] text-white shadow-xs font-semibold"
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                               }`}
                             >
-                              {lvl === "all" ? "Todos" : lvl}
+                              {lvl === "all" ? `Todos (${studyTerms.length})` : `${lvl} (${dynamicLevelCounts[lvl] || 0})`}
                             </button>
                           ))}
 
@@ -2499,7 +2631,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                               }}
                               className="ml-2 text-xs text-rose-600 hover:underline flex items-center gap-1 font-medium whitespace-nowrap cursor-pointer"
                             >
-                              <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
+                              <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
                               Restablecer
                             </button>
                           )}
@@ -2514,8 +2646,8 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                           <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />
                           <h4 className="font-bold text-foreground text-lg">Diccionario en construcción</h4>
                           <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                            Actualmente no hay términos técnicos registrados para el programa{" "}
-                            <strong className="text-foreground">{selectedDictProgram}</strong>. Tu instructor cargará el vocabulario técnico próximamente.
+                            No hay un diccionario asignado a tu ficha actualmente. El examen y el vocabulario estarán disponibles una vez tu instructor asigne el contenido a la ficha{" "}
+                            <strong className="text-foreground">{selectedDictProgram}</strong>.
                           </p>
                         </div>
                       ) : filteredTerms.length > 0 ? (
@@ -2530,6 +2662,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                                 isPlaying={playingTermId === termKey}
                                 isListening={listeningTerm === termKey}
                                 feedback={speechFeedback[termKey]}
+                                isAudioUnavailable={Boolean(audioErrorMap[termKey])}
                                 onPlayPronunciation={handlePlayPronunciation}
                                 onVoicePractice={handleVoicePractice}
                                 onOpenLightbox={(t) => setSelectedLightboxDoc(t)}
