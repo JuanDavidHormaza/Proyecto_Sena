@@ -592,7 +592,7 @@ export function LoginPage() {
       </div>
 
       {/* ── Columna Derecha: Fotografía y Marca (50% en pantallas grandes) ── */}
-      <div className="hidden lg:flex lg:w-1/2 relative min-h-screen overflow-hidden bg-slate-900 flex-col justify-end p-12 xl:p-16">
+      <div className="hidden lg:flex lg:w-1/2 relative min-h-screen overflow-hidden bg-slate-900 flex-col justify-end p-8 xl:p-12 items-center text-center">
         <img
           src="/GenteSena.jpg"
           alt="Aprendices SENA"
@@ -601,22 +601,22 @@ export function LoginPage() {
         {/* Oscurecimiento suave para legibilidad */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-950/25" />
         
-        <div className="relative z-10 max-w-lg">
-          {/* Insignia Circular Flotante WorkLex */}
-          <div className="mb-8">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white/95 backdrop-blur-md shadow-2xl border-4 border-white/80 p-3 flex items-center justify-center transition-transform hover:scale-105">
-              <img
-                src="/worklex.png"
-                alt="WorkLex"
-                className="w-full h-full object-contain rounded-full"
-              />
-            </div>
+        {/* Insignia Circular Grande y Nítida Centrada */}
+        <div className="absolute bottom-28 sm:bottom-32 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white/95 backdrop-blur-md shadow-2xl border-4 border-white flex items-center justify-center p-3 transition-transform hover:scale-105">
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="w-full h-full object-contain rounded-full"
+            />
           </div>
+        </div>
 
-          <blockquote className="text-xl sm:text-2xl font-medium leading-relaxed drop-shadow-md text-white">
+        <div className="relative z-10 max-w-lg mx-auto text-center">
+          <blockquote className="text-lg sm:text-xl font-medium leading-relaxed drop-shadow-md text-white">
             "Formación profesional integral para el desarrollo tecnológico y lingüístico de Colombia."
           </blockquote>
-          <p className="mt-4 text-base text-slate-200 font-light drop-shadow-sm">
+          <p className="mt-2 text-sm sm:text-base text-slate-200 font-light drop-shadow-sm">
             Servicio Nacional de Aprendizaje — SENA
           </p>
         </div>
