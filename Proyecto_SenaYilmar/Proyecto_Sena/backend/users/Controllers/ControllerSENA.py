@@ -1079,16 +1079,30 @@ class FichaRequestController:
     # Alias para compatibilidad con llamadas de vistas
     request_ficha = create
 
-    @staticmethod
-    def list_all(user):
-        role = getattr(user, 'role_id', None)
+    @classmethod
+    def list_all(cls, user=None):
+        if user is None and cls is not None and not isinstance(cls, type):
+            user = cls
+
+        # Extraer ID primario entero de forma segura desde AuthenticatedUser o User
+        user_id = user.id if hasattr(user, 'id') else getattr(user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, 'user'):
+            user_id = getattr(user.user, 'id', None) or getattr(user.user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, '_user'):
+            user_id = getattr(user._user, 'user_id', None) or getattr(user._user, 'id', None)
+        if not isinstance(user_id, int) and hasattr(user, 'user_id'):
+            user_id = user.user_id
+
+        real_user = getattr(user, '_user', user)
+        role = getattr(user, 'role_id', None) or getattr(real_user, 'role_id', None)
+
         if role in ('ADMIN', 'SUPERADMIN'):
             # Vista de auditoría general para el administrador
             return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').all()
         elif role in ('INSTRUCTOR', 'MONITOR'):
             # Cada docente gestiona los aprendices de sus respectivas fichas
-            inst_prog = (getattr(user, 'program', '') or '').strip().lower()
-            q_filter = models.Q(assigned_instructor=user)
+            inst_prog = (getattr(user, 'program', '') or getattr(real_user, 'program', '') or '').strip().lower()
+            q_filter = models.Q(assigned_instructor_id=user_id) if isinstance(user_id, int) else models.Q()
             if inst_prog:
                 q_filter |= models.Q(program_name__icontains=inst_prog)
                 ficha_digits = [token for token in inst_prog.split() if token.isdigit()]
@@ -1097,11 +1111,20 @@ class FichaRequestController:
             qs = FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(q_filter)
             if not qs.exists():
                 # Si no hay vinculación explícita, listar las asignadas al docente o pendientes generales
-                qs = FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(
-                    models.Q(assigned_instructor=user) | models.Q(assigned_instructor__isnull=True)
-                )
+                default_q = models.Q(assigned_instructor__isnull=True)
+                if isinstance(user_id, int):
+                    default_q |= models.Q(assigned_instructor_id=user_id)
+                qs = FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(default_q)
             return qs
-        return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(person=user.person)
+
+        # Aprendiz: filtrar por su person_id o user_id enteros
+        person = getattr(user, 'person', None) or getattr(real_user, 'person', None)
+        person_id = getattr(person, 'person_id', None) or getattr(person, 'id', None) or getattr(person, 'pk', None)
+        if isinstance(person_id, int):
+            return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(person_id=person_id)
+        if isinstance(user_id, int):
+            return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(user_id=user_id)
+        return FichaRequest.objects.none()
 
     @staticmethod
     def approve(request_id, actor_user, instructor_id=None, notes=None):
@@ -1198,11 +1221,32 @@ class SupportTicketController:
         )
         return ticket, None
 
-    @staticmethod
-    def list_all(user):
-        if getattr(user, 'role_id', None) in ('ADMIN', 'SUPERADMIN'):
+    @classmethod
+    def list_all(cls, user=None):
+        if user is None and cls is not None and not isinstance(cls, type):
+            user = cls
+
+        user_id = user.id if hasattr(user, 'id') else getattr(user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, 'user'):
+            user_id = getattr(user.user, 'id', None) or getattr(user.user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, '_user'):
+            user_id = getattr(user._user, 'user_id', None) or getattr(user._user, 'id', None)
+        if not isinstance(user_id, int) and hasattr(user, 'user_id'):
+            user_id = user.user_id
+
+        real_user = getattr(user, '_user', user)
+        role = getattr(user, 'role_id', None) or getattr(real_user, 'role_id', None)
+
+        if role in ('ADMIN', 'SUPERADMIN'):
             return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').all()
-        return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').filter(person=user.person)
+
+        person = getattr(user, 'person', None) or getattr(real_user, 'person', None)
+        person_id = getattr(person, 'person_id', None) or getattr(person, 'id', None) or getattr(person, 'pk', None)
+        if isinstance(person_id, int):
+            return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').filter(person_id=person_id)
+        if isinstance(user_id, int):
+            return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').filter(user_id=user_id)
+        return SupportTicket.objects.none()
 
     @staticmethod
     def update_status(ticket_id, admin_user, new_status=None, admin_notes=None):
