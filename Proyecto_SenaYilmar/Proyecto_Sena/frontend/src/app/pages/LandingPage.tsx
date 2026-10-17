@@ -2,7 +2,8 @@ import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
   IconUsers,
-  IconBook2,
+  IconBooks,
+  IconCertificate,
   IconAward,
   IconPlayerPlay,
   IconLogin,
@@ -63,26 +64,26 @@ export function LandingPage() {
             />
           </div>
 
-          {/* Botón de navegación dinámico según estado de sesión */}
+          {/* Botón de navegación dinámico SaaS según estado de sesión */}
           <div className="flex items-center gap-3">
             {hasValidSession ? (
               <button
                 type="button"
                 onClick={() => navigate(getDashboardPath())}
-                className="h-10 sm:h-11 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 rounded-xl shadow-sm hover:shadow-md hover:shadow-[#39A900]/20 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm hover:shadow transition-all cursor-pointer active:scale-98"
                 title="Ir a mi panel principal de WorkLex"
               >
-                <span>Ir al Dashboard</span>
-                <IconLayoutDashboard size={20} className="ml-2" />
+                <IconLayoutDashboard size={18} stroke={2} />
+                <span>Ir a mi Panel</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="h-10 sm:h-11 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-xs sm:text-sm px-4 sm:px-6 rounded-xl shadow-sm hover:shadow-md hover:shadow-[#39A900]/20 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm hover:shadow transition-all cursor-pointer active:scale-98"
               >
+                <IconLogin size={18} stroke={2} />
                 <span>Ingresar</span>
-                <IconLogin size={20} className="ml-1" />
               </button>
             )}
           </div>
@@ -139,7 +140,7 @@ export function LandingPage() {
                     className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-900 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                   >
                     <IconLayoutDashboard size={20} stroke={1.8} className="text-[#39A900]" />
-                    <span>Continuar aprendiendo</span>
+                    <span>Continuar a mi formación</span>
                   </button>
                 ) : (
                   <button
@@ -164,41 +165,47 @@ export function LandingPage() {
               {/* Tarjetas Estadísticas Estilo MatDash (Vertical en móvil < 768px: grid-cols-1 sm:grid-cols-3 lg:grid-cols-1) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4 w-full">
                 {/* Tarjeta 1: Aprendices evaluados */}
-                <div className="bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                      <IconUsers size={24} stroke={1.8} />
-                    </div>
-                    <div>
-                      <p className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">1,250+</p>
-                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Aprendices evaluados</p>
-                    </div>
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 flex items-center justify-between group cursor-default">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      1,250+
+                    </p>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Aprendices evaluados
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
+                    <IconUsers size={28} stroke={1.6} />
                   </div>
                 </div>
 
                 {/* Tarjeta 2: Programas SENA */}
-                <div className="bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                      <IconBook2 size={24} stroke={1.8} />
-                    </div>
-                    <div>
-                      <p className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">24</p>
-                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Programas SENA</p>
-                    </div>
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 flex items-center justify-between group cursor-default">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      24
+                    </p>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Programas SENA
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
+                    <IconBooks size={28} stroke={1.6} />
                   </div>
                 </div>
 
-                {/* Tarjeta 3: Satisfacción */}
-                <div className="bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                      <IconAward size={24} stroke={1.8} />
-                    </div>
-                    <div>
-                      <p className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">98%</p>
-                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Satisfacción</p>
-                    </div>
+                {/* Tarjeta 3: Satisfacción General */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 flex items-center justify-between group cursor-default">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      98%
+                    </p>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Satisfacción General
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
+                    <IconCertificate size={28} stroke={1.6} />
                   </div>
                 </div>
               </div>
