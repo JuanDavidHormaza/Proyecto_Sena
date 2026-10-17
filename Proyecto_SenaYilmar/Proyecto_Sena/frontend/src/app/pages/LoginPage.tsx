@@ -602,12 +602,12 @@ export function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-950/25" />
         
         {/* Insignia Circular Grande y Nítida Centrada */}
-        <div className="absolute bottom-28 sm:bottom-32 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white/95 backdrop-blur-md shadow-2xl border-4 border-white flex items-center justify-center p-3 transition-transform hover:scale-105">
+        <div className="absolute top-[48%] -translate-y-1/2 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white shadow-2xl border-4 border-white/90 p-2 flex items-center justify-center transition-transform hover:scale-105">
             <img
               src="/worklex.png"
               alt="WorkLex"
-              className="w-full h-full object-contain rounded-full"
+              className="w-full h-full object-contain rounded-full scale-110"
             />
           </div>
         </div>
