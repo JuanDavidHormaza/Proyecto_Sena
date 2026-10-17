@@ -18,6 +18,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Loader2,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
@@ -317,285 +318,297 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50/60 dark:bg-slate-950 flex flex-col justify-center items-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 relative overflow-x-hidden">
-      {/* Resplandor ambiental de fondo sutil */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(57,169,0,0.12),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(57,169,0,0.08),rgba(0,0,0,0))] pointer-events-none" />
+    <div className="min-h-screen w-full bg-white dark:bg-slate-950 flex flex-col lg:flex-row relative overflow-x-hidden">
+      {/* ── Columna Izquierda: Formulario de Autenticación (50% en pantallas grandes) ── */}
+      <div className="w-full lg:w-1/2 min-h-screen flex flex-col justify-center items-center px-6 sm:px-12 lg:px-16 py-10 sm:py-14 z-10 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800">
+        <div className="w-full max-w-md mx-auto space-y-6">
+          {/* Botón superior de navegación */}
+          <button
+            type="button"
+            onClick={() => (step === "otp" ? setStep("credentials") : navigate("/"))}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+            <span>{step === "otp" ? "Volver a credenciales" : "Volver al inicio"}</span>
+          </button>
 
-      {/* Botón superior de volver al inicio */}
-      <div className="w-full max-w-md sm:max-w-lg mb-4 z-10">
-        <button
-          type="button"
-          onClick={() => (step === "otp" ? setStep("credentials") : navigate("/"))}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>{step === "otp" ? "Volver a credenciales" : "Volver al inicio"}</span>
-        </button>
-      </div>
-
-      {/* Card SaaS Centralizada y Proporcionada */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="w-full max-w-md sm:max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-10 relative z-10"
-      >
-        {/* Cabecera con protagonismo absoluto del logotipo WorkLex */}
-        <div className="flex flex-col items-center justify-center text-center mb-7 sm:mb-8">
-          {/* Badge superior moderno */}
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 mb-4 sm:mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Ecosistema Digital WorkLex
-          </div>
-
-          {/* Logos con WorkLex en escala protagonista */}
-          <div className="flex items-center justify-center gap-4 sm:gap-5 mb-4">
+          {/* Header con Logos SENA y WorkLex alineados armónicamente, con WorkLex protagonista */}
+          <div className="flex items-center gap-4 pt-1 pb-2">
             <img
               src="/worklex.png"
               alt="WorkLex"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-              className="h-14 sm:h-16 md:h-20 w-auto object-contain shrink-0 drop-shadow-xs"
+              className="h-12 sm:h-14 w-auto object-contain shrink-0 drop-shadow-xs"
             />
-            <span className="h-8 sm:h-10 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+            <span className="h-8 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
             <img
               src="/logo-sena.png"
               alt="SENA"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-              className="h-10 sm:h-12 w-auto object-contain shrink-0 opacity-90"
+              className="h-10 sm:h-11 w-auto object-contain shrink-0 opacity-90"
             />
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {step === "credentials" ? "Iniciar Sesión" : "Verificación de Seguridad"}
-          </h1>
-          <p className="text-base text-slate-600 dark:text-slate-400 mt-1.5 max-w-sm">
-            {step === "credentials"
-              ? "Accede a tu plataforma inteligente de aprendizaje y práctica técnica."
-              : `Ingresa el código de 6 dígitos enviado a tu correo.`}
+          <AnimatePresence mode="wait">
+            {/* ── PASO 1: Ingreso de Credenciales ── */}
+            {step === "credentials" && (
+              <motion.div
+                key="credentials"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Iniciar Sesión
+                  </h1>
+                  <p className="text-base text-slate-600 dark:text-slate-400 font-normal mt-2 mb-6 leading-relaxed">
+                    Accede a tu plataforma inteligente de aprendizaje y práctica técnica.
+                  </p>
+                </div>
+
+                {isIdleTimeout && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-800 dark:text-amber-200 text-sm font-medium"
+                  >
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="leading-snug">Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.</p>
+                  </motion.div>
+                )}
+
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm"
+                  >
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <p className="leading-snug">{error}</p>
+                  </motion.div>
+                )}
+
+                <form onSubmit={handleCredentialsSubmit} className="space-y-5">
+                  <div>
+                    <label className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                      Correo electrónico
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="email"
+                        required
+                        autoComplete="email"
+                        value={formData.email}
+                        onChange={(e) => handleEmailChange(e.target.value)}
+                        onBlur={handleEmailBlur}
+                        placeholder="aprendiz@soy.sena.edu.co"
+                        className={`w-full h-12 text-base bg-white dark:bg-slate-800 border rounded-xl pl-12 pr-4 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs ${
+                          emailTouched && emailError
+                            ? "border-rose-400 focus:ring-rose-500/20 focus:border-rose-500"
+                            : "border-slate-300 dark:border-slate-700"
+                        }`}
+                      />
+                    </div>
+                    <FieldError error={emailTouched ? emailError : undefined} />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-base font-semibold text-slate-700 dark:text-slate-300">
+                        Contraseña
+                      </label>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        autoComplete="current-password"
+                        value={formData.password}
+                        onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
+                        placeholder="••••••••"
+                        className="w-full h-12 text-base bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-12 pr-12 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer p-1"
+                        title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    <div className="flex justify-end mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const userEmail = (formData.email || "").trim().toLowerCase();
+                          if (userEmail) {
+                            sessionStorage.setItem("reset_email", userEmail);
+                            sessionStorage.setItem("recover_email", userEmail);
+                            navigate(`/recuperar-cuenta?email=${encodeURIComponent(userEmail)}`);
+                          } else {
+                            navigate("/recuperar-cuenta");
+                          }
+                        }}
+                        className="text-[#39A900] hover:underline font-medium text-sm cursor-pointer"
+                      >
+                        ¿Olvidaste tu contraseña? / Recuperar cuenta
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
+                    className="w-full h-12 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-base sm:text-lg rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-3"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Validando credenciales...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Continuar</span>
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <p className="text-center text-base text-slate-600 dark:text-slate-400 pt-2">
+                  ¿No tienes cuenta?{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/register")}
+                    className="text-[#39A900] hover:underline font-semibold cursor-pointer"
+                  >
+                    Regístrate aquí
+                  </button>
+                </p>
+              </motion.div>
+            )}
+
+            {/* ── PASO 2: Código de Verificación OTP ── */}
+            {step === "otp" && (
+              <motion.div
+                key="otp"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <div className="flex justify-center">
+                  <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/40 text-[#39A900] rounded-2xl flex items-center justify-center border border-emerald-100 dark:border-emerald-800">
+                    <KeyRound className="w-7 h-7" />
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Verificación de Seguridad
+                  </h2>
+                  <p className="text-base text-slate-600 dark:text-slate-400 mt-2 mb-1 leading-relaxed">
+                    Hemos enviado un código seguro de 6 dígitos a tu correo:
+                  </p>
+                  <p className="font-bold text-slate-800 dark:text-slate-200 text-base">{otpEmail}</p>
+                </div>
+
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm"
+                  >
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <p className="leading-snug">{error}</p>
+                  </motion.div>
+                )}
+
+                <form onSubmit={handleVerifyOtp} className="space-y-6">
+                  <div>
+                    <label className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-3 block text-center">
+                      Código de 6 dígitos
+                    </label>
+                    <div className="flex justify-center gap-2 sm:gap-3">
+                      {otpDigits.map((digit, idx) => (
+                        <input
+                          key={idx}
+                          id={`login-otp-${idx}`}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          required
+                          autoFocus={idx === 0}
+                          value={digit}
+                          onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                          onPaste={handleOtpPaste}
+                          className="w-11 sm:w-13 h-12 sm:h-14 text-center text-xl font-bold font-mono border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || otpDigits.join("").length < 6}
+                    className="w-full h-12 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-base sm:text-lg rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Validando código...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span>Validar y Acceder</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <p className="text-base text-slate-600 dark:text-slate-400">¿No recibiste el código?</p>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={resendCooldown > 0}
+                    className="flex items-center gap-1.5 text-[#39A900] hover:underline font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${resendCooldown > 0 ? "animate-spin" : ""}`} />
+                    <span>{resendCooldown > 0 ? `Reenviar (${resendCooldown}s)` : "Reenviar código"}</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* ── Columna Derecha: Fotografía Institucional con Overlay (50% en pantallas grandes) ── */}
+      <div className="hidden lg:flex lg:w-1/2 relative min-h-screen overflow-hidden bg-slate-900 flex-col justify-end p-12 xl:p-16">
+        <img
+          src="/GenteSena.jpg"
+          alt="Aprendices SENA"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        {/* Oscurecimiento suave para legibilidad */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-950/25" />
+        <div className="relative z-10 text-white max-w-lg">
+          <blockquote className="text-xl sm:text-2xl font-medium leading-relaxed drop-shadow-md">
+            "Formación profesional integral para el desarrollo tecnológico y lingüístico de Colombia."
+          </blockquote>
+          <p className="mt-4 text-base text-slate-200 font-light drop-shadow-sm">
+            Servicio Nacional de Aprendizaje — SENA
           </p>
         </div>
-
-        <AnimatePresence mode="wait">
-          {/* ── PASO 1: Ingreso de Credenciales ── */}
-          {step === "credentials" && (
-            <motion.div
-              key="credentials"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-5"
-            >
-              {isIdleTimeout && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-800 dark:text-amber-200 text-sm font-medium"
-                >
-                  <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                  <p className="leading-snug">Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.</p>
-                </motion.div>
-              )}
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm"
-                >
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <p className="leading-snug">{error}</p>
-                </motion.div>
-              )}
-
-              <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-                <div>
-                  <label className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
-                    Correo electrónico
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="email"
-                      required
-                      autoComplete="email"
-                      value={formData.email}
-                      onChange={(e) => handleEmailChange(e.target.value)}
-                      onBlur={handleEmailBlur}
-                      placeholder="aprendiz@soy.sena.edu.co"
-                      className={`w-full h-12 text-base bg-white dark:bg-slate-800 border rounded-xl pl-11 pr-4 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs ${
-                        emailTouched && emailError
-                          ? "border-rose-400 focus:ring-rose-500/20 focus:border-rose-500"
-                          : "border-slate-300 dark:border-slate-700"
-                      }`}
-                    />
-                  </div>
-                  <FieldError error={emailTouched ? emailError : undefined} />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-base font-semibold text-slate-700 dark:text-slate-300">
-                      Contraseña
-                    </label>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      autoComplete="current-password"
-                      value={formData.password}
-                      onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
-                      placeholder="••••••••"
-                      className="w-full h-12 text-base bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-11 pr-11 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
-                      title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  <div className="flex justify-end mt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const userEmail = (formData.email || "").trim().toLowerCase();
-                        if (userEmail) {
-                          sessionStorage.setItem("reset_email", userEmail);
-                          sessionStorage.setItem("recover_email", userEmail);
-                          navigate(`/recuperar-cuenta?email=${encodeURIComponent(userEmail)}`);
-                        } else {
-                          navigate("/recuperar-cuenta");
-                        }
-                      }}
-                      className="text-[#39A900] hover:underline font-medium text-sm cursor-pointer"
-                    >
-                      ¿Olvidaste tu contraseña? / Recuperar cuenta
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
-                  className="w-full h-12 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-base rounded-xl shadow-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Validando credenciales...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Continuar</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <p className="text-center text-sm text-slate-500 dark:text-slate-400 pt-2">
-                ¿No tienes cuenta?{" "}
-                <button
-                  type="button"
-                  onClick={() => navigate("/register")}
-                  className="text-[#39A900] hover:underline font-semibold text-sm cursor-pointer"
-                >
-                  Regístrate aquí
-                </button>
-              </p>
-            </motion.div>
-          )}
-
-          {/* ── PASO 2: Código de Verificación OTP ── */}
-          {step === "otp" && (
-            <motion.div
-              key="otp"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-5"
-            >
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm"
-                >
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <p className="leading-snug">{error}</p>
-                </motion.div>
-              )}
-
-              <form onSubmit={handleVerifyOtp} className="space-y-5">
-                <div>
-                  <label className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-3 block text-center">
-                    Código de 6 dígitos
-                  </label>
-                  <div className="flex justify-center gap-2 sm:gap-3">
-                    {otpDigits.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        id={`login-otp-${idx}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        required
-                        autoFocus={idx === 0}
-                        value={digit}
-                        onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        onPaste={handleOtpPaste}
-                        className="w-11 sm:w-13 h-12 sm:h-14 text-center text-xl font-bold font-mono border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading || otpDigits.join("").length < 6}
-                  className="w-full h-12 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-base rounded-xl shadow-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Validando código...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span>Validar y Acceder</span>
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <div className="flex items-center justify-center gap-2 pt-2">
-                <p className="text-sm text-slate-500">¿No recibiste el código?</p>
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={resendCooldown > 0}
-                  className="flex items-center gap-1.5 text-[#39A900] hover:underline font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${resendCooldown > 0 ? "animate-spin" : ""}`} />
-                  <span>{resendCooldown > 0 ? `Reenviar (${resendCooldown}s)` : "Reenviar código"}</span>
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+      </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
           ALERT VIEW: SELECCIÓN DE FICHA ACTIVA PARA APRENDICES CON MULTIPROGRAMA
@@ -751,7 +764,7 @@ export function LoginPage() {
                 <button
                   type="submit"
                   disabled={isManualEnrolling || !manualFichaInput.trim()}
-                  className="w-full h-12 bg-[#39A900] hover:bg-[#2d8500] text-white font-semibold text-base rounded-xl shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2.5 cursor-pointer mt-3"
+                  className="w-full h-12 bg-[#39A900] hover:bg-[#2d8500] text-white font-semibold text-base rounded-xl shadow-sm hover:shadow transition-all disabled:opacity-50 flex items-center justify-center gap-2.5 cursor-pointer mt-3"
                 >
                   {isManualEnrolling ? (
                     <>
