@@ -13,7 +13,7 @@ import {
   IconClock,
   IconHelp,
   IconLanguage,
-  IconAccessible,
+  IconWheelchair,
   IconUserCheck,
 } from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
@@ -401,7 +401,7 @@ export function LandingPage() {
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 transition-colors cursor-pointer"
                 title="Abrir panel de accesibilidad universal"
               >
-                <IconAccessible size={18} stroke={1.8} className="text-[#39A900]" />
+                <IconWheelchair size={18} stroke={1.8} className="text-[#39A900]" />
                 <span>Accesibilidad Visual</span>
               </button>
               <p className="text-xs text-slate-400 dark:text-slate-500">© 2026 WorkLex</p>

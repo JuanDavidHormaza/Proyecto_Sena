@@ -43,11 +43,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const userName = localStorage.getItem('userName');
       const userRole = localStorage.getItem('userRole') as any;
       if (token && userId && userName) {
+        const storedRoles = JSON.parse(localStorage.getItem('roles') || '[]');
+        const isDual = localStorage.getItem('is_dual_role') === 'true' || localStorage.getItem('isDualRole') === 'true';
         return {
           id: userId,
           name: userName,
           email: localStorage.getItem('userEmail') || '',
           role: userRole || 'student',
+          active_role: localStorage.getItem('active_role') || (userRole === 'teacher' ? 'INSTRUCTOR' : 'APRENDIZ'),
+          activeRole: localStorage.getItem('activeRole') || (userRole === 'teacher' ? 'INSTRUCTOR' : 'APRENDIZ'),
+          roles: storedRoles,
+          is_dual_role: isDual,
+          isDualRole: isDual,
           status: 'active',
           program: localStorage.getItem('userProgram') || null,
           enrolledPrograms: JSON.parse(localStorage.getItem('userEnrolledPrograms') || '[]'),
@@ -88,6 +95,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         localStorage.setItem('userRole', userData.role);
         localStorage.setItem('userId', userData.id);
         localStorage.setItem('userEmail', userData.email || '');
+        if (userData.active_role) {
+          localStorage.setItem('active_role', userData.active_role);
+          localStorage.setItem('activeRole', userData.active_role);
+        }
+        if (userData.roles) {
+          localStorage.setItem('roles', JSON.stringify(userData.roles));
+        }
+        const isDual = Boolean(userData.is_dual_role || userData.isDualRole);
+        localStorage.setItem('is_dual_role', String(isDual));
+        localStorage.setItem('isDualRole', String(isDual));
         if (userData.avatar || storedAvatar) {
           localStorage.setItem('userAvatar', userData.avatar || storedAvatar);
         }

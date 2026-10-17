@@ -19,13 +19,21 @@ export interface ApiUser {
   name: string;
   email: string;
   role: 'superadmin' | 'admin' | 'teacher' | 'student';
+  active_role?: string;
+  activeRole?: string;
+  roles?: string[];
+  is_dual_role?: boolean;
+  isDualRole?: boolean;
+  ficha?: {
+    codigo?: string;
+    programa?: string;
+  };
   status: 'active' | 'inactive';
   permissions: UserPermissions;
   docType?: string;
   program?: string | null;
   enrolledPrograms?: string[];
   availableRoles?: string[];
-  isDualRole?: boolean;
   docNum?: string;
   phoneNum?: string | number;
   country?: string;

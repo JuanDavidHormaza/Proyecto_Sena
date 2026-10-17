@@ -352,6 +352,7 @@ export function TeacherDictionariesPage() {
     setPlayingAudioId(docId);
 
     const audio = new Audio(resolved);
+    audio.loop = false; // Sin bucles infinitos
     audioPlayerRef.current = audio;
 
     audio.oncanplay = () => {
@@ -680,7 +681,8 @@ export function TeacherDictionariesPage() {
               className="w-full h-8"
               src={activeAudioUrl}
               onError={() => {
-                toast.warning("El archivo de audio solicitado no se encuentra en el bucket 'dictionary-audios'.");
+                setActiveAudioUrl(null);
+                setPlayingAudioId(null);
               }}
             />
           </div>

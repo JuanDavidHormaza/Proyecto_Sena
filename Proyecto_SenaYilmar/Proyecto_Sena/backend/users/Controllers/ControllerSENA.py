@@ -111,26 +111,45 @@ def _build_user_response(user, person):
         .values_list('role_id', flat=True)
         .distinct()
     )
-    available_roles = list(set([ROLE_MAP.get(r, 'student') for r in all_role_ids if r]))
+    raw_roles = [r for r in all_role_ids if r]
+    if user.role_id and user.role_id not in raw_roles:
+        raw_roles.append(user.role_id)
+    if not raw_roles:
+        raw_roles = [user.role_id or 'APRENDIZ']
+
+    active_role = user.role_id or raw_roles[0]
+    is_dual = len(raw_roles) > 1 or ('INSTRUCTOR' in raw_roles and 'APRENDIZ' in raw_roles)
+
+    available_roles = list(set([ROLE_MAP.get(r, 'student') for r in raw_roles if r]))
     if frontend_role not in available_roles:
         available_roles.append(frontend_role)
 
-    is_dual = len(available_roles) > 1 or ('student' in available_roles and 'teacher' in available_roles)
-
     created_at_dt = getattr(person, 'created_at', None) or getattr(user, 'created_at', None)
     created_at_str = created_at_dt.isoformat() if created_at_dt else None
+
+    # Información de ficha y programa para aislamiento institucional
+    programa = user.program or ''
+    ficha_code = getattr(user, 'ficha', '') or getattr(user, 'ficha_code', '') or ''
 
     return {
         'id': str(user.user_id),
         'name': f"{person.first_name} {person.last_name}".strip(),
         'email': person.email,
         'role': frontend_role,
+        'active_role': active_role,
+        'activeRole': active_role,
+        'roles': raw_roles,
+        'is_dual_role': is_dual,
+        'isDualRole': is_dual,
         'status': STATUS_MAP.get(getattr(person, 'status', None), 'inactive'),
         'permissions': get_permissions_by_role(frontend_role),
         'program': user.program,
+        'ficha': {
+            'codigo': str(ficha_code),
+            'programa': programa,
+        },
         'enrolledPrograms': enrolled_programs,
         'availableRoles': available_roles,
-        'isDualRole': is_dual,
         'country': country,
         'docType': getattr(person, 'doc_type', None),
         'docNum': getattr(person, 'doc_num', None),
@@ -142,11 +161,34 @@ def _build_user_response(user, person):
 
 
 def _generate_tokens(user):
-    """Genera par de tokens JWT para un usuario."""
+    """Genera par de tokens JWT para un usuario con roles institucionales."""
     refresh = RefreshToken()
     refresh['user_id'] = user.user_id
     access = refresh.access_token
     access['user_id'] = user.user_id
+
+    person = getattr(user, 'person', None)
+    if person:
+        raw_roles = list(
+            User.objects.filter(person=person)
+            .values_list('role_id', flat=True)
+            .distinct()
+        )
+        raw_roles = [r for r in raw_roles if r]
+        if user.role_id and user.role_id not in raw_roles:
+            raw_roles.append(user.role_id)
+        if not raw_roles:
+            raw_roles = [user.role_id or 'APRENDIZ']
+        is_dual = len(raw_roles) > 1 or ('INSTRUCTOR' in raw_roles and 'APRENDIZ' in raw_roles)
+        active_role = user.role_id or raw_roles[0]
+
+        access['roles'] = raw_roles
+        access['active_role'] = active_role
+        access['is_dual_role'] = is_dual
+        refresh['roles'] = raw_roles
+        refresh['active_role'] = active_role
+        refresh['is_dual_role'] = is_dual
+
     return str(access), str(refresh)
 
 

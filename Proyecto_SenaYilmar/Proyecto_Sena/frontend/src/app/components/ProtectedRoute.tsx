@@ -16,24 +16,37 @@ export function ProtectedRoute({ children, allowedRoles }: Props) {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  const roles = user.roles || [];
   const isDualRole = Boolean(
+    user.is_dual_role ||
     user.isDualRole ||
-    (user.availableRoles && user.availableRoles.length > 1) ||
-    localStorage.getItem("isDualRole") === "true" ||
-    localStorage.getItem("originalRole") === "teacher"
+    (roles.includes("INSTRUCTOR") && roles.includes("APRENDIZ")) ||
+    (user.availableRoles && user.availableRoles.includes("teacher") && user.availableRoles.includes("student")) ||
+    localStorage.getItem("is_dual_role") === "true" ||
+    localStorage.getItem("isDualRole") === "true"
   );
 
-  // Permitir acceso si el rol coincide directamente, o si el usuario es docente/doble rol explorando vista de estudiante
+  const activeRole = (
+    user.active_role ||
+    user.activeRole ||
+    localStorage.getItem("active_role") ||
+    localStorage.getItem("activeRole") ||
+    (user.role === "teacher" ? "INSTRUCTOR" : "APRENDIZ")
+  ).toUpperCase();
+
+  const effectiveRole = activeRole === "INSTRUCTOR" ? "teacher" : "student";
+
+  // Permitir acceso si el rol del usuario está permitido, o si tiene rol activo correspondiente (caso especial doble rol)
   const hasAccess =
     allowedRoles.includes(user.role) ||
-    (isDualRole && allowedRoles.includes("student")) ||
-    (user.role === "teacher" && allowedRoles.includes("student")) ||
+    allowedRoles.includes(effectiveRole) ||
+    (isDualRole && (allowedRoles.includes("student") || allowedRoles.includes("teacher"))) ||
     (user.role === "admin" || user.role === "superadmin");
 
   if (!hasAccess) {
-    // Redirigir según su rol real
-    if (user.role === "student") return <Navigate to="/dashboard" replace />;
-    if (user.role === "teacher") return <Navigate to="/teacher" replace />;
+    // Redirigir según su rol efectivo
+    if (effectiveRole === "student") return <Navigate to="/dashboard" replace />;
+    if (effectiveRole === "teacher") return <Navigate to="/teacher" replace />;
     if (user.role === "admin" || user.role === "superadmin") return <Navigate to="/admin" replace />;
     return <Navigate to="/login" replace />;
   }

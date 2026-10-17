@@ -914,29 +914,22 @@ function StudentVocabCard({
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">{termKey}</h4>
-            {isAudioUnavailable ? (
-              <button
-                type="button"
-                disabled={true}
-                title="Pronunciación temporalmente no disponible"
-                className="w-9 h-9 rounded-full flex items-center justify-center transition-all bg-slate-100 dark:bg-slate-800 text-slate-400 opacity-40 cursor-not-allowed border border-slate-200 dark:border-slate-700"
-              >
-                <VolumeX className="w-4 h-4 text-slate-400" strokeWidth={1.8} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onPlayPronunciation(term)}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                  isPlaying
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 animate-pulse ring-4 ring-emerald-100"
-                    : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                }`}
-                title={`Escuchar pronunciación de ${termKey}`}
-              >
-                <Volume2 className={`w-4 h-4 ${isPlaying ? "animate-bounce" : ""}`} strokeWidth={1.8} />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => onPlayPronunciation(term)}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                isPlaying
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 ring-4 ring-emerald-100"
+                  : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+              }`}
+              title={isPlaying ? `Pausar pronunciación de ${termKey}` : `Escuchar pronunciación de ${termKey}`}
+            >
+              {isPlaying ? (
+                <Pause className="w-4 h-4" strokeWidth={1.8} />
+              ) : (
+                <Volume2 className="w-4 h-4" strokeWidth={1.8} />
+              )}
+            </button>
           </div>
 
           <p className="text-xs text-foreground/90 leading-relaxed min-h-[2.8rem]">
@@ -1107,7 +1100,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     return [prog];
   }, [user, activeProgramKey]);
 
-  const activeProgram = user?.program || localStorage.getItem("userProgram") || enrolledPrograms[0] || "ADSO";
+  const activeProgram = user?.ficha?.programa || user?.program || localStorage.getItem("userProgram") || enrolledPrograms[0] || "ADSO";
 
   const handleProgramSwitch = async (targetProg: string) => {
     if (targetProg === activeProgram) return;
@@ -1526,6 +1519,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     if (mediaPath) {
       const url = resolveMediaUrl(mediaPath, "dictionary-audios");
       const audio = new Audio(url);
+      audio.loop = false; // Asegurar que ningún audio quede en bucle infinito
       audioRef.current = audio;
       setPlayingTermId(termKey);
 
@@ -1550,6 +1544,16 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   // Práctica interactiva de pronunciación con el micrófono del navegador
   const handleVoicePractice = (term: api.ApiDocument) => {
     const termKey = term.wordId || term.name;
+
+    // 1. Pausar cualquier audio o síntesis de voz en reproducción para liberar el audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setPlayingTermId(null);
 
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -2742,7 +2746,39 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                     </div>
 
                     {/* Cuerpo del Modal: Grid Responsivo con scroll vertical */}
-                    <div className="overflow-y-auto p-6 flex-1 bg-slate-50/50">
+                    <div className="overflow-y-auto p-6 flex-1 bg-slate-50/50 space-y-5">
+                      {/* Métricas Consolidadas Reales en Tiempo Real */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+                          <span className="text-[11px] text-slate-500 font-medium block">Palabras</span>
+                          <span className="text-xl font-bold text-slate-800 dark:text-white font-mono">
+                            {filteredTerms.length}
+                          </span>
+                          <span className="text-[10px] text-emerald-600 block font-medium">Términos Filtrados</span>
+                        </div>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+                          <span className="text-[11px] text-slate-500 font-medium block">Imágenes</span>
+                          <span className="text-xl font-bold text-slate-800 dark:text-white font-mono">
+                            {filteredTerms.filter(t => Boolean(t.image || t.imageUrl || (t as any).image_url || (t as any).has_image)).length}
+                          </span>
+                          <span className="text-[10px] text-emerald-600 block font-medium">Recursos Visuales</span>
+                        </div>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+                          <span className="text-[11px] text-slate-500 font-medium block">Audios</span>
+                          <span className="text-xl font-bold text-slate-800 dark:text-white font-mono">
+                            {filteredTerms.filter(t => Boolean(t.audio || t.audioUrl || (t as any).audio_url || (t as any).has_audio)).length}
+                          </span>
+                          <span className="text-[10px] text-emerald-600 block font-medium">Pronunciación Nativa</span>
+                        </div>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+                          <span className="text-[11px] text-slate-500 font-medium block">Videos</span>
+                          <span className="text-xl font-bold text-slate-800 dark:text-white font-mono">
+                            {filteredTerms.filter(t => Boolean(t.video || t.videoUrl || (t as any).video_url || (t as any).has_video)).length}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block font-medium">Videoclips Técnicos</span>
+                        </div>
+                      </div>
+
                       {studyTerms.length === 0 ? (
                         <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-border p-8 shadow-xs space-y-3 max-w-lg mx-auto my-8">
                           <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />

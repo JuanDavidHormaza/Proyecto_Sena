@@ -948,6 +948,31 @@ class UserViewSet(viewsets.ViewSet):
             return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
         return Response({'role': role})
 
+    @action(detail=False, methods=['post'], url_path='switch-role')
+    def switch_role(self, request):
+        target_role = (request.data.get('role') or '').strip().upper()
+        if target_role == 'TEACHER':
+            target_role = 'INSTRUCTOR'
+        elif target_role == 'STUDENT':
+            target_role = 'APRENDIZ'
+
+        person = getattr(request.user, 'person', None)
+        if not person:
+            return Response({'error': 'No se encontró la persona asociada'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Buscar si existe un User para esta persona con el target_role
+        available_users = User.objects.filter(person=person)
+        target_user = available_users.filter(role_id=target_role).first()
+        if not target_user:
+            if target_role in ['INSTRUCTOR', 'APRENDIZ', 'ADMIN', 'SUPERADMIN', 'MONITOR']:
+                request.user.role_id = target_role
+                request.user.save(update_fields=['role_id'])
+                target_user = request.user
+            else:
+                target_user = request.user
+
+        return Response(_build_user_response(target_user, person), status=status.HTTP_200_OK)
+
     def partial_update(self, request, pk=None):
         user = self.get_object()
         current_user_id = getattr(request.user, 'user_id', None) or getattr(request.user, 'pk', None)
