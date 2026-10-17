@@ -28,7 +28,6 @@ import {
   sanitizeEmail,
 } from "../utils/validation";
 import { FieldError } from "../components/FieldError";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 type LoginStep = "credentials" | "otp";
 
@@ -333,12 +332,17 @@ export function LoginPage() {
             <span>{step === "otp" ? "Volver a credenciales" : "Volver al inicio"}</span>
           </button>
 
-          {/* ── LOGOTIPO CIRCULAR WORKLEX Y ALINEACIÓN CON LOGO SENA ── */}
-          <div className="flex items-center gap-4 sm:gap-5 mb-8">
-            {/* Logo WorkLex Circular Grande */}
-            <WorklexBrandLogo size="lg" />
-            {/* Divisor vertical */}
-            <div className="h-10 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+          {/* ── LOGOTIPOS WORKLEX Y SENA (SIN CAJA NI BORDES RÍGIDOS) ── */}
+          <div className="flex items-center mb-8">
+            {/* Logo WorkLex Limpio y Nítido */}
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="h-14 sm:h-16 w-auto object-contain shrink-0"
+              style={{ imageRendering: "-webkit-optimize-contrast" }}
+            />
+            {/* Divisor sutil */}
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0" />
             {/* Logo SENA */}
             <img
               src="/logo-sena.png"
@@ -601,20 +605,22 @@ export function LoginPage() {
         {/* Oscurecimiento suave para legibilidad */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-950/25" />
         
-        {/* Contenedor Unificado Inferior: Logo Flotante y Cita Institucional */}
-        <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center text-center w-full max-w-lg px-6">
-          {/* Logo WorkLex Grande sin fondo blanco */}
-          <img
-            src="/worklex.png"
-            alt="WorkLex"
-            className="w-48 sm:w-56 md:w-64 h-auto object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)] mb-3 transition-transform hover:scale-105"
-          />
+        {/* Contenedor Inferior: Insignia Circular Blanca y Cita Institucional */}
+        <div className="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center text-center w-full max-w-md px-4">
+          {/* Insignia Circular Blanca */}
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white shadow-2xl border-4 border-white/90 p-2.5 flex items-center justify-center transition-transform hover:scale-105 mb-4">
+            <img 
+              src="/worklex.png" 
+              alt="WorkLex" 
+              className="w-full h-full object-contain rounded-full" 
+            />
+          </div>
 
-          {/* Texto pegado y legible con sombra suave */}
+          {/* Texto pegado y bien legible */}
           <p className="text-white text-base sm:text-lg font-medium leading-snug drop-shadow-md">
             "Formación profesional integral para el desarrollo tecnológico y lingüístico de Colombia."
           </p>
-          <span className="text-emerald-300 text-sm font-semibold tracking-wide mt-1.5 drop-shadow">
+          <span className="text-emerald-300 text-sm font-semibold tracking-wide mt-1 drop-shadow">
             Servicio Nacional de Aprendizaje — SENA
           </span>
         </div>

@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { UserAccountMenu } from "./UserAccountMenu";
 import { HeaderActionTools } from "./HeaderActionTools";
 import { useAuth } from "../context/AuthContext";
-import { WorklexBrandLogo } from "./WorklexBrandLogo";
 
 interface NavLinkItem {
   label: string;
@@ -43,15 +42,20 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
     <header className="h-16 sm:h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 transition-colors">
       <div className="container mx-auto px-4 lg:px-8 h-full flex items-center justify-between">
         {/* Identidad de marca WorkLex y SENA a la izquierda */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center">
           <button
             type="button"
             onClick={() => navigate("/")}
             title="Ir a la página principal de WorkLex"
-            className="group flex items-center gap-3 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all text-left cursor-pointer"
+            className="group flex items-center p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all text-left cursor-pointer"
           >
-            <WorklexBrandLogo size="md" showText={true} />
-            <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="h-10 sm:h-12 md:h-14 w-auto object-contain shrink-0"
+              style={{ imageRendering: "-webkit-optimize-contrast" }}
+            />
+            <span className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0" />
             <img
               src="/logo-sena.png"
               alt="SENA"
