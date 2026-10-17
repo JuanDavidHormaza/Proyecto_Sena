@@ -61,28 +61,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verificar token al montar, o sesión privilegiada si no hay token
+  // Verificar token al montar, evitando llamadas innecesarias en rutas públicas si no hay token
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('accessToken');
+      const token = typeof window !== 'undefined'
+        ? localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('accessToken')
+        : null;
 
+      // Rutas públicas que no deben chequear roles privilegiados de forma automática si no hay sesión
+      const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+      const isPublicRoute = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/recover' || pathname.startsWith('/reset-password');
+
+      // Si no hay token en el cliente (especialmente en rutas públicas), no ejecutar llamadas para evitar el 401 innecesario
       if (!token) {
-        try {
-          const resp = await privilegedMe();
-          setUser(resp.user);
-          localStorage.setItem('userName', resp.user.name);
-          localStorage.setItem('userRole', resp.user.role);
-          localStorage.setItem('userId', resp.user.id);
-          localStorage.setItem('userPermissions', JSON.stringify(resp.user.permissions));
-          localStorage.setItem('userProgram', resp.user.program || '');
-          if (resp.user.enrolledPrograms) {
-            localStorage.setItem('userEnrolledPrograms', JSON.stringify(resp.user.enrolledPrograms));
-          }
-        } catch {
-          // no autenticado
-        } finally {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
         return;
       }
 
@@ -106,9 +98,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       } catch (error: any) {
         console.warn("Validación de sesión con getMe:", error);
+        // Si falló getMe con token, verificar si corresponde a sesión privilegiada
+        try {
+          const resp = await privilegedMe();
+          if (resp?.user) {
+            setUser(resp.user);
+            localStorage.setItem('userName', resp.user.name);
+            localStorage.setItem('userRole', resp.user.role);
+            localStorage.setItem('userId', resp.user.id);
+            localStorage.setItem('userPermissions', JSON.stringify(resp.user.permissions));
+            localStorage.setItem('userProgram', resp.user.program || '');
+            if (resp.user.enrolledPrograms) {
+              localStorage.setItem('userEnrolledPrograms', JSON.stringify(resp.user.enrolledPrograms));
+            }
+            return;
+          }
+        } catch {
+          // no autenticado
+        }
+
         // Solo invalidar si el token fue rechazado con 401 no recuperable
         if (error?.status === 401) {
           localStorage.removeItem('accessToken');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
           setUser(null);
         }

@@ -228,7 +228,9 @@ export function clearAllTokens(): void {
 }
 
 function getAuthHeaders(includeJsonContentType = true): HeadersInit {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('accessToken') || localStorage.getItem('token')
+    : null;
   const headers: HeadersInit = {};
 
   if (includeJsonContentType) {
@@ -430,9 +432,19 @@ export async function privilegedLogin(credentials: LoginCredentials): Promise<{ 
   return handleResponse<{ user: ApiUser }>(response);
 }
 
-export async function privilegedMe(): Promise<{ user: ApiUser }> {
+export async function privilegedMe(): Promise<{ user: ApiUser } | null> {
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('accessToken')
+    : null;
+
+  // Si no hay token en el cliente, no ejecutar la llamada para evitar el 401 innecesario
+  if (!token) {
+    return null;
+  }
+
   const response = await safeFetch(`${API_BASE}/auth/privileged-me/`, {
     method: 'GET',
+    headers: getAuthHeaders(),
   });
 
   return handleResponse<{ user: ApiUser }>(response);
