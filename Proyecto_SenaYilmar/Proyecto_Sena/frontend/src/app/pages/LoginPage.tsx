@@ -602,12 +602,14 @@ export function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-950/25" />
         
         <div className="relative z-10 max-w-lg">
-          {/* Tarjeta Cápsula Vidrio Esmerilado WorkLex */}
-          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-white/40 dark:border-slate-700/40 p-4 sm:p-5 rounded-3xl shadow-xl flex items-center gap-4 max-w-md mb-8">
-            <WorklexBrandLogo size="md" />
-            <div>
-              <span className="font-extrabold text-slate-900 dark:text-white text-lg tracking-tight block">WorkLex</span>
-              <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-snug">Ecosistema Digital de Aprendizaje y Práctica Técnica</span>
+          {/* Insignia Circular Flotante WorkLex */}
+          <div className="mb-8">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white/95 backdrop-blur-md shadow-2xl border-4 border-white/80 p-3 flex items-center justify-center transition-transform hover:scale-105">
+              <img
+                src="/worklex.png"
+                alt="WorkLex"
+                className="w-full h-full object-contain rounded-full"
+              />
             </div>
           </div>
 
