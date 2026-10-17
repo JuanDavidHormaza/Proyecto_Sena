@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Image, Video, X, Play, ChevronRight, Film, Camera, ZoomIn, Languages } from "lucide-react";
 import { useState } from "react";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 // ─── Datos de ejemplo ───────────────────────────────────────────────────────
 // Reemplaza estos src por tus archivos reales importados con:
@@ -102,17 +103,11 @@ export function MediaPage() {
             transition={{ duration: 0.5 }}
             className="flex items-center justify-between"
           >
-            <div className="flex items-center gap-3">
-              <img
-                src="/worklex.png"
-                alt="WorkLex"
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
-              />
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">English Level Test</h1>
-                <p className="text-xs text-muted-foreground">Plataforma SENA</p>
-              </div>
-            </div>
+            <WorklexBrandLogo
+              size="md"
+              showText={true}
+              subtitle="English Level Test"
+            />
             <button
               onClick={() => navigate("/login")}
               className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-sena-blue text-white rounded-xl hover:bg-sena-blue-light transition-all duration-300 font-medium shadow-lg shadow-sena-blue/25"
@@ -395,17 +390,11 @@ export function MediaPage() {
       <footer className="py-8 px-6 border-t border-border bg-white">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img
-                src="/worklex.png"
-                alt="WorkLex"
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
-              />
-              <div>
-                <p className="font-semibold text-foreground">English Level Test</p>
-                <p className="text-sm text-muted-foreground">SENA - 2026</p>
-              </div>
-            </div>
+            <WorklexBrandLogo
+              size="sm"
+              showText={true}
+              subtitle="SENA - 2026"
+            />
             <p className="text-sm text-muted-foreground">
               Plataforma educativa para la evaluación de competencias en inglés
             </p>
