@@ -1,6 +1,48 @@
 import { useState, useEffect } from "react";
-import { ImageIcon, ZoomIn } from "lucide-react";
+import { GitBranch, Terminal, Layers, Code2, ZoomIn } from "lucide-react";
 import { getMediaUrl } from "../services/api";
+
+function getTermSemanticIcon(term?: string) {
+  const w = (term || "").toLowerCase().trim();
+  if (
+    w.includes("branch") ||
+    w.includes("git") ||
+    w.includes("repo") ||
+    w.includes("merge") ||
+    w.includes("commit") ||
+    w.includes("pull") ||
+    w.includes("checkout")
+  ) {
+    return GitBranch;
+  }
+  if (
+    w.includes("terminal") ||
+    w.includes("debug") ||
+    w.includes("test") ||
+    w.includes("cli") ||
+    w.includes("console") ||
+    w.includes("shell") ||
+    w.includes("script") ||
+    w.includes("command")
+  ) {
+    return Terminal;
+  }
+  if (
+    w.includes("layer") ||
+    w.includes("middle") ||
+    w.includes("microservice") ||
+    w.includes("service") ||
+    w.includes("cloud") ||
+    w.includes("server") ||
+    w.includes("api") ||
+    w.includes("backend") ||
+    w.includes("docker") ||
+    w.includes("deploy")
+  ) {
+    return Layers;
+  }
+  return Code2;
+}
 
 export interface SafeImageProps {
   src?: string;
@@ -67,10 +109,24 @@ export function SafeImage({
         />
       ) : null}
 
-      {/* 3. Placeholder Limpio si no hay imagen o falla (Cero texto residual o insignias) */}
+      {/* 3. Placeholder Limpio si no hay imagen o falla (Fondo neutro, borde suave e icono temático) */}
       {hasError && (
-        <div className="absolute inset-0 bg-slate-50 flex items-center justify-center text-slate-300 p-3">
-          <ImageIcon className="w-8 h-8 text-slate-300" strokeWidth={1.5} />
+        <div className="absolute inset-0 bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-500 p-3 text-center">
+          {(() => {
+            const SemanticIcon = getTermSemanticIcon(alt || fallbackText);
+            return (
+              <>
+                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center mb-1 text-slate-600 shadow-2xs">
+                  <SemanticIcon className="w-5 h-5" strokeWidth={1.75} />
+                </div>
+                {(fallbackText || alt) && (
+                  <span className="text-xs font-semibold text-slate-700 truncate max-w-full px-2">
+                    {fallbackText || alt}
+                  </span>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 

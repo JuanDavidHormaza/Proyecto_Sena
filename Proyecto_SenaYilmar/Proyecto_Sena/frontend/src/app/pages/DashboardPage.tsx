@@ -42,6 +42,7 @@ import {
   Languages,
   LifeBuoy,
   Plus,
+  GitBranch,
 } from "lucide-react";
 import { getLevelFromScore } from "../data/questionsA1";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -795,8 +796,48 @@ function StudentVocabCard({
   };
   const compBadge = compColors[competence] || "bg-purple-50 text-purple-700 border-purple-200";
 
-  const FallbackIcons = [Code2, Terminal, FileCode, Layers, Cpu];
-  const FallbackIcon = FallbackIcons[Math.abs(index) % FallbackIcons.length];
+  const getTermSemanticIcon = (word: string) => {
+    const w = (word || "").toLowerCase().trim();
+    if (
+      w.includes("branch") ||
+      w.includes("git") ||
+      w.includes("repo") ||
+      w.includes("merge") ||
+      w.includes("commit") ||
+      w.includes("pull") ||
+      w.includes("checkout")
+    ) {
+      return GitBranch;
+    }
+    if (
+      w.includes("terminal") ||
+      w.includes("debug") ||
+      w.includes("test") ||
+      w.includes("cli") ||
+      w.includes("console") ||
+      w.includes("shell") ||
+      w.includes("script") ||
+      w.includes("command")
+    ) {
+      return Terminal;
+    }
+    if (
+      w.includes("layer") ||
+      w.includes("middle") ||
+      w.includes("microservice") ||
+      w.includes("service") ||
+      w.includes("cloud") ||
+      w.includes("server") ||
+      w.includes("api") ||
+      w.includes("backend") ||
+      w.includes("docker") ||
+      w.includes("deploy")
+    ) {
+      return Layers;
+    }
+    return Code2;
+  };
+  const SemanticIcon = getTermSemanticIcon(termKey);
 
   const rawImageSrc = term.imageUrl || term.image;
   const imageKey = term.image || (term.imageUrl ? term.imageUrl.replace(/^\/api\/media\/dictionary-images\//, "") : `${termKey.toLowerCase().replace(/\s+/g, "_")}.png`);
@@ -839,10 +880,16 @@ function StudentVocabCard({
               )}
             </div>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-700/80 text-slate-400 dark:text-slate-500">
-              <FallbackIcon className="w-9 h-9 mb-1.5 text-slate-400 dark:text-slate-500 stroke-[1.5]" />
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 tracking-tight">{termKey}</span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500">Recurso institucional</span>
+            <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 text-center">
+              <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-700/90 border border-slate-200 dark:border-slate-600 flex items-center justify-center mb-1.5 shadow-xs text-slate-600 dark:text-slate-300">
+                <SemanticIcon className="w-6 h-6" strokeWidth={1.75} />
+              </div>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 tracking-tight truncate max-w-full px-2">
+                {termKey}
+              </span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                Recurso institucional
+              </span>
             </div>
           )}
 

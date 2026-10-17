@@ -32,6 +32,8 @@ import {
   Pause,
   Layers,
   Sparkles,
+  GitBranch,
+  Terminal,
 } from "lucide-react";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
@@ -58,6 +60,48 @@ function matchesTeacherProgram(docProgram: string | undefined, teacherProgram: s
   const tNorm = teacherProgram.trim().toLowerCase();
   const dNorm = (docProgram || "").trim().toLowerCase();
   return dNorm.includes(tNorm) || tNorm.includes(dNorm) || isGlobalProgram(docProgram);
+}
+
+export function getTermSemanticIcon(termName?: string) {
+  const name = (termName || "").toLowerCase().trim();
+  if (
+    name.includes("branch") ||
+    name.includes("git") ||
+    name.includes("repo") ||
+    name.includes("merge") ||
+    name.includes("commit") ||
+    name.includes("pull") ||
+    name.includes("checkout")
+  ) {
+    return GitBranch;
+  }
+  if (
+    name.includes("terminal") ||
+    name.includes("debug") ||
+    name.includes("test") ||
+    name.includes("cli") ||
+    name.includes("console") ||
+    name.includes("shell") ||
+    name.includes("script") ||
+    name.includes("command")
+  ) {
+    return Terminal;
+  }
+  if (
+    name.includes("layer") ||
+    name.includes("middle") ||
+    name.includes("microservice") ||
+    name.includes("service") ||
+    name.includes("cloud") ||
+    name.includes("server") ||
+    name.includes("api") ||
+    name.includes("backend") ||
+    name.includes("docker") ||
+    name.includes("deploy")
+  ) {
+    return Layers;
+  }
+  return Code2;
 }
 
 export function TeacherDictionariesPage() {
@@ -570,34 +614,41 @@ export function TeacherDictionariesPage() {
                 className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between group"
               >
                 <div>
-                  {/* Vista Previa de Ilustración con Fallback SVG Tolerante a 404 */}
-                  {doc.imageUrl ? (
-                    <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 mb-4 group/img flex items-center justify-center">
-                      {!imageErrors[doc.id] ? (
-                        <img
-                          src={resolveMediaUrl(doc.imageUrl)}
-                          alt={doc.name || doc.wordId || "Ilustración técnica"}
-                          loading="lazy"
-                          decoding="async"
-                          onError={() => {
-                            console.warn(`[MediaProxy 404] Imagen no encontrada: ${doc.imageUrl}`);
-                            setImageErrors((prev) => ({ ...prev, [doc.id]: true }));
-                          }}
-                          className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover/img:scale-105"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/60 text-slate-400 p-4 text-center">
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center mb-1 text-slate-500">
-                            <ImageIcon className="w-5 h-5" strokeWidth={1.75} />
-                          </div>
-                          <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Ilustración Técnica</span>
-                          <span className="text-[10px] text-slate-400 font-mono mt-0.5 truncate max-w-full px-2">
-                            {doc.imageUrl.split("/").pop()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
+                  {/* Vista Previa de Ilustración con Fallback Semántico Tolerante a 404 (aspect-video siempre constante) */}
+                  <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 mb-4 group/img flex items-center justify-center">
+                    {doc.imageUrl && !imageErrors[doc.id] ? (
+                      <img
+                        src={resolveMediaUrl(doc.imageUrl)}
+                        alt={doc.name || doc.wordId || "Ilustración técnica"}
+                        loading="lazy"
+                        decoding="async"
+                        onError={() => {
+                          console.warn(`[MediaProxy 404] Imagen no encontrada: ${doc.imageUrl}`);
+                          setImageErrors((prev) => ({ ...prev, [doc.id]: true }));
+                        }}
+                        className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover/img:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 text-center">
+                        {(() => {
+                          const SemanticIcon = getTermSemanticIcon(doc.name || doc.wordId);
+                          return (
+                            <>
+                              <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-700/90 border border-slate-200 dark:border-slate-600 flex items-center justify-center mb-1.5 shadow-xs text-slate-600 dark:text-slate-300">
+                                <SemanticIcon className="w-6 h-6" strokeWidth={1.75} />
+                              </div>
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 tracking-tight truncate max-w-full px-2">
+                                {doc.name || doc.wordId}
+                              </span>
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                                Recurso institucional
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Cabecera de la Tarjeta con Badges y Acciones */}
                   <div className="flex items-start justify-between gap-2 mb-3">
@@ -683,56 +734,52 @@ export function TeacherDictionariesPage() {
                 </div>
 
                 {/* ─── Acciones Multimedia (Audio, Imagen, Video) ─── */}
-                {(doc.audioUrl || doc.videoUrl || doc.imageUrl) && (
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2 flex flex-wrap gap-2">
-                    {/* Botón de Audio con Tolerancia a Fallos 404 */}
-                    {doc.audioUrl && (
-                      <button
-                        type="button"
-                        disabled={Boolean(audioErrorMap[doc.id])}
-                        onClick={() => doc.audioUrl && handlePlayAudio(doc.id, doc.audioUrl)}
-                        title={
-                          audioErrorMap[doc.id]
-                            ? "Audio no disponible temporalmente en el almacenamiento (404)"
-                            : "Escuchar pronunciación nativa"
-                        }
-                        className={`inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold transition-all ${
-                          audioErrorMap[doc.id]
-                            ? "bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-60"
-                            : playingAudioId === doc.id
-                            ? "bg-[#39A900] text-white border border-[#39A900] shadow-xs"
-                            : "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80 cursor-pointer"
-                        }`}
-                      >
-                        {audioLoadingMap[doc.id] ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />
-                        ) : audioErrorMap[doc.id] ? (
-                          <VolumeX className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
-                        ) : (
-                          <Volume2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-                        )}
-                        <span>
-                          {audioErrorMap[doc.id]
-                            ? "Audio no disponible"
-                            : playingAudioId === doc.id
-                            ? "Pausar Audio"
-                            : "Escuchar Audio"}
-                        </span>
-                      </button>
-                    )}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2 flex flex-wrap items-center gap-2">
+                  {/* Botón de Audio con Tolerancia Total a Fallos 404 */}
+                  {doc.audioUrl && !audioErrorMap[doc.id] ? (
+                    <button
+                      type="button"
+                      onClick={() => handlePlayAudio(doc.id, doc.audioUrl!)}
+                      title="Escuchar pronunciación nativa"
+                      className={`inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        playingAudioId === doc.id
+                          ? "bg-[#39A900] text-white border border-[#39A900] shadow-xs"
+                          : "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80"
+                      }`}
+                    >
+                      {audioLoadingMap[doc.id] ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />
+                      ) : (
+                        <Volume2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+                      )}
+                      <span>
+                        {playingAudioId === doc.id ? "Pausar Audio" : "Escuchar Audio"}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={true}
+                      title="Audio no disponible temporalmente (404)"
+                      className="inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 opacity-40 cursor-not-allowed transition-all"
+                    >
+                      <VolumeX className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
+                      <span>Audio no disponible</span>
+                    </button>
+                  )}
 
-                    {/* Enlace Ilustración */}
-                    {doc.imageUrl && (
-                      <a
-                        href={resolveMediaUrl(doc.imageUrl)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 border border-emerald-200/80 dark:border-emerald-800/80 transition-colors"
-                      >
-                        <Image className="w-3.5 h-3.5" strokeWidth={1.75} />
-                        <span>Ver Ilustración</span>
-                      </a>
-                    )}
+                  {/* Enlace Ilustración si existe y no dio error */}
+                  {doc.imageUrl && !imageErrors[doc.id] && (
+                    <a
+                      href={resolveMediaUrl(doc.imageUrl)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 border border-emerald-200/80 dark:border-emerald-800/80 transition-colors"
+                    >
+                      <Image className="w-3.5 h-3.5" strokeWidth={1.75} />
+                      <span>Ver Ilustración</span>
+                    </a>
+                  )}
 
                     {/* Video Educativo */}
                     {doc.videoUrl && (
@@ -761,7 +808,6 @@ export function TeacherDictionariesPage() {
                       </div>
                     )}
                   </div>
-                )}
               </motion.article>
             ))}
           </div>
