@@ -13,6 +13,7 @@ import { TestResult, User } from "../data/users";
 import * as api from "../services/api";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { HeaderActionTools } from "../components/HeaderActionTools";
+import { RoleSwitcher } from "../components/RoleSwitcher";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
 import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
@@ -253,6 +254,7 @@ export function TeacherDashboard() {
             </div>
 
             <div className="flex items-center gap-3">
+              <RoleSwitcher />
               <HeaderActionTools />
               <button
                 onClick={() => navigate('/dictionary')}

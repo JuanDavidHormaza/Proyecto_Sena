@@ -16,7 +16,21 @@ export function ProtectedRoute({ children, allowedRoles }: Props) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!allowedRoles.includes(user.role)) {
+  const isDualRole = Boolean(
+    user.isDualRole ||
+    (user.availableRoles && user.availableRoles.length > 1) ||
+    localStorage.getItem("isDualRole") === "true" ||
+    localStorage.getItem("originalRole") === "teacher"
+  );
+
+  // Permitir acceso si el rol coincide directamente, o si el usuario es docente/doble rol explorando vista de estudiante
+  const hasAccess =
+    allowedRoles.includes(user.role) ||
+    (isDualRole && allowedRoles.includes("student")) ||
+    (user.role === "teacher" && allowedRoles.includes("student")) ||
+    (user.role === "admin" || user.role === "superadmin");
+
+  if (!hasAccess) {
     // Redirigir según su rol real
     if (user.role === "student") return <Navigate to="/dashboard" replace />;
     if (user.role === "teacher") return <Navigate to="/teacher" replace />;

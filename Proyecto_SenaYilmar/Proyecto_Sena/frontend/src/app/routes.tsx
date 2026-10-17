@@ -83,6 +83,14 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "/instructor",
+    element: <Navigate to="/teacher" replace />,
+  },
+  {
+    path: "/instructor/dashboard",
+    element: <Navigate to="/teacher" replace />,
+  },
+  {
     path: "/teacher/dictionaries",
     element: (
       <ProtectedRoute allowedRoles={["teacher"]}>

@@ -40,6 +40,7 @@ import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
 import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { RoleSwitcher } from "../components/RoleSwitcher";
 import { resolveMediaUrl } from "../services/api";
 import { Document, mockDocuments } from "../data/users";
 import { toast } from "../components/Toast";
@@ -291,59 +292,83 @@ export function TeacherDictionariesPage() {
 
   const programLabel = teacherProgram || "tu programa de formación";
 
-  // Manejo de reproducción de audio con tolerancia total a fallos (404)
-  const handlePlayAudio = (docId: string, rawAudioUrl: string) => {
-    if (audioErrorMap[docId]) {
-      toast.warning("El archivo de audio no se encuentra disponible en el almacenamiento temporalmente.", "Audio 404");
+  // Fallback nativo Web Speech API silencioso sin toasts de error 404
+  const speakFallback = (text: string, docId: string) => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+      utterance.rate = 0.9;
+      setPlayingAudioId(docId);
+      utterance.onend = () => {
+        setPlayingAudioId(null);
+        setAudioLoadingMap((prev) => ({ ...prev, [docId]: false }));
+      };
+      utterance.onerror = () => {
+        setPlayingAudioId(null);
+        setAudioLoadingMap((prev) => ({ ...prev, [docId]: false }));
+      };
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setPlayingAudioId(null);
+      setAudioLoadingMap((prev) => ({ ...prev, [docId]: false }));
+    }
+  };
+
+  // Manejo de reproducción de audio con control de pausa y fallback nativo Web Speech API
+  const handlePlayAudio = (docId: string, rawAudioUrl?: string, wordText?: string) => {
+    const textToSpeak = wordText || docId;
+
+    // 1. Si vuelve a presionar el mismo término, pausar inmediatamente
+    if (playingAudioId === docId) {
+      if (audioPlayerRef.current && !audioPlayerRef.current.paused) {
+        audioPlayerRef.current.pause();
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setPlayingAudioId(null);
+      return;
+    }
+
+    // 2. Detener cualquier reproducción previa
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    // 3. Si no tiene url de audio, usar fallback de inmediato
+    if (!rawAudioUrl) {
+      speakFallback(textToSpeak, docId);
       return;
     }
 
     const resolved = resolveMediaUrl(rawAudioUrl);
-
-    // Si ya se está reproduciendo el mismo audio, alternar pausa
-    if (playingAudioId === docId && audioPlayerRef.current) {
-      if (!audioPlayerRef.current.paused) {
-        audioPlayerRef.current.pause();
-        setPlayingAudioId(null);
-        return;
-      } else {
-        audioPlayerRef.current.play().catch(() => {});
-        setPlayingAudioId(docId);
-        return;
-      }
-    }
-
     setAudioLoadingMap((prev) => ({ ...prev, [docId]: true }));
     setActiveAudioUrl(resolved);
     setPlayingAudioId(docId);
-
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-    }
 
     const audio = new Audio(resolved);
     audioPlayerRef.current = audio;
 
     audio.oncanplay = () => {
       setAudioLoadingMap((prev) => ({ ...prev, [docId]: false }));
-      audio.play().catch((err) => {
-        console.warn("Reproducción de audio bloqueada o con error:", err);
-        setAudioErrorMap((prev) => ({ ...prev, [docId]: true }));
-        setPlayingAudioId(null);
-        setAudioLoadingMap((prev) => ({ ...prev, [docId]: false }));
+      audio.play().catch(() => {
+        speakFallback(textToSpeak, docId);
       });
     };
 
     audio.onerror = () => {
-      console.warn(`[MediaProxy 404] Audio no encontrado en bucket: ${resolved}`);
-      setAudioErrorMap((prev) => ({ ...prev, [docId]: true }));
-      setPlayingAudioId(null);
-      setAudioLoadingMap((prev) => ({ ...prev, [docId]: false }));
-      toast.warning("Audio no disponible temporalmente en el bucket 'dictionary-audios'.", "Recurso no encontrado (404)");
+      // Fallback automático silencioso con SpeechSynthesis sin spam de toasts de error
+      speakFallback(textToSpeak, docId);
     };
 
     audio.onended = () => {
       setPlayingAudioId(null);
+      setAudioLoadingMap((prev) => ({ ...prev, [docId]: false }));
     };
   };
 
@@ -482,6 +507,7 @@ export function TeacherDictionariesPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <RoleSwitcher />
             <UserAccountMenu accent="blue" />
           </div>
         </div>
@@ -804,38 +830,26 @@ export function TeacherDictionariesPage() {
 
                 {/* ─── Acciones Multimedia (Audio, Imagen, Video) ─── */}
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2 flex flex-wrap items-center gap-2">
-                  {/* Botón de Audio con Tolerancia Total a Fallos 404 */}
-                  {doc.audioUrl && !audioErrorMap[doc.id] ? (
-                    <button
-                      type="button"
-                      onClick={() => handlePlayAudio(doc.id, doc.audioUrl!)}
-                      title="Escuchar pronunciación nativa"
-                      className={`inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                        playingAudioId === doc.id
-                          ? "bg-[#39A900] text-white border border-[#39A900] shadow-xs"
-                          : "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80"
-                      }`}
-                    >
-                      {audioLoadingMap[doc.id] ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />
-                      ) : (
-                        <Volume2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-                      )}
-                      <span>
-                        {playingAudioId === doc.id ? "Pausar Audio" : "Escuchar Audio"}
-                      </span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={true}
-                      title="Audio no disponible temporalmente (404)"
-                      className="inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 opacity-40 cursor-not-allowed transition-all"
-                    >
-                      <VolumeX className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
-                      <span>Audio no disponible</span>
-                    </button>
-                  )}
+                  {/* Botón de Audio con Tolerancia Total y Fallback Nativo Web Speech */}
+                  <button
+                    type="button"
+                    onClick={() => handlePlayAudio(doc.id, doc.audioUrl, doc.name || doc.wordId)}
+                    title="Escuchar pronunciación nativa o sintetizada"
+                    className={`inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      playingAudioId === doc.id
+                        ? "bg-[#39A900] text-white border border-[#39A900] shadow-xs"
+                        : "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80"
+                    }`}
+                  >
+                    {audioLoadingMap[doc.id] ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />
+                    ) : (
+                      <Volume2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+                    )}
+                    <span>
+                      {playingAudioId === doc.id ? "Pausar Audio" : "Escuchar Audio"}
+                    </span>
+                  </button>
 
                   {/* Enlace Ilustración si existe y no dio error */}
                   {doc.imageUrl && !imageErrors[doc.id] && (

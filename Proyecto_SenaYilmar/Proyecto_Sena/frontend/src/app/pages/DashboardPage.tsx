@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 import {
   Target,
@@ -58,6 +58,7 @@ import { questions } from "../data";
 import { toast } from "../components/Toast";
 import { playEnglishSpeech } from "../utils/speech";
 import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { RoleSwitcher } from "../components/RoleSwitcher";
 
 const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
   if (!raw) return "Reading";
@@ -1228,7 +1229,8 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
   const [showDictionaryModal, setShowDictionaryModal] = useState<boolean>(false);
 
-  // Estados de audio y pronunciación por voz (con mapa de errores 404 resiliente)
+  // Estados de audio y pronunciación por voz (reproductor controlado play/pause con fallback nativo)
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingTermId, setPlayingTermId] = useState<string | null>(null);
   const [audioErrorMap, setAudioErrorMap] = useState<Record<string, boolean>>({});
   const [listeningTerm, setListeningTerm] = useState<string | null>(null);
@@ -1481,41 +1483,68 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     });
   }, [studyTerms, selectedLevel, selectedCompetence, searchQuery]);
 
-  // Reproducir pronunciación con fallback resiliente y tolerancia a fallos 404
+  // Reproductor de pronunciación controlado con estado (Play/Pause) y fallback nativo Web Speech API
+  const speakFallback = (text: string) => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+      utterance.rate = 0.9;
+      setPlayingTermId(text);
+      utterance.onend = () => setPlayingTermId(null);
+      utterance.onerror = () => setPlayingTermId(null);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setPlayingTermId(null);
+    }
+  };
+
   const handlePlayPronunciation = (term: api.ApiDocument) => {
     const termKey = term.wordId || term.name;
-    if (audioErrorMap[termKey]) {
-      toast.warning("Pronunciación temporalmente no disponible", "Audio no encontrado (404)");
+
+    // 1. Si vuelve a presionar el mismo término, pausarlo inmediatamente
+    if (audioRef.current && playingTermId === termKey) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setPlayingTermId(null);
       return;
     }
 
-    setPlayingTermId(termKey);
+    // 2. Detener cualquier reproducción previa
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
 
     const mediaPath = term.audioUrl || term.audio;
     if (mediaPath) {
       const url = resolveMediaUrl(mediaPath, "dictionary-audios");
       const audio = new Audio(url);
-      audio.onended = () => setPlayingTermId(null);
-      audio.onerror = () => {
-        console.warn(`[MediaProxy 404] Audio no encontrado en bucket: ${url}`);
-        setAudioErrorMap((prev) => ({ ...prev, [termKey]: true }));
+      audioRef.current = audio;
+      setPlayingTermId(termKey);
+
+      audio.onended = () => {
         setPlayingTermId(null);
-        toast.warning("Pronunciación temporalmente no disponible", "Audio no encontrado (404)");
+        audioRef.current = null;
       };
-      audio.play().catch((err) => {
-        console.warn(`Error al reproducir audio para ${termKey}:`, err);
-        setAudioErrorMap((prev) => ({ ...prev, [termKey]: true }));
-        setPlayingTermId(null);
-        toast.warning("Pronunciación temporalmente no disponible", "Audio no encontrado (404)");
+
+      audio.onerror = () => {
+        // Fallback automático fluido y silencioso con SpeechSynthesis sin spam de toasts
+        speakFallback(termKey);
+      };
+
+      audio.play().catch(() => {
+        speakFallback(termKey);
       });
     } else {
-      speakWord(termKey);
-      setTimeout(() => setPlayingTermId(null), 1200);
+      speakFallback(termKey);
     }
-  };
-
-  const speakWord = (text: string) => {
-    playEnglishSpeech(text, { rate: 0.85 });
   };
 
   // Práctica interactiva de pronunciación con el micrófono del navegador
@@ -1601,23 +1630,45 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   // Conteo de términos por nivel
   // Conteo de términos dinámico por nivel y por competencia lingüística
   const dynamicLevelCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: studyTerms.length, A1: 0, A2: 0, B1: 0, B2: 0 };
+    const counts: Record<string, number> = { all: filteredTerms.length, A1: 0, A2: 0, B1: 0, B2: 0 };
     studyTerms.forEach((t) => {
-      const lvl = (t.level || "A1").toUpperCase();
-      if (counts[lvl] !== undefined) counts[lvl]++;
+      const termSkill = (t.competence || (t as any).skill || (t as any).category || "Grammar").toLowerCase();
+      const targetSkill = selectedCompetence.toLowerCase();
+      const matchesSkill = selectedCompetence === "all" || selectedCompetence === "Todas" || selectedCompetence === "Todos" || termSkill === targetSkill;
+      
+      const termName = (t.wordId || t.name || "").toLowerCase();
+      const def = (t.definition || "").toLowerCase();
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch = !query || termName.includes(query) || def.includes(query);
+
+      if (matchesSkill && matchesSearch) {
+        const lvl = (t.level || "A1").toUpperCase();
+        if (counts[lvl] !== undefined) counts[lvl]++;
+      }
     });
     return counts;
-  }, [studyTerms]);
+  }, [studyTerms, selectedCompetence, searchQuery, filteredTerms.length]);
 
   const dynamicCompCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: studyTerms.length, Speaking: 0, Writing: 0, Grammar: 0, Reading: 0, Listening: 0 };
+    const counts: Record<string, number> = { all: filteredTerms.length, Speaking: 0, Writing: 0, Grammar: 0, Reading: 0, Listening: 0 };
     studyTerms.forEach((t) => {
-      const c = t.competence || "Grammar";
-      if (counts[c] !== undefined) counts[c]++;
-      else if (c.toLowerCase().includes("listen")) counts.Listening++;
+      const termLevel = (t.level || "A1").toUpperCase();
+      const targetLevel = selectedLevel.toUpperCase();
+      const matchesLevel = selectedLevel === "all" || selectedLevel === "Todos" || selectedLevel === "Todas" || termLevel === targetLevel;
+
+      const termName = (t.wordId || t.name || "").toLowerCase();
+      const def = (t.definition || "").toLowerCase();
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch = !query || termName.includes(query) || def.includes(query);
+
+      if (matchesLevel && matchesSearch) {
+        const c = t.competence || "Grammar";
+        if (counts[c] !== undefined) counts[c]++;
+        else if (c.toLowerCase().includes("listen")) counts.Listening++;
+      }
     });
     return counts;
-  }, [studyTerms]);
+  }, [studyTerms, selectedLevel, searchQuery, filteredTerms.length]);
 
   const levelCounts = dynamicLevelCounts;
 
@@ -1701,6 +1752,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
 
             {/* Acciones del Header: Menú y Perfil */}
             <div className="flex items-center gap-2">
+              <RoleSwitcher />
               <HeaderActionTools />
 
               {/* Botón Móvil Hamburguesa */}
@@ -2382,28 +2434,28 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Palabras</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {studyTerms.length}
+                    {filteredTerms.length}
                   </span>
-                  <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Términos Registrados</span>
+                  <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Términos Filtrados</span>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Imágenes</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {studyTerms.filter(t => Boolean(t.image || t.imageUrl)).length}
+                    {filteredTerms.filter(t => Boolean(t.image || t.imageUrl || (t as any).image_url || (t as any).has_image)).length}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Recursos Visuales</span>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Audios</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {studyTerms.filter(t => Boolean(t.audio || t.audioUrl)).length}
+                    {filteredTerms.filter(t => Boolean(t.audio || t.audioUrl || (t as any).audio_url || (t as any).has_audio)).length}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Pronunciación Nativa</span>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Videos</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {studyTerms.filter(t => Boolean(t.video || t.videoUrl)).length}
+                    {filteredTerms.filter(t => Boolean(t.video || t.videoUrl || (t as any).video_url || (t as any).has_video)).length}
                   </span>
                   <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Videoclips Técnicos</span>
                 </div>
@@ -2501,7 +2553,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                               : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                           }`}
                         >
-                          {comp === "all" ? `Todas (${studyTerms.length})` : `${comp} (${dynamicCompCounts[comp] || 0})`}
+                          {comp === "all" ? `Todas (${dynamicCompCounts.all || filteredTerms.length})` : `${comp} (${dynamicCompCounts[comp] || 0})`}
                         </button>
                       ))}
                     </div>
@@ -2520,7 +2572,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                               : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                           }`}
                         >
-                          {lvl === "all" ? `Todos (${studyTerms.length})` : `${lvl} (${dynamicLevelCounts[lvl] || 0})`}
+                          {lvl === "all" ? `Todos (${dynamicLevelCounts.all || filteredTerms.length})` : `${lvl} (${dynamicLevelCounts[lvl] || 0})`}
                         </button>
                       ))}
 
@@ -2648,7 +2700,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                                   : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                               }`}
                             >
-                              {comp === "all" ? `Todas (${studyTerms.length})` : `${comp} (${dynamicCompCounts[comp] || 0})`}
+                              {comp === "all" ? `Todas (${dynamicCompCounts.all || filteredTerms.length})` : `${comp} (${dynamicCompCounts[comp] || 0})`}
                             </button>
                           ))}
                         </div>
@@ -2667,7 +2719,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                                   : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                               }`}
                             >
-                              {lvl === "all" ? `Todos (${studyTerms.length})` : `${lvl} (${dynamicLevelCounts[lvl] || 0})`}
+                              {lvl === "all" ? `Todos (${dynamicLevelCounts.all || filteredTerms.length})` : `${lvl} (${dynamicLevelCounts[lvl] || 0})`}
                             </button>
                           ))}
 
