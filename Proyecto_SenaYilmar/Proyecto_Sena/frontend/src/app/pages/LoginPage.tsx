@@ -28,6 +28,7 @@ import {
   sanitizeEmail,
 } from "../utils/validation";
 import { FieldError } from "../components/FieldError";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 type LoginStep = "credentials" | "otp";
 
@@ -335,13 +336,7 @@ export function LoginPage() {
           {/* ── LOGOTIPO CIRCULAR WORKLEX Y ALINEACIÓN CON LOGO SENA ── */}
           <div className="flex items-center gap-4 sm:gap-5 mb-8">
             {/* Logo WorkLex Circular Grande */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white shadow-md border-2 border-emerald-500/20 p-2 flex items-center justify-center overflow-hidden transition-transform hover:scale-105 shrink-0">
-              <img
-                src="/worklex.png"
-                alt="WorkLex"
-                className="w-full h-full object-contain rounded-full"
-              />
-            </div>
+            <WorklexBrandLogo size="lg" />
             {/* Divisor vertical */}
             <div className="h-10 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
             {/* Logo SENA */}
@@ -596,7 +591,7 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* ── Columna Derecha: Fotografía Institucional con Overlay (50% en pantallas grandes) ── */}
+      {/* ── Columna Derecha: Fotografía y Marca (50% en pantallas grandes) ── */}
       <div className="hidden lg:flex lg:w-1/2 relative min-h-screen overflow-hidden bg-slate-900 flex-col justify-end p-12 xl:p-16">
         <img
           src="/GenteSena.jpg"
@@ -605,8 +600,18 @@ export function LoginPage() {
         />
         {/* Oscurecimiento suave para legibilidad */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-950/25" />
-        <div className="relative z-10 text-white max-w-lg">
-          <blockquote className="text-xl sm:text-2xl font-medium leading-relaxed drop-shadow-md">
+        
+        <div className="relative z-10 max-w-lg">
+          {/* Tarjeta Cápsula Vidrio Esmerilado WorkLex */}
+          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-white/40 dark:border-slate-700/40 p-4 sm:p-5 rounded-3xl shadow-xl flex items-center gap-4 max-w-md mb-8">
+            <WorklexBrandLogo size="md" />
+            <div>
+              <span className="font-extrabold text-slate-900 dark:text-white text-lg tracking-tight block">WorkLex</span>
+              <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-snug">Ecosistema Digital de Aprendizaje y Práctica Técnica</span>
+            </div>
+          </div>
+
+          <blockquote className="text-xl sm:text-2xl font-medium leading-relaxed drop-shadow-md text-white">
             "Formación profesional integral para el desarrollo tecnológico y lingüístico de Colombia."
           </blockquote>
           <p className="mt-4 text-base text-slate-200 font-light drop-shadow-sm">

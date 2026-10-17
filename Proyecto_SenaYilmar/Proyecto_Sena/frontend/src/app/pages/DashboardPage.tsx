@@ -57,6 +57,7 @@ import { getTermsForProgram } from "../data/dictionariesByFicha";
 import { questions } from "../data";
 import { toast } from "../components/Toast";
 import { playEnglishSpeech } from "../utils/speech";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
   if (!raw) return "Reading";
@@ -1632,16 +1633,12 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 title="Ir a la página principal de WorkLex (Inicio)"
                 className="group flex items-center gap-2.5 sm:gap-3.5 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left cursor-pointer"
               >
+                <WorklexBrandLogo size="md" showText={true} />
+                <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
                 <img
                   src="/logo-sena.png"
                   alt="SENA"
-                  className="h-9 sm:h-10 w-auto object-contain shrink-0"
-                />
-                <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
-                <img
-                  src="/worklex.png"
-                  alt="Worklex SENA"
-                  className="h-10 sm:h-12 md:h-14 w-auto object-contain shrink-0 transition-transform group-hover:scale-105"
+                  className="h-8 sm:h-9 w-auto object-contain shrink-0 opacity-90"
                 />
               </button>
               <div className="hidden lg:flex items-center">

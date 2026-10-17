@@ -38,6 +38,7 @@ import {
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 import { resolveMediaUrl } from "../services/api";
 import { Document, mockDocuments } from "../data/users";
 import { toast } from "../components/Toast";
@@ -400,20 +401,13 @@ export function TeacherDictionariesPage() {
               className="flex items-center gap-3 sm:gap-4 p-1.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group text-left"
               title="Regresar al panel del docente"
             >
-              <img
-                src="/worklex.png"
-                alt="Worklex SENA"
-                className="h-12 sm:h-14 md:h-16 w-auto object-contain transition-transform group-hover:scale-105 flex-shrink-0"
+              <WorklexBrandLogo
+                size="md"
+                showText={true}
+                showBadge={true}
+                badgeText="Ecosistema Digital"
+                subtitle="Plataforma de Gestión y Aprendizaje"
               />
-              <div className="hidden sm:flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900 dark:text-white text-base tracking-tight">Worklex SENA</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-                    Ecosistema Digital
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Plataforma de Gestión y Aprendizaje</p>
-              </div>
             </button>
           </div>
 

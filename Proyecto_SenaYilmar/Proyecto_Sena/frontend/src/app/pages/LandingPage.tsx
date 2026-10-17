@@ -14,6 +14,7 @@ import {
   LogIn,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -34,16 +35,12 @@ export function LandingPage() {
       <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div className="w-full h-full flex items-center justify-between px-4 sm:px-8 transition-all duration-300">
           <div className="flex-shrink-0 flex items-center gap-3">
+            <WorklexBrandLogo size="md" showText={true} />
+            <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
             <img
               src="/logo-sena.png"
               alt="SENA"
-              className="h-9 w-auto object-contain shrink-0"
-            />
-            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
-            <img
-              src="/worklex.png"
-              alt="WorkLex SENA"
-              className="h-8 w-auto object-contain shrink-0"
+              className="h-8 sm:h-9 w-auto object-contain shrink-0 opacity-90"
             />
           </div>
 
@@ -328,17 +325,11 @@ export function LandingPage() {
       <footer className="py-8 px-6 border-t border-border bg-card">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img
-                src="/worklex.png"
-                alt="WorkLex"
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
-              />
-              <div>
-                <p className="font-semibold text-foreground">English Level Test</p>
-                <p className="text-sm text-muted-foreground">SENA - 2026</p>
-              </div>
-            </div>
+            <WorklexBrandLogo
+              size="sm"
+              showText={true}
+              subtitle="SENA - 2026"
+            />
             <p className="text-sm text-muted-foreground">
               Plataforma educativa para la evaluacion de competencias en ingles
             </p>

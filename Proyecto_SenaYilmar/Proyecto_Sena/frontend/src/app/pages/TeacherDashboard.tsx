@@ -15,6 +15,7 @@ import { UserAccountMenu } from "../components/UserAccountMenu";
 import { HeaderActionTools } from "../components/HeaderActionTools";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 function normalizeText(value?: string | null) {
   return (value || "").trim().toLowerCase();
@@ -233,15 +234,11 @@ export function TeacherDashboard() {
         <div className="container mx-auto px-4 lg:px-8 h-full">
           <div className="flex items-center justify-between h-full">
             <div className="flex items-center gap-3">
-              <img
-                src="/worklex.png"
-                alt="Worklex SENA"
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              <WorklexBrandLogo
+                size="md"
+                showText={true}
+                subtitle="Seguimiento Formativo"
               />
-              <div className="hidden sm:block">
-                <h1 className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">Worklex SENA</h1>
-                <p className="text-xs text-muted-foreground">Seguimiento Formativo</p>
-              </div>
             </div>
 
             <div className="flex items-center gap-3">
