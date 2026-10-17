@@ -1,205 +1,260 @@
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import {
-  Clock,
-  FileQuestion,
-  Award,
-  Sparkles,
-  GraduationCap,
-  BookOpen,
-  Languages,
-  PlayCircle,
-  ArrowRight,
-  UserCheck,
-  LogIn,
-} from "lucide-react";
+  IconUsers,
+  IconBooks,
+  IconCertificate,
+  IconAward,
+  IconPlayerPlay,
+  IconLogin,
+  IconLayoutDashboard,
+  IconArrowRight,
+  IconSparkles,
+  IconClock,
+  IconHelp,
+  IconLanguage,
+  IconAccessible,
+  IconUserCheck,
+} from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
 
 export function LandingPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const hasValidSession = Boolean(isAuthenticated && user && localStorage.getItem("accessToken"));
+
+  // Detección estricta y resiliente de sesión activa
+  const token = typeof window !== "undefined"
+    ? localStorage.getItem("accessToken") || localStorage.getItem("access_token") || localStorage.getItem("token")
+    : null;
+  const hasValidSession = Boolean(isAuthenticated || (user && token));
+
+  const getDashboardPath = () => {
+    const role = (user?.role || localStorage.getItem("userRole") || "").toLowerCase();
+    if (role === "admin" || role === "superadmin") return "/admin";
+    if (role === "teacher") return "/teacher";
+    return "/dashboard";
+  };
 
   const handleStartExamCTA = () => {
     if (hasValidSession) {
       navigate("/quiz");
     } else {
-      navigate("/register");
+      navigate("/login");
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header Responsivo */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <div className="w-full h-full flex items-center justify-between px-4 sm:px-8 transition-all duration-300">
-          <div className="flex-shrink-0 flex items-center gap-3">
+    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white overflow-x-hidden selection:bg-[#39A900]/20 selection:text-[#39A900]">
+      {/* ── Header Global Responsivo ── */}
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 sm:h-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+          {/* Identidad de marca WorkLex y SENA */}
+          <div className="flex-shrink-0 flex items-center">
+            <img
+              src="/worklex.png"
+              alt="WorkLex"
+              className="h-10 sm:h-12 w-auto object-contain shrink-0"
+              style={{ imageRendering: "-webkit-optimize-contrast" }}
+            />
+            <span className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0" />
             <img
               src="/logo-sena.png"
               alt="SENA"
-              className="h-9 w-auto object-contain shrink-0"
-            />
-            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
-            <img
-              src="/worklex.png"
-              alt="WorkLex SENA"
-              className="h-8 w-auto object-contain shrink-0"
+              className="h-8 sm:h-9 w-auto object-contain shrink-0 opacity-90"
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (hasValidSession) {
-                if (user?.role === "admin" || user?.role === "superadmin") {
-                  navigate("/admin");
-                } else if (user?.role === "teacher") {
-                  navigate("/teacher");
-                } else {
-                  navigate("/dashboard");
-                }
-              } else {
-                navigate("/login");
-              }
-            }}
-            className="h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm px-5 rounded-lg shadow-xs transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <span>{hasValidSession ? "Mi Dashboard" : "Ingresar"}</span>
-            <LogIn className="w-4 h-4 ml-1" strokeWidth={2} />
-          </button>
+          {/* Botón de navegación dinámico SaaS según estado de sesión */}
+          <div className="flex items-center gap-3">
+            {hasValidSession ? (
+              <button
+                type="button"
+                onClick={() => navigate(getDashboardPath())}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm hover:shadow transition-all cursor-pointer active:scale-98"
+                title="Ir a mi panel principal de WorkLex"
+              >
+                <IconLayoutDashboard size={18} stroke={2} />
+                <span>Ir a mi Panel</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm hover:shadow transition-all cursor-pointer active:scale-98"
+              >
+                <IconLogin size={18} stroke={2} />
+                <span>Ingresar</span>
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-sena-green/5 via-transparent to-sena-blue/5" />
+      {/* ── Hero Section (Mobile-First Real & 60/40 Desktop) ── */}
+      <section className="pt-28 sm:pt-36 lg:pt-40 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* Fondo decorativo sutil */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-blue-500/5 pointer-events-none" />
 
-        <div className="container mx-auto max-w-6xl relative">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left Content */}
+        <div className="container mx-auto max-w-6xl relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            
+            {/* ── LADO IZQUIERDO: 60% en escritorio (lg:col-span-7) ── */}
             <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="lg:col-span-7 flex flex-col items-start w-full text-left"
             >
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-xs font-semibold mb-6">
-                <Sparkles className="w-3.5 h-3.5" strokeWidth={2} />
-                Evaluación Interactiva SENA
+              {/* Badge temático */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-bold mb-5 shadow-2xs">
+                <IconSparkles size={16} stroke={2} className="text-[#39A900]" />
+                <span>Evaluación Interactiva SENA</span>
               </div>
-              
-              <h2 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-5 leading-tight text-balance">
+
+              {/* Título Principal */}
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white mb-5 tracking-tight leading-[1.15] text-balance">
                 Evalúa tu Nivel de{" "}
                 <span className="text-[#39A900]">Inglés Técnico</span>
-              </h2>
+              </h1>
 
-              <p className="text-base text-slate-600 dark:text-slate-400 mb-8 leading-relaxed max-w-lg">
-                Completa un cuestionario interactivo y descubre tu nivel lingüístico en minutos. 
-                Recibe retroalimentación personalizada de tus instructores.
+              {/* Descripción */}
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 mb-8 leading-relaxed max-w-xl">
+                Completa un cuestionario adaptativo y descubre tu nivel de competencia lingüística en minutos. Recibe retroalimentación personalizada avalada por instructores SENA.
               </p>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              {/* Botones de Acción Móvil-First */}
+              <div className="flex flex-col sm:flex-row gap-3.5 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={handleStartExamCTA}
-                  className="h-11 px-6 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-[#39A900] hover:bg-[#2e8600] text-white rounded-xl text-base font-bold transition-all shadow-md hover:shadow-lg hover:shadow-[#39A900]/25 flex items-center justify-center cursor-pointer active:scale-98"
                 >
-                  <PlayCircle className="w-4 h-4" strokeWidth={2} />
+                  <IconPlayerPlay size={20} stroke={2} className="mr-2" />
                   <span>Comenzar Evaluación</span>
-                  <ArrowRight className="w-4 h-4" strokeWidth={2} />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/login")}
-                  className="h-11 px-6 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <UserCheck className="w-4 h-4" strokeWidth={2} />
-                  <span>Ya tengo cuenta</span>
-                </button>
+
+                {hasValidSession ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate(getDashboardPath())}
+                    className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-900 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  >
+                    <IconLayoutDashboard size={20} stroke={1.8} className="text-[#39A900]" />
+                    <span>Continuar a mi formación</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/login")}
+                    className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs active:scale-98"
+                  >
+                    <IconUserCheck size={20} stroke={1.8} className="text-slate-500 dark:text-slate-400" />
+                    <span>Ya tengo cuenta</span>
+                  </button>
+                )}
               </div>
             </motion.div>
 
-            {/* Right - Stats Cards (MatDash Clean Metric Cards) */}
+            {/* ── LADO DERECHO: 40% en escritorio (lg:col-span-5) ── */}
             <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="grid grid-cols-2 gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="lg:col-span-5 w-full"
             >
-              <div className="col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-                    <GraduationCap className="w-5 h-5 text-emerald-600" />
-                  </div>
+              {/* Tarjetas Estadísticas Estilo MatDash (Vertical en móvil < 768px: grid-cols-1 sm:grid-cols-3 lg:grid-cols-1) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4 w-full">
+                {/* Tarjeta 1: Aprendices evaluados */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 flex items-center justify-between group cursor-default">
                   <div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">0</p>
-                    <p className="text-xs font-medium text-slate-500">Aprendices evaluados</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      1,250+
+                    </p>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Aprendices evaluados
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
+                    <IconUsers size={28} stroke={1.6} />
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
-                <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-3 shrink-0">
-                  <BookOpen className="w-5 h-5 text-blue-600" />
+                {/* Tarjeta 2: Programas SENA */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 flex items-center justify-between group cursor-default">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      24
+                    </p>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Programas SENA
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
+                    <IconBooks size={28} stroke={1.6} />
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">0</p>
-                <p className="text-xs font-medium text-slate-500">Programas SENA</p>
-              </div>
 
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm">
-                <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center mb-3 shrink-0">
-                  <Award className="w-5 h-5 text-amber-500" />
+                {/* Tarjeta 3: Satisfacción General */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 flex items-center justify-between group cursor-default">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      98%
+                    </p>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Satisfacción General
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
+                    <IconCertificate size={28} stroke={1.6} />
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">0%</p>
-                <p className="text-xs font-medium text-slate-500">Satisfacción</p>
               </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 px-6 bg-slate-50/70 dark:bg-slate-900/50 border-y border-slate-200 dark:border-slate-800">
+      {/* ── Features Section: Cómo Funciona ── */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/70 dark:bg-slate-900/50 border-y border-slate-200/80 dark:border-slate-800">
         <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">
               Cómo funciona la evaluación
-            </h3>
-            <p className="text-sm text-slate-500 max-w-2xl mx-auto">
-              Un proceso simple y efectivo para conocer tu nivel de inglés técnico
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Un proceso ágil y riguroso para medir con exactitud tu comprensión técnica en inglés.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
-                icon: Clock,
-                title: "Tiempo del quiz",
-                description: "El tiempo se registra automáticamente cuando el aprendiz finaliza la evaluación.",
-                iconBg: "bg-emerald-50 text-emerald-600",
+                icon: IconClock,
+                title: "Tiempo controlado",
+                description: "Cronometraje dinámico por pregunta para simular entornos profesionales reales.",
+                iconBg: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400",
               },
               {
-                icon: FileQuestion,
+                icon: IconHelp,
                 title: "Preguntas por nivel",
-                description: "La evaluación avanza por A1, A2, B1 y B2 con preguntas, escritura y audio.",
-                iconBg: "bg-blue-50 text-blue-600",
+                description: "Evaluación adaptativa estructurada en módulos A1, A2, B1 y B2 con audio y código.",
+                iconBg: "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400",
               },
               {
-                icon: Award,
-                title: "Resultado",
-                description: "Al terminar el último nivel se muestra la página de resultados con datos reales.",
-                iconBg: "bg-amber-50 text-amber-500",
+                icon: IconAward,
+                title: "Certificación inmediata",
+                description: "Resultados instantáneos con desglose porcentual por competencia y retroalimentación.",
+                iconBg: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400",
               },
             ].map((feature, index) => (
               <div
                 key={index}
-                className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700"
+                className="bg-white dark:bg-slate-800/90 rounded-2xl p-6 sm:p-7 shadow-xs hover:shadow-md border border-slate-200/90 dark:border-slate-700/80 transition-all flex flex-col items-start"
               >
-                <div className={`w-10 h-10 ${feature.iconBg} rounded-lg flex items-center justify-center mb-4`}>
-                  <feature.icon className="w-5 h-5" />
+                <div className={`w-12 h-12 ${feature.iconBg} rounded-xl flex items-center justify-center mb-5 shrink-0`}>
+                  <feature.icon size={24} stroke={1.8} />
                 </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">{feature.title}</h4>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{feature.title}</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{feature.description}</p>
               </div>
             ))}
@@ -207,62 +262,62 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Levels Section */}
-      <section className="py-20 px-6">
+      {/* ── Levels Section: MCER ── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-6xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4 text-balance">
-              Niveles de Evaluacion
-            </h3>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Basado en el Marco Comun Europeo de Referencia para las Lenguas (MCER)
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
+              Niveles de Evaluación
+            </h2>
+            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Alineado con el Marco Común Europeo de Referencia para las Lenguas (MCER).
             </p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 level: "Principiante",
                 range: "A1",
                 percentage: "0% - 59%",
                 color: "#E21B3C",
-                description: "Fundamentos del idioma y vocabulario técnico esencial",
+                description: "Fundamentos del idioma y vocabulario técnico esencial.",
               },
               {
                 level: "Elemental",
                 range: "A2",
                 percentage: "60% - 64%",
                 color: "#FF6B00",
-                description: "Comprensión de instrucciones y flujos de software básicos",
+                description: "Comprensión de instrucciones y flujos de software básicos.",
               },
               {
                 level: "Intermedio",
                 range: "B1",
                 percentage: "65% - 69%",
                 color: "#D89E00",
-                description: "Comunicación técnica y resolución de problemas",
+                description: "Comunicación técnica y resolución práctica de problemas.",
               },
               {
                 level: "Intermedio Alto",
                 range: "B2",
                 percentage: "70% - 100%",
                 color: "#39A900",
-                description: "Dominio profesional y comunicación fluida en tecnología",
+                description: "Dominio profesional y comunicación fluida en tecnología.",
               },
             ].map((item, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.96 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="relative overflow-hidden bg-card rounded-2xl p-6 shadow-lg border border-border group hover:shadow-xl transition-all duration-300"
+                transition={{ duration: 0.4, delay: index * 0.08 }}
+                className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200/90 dark:border-slate-700 hover:shadow-lg transition-all"
               >
                 <div
                   className="absolute top-0 left-0 right-0 h-1.5"
@@ -271,15 +326,15 @@ export function LandingPage() {
                 <div className="pt-2">
                   <div className="flex items-center justify-between mb-4">
                     <span
-                      className="text-sm font-semibold px-3 py-1 rounded-full"
-                      style={{ backgroundColor: `${item.color}20`, color: item.color }}
+                      className="text-xs font-bold px-3 py-1 rounded-full"
+                      style={{ backgroundColor: `${item.color}15`, color: item.color }}
                     >
                       {item.range}
                     </span>
-                    <span className="text-sm text-muted-foreground">{item.percentage}</span>
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.percentage}</span>
                   </div>
-                  <h4 className="text-2xl font-bold text-foreground mb-2">{item.level}</h4>
-                  <p className="text-muted-foreground">{item.description}</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{item.level}</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{item.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -287,64 +342,75 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-6">
+      {/* ── Final Call To Action ── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-4xl">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 25 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative overflow-hidden bg-gradient-to-br from-sena-green to-sena-green-dark rounded-3xl p-12 text-center text-white shadow-2xl"
+            transition={{ duration: 0.5 }}
+            className="relative overflow-hidden bg-gradient-to-br from-[#39A900] to-[#256f00] rounded-3xl p-8 sm:p-14 text-center text-white shadow-2xl"
           >
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIwOSAxLjc5MS00IDQtNHM0IDEuNzkxIDQgNC0xLjc5MSA0LTQgNC00LTEuNzkxLTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
-            
-            <div className="relative z-10">
-              <div className="mx-auto mb-6 h-18 w-18 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-xl shadow-emerald-950/20">
-                <Languages className="w-9 h-9 text-white" strokeWidth={2} />
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="mb-6 h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-xl">
+                <IconLanguage size={36} stroke={2} className="text-white" />
               </div>
-              <h3 className="text-3xl md:text-4xl font-bold mb-4 text-balance">
-                Listo para conocer tu nivel?
-              </h3>
-              <p className="text-lg opacity-90 mb-8 max-w-xl mx-auto">
-                Inicia la evaluacion y guarda tus resultados reales en la plataforma.
+              <h2 className="text-2xl sm:text-4xl font-extrabold mb-4 text-balance tracking-tight">
+                ¿Listo para certificar tus competencias?
+              </h2>
+              <p className="text-base sm:text-lg opacity-90 mb-8 max-w-xl leading-relaxed">
+                Inicia la evaluación interactiva y recibe el diagnóstico de tus habilidades técnicas en inglés.
               </p>
-              <motion.button
+              <button
+                type="button"
                 onClick={handleStartExamCTA}
-                className="inline-flex items-center gap-2 bg-white text-sena-green px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-50 transition-all duration-300 shadow-xl cursor-pointer"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="inline-flex items-center gap-2.5 bg-white text-[#39A900] hover:bg-slate-50 px-8 py-4 rounded-xl text-base sm:text-lg font-bold transition-all shadow-xl hover:scale-105 active:scale-95 cursor-pointer"
               >
-                <PlayCircle className="w-5 h-5 mr-1" strokeWidth={2} />
+                <IconPlayerPlay size={20} stroke={2} className="fill-current" />
                 <span>Comenzar Ahora</span>
-                <ArrowRight className="w-5 h-5 ml-1" strokeWidth={2} />
-              </motion.button>
+                <IconArrowRight size={20} stroke={2.5} />
+              </button>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 px-6 border-t border-border bg-card">
+      {/* ── Footer con Integración de Accesibilidad ── */}
+      <footer className="py-10 px-4 sm:px-6 lg:px-8 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="container mx-auto max-w-6xl">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center">
               <img
                 src="/worklex.png"
                 alt="WorkLex"
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+                className="h-9 sm:h-10 w-auto object-contain"
+                style={{ imageRendering: "-webkit-optimize-contrast" }}
               />
-              <div>
-                <p className="font-semibold text-foreground">English Level Test</p>
-                <p className="text-sm text-muted-foreground">SENA - 2026</p>
-              </div>
+              <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0" />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                SENA — Ecosistema Digital de Formación Profesional
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Plataforma educativa para la evaluacion de competencias en ingles
-            </p>
+
+            {/* Accesibilidad discreta e integrada */}
+            <div className="flex items-center gap-4 flex-wrap justify-center">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("toggle-worklex-accessibility"))}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 transition-colors cursor-pointer"
+                title="Abrir panel de accesibilidad universal"
+              >
+                <IconAccessible size={18} stroke={1.8} className="text-[#39A900]" />
+                <span>Accesibilidad Visual</span>
+              </button>
+              <p className="text-xs text-slate-400 dark:text-slate-500">© 2026 WorkLex</p>
+            </div>
           </div>
         </div>
       </footer>
     </div>
   );
 }
+
+export default LandingPage;

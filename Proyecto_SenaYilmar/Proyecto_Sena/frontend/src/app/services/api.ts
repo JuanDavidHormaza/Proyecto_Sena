@@ -228,7 +228,9 @@ export function clearAllTokens(): void {
 }
 
 function getAuthHeaders(includeJsonContentType = true): HeadersInit {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('accessToken') || localStorage.getItem('token')
+    : null;
   const headers: HeadersInit = {};
 
   if (includeJsonContentType) {
@@ -340,20 +342,41 @@ async function handleResponse<T>(response: Response): Promise<T> {
     }
 
     const message = extractErrorMessage(rawError, response.status);
-    console.warn("API Error Response:", { status: response.status, url: response.url, message, rawError });
 
-    // Solo intentar refresh si hay token guardado y no es un endpoint de login/registro
+    // Detección de rutas públicas y llamadas de comprobación de privilegios / sesión
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isPublicRoute = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/recover' || pathname.startsWith('/reset-password');
+    const isPrivilegedOrAuthProbe = response.url && (
+      response.url.includes('/auth/privileged-me') ||
+      response.url.includes('/auth/privileged-login') ||
+      response.url.includes('/auth/me')
+    );
+
+    // Si el status es 401 en llamadas de comprobación de privilegios mientras el usuario está en rutas públicas (/, /login, /register),
+    // no arrojar console.warn ni alertas innecesarias
+    const suppressLog = response.status === 401 && (isPublicRoute || isPrivilegedOrAuthProbe);
+
+    if (!suppressLog) {
+      console.warn("API Error Response:", { status: response.status, url: response.url, message, rawError });
+    }
+
+    // Solo intentar refresh si hay token guardado y no es un endpoint de login/registro ni una ruta pública
     const isAuthEndpoint = response.url && (
       response.url.includes("/auth/login") ||
       response.url.includes("/auth/register") ||
       response.url.includes("/auth/check-document") ||
-      response.url.includes("/auth/verify-otp")
+      response.url.includes("/auth/verify-otp") ||
+      response.url.includes("/auth/privileged-me")
     );
-    if (response.status === 401 && localStorage.getItem("accessToken") && !isAuthEndpoint) {
+    const hasToken = typeof window !== 'undefined' && Boolean(
+      localStorage.getItem("accessToken") || localStorage.getItem("access_token") || localStorage.getItem("token")
+    );
+
+    if (response.status === 401 && hasToken && !isAuthEndpoint && !isPublicRoute) {
       const refreshed = await refreshToken();
       if (!refreshed) {
         clearAllTokens();
-        if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/register" && window.location.pathname !== "/") {
+        if (typeof window !== "undefined") {
           window.location.href = "/login?reason=session_expired";
         }
       }
@@ -410,6 +433,14 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
 }
 
 export async function getMe(): Promise<ApiUser> {
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('accessToken')
+    : null;
+
+  if (!token) {
+    throw new ApiError('No hay sesión activa', 401);
+  }
+
   const response = await safeFetch(`${API_BASE}/auth/me/`, {
     headers: getAuthHeaders(),
   });
@@ -430,12 +461,33 @@ export async function privilegedLogin(credentials: LoginCredentials): Promise<{ 
   return handleResponse<{ user: ApiUser }>(response);
 }
 
-export async function privilegedMe(): Promise<{ user: ApiUser }> {
-  const response = await safeFetch(`${API_BASE}/auth/privileged-me/`, {
-    method: 'GET',
-  });
+export async function privilegedMe(): Promise<{ user: ApiUser } | null> {
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('accessToken')
+    : null;
 
-  return handleResponse<{ user: ApiUser }>(response);
+  // Si no hay token en el cliente, no ejecutar la llamada para evitar el 401 innecesario
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const response = await safeFetch(`${API_BASE}/auth/privileged-me/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (response.status === 401) {
+      return null;
+    }
+
+    return handleResponse<{ user: ApiUser }>(response);
+  } catch (err: any) {
+    if (err?.status === 401) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 

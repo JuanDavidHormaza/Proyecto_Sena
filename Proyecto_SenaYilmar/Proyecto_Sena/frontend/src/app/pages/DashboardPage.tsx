@@ -57,6 +57,7 @@ import { getTermsForProgram } from "../data/dictionariesByFicha";
 import { questions } from "../data";
 import { toast } from "../components/Toast";
 import { playEnglishSpeech } from "../utils/speech";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
   if (!raw) return "Reading";
@@ -1446,31 +1447,37 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     return list;
   }, [testResults, latestResult]);
 
-  // Filtrado de términos para el Espacio de Estudio
+  // Filtrado estricto acumulativo (AND) de términos para el Espacio de Estudio
   const filteredTerms = useMemo(() => {
     return studyTerms.filter((term) => {
-      // Nivel CEFR
-      if (selectedLevel !== "all" && (term.level || "A1").toUpperCase() !== selectedLevel.toUpperCase()) {
-        return false;
-      }
-      // Competencia
-      if (selectedCompetence !== "all") {
-        const comp = (term.competence || "Grammar").toLowerCase();
-        if (selectedCompetence.toLowerCase() === "listening") {
-          if (comp !== "listening" && comp !== "reading") return false;
-        } else if (comp !== selectedCompetence.toLowerCase()) {
-          return false;
-        }
-      }
-      // Búsqueda de texto
-      if (searchQuery.trim()) {
-        const query = searchQuery.trim().toLowerCase();
-        const termName = (term.wordId || term.name || "").toLowerCase();
-        const def = (term.definition || "").toLowerCase();
-        const syn = (term.synonyms || "").toLowerCase();
-        return termName.includes(query) || def.includes(query) || syn.includes(query);
-      }
-      return true;
+      // 1. Filtro por búsqueda de texto
+      const termName = (term.wordId || term.name || "").toLowerCase();
+      const def = (term.definition || "").toLowerCase();
+      const syn = (term.synonyms || "").toLowerCase();
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch = !query || 
+        termName.includes(query) ||
+        def.includes(query) ||
+        syn.includes(query);
+
+      // 2. Filtro por Habilidad (Category / Skill / Competence)
+      const termSkill = (term.competence || (term as any).skill || (term as any).category || "Grammar").toLowerCase();
+      const targetSkill = selectedCompetence.toLowerCase();
+      const matchesSkill = selectedCompetence === "all" || 
+        selectedCompetence === "Todas" || 
+        selectedCompetence === "Todos" ||
+        termSkill === targetSkill ||
+        (targetSkill === "listening" && (termSkill.includes("listen") || termSkill.includes("read")));
+
+      // 3. Filtro por Nivel CEFR (A1, A2, B1, B2)
+      const termLevel = (term.level || "A1").toUpperCase();
+      const targetLevel = selectedLevel.toUpperCase();
+      const matchesLevel = selectedLevel === "all" || 
+        selectedLevel === "Todos" || 
+        selectedLevel === "Todas" ||
+        termLevel === targetLevel;
+
+      return matchesSearch && matchesSkill && matchesLevel;
     });
   }, [studyTerms, selectedLevel, selectedCompetence, searchQuery]);
 
@@ -1632,16 +1639,12 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 title="Ir a la página principal de WorkLex (Inicio)"
                 className="group flex items-center gap-2.5 sm:gap-3.5 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left cursor-pointer"
               >
+                <WorklexBrandLogo size="md" showText={true} />
+                <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
                 <img
                   src="/logo-sena.png"
                   alt="SENA"
-                  className="h-9 sm:h-10 w-auto object-contain shrink-0"
-                />
-                <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
-                <img
-                  src="/worklex.png"
-                  alt="Worklex SENA"
-                  className="h-10 sm:h-12 md:h-14 w-auto object-contain shrink-0 transition-transform group-hover:scale-105"
+                  className="h-8 sm:h-9 w-auto object-contain shrink-0 opacity-90"
                 />
               </button>
               <div className="hidden lg:flex items-center">
@@ -2718,12 +2721,16 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                           })}
                         </div>
                       ) : (
-                        <div className="text-center py-16 bg-white rounded-2xl border border-border p-8 shadow-xs space-y-3 max-w-lg mx-auto my-8">
-                          <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto" strokeWidth={1.8} />
-                          <h4 className="font-bold text-foreground text-base">No se encontraron términos</h4>
-                          <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                            No hay términos que coincidan con la búsqueda o filtros seleccionados en este momento.
-                          </p>
+                        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-8 shadow-xs space-y-4 max-w-lg mx-auto my-8">
+                          <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                            <BookOpen className="w-7 h-7" strokeWidth={1.8} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 dark:text-white text-lg">No se encontraron términos para estos filtros</h4>
+                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed mt-1">
+                              No hay términos técnicos que coincidan con la combinación actual de búsqueda, habilidad o nivel CEFR.
+                            </p>
+                          </div>
                           <button
                             type="button"
                             onClick={() => {
@@ -2731,10 +2738,10 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                               setSelectedCompetence("all");
                               setSearchQuery("");
                             }}
-                            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs"
                           >
-                            <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
-                            Limpiar Filtros
+                            <RotateCcw className="w-4 h-4" strokeWidth={1.8} />
+                            <span>Restablecer Filtros</span>
                           </button>
                         </div>
                       )}

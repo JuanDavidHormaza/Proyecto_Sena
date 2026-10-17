@@ -15,6 +15,7 @@ import { UserAccountMenu } from "../components/UserAccountMenu";
 import { HeaderActionTools } from "../components/HeaderActionTools";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 function normalizeText(value?: string | null) {
   return (value || "").trim().toLowerCase();
@@ -167,15 +168,26 @@ export function TeacherDashboard() {
 
   const filteredResults = results.filter(r => {
     const student = students.find(s => s.id === r.userId);
-    const resultProgram = r.studentProgram || student?.program || "";
-    const matchesProgram = !teacherProgramKey || normalizeText(resultProgram) === teacherProgramKey;
+    const resultProgram = normalizeText(r.studentProgram || student?.program || "");
+    const matchesProgram = !teacherProgramKey ||
+      resultProgram === teacherProgramKey ||
+      resultProgram.includes(teacherProgramKey) ||
+      teacherProgramKey.includes(resultProgram) ||
+      teacherProgramKey.split(/\s+/).filter(t => t.length >= 4 || /^\d+$/.test(t)).some(t => resultProgram.includes(t));
     const matchesSearch = r.userName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLevel = filterLevel === "all" || r.level.startsWith(filterLevel);
     return matchesProgram && matchesSearch && matchesLevel;
   });
 
-  const programStudents = teacherProgram
-    ? students.filter(student => normalizeText(student.program) === teacherProgramKey)
+  const programStudents = teacherProgramKey
+    ? students.filter(student => {
+        const sp = normalizeText(student.program);
+        if (!sp) return false;
+        if (sp === teacherProgramKey) return true;
+        if (sp.includes(teacherProgramKey) || teacherProgramKey.includes(sp)) return true;
+        const teacherTokens = teacherProgramKey.split(/\s+/).filter(t => t.length >= 4 || /^\d+$/.test(t));
+        return teacherTokens.some(t => sp.includes(t));
+      })
     : students;
 
   // Group results by student
@@ -233,15 +245,11 @@ export function TeacherDashboard() {
         <div className="container mx-auto px-4 lg:px-8 h-full">
           <div className="flex items-center justify-between h-full">
             <div className="flex items-center gap-3">
-              <img
-                src="/worklex.png"
-                alt="Worklex SENA"
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-emerald-500/30 shadow-md transition-transform hover:scale-105 flex-shrink-0"
+              <WorklexBrandLogo
+                size="md"
+                showText={true}
+                subtitle="Seguimiento Formativo"
               />
-              <div className="hidden sm:block">
-                <h1 className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">Worklex SENA</h1>
-                <p className="text-xs text-muted-foreground">Seguimiento Formativo</p>
-              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -804,10 +812,10 @@ export function TeacherDashboard() {
                                     disabled={isProcessingRequest === req.request_id}
                                     onClick={() => handleApproveRequest(req)}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sena-green hover:bg-sena-green-dark text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                                    title="Aprobar ingreso a la ficha"
+                                    title="Aprobar y asignar a ficha"
                                   >
                                     <Check className="w-3.5 h-3.5" />
-                                    <span>Aprobar</span>
+                                    <span>Aprobar y Asignar a Ficha</span>
                                   </button>
                                   <button
                                     type="button"

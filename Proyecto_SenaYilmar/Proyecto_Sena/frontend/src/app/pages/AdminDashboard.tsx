@@ -34,6 +34,7 @@ import { resolveMediaUrl } from "../services/api";
 import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightboxModal";
 import { SafeImage } from "../components/SafeImage";
 import { playEnglishSpeech } from "../utils/speech";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 // ─── Tipos de archivo ─────────────────────────────────────────────────────────
 type FileCategory = "document" | "audio" | "video" | "image";
@@ -1560,16 +1561,12 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
       {/* ── Sidebar ── */}
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 z-40 hidden lg:block">
         <div className="p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <img
-              src="/worklex.png"
-              alt="WorkLex"
-              className="w-10 h-10 rounded-full object-cover border border-emerald-500/30 shadow-xs transition-transform hover:scale-105 flex-shrink-0"
+          <div className="mb-6">
+            <WorklexBrandLogo
+              size="sm"
+              showText={true}
+              subtitle="Gestión y Administración"
             />
-            <div className="min-w-0">
-              <h1 className="font-semibold text-slate-900 tracking-tight truncate">Worklex SENA</h1>
-              <p className="text-xs text-slate-500 truncate">Gestión Institucional</p>
-            </div>
           </div>
           <nav className="space-y-1.5">
             {tabs.map((tab) => {
@@ -1613,13 +1610,8 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
       {/* ── Mobile Header ── */}
       <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 z-40 px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src="/worklex.png"
-              alt="WorkLex"
-              className="w-9 h-9 rounded-full object-cover border border-emerald-500/30 shadow-xs transition-transform hover:scale-105 flex-shrink-0"
-            />
-            <span className="font-semibold text-slate-900 dark:text-white high-contrast:text-white">Worklex SENA</span>
+          <div className="flex items-center gap-2">
+            <WorklexBrandLogo size="sm" showText={true} />
           </div>
           <div className="flex items-center gap-2">
             {/* Campana de Notificaciones en Móvil */}

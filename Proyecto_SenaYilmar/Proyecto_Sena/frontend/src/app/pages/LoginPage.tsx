@@ -320,30 +320,34 @@ export function LoginPage() {
   return (
     <div className="min-h-screen w-full bg-white dark:bg-slate-950 flex flex-col lg:flex-row relative overflow-x-hidden">
       {/* ── Columna Izquierda: Formulario de Autenticación (50% en pantallas grandes) ── */}
-      <div className="w-full lg:w-1/2 min-h-screen flex flex-col justify-center items-center px-6 sm:px-12 lg:px-16 py-10 sm:py-14 z-10 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800">
-        <div className="w-full max-w-md mx-auto space-y-6">
+      <div className="w-full lg:w-1/2 min-h-screen flex flex-col justify-center items-center px-6 sm:px-12 md:px-16 lg:px-20 py-10 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 z-10">
+        <div className="w-full max-w-lg lg:max-w-xl mx-auto space-y-6">
           {/* Botón superior de navegación */}
           <button
             type="button"
             onClick={() => (step === "otp" ? setStep("credentials") : navigate("/"))}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 text-sm sm:text-base font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
             <span>{step === "otp" ? "Volver a credenciales" : "Volver al inicio"}</span>
           </button>
 
-          {/* Header con Logos SENA y WorkLex alineados armónicamente, con WorkLex protagonista */}
-          <div className="flex items-center gap-4 pt-1 pb-2">
+          {/* ── LOGOTIPOS WORKLEX Y SENA (SIN CAJA NI BORDES RÍGIDOS) ── */}
+          <div className="flex items-center mb-8">
+            {/* Logo WorkLex Limpio y Nítido */}
             <img
               src="/worklex.png"
               alt="WorkLex"
-              className="h-12 sm:h-14 w-auto object-contain shrink-0 drop-shadow-xs"
+              className="h-14 sm:h-16 w-auto object-contain shrink-0"
+              style={{ imageRendering: "-webkit-optimize-contrast" }}
             />
-            <span className="h-8 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
+            {/* Divisor sutil */}
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0" />
+            {/* Logo SENA */}
             <img
               src="/logo-sena.png"
               alt="SENA"
-              className="h-10 sm:h-11 w-auto object-contain shrink-0 opacity-90"
+              className="h-10 sm:h-12 w-auto object-contain shrink-0 opacity-90"
             />
           </div>
 
@@ -359,10 +363,10 @@ export function LoginPage() {
                 className="space-y-6"
               >
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mb-3">
                     Iniciar Sesión
                   </h1>
-                  <p className="text-base text-slate-600 dark:text-slate-400 font-normal mt-2 mb-6 leading-relaxed">
+                  <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-normal leading-relaxed mb-8">
                     Accede a tu plataforma inteligente de aprendizaje y práctica técnica.
                   </p>
                 </div>
@@ -371,7 +375,7 @@ export function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-800 dark:text-amber-200 text-sm font-medium"
+                    className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-800 dark:text-amber-200 text-sm sm:text-base font-medium"
                   >
                     <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                     <p className="leading-snug">Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.</p>
@@ -382,7 +386,7 @@ export function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm"
+                    className="flex items-center gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-sm sm:text-base"
                   >
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />
                     <p className="leading-snug">{error}</p>
@@ -391,7 +395,7 @@ export function LoginPage() {
 
                 <form onSubmit={handleCredentialsSubmit} className="space-y-5">
                   <div>
-                    <label className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                    <label className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2.5 block">
                       Correo electrónico
                     </label>
                     <div className="relative">
@@ -404,10 +408,10 @@ export function LoginPage() {
                         onChange={(e) => handleEmailChange(e.target.value)}
                         onBlur={handleEmailBlur}
                         placeholder="aprendiz@soy.sena.edu.co"
-                        className={`w-full h-12 text-base bg-white dark:bg-slate-800 border rounded-xl pl-12 pr-4 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs ${
+                        className={`w-full h-14 text-base sm:text-lg px-4 pl-12 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs ${
                           emailTouched && emailError
                             ? "border-rose-400 focus:ring-rose-500/20 focus:border-rose-500"
-                            : "border-slate-300 dark:border-slate-700"
+                            : ""
                         }`}
                       />
                     </div>
@@ -415,8 +419,8 @@ export function LoginPage() {
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-base font-semibold text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <label className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-200">
                         Contraseña
                       </label>
                     </div>
@@ -429,18 +433,18 @@ export function LoginPage() {
                         value={formData.password}
                         onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
                         placeholder="••••••••"
-                        className="w-full h-12 text-base bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-12 pr-12 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs"
+                        className="w-full h-14 text-base sm:text-lg px-4 pl-12 pr-12 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer p-1"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer p-1"
                         title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
-                    <div className="flex justify-end mt-2">
+                    <div className="flex justify-end mt-2.5">
                       <button
                         type="button"
                         onClick={() => {
@@ -453,7 +457,7 @@ export function LoginPage() {
                             navigate("/recuperar-cuenta");
                           }
                         }}
-                        className="text-[#39A900] hover:underline font-medium text-sm cursor-pointer"
+                        className="text-base font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline cursor-pointer"
                       >
                         ¿Olvidaste tu contraseña? / Recuperar cuenta
                       </button>
@@ -463,7 +467,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || !formData.email.trim() || !formData.password || Boolean(emailError)}
-                    className="w-full h-12 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-base sm:text-lg rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-3"
+                    className="w-full h-14 text-lg sm:text-xl font-bold rounded-2xl bg-[#39A900] hover:bg-[#329600] text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     {isLoading ? (
                       <>
@@ -479,12 +483,12 @@ export function LoginPage() {
                   </button>
                 </form>
 
-                <p className="text-center text-base text-slate-600 dark:text-slate-400 pt-2">
+                <p className="text-center text-base sm:text-lg text-slate-600 dark:text-slate-400 pt-2">
                   ¿No tienes cuenta?{" "}
                   <button
                     type="button"
                     onClick={() => navigate("/register")}
-                    className="text-[#39A900] hover:underline font-semibold cursor-pointer"
+                    className="text-base sm:text-lg font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline cursor-pointer"
                   >
                     Regístrate aquí
                   </button>
@@ -503,26 +507,26 @@ export function LoginPage() {
                 className="space-y-6"
               >
                 <div className="flex justify-center">
-                  <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/40 text-[#39A900] rounded-2xl flex items-center justify-center border border-emerald-100 dark:border-emerald-800">
-                    <KeyRound className="w-7 h-7" />
+                  <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 text-[#39A900] rounded-2xl flex items-center justify-center border border-emerald-100 dark:border-emerald-800">
+                    <KeyRound className="w-8 h-8" />
                   </div>
                 </div>
 
                 <div className="text-center">
-                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mb-3">
                     Verificación de Seguridad
                   </h2>
-                  <p className="text-base text-slate-600 dark:text-slate-400 mt-2 mb-1 leading-relaxed">
+                  <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mt-2 mb-1 leading-relaxed">
                     Hemos enviado un código seguro de 6 dígitos a tu correo:
                   </p>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 text-base">{otpEmail}</p>
+                  <p className="font-bold text-slate-800 dark:text-slate-200 text-base sm:text-lg">{otpEmail}</p>
                 </div>
 
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm"
+                    className="flex items-center gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-sm sm:text-base"
                   >
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />
                     <p className="leading-snug">{error}</p>
@@ -531,7 +535,7 @@ export function LoginPage() {
 
                 <form onSubmit={handleVerifyOtp} className="space-y-6">
                   <div>
-                    <label className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-3 block text-center">
+                    <label className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3 block text-center">
                       Código de 6 dígitos
                     </label>
                     <div className="flex justify-center gap-2 sm:gap-3">
@@ -548,7 +552,7 @@ export function LoginPage() {
                           onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           onPaste={handleOtpPaste}
-                          className="w-11 sm:w-13 h-12 sm:h-14 text-center text-xl font-bold font-mono border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs"
+                          className="w-12 sm:w-14 h-14 sm:h-16 text-center text-2xl font-bold font-mono border border-slate-300 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-[#39A900]/20 focus:border-[#39A900] transition-all shadow-xs"
                         />
                       ))}
                     </div>
@@ -557,7 +561,7 @@ export function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading || otpDigits.join("").length < 6}
-                    className="w-full h-12 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-base sm:text-lg rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-14 text-lg sm:text-xl font-bold rounded-2xl bg-[#39A900] hover:bg-[#329600] text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <>
@@ -579,7 +583,7 @@ export function LoginPage() {
                     type="button"
                     onClick={handleResendOtp}
                     disabled={resendCooldown > 0}
-                    className="flex items-center gap-1.5 text-[#39A900] hover:underline font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-1.5 text-base font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <RefreshCw className={`w-4 h-4 ${resendCooldown > 0 ? "animate-spin" : ""}`} />
                     <span>{resendCooldown > 0 ? `Reenviar (${resendCooldown}s)` : "Reenviar código"}</span>
@@ -591,8 +595,8 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* ── Columna Derecha: Fotografía Institucional con Overlay (50% en pantallas grandes) ── */}
-      <div className="hidden lg:flex lg:w-1/2 relative min-h-screen overflow-hidden bg-slate-900 flex-col justify-end p-12 xl:p-16">
+      {/* ── Columna Derecha: Fotografía y Marca (50% en pantallas grandes) ── */}
+      <div className="hidden lg:flex lg:w-1/2 relative min-h-screen overflow-hidden bg-slate-900 flex-col justify-end p-8 xl:p-12 items-center text-center">
         <img
           src="/GenteSena.jpg"
           alt="Aprendices SENA"
@@ -600,13 +604,25 @@ export function LoginPage() {
         />
         {/* Oscurecimiento suave para legibilidad */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/40 to-slate-950/25" />
-        <div className="relative z-10 text-white max-w-lg">
-          <blockquote className="text-xl sm:text-2xl font-medium leading-relaxed drop-shadow-md">
+        
+        {/* Contenedor Inferior: Insignia Circular Blanca y Cita Institucional */}
+        <div className="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center text-center w-full max-w-md px-4">
+          {/* Insignia Circular Blanca */}
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white shadow-2xl border-4 border-white/90 p-2.5 flex items-center justify-center transition-transform hover:scale-105 mb-4">
+            <img 
+              src="/worklex.png" 
+              alt="WorkLex" 
+              className="w-full h-full object-contain rounded-full" 
+            />
+          </div>
+
+          {/* Texto pegado y bien legible */}
+          <p className="text-white text-base sm:text-lg font-medium leading-snug drop-shadow-md">
             "Formación profesional integral para el desarrollo tecnológico y lingüístico de Colombia."
-          </blockquote>
-          <p className="mt-4 text-base text-slate-200 font-light drop-shadow-sm">
-            Servicio Nacional de Aprendizaje — SENA
           </p>
+          <span className="text-emerald-300 text-sm font-semibold tracking-wide mt-1 drop-shadow">
+            Servicio Nacional de Aprendizaje — SENA
+          </span>
         </div>
       </div>
 

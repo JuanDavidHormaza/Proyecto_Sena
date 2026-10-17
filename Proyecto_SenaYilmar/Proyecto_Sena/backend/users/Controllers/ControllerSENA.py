@@ -336,7 +336,12 @@ class UserController:
                 backend_role = ROLE_MAP_REVERSE.get(role_filter, role_filter.upper())
                 queryset = queryset.filter(role_id=backend_role)
         if program_filter:
-            queryset = queryset.filter(program__iexact=program_filter.strip())
+            p_clean = program_filter.strip()
+            p_q = models.Q(program__iexact=p_clean) | models.Q(program__icontains=p_clean)
+            tokens = [t for t in p_clean.replace('-', ' ').split() if len(t) >= 4 or t.isdigit()]
+            for t in tokens:
+                p_q |= models.Q(program__icontains=t)
+            queryset = queryset.filter(p_q)
         if search:
             s = search.strip()
             queryset = queryset.filter(
@@ -1063,8 +1068,6 @@ class FichaRequestController:
             if clean_input in inst_prog or (matched_name and any(token in inst_prog for token in matched_name.lower().split() if len(token) > 3)):
                 assigned_inst = inst
                 break
-        if not assigned_inst and instructor_qs.exists():
-            assigned_inst = instructor_qs.first()
 
         req = FichaRequest.objects.create(
             user=real_user,
@@ -1079,29 +1082,59 @@ class FichaRequestController:
     # Alias para compatibilidad con llamadas de vistas
     request_ficha = create
 
-    @staticmethod
-    def list_all(user):
-        role = getattr(user, 'role_id', None)
+    @classmethod
+    def list_all(cls, user=None):
+        if user is None and cls is not None and not isinstance(cls, type):
+            user = cls
+
+        # Extraer ID primario entero de forma segura desde AuthenticatedUser o User
+        user_id = user.id if hasattr(user, 'id') else getattr(user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, 'user'):
+            user_id = getattr(user.user, 'id', None) or getattr(user.user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, '_user'):
+            user_id = getattr(user._user, 'user_id', None) or getattr(user._user, 'id', None) or getattr(user._user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, 'user_id'):
+            user_id = user.user_id
+
+        real_user = getattr(user, '_user', user)
+        role = getattr(user, 'role_id', None) or getattr(real_user, 'role_id', None)
+
         if role in ('ADMIN', 'SUPERADMIN'):
             # Vista de auditoría general para el administrador
-            return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').all()
+            return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').all().order_by('-created_at')
         elif role in ('INSTRUCTOR', 'MONITOR'):
-            # Cada docente gestiona los aprendices de sus respectivas fichas
-            inst_prog = (getattr(user, 'program', '') or '').strip().lower()
-            q_filter = models.Q(assigned_instructor=user)
+            # El docente debe ver las solicitudes asignadas a su ID o que correspondan a su ficha/programa,
+            # así como solicitudes pendientes generales sin instructor asignado
+            q_filter = models.Q(assigned_instructor_id=user_id) if isinstance(user_id, int) else models.Q()
+            inst_prog = (getattr(user, 'program', '') or getattr(real_user, 'program', '') or '').strip()
             if inst_prog:
                 q_filter |= models.Q(program_name__icontains=inst_prog)
-                ficha_digits = [token for token in inst_prog.split() if token.isdigit()]
-                if ficha_digits:
-                    q_filter |= models.Q(ficha_code__in=ficha_digits)
-            qs = FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(q_filter)
-            if not qs.exists():
-                # Si no hay vinculación explícita, listar las asignadas al docente o pendientes generales
-                qs = FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(
-                    models.Q(assigned_instructor=user) | models.Q(assigned_instructor__isnull=True)
-                )
-            return qs
-        return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(person=user.person)
+                q_filter |= models.Q(ficha_code__icontains=inst_prog)
+                tokens = [t for t in inst_prog.replace('-', ' ').split() if t.strip()]
+                for t in tokens:
+                    if t.isdigit():
+                        q_filter |= models.Q(ficha_code__icontains=t)
+                    elif len(t) >= 4:
+                        q_filter |= models.Q(program_name__icontains=t)
+
+            # Incluir solicitudes pendientes sin instructor asignado para que el docente responsable las pueda revisar
+            q_filter |= models.Q(assigned_instructor__isnull=True)
+            return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(q_filter).order_by('-created_at')
+
+        # Aprendiz: filtrar solo sus solicitudes con user_id=user_id
+        student_filter = models.Q()
+        if isinstance(user_id, int):
+            student_filter |= models.Q(user_id=user_id)
+
+        person = getattr(user, 'person', None) or getattr(real_user, 'person', None)
+        person_id = getattr(person, 'person_id', None) or getattr(person, 'id', None) or getattr(person, 'pk', None)
+        if isinstance(person_id, int):
+            student_filter |= models.Q(person_id=person_id)
+
+        if not student_filter:
+            return FichaRequest.objects.none()
+
+        return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(student_filter).order_by('-created_at')
 
     @staticmethod
     def approve(request_id, actor_user, instructor_id=None, notes=None):
@@ -1133,17 +1166,43 @@ class FichaRequestController:
 
         req.save(update_fields=['status', 'reviewed_at', 'reviewed_by', 'assigned_instructor', 'admin_notes'])
 
-        # Vincular programa al aprendiz creando/actualizando el User para esa persona
-        if not User.objects.filter(person=req.person, program=req.program_name).exists():
-            User.objects.create(
-                person=req.person,
-                role_id=req.user.role_id,
-                status='EN_FORMACION',
-                program=req.program_name,
-                mfa=req.user.mfa or '',
-            )
+        # Vincular formalmente al aprendiz en la tabla/relación de la Ficha y Programa correspondiente
+        target_program = req.program_name
+
+        # 1. Asegurar estado activo en Person
+        if req.person.status != 'ACTIVO':
+            req.person.status = 'ACTIVO'
+            req.person.save(update_fields=['status'])
+
+        # 2. Si el usuario actual no tiene programa asignado, actualizarlo directamente
+        if not req.user.program:
+            req.user.program = target_program
+            req.user.status = 'EN_FORMACION'
+            req.user.save(update_fields=['program', 'status'])
+        else:
+            # Si el aprendiz ya tenía un programa inicial, verificar si existe una cuenta vacía o crearla
+            empty_user = User.objects.filter(person=req.person, program__isnull=True).first()
+            if not empty_user:
+                empty_user = User.objects.filter(person=req.person, program='').first()
+
+            if empty_user:
+                empty_user.program = target_program
+                empty_user.status = 'EN_FORMACION'
+                empty_user.role_id = req.user.role_id
+                empty_user.save(update_fields=['program', 'status', 'role_id'])
+            elif not User.objects.filter(person=req.person, program=target_program).exists():
+                User.objects.create(
+                    person=req.person,
+                    role_id=req.user.role_id,
+                    status='EN_FORMACION',
+                    program=target_program,
+                    mfa=req.user.mfa or '',
+                )
 
         return req, None
+
+    # Alias para compatibilidad con approve_request
+    approve_request = approve
 
     @staticmethod
     def reject(request_id, actor_user, notes=None):
@@ -1198,11 +1257,32 @@ class SupportTicketController:
         )
         return ticket, None
 
-    @staticmethod
-    def list_all(user):
-        if getattr(user, 'role_id', None) in ('ADMIN', 'SUPERADMIN'):
+    @classmethod
+    def list_all(cls, user=None):
+        if user is None and cls is not None and not isinstance(cls, type):
+            user = cls
+
+        user_id = user.id if hasattr(user, 'id') else getattr(user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, 'user'):
+            user_id = getattr(user.user, 'id', None) or getattr(user.user, 'pk', None)
+        if not isinstance(user_id, int) and hasattr(user, '_user'):
+            user_id = getattr(user._user, 'user_id', None) or getattr(user._user, 'id', None)
+        if not isinstance(user_id, int) and hasattr(user, 'user_id'):
+            user_id = user.user_id
+
+        real_user = getattr(user, '_user', user)
+        role = getattr(user, 'role_id', None) or getattr(real_user, 'role_id', None)
+
+        if role in ('ADMIN', 'SUPERADMIN'):
             return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').all()
-        return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').filter(person=user.person)
+
+        person = getattr(user, 'person', None) or getattr(real_user, 'person', None)
+        person_id = getattr(person, 'person_id', None) or getattr(person, 'id', None) or getattr(person, 'pk', None)
+        if isinstance(person_id, int):
+            return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').filter(person_id=person_id)
+        if isinstance(user_id, int):
+            return SupportTicket.objects.select_related('person', 'user', 'resolved_by__person').filter(user_id=user_id)
+        return SupportTicket.objects.none()
 
     @staticmethod
     def update_status(ticket_id, admin_user, new_status=None, admin_notes=None):

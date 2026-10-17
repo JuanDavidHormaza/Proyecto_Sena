@@ -33,6 +33,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
 import { useToast } from "../components/Toast";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 import {
   validateName,
   sanitizeName,
@@ -760,17 +761,13 @@ export function RegisterPage() {
             </span>
           </button>
 
-          <div className="flex items-center gap-3 mb-6 logo-container">
+          <div className="flex items-center gap-4 sm:gap-5 mb-8 logo-container">
+            <WorklexBrandLogo size="lg" />
+            <div className="h-10 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
             <img
               src="/logo-sena.png"
               alt="SENA"
-              className="h-10 w-auto object-contain shrink-0"
-            />
-            <span className="h-6 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
-            <img
-              src="/worklex.png"
-              alt="WorkLex"
-              className="h-8 w-auto object-contain shrink-0"
+              className="h-10 sm:h-12 w-auto object-contain shrink-0 opacity-90"
             />
           </div>
 

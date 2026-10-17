@@ -11,6 +11,7 @@ import {
   Search,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 
 export function NotFoundPage() {
   const navigate = useNavigate();
@@ -38,24 +39,12 @@ export function NotFoundPage() {
       {/* Header simplificado */}
       <header className="w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between">
-          <div
+          <WorklexBrandLogo
+            size="md"
+            showText={true}
+            subtitle="English Evaluation & Technical Practice"
             onClick={() => navigate("/")}
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <img
-              src="/worklex.png"
-              alt="WorkLex SENA"
-              className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/30 shadow-xs group-hover:scale-105 transition-transform"
-            />
-            <div>
-              <span className="font-bold text-base text-slate-900 block leading-tight">
-                Worklex SENA
-              </span>
-              <span className="text-xs text-muted-foreground font-medium">
-                English Evaluation & Technical Practice
-              </span>
-            </div>
-          </div>
+          />
 
           <button
             type="button"

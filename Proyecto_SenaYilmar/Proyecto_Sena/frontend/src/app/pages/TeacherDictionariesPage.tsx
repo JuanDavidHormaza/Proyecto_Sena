@@ -34,10 +34,12 @@ import {
   Sparkles,
   GitBranch,
   Terminal,
+  RotateCcw,
 } from "lucide-react";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
+import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 import { resolveMediaUrl } from "../services/api";
 import { Document, mockDocuments } from "../data/users";
 import { toast } from "../components/Toast";
@@ -48,6 +50,8 @@ export type DictionaryDocument = Document & {
   imageUrl?: string;
   level?: string;
   competence?: string;
+  skill?: string;
+  category?: string;
 };
 
 function isGlobalProgram(program?: string | null) {
@@ -177,9 +181,9 @@ export function TeacherDictionariesPage() {
         fichaId: teacherProgram || undefined,
       });
 
-      const convertedDocs: DictionaryDocument[] = apiDocs.map((doc) => ({
+      const convertedDocs: DictionaryDocument[] = apiDocs.map((doc: any) => ({
         id: doc.id,
-        name: doc.name,
+        name: doc.name || doc.wordId || "",
         subjectId: doc.subjectId,
         subjectName: doc.subjectName,
         program: doc.program,
@@ -187,14 +191,16 @@ export function TeacherDictionariesPage() {
         fileType: doc.fileType,
         size: doc.size,
         uploadedBy: doc.uploadedBy,
-        wordId: doc.wordId,
-        definition: doc.definition,
-        synonyms: doc.synonyms,
+        wordId: doc.wordId || doc.name || "",
+        definition: doc.definition || "",
+        synonyms: doc.synonyms || "",
         audioUrl: doc.audioUrl,
         videoUrl: doc.videoUrl,
         imageUrl: doc.imageUrl,
         level: doc.level || "A1",
-        competence: doc.competence || "Grammar",
+        competence: doc.competence || doc.skill || doc.category || "Grammar",
+        skill: doc.skill || doc.competence || "Grammar",
+        category: doc.category || doc.competence || "Grammar",
       }));
 
       setDocuments(convertedDocs);
@@ -214,9 +220,74 @@ export function TeacherDictionariesPage() {
     return () => clearTimeout(debounceTimer);
   }, [selectedSubject, selectedLevel, selectedCompetence, searchTerm]);
 
-  const teacherDocuments = useMemo(() => {
+  // Documentos base asignados a la ficha del instructor
+  const baseTeacherDocuments = useMemo(() => {
     return documents.filter((doc) => matchesTeacherProgram(doc.program, teacherProgram));
   }, [documents, teacherProgram]);
+
+  // Contadores dinámicos sincronizados por Habilidad (Category / Skill) y Nivel CEFR
+  const skillCounts = useMemo(() => {
+    const counts: Record<string, number> = { Speaking: 0, Grammar: 0, Writing: 0, Reading: 0, Listening: 0 };
+    baseTeacherDocuments.forEach((doc) => {
+      const s = doc.skill || doc.category || doc.competence || "Grammar";
+      if (counts[s] !== undefined) counts[s]++;
+      else if (s.toLowerCase().includes("listen")) counts.Listening++;
+    });
+    return counts;
+  }, [baseTeacherDocuments]);
+
+  const levelCounts = useMemo(() => {
+    const counts: Record<string, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
+    baseTeacherDocuments.forEach((doc) => {
+      const lvl = (doc.level || "A1").toUpperCase();
+      if (counts[lvl] !== undefined) counts[lvl]++;
+    });
+    return counts;
+  }, [baseTeacherDocuments]);
+
+  // Filtrado estricto acumulativo (AND) para las tarjetas
+  const filteredTerms = useMemo(() => {
+    return baseTeacherDocuments.filter((term) => {
+      // 1. Filtro por búsqueda de texto
+      const termName = (term.name || term.wordId || "").toLowerCase();
+      const termDef = (term.definition || "").toLowerCase();
+      const termSyn = (term.synonyms || "").toLowerCase();
+      const query = searchTerm.trim().toLowerCase();
+      const matchesSearch = !query || 
+        termName.includes(query) ||
+        termDef.includes(query) ||
+        termSyn.includes(query);
+
+      // 2. Filtro por Habilidad (Category / Skill / Competence)
+      const termSkill = (term.skill || term.category || term.competence || "").toLowerCase();
+      const targetSkill = selectedCompetence.toLowerCase();
+      const matchesSkill = selectedCompetence === "all" || 
+        selectedCompetence === "Todas" || 
+        selectedCompetence === "Todos" ||
+        termSkill === targetSkill ||
+        (targetSkill === "listening" && (termSkill.includes("listen") || termSkill.includes("read")));
+
+      // 3. Filtro por Nivel CEFR (A1, A2, B1, B2)
+      const termLevel = (term.level || "A1").toUpperCase();
+      const targetLevel = selectedLevel.toUpperCase();
+      const matchesLevel = selectedLevel === "all" || 
+        selectedLevel === "Todos" || 
+        selectedLevel === "Todas" ||
+        termLevel === targetLevel;
+
+      // 4. Filtro por Asignatura / Área
+      const matchesSubject = selectedSubject === "all" || term.subjectId === selectedSubject;
+
+      return matchesSearch && matchesSkill && matchesLevel && matchesSubject;
+    });
+  }, [baseTeacherDocuments, searchTerm, selectedCompetence, selectedLevel, selectedSubject]);
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setSelectedLevel("all");
+    setSelectedCompetence("all");
+    setSelectedSubject("all");
+  };
 
   const programLabel = teacherProgram || "tu programa de formación";
 
@@ -400,20 +471,13 @@ export function TeacherDictionariesPage() {
               className="flex items-center gap-3 sm:gap-4 p-1.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group text-left"
               title="Regresar al panel del docente"
             >
-              <img
-                src="/worklex.png"
-                alt="Worklex SENA"
-                className="h-12 sm:h-14 md:h-16 w-auto object-contain transition-transform group-hover:scale-105 flex-shrink-0"
+              <WorklexBrandLogo
+                size="md"
+                showText={true}
+                showBadge={true}
+                badgeText="Ecosistema Digital"
+                subtitle="Plataforma de Gestión y Aprendizaje"
               />
-              <div className="hidden sm:flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900 dark:text-white text-base tracking-tight">Worklex SENA</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-                    Ecosistema Digital
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Plataforma de Gestión y Aprendizaje</p>
-              </div>
             </button>
           </div>
 
@@ -470,8 +534,12 @@ export function TeacherDictionariesPage() {
 
             <div className="flex items-center gap-3 self-start lg:self-end">
               <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl px-5 py-3 shadow-xs min-w-44">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Términos Disponibles</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{teacherDocuments.length}</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {filteredTerms.length === baseTeacherDocuments.length
+                    ? "Términos Disponibles"
+                    : `Mostrando ${filteredTerms.length} de ${baseTeacherDocuments.length}`}
+                </p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{filteredTerms.length}</p>
               </div>
 
               <button
@@ -533,29 +601,30 @@ export function TeacherDictionariesPage() {
                 onChange={(e) => setSelectedLevel(e.target.value)}
                 className="w-full h-12 px-3.5 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] cursor-pointer transition-all shadow-xs"
               >
-                <option value="all">Todos los niveles (A1 - B2)</option>
-                <option value="A1">Nivel A1 (Acceso)</option>
-                <option value="A2">Nivel A2 (Plataforma)</option>
-                <option value="B1">Nivel B1 (Umbral)</option>
-                <option value="B2">Nivel B2 (Avanzado)</option>
+                <option value="all">Todos los niveles ({baseTeacherDocuments.length})</option>
+                <option value="A1">Nivel A1 ({levelCounts.A1 || 0})</option>
+                <option value="A2">Nivel A2 ({levelCounts.A2 || 0})</option>
+                <option value="B1">Nivel B1 ({levelCounts.B1 || 0})</option>
+                <option value="B2">Nivel B2 ({levelCounts.B2 || 0})</option>
               </select>
             </div>
 
-            {/* Filtro Competencia */}
+            {/* Filtro Habilidad / Competencia */}
             <div>
               <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                Competencia
+                Habilidad / Competencia
               </label>
               <select
                 value={selectedCompetence}
                 onChange={(e) => setSelectedCompetence(e.target.value)}
                 className="w-full h-12 px-3.5 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] cursor-pointer transition-all shadow-xs"
               >
-                <option value="all">Todas las competencias</option>
-                <option value="Speaking">Speaking (Habla)</option>
-                <option value="Grammar">Grammar (Gramática)</option>
-                <option value="Writing">Writing (Escritura)</option>
-                <option value="Reading">Reading (Lectura)</option>
+                <option value="all">Todas las habilidades ({baseTeacherDocuments.length})</option>
+                <option value="Speaking">Speaking ({skillCounts.Speaking || 0})</option>
+                <option value="Grammar">Grammar ({skillCounts.Grammar || 0})</option>
+                <option value="Writing">Writing ({skillCounts.Writing || 0})</option>
+                <option value="Reading">Reading ({skillCounts.Reading || 0})</option>
+                <option value="Listening">Listening ({skillCounts.Listening || 0})</option>
               </select>
             </div>
           </div>
@@ -603,9 +672,9 @@ export function TeacherDictionariesPage() {
               </div>
             ))}
           </div>
-        ) : teacherDocuments.length > 0 ? (
+        ) : filteredTerms.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {teacherDocuments.map((doc, index) => (
+            {filteredTerms.map((doc, index) => (
               <motion.article
                 key={doc.id}
                 initial={{ opacity: 0, y: 12 }}
@@ -812,12 +881,26 @@ export function TeacherDictionariesPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-sm">
-            <BookOpen className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" strokeWidth={1.75} />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No hay términos disponibles</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
-              No se encontraron términos para {programLabel} con los filtros seleccionados. Puedes registrar un nuevo término técnico haciendo clic en el botón superior.
-            </p>
+          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-8 shadow-xs max-w-lg mx-auto my-8 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
+              <BookOpen className="w-7 h-7" strokeWidth={1.8} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1.5">
+                No se encontraron términos para estos filtros
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
+                No hay términos en el diccionario de {programLabel} que coincidan con la combinación actual de búsqueda, habilidad o nivel.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="px-4 py-2 bg-[#39A900] hover:bg-[#2e8600] active:scale-[0.98] text-white rounded-xl text-sm font-semibold transition-all inline-flex items-center gap-2 cursor-pointer shadow-xs"
+            >
+              <RotateCcw className="w-4 h-4" strokeWidth={1.8} />
+              <span>Restablecer Filtros</span>
+            </button>
           </div>
         )}
       </main>
