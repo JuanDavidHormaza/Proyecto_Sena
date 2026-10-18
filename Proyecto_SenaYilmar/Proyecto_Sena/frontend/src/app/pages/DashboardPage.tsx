@@ -43,6 +43,8 @@ import {
   LifeBuoy,
   GitBranch,
   Pause,
+  AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 import {
   IconCode,
@@ -69,6 +71,7 @@ import { questions } from "../data";
 import { toast } from "../components/Toast";
 import { playEnglishSpeech } from "../utils/speech";
 import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { BrandHeader } from "../components/BrandHeader";
 import { RoleSwitcher } from "../components/RoleSwitcher";
 
 const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
@@ -1035,7 +1038,7 @@ function StudentVocabCard({
 }
 
 export function formatProgramFichaHeader(raw?: string | null): string {
-  if (!raw) return "Programa: SENA - Ficha: General";
+  if (!raw) return "Sin Ficha / Programa Asignado";
   const str = raw.trim();
   if (str.toLowerCase().startsWith("programa:") && str.toLowerCase().includes("ficha:")) {
     return str;
@@ -1061,7 +1064,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const userName = user?.name || localStorage.getItem("userName") || "Usuario";
 
   // Tab de navegación principal: 'overview' (Evaluación y Progreso) vs 'study' (Espacio de Estudio)
@@ -1077,7 +1080,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
 
-  // Soporte Multiprograma SENA
+  // Soporte Multiprograma SENA y Contextos
   const [activeProgramKey, setActiveProgramKey] = useState(0);
 
   useEffect(() => {
@@ -1092,25 +1095,43 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     };
   }, []);
 
+  const availableContexts = user?.available_contexts || (user as any)?.availableContexts || [];
+
   const enrolledPrograms = useMemo(() => {
     let list: string[] = user?.enrolledPrograms || [];
     if (!list || list.length === 0) {
-      try {
-        const stored = localStorage.getItem("userEnrolledPrograms");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) list = parsed;
-        }
-      } catch {}
+      if (availableContexts.length > 0) {
+        list = availableContexts.map((c: any) => c.program_name || c.ficha_code).filter(Boolean);
+      } else {
+        try {
+          const stored = localStorage.getItem("userEnrolledPrograms");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) list = parsed;
+          }
+        } catch {}
+      }
     }
     if (list.length > 0) {
       return Array.from(new Set(list.filter(Boolean)));
     }
-    const prog = user?.program || localStorage.getItem("userProgram") || "ADSO";
-    return [prog];
-  }, [user, activeProgramKey]);
+    const prog = user?.program || localStorage.getItem("userProgram");
+    return prog ? [prog] : [];
+  }, [user, availableContexts, activeProgramKey]);
 
-  const activeProgram = user?.ficha?.programa || user?.program || localStorage.getItem("userProgram") || enrolledPrograms[0] || "ADSO";
+  // Si active_context guardado en localStorage ya no existe en el perfil, seleccionar primer válido
+  const activeProgram = useMemo(() => {
+    const saved = localStorage.getItem("userProgram") || localStorage.getItem("activeProgram");
+    if (availableContexts.length > 0) {
+      const match = availableContexts.find((c: any) => c.program_name === saved || c.ficha_code === saved);
+      if (match) return match.program_name || match.ficha_code;
+      return availableContexts[0].program_name || availableContexts[0].ficha_code;
+    }
+    if (saved && enrolledPrograms.includes(saved)) {
+      return saved;
+    }
+    return user?.ficha?.programa || user?.program || enrolledPrograms[0] || "";
+  }, [user, availableContexts, enrolledPrograms]);
 
   const handleProgramSwitch = async (targetProg: string) => {
     if (targetProg === activeProgram) return;
@@ -1681,21 +1702,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
           <div className="h-16 sm:h-20 flex items-center justify-between gap-3">
             {/* Isotipo/Logos e Identidad Institucional Worklex */}
             <div className="flex items-center gap-3 sm:gap-4">
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                title="Ir a la página principal de WorkLex (Inicio)"
-                className="group flex items-center gap-2.5 sm:gap-3.5 p-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left cursor-pointer"
-              >
-                <WorklexBrandLogo size="md" showText={true} />
-                <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
-                <img
-                  src="/logo-sena.png"
-                  alt="SENA"
-                  className="h-8 sm:h-9 w-auto object-contain bg-transparent mix-blend-multiply dark:mix-blend-normal shrink-0 opacity-90"
-                  style={{ imageRendering: "-webkit-optimize-contrast" }}
-                />
-              </button>
+              <BrandHeader size="md" onClick={() => navigate("/")} />
               <div className="hidden lg:flex items-center">
                 <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1833,6 +1840,34 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
             </div>
           </div>
         </motion.div>
+
+        {/* Aviso de Aprendiz Sin Ficha Asignada */}
+        {user?.role === "student" && !activeProgram && enrolledPrograms.length === 0 && (
+          <div className="mb-6 p-6 rounded-2xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6" strokeWidth={1.8} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Sin Ficha o Programa Asignado
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                  Tu cuenta de aprendiz no cuenta actualmente con una ficha de formación vinculada. Comunícate con tu instructor líder o coordinador académico en el centro SENA para ser asignado.
+                </p>
+              </div>
+            </div>
+            <a
+              href="https://oferta.senasofiaplus.edu.co/sofia-oferta/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shrink-0 flex items-center gap-1.5 transition-colors shadow-xs"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Portal SOFIA Plus
+            </a>
+          </div>
+        )}
 
         {/* Sistema de Pestañas (Tabs) Formal y Plano */}
         <div className="flex items-center gap-6 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">

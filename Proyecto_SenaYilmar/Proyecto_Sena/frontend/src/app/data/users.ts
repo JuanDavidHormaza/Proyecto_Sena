@@ -17,6 +17,7 @@ export interface User {
   email: string;
   password: string;
   role: UserRole;
+  roles?: string[];
   // Campos PERSONS del modelo de BD
   docType?: string;
   docNum?: string;
@@ -26,6 +27,7 @@ export interface User {
   title?: string;
   country?: string;
   program?: string;
+  programs?: Array<{ id?: string | number; name: string; ficha_code?: string }>;
   permissions: UserPermissions;
   status: 'active' | 'inactive';
   createdAt: string;

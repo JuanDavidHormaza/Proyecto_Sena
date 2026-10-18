@@ -24,6 +24,27 @@ export interface ApiUser {
   roles?: string[];
   is_dual_role?: boolean;
   isDualRole?: boolean;
+  is_special_case?: boolean;
+  isSpecialCase?: boolean;
+  active_context?: {
+    role: string;
+    ficha_id?: string | number;
+    ficha_code?: string;
+    program_name?: string;
+    is_active?: boolean;
+  };
+  available_contexts?: Array<{
+    role: string;
+    ficha_id?: string | number;
+    ficha_code?: string;
+    program_name?: string;
+    is_active?: boolean;
+  }>;
+  programs?: Array<{
+    id?: string | number;
+    name: string;
+    ficha_code?: string;
+  }>;
   ficha?: {
     codigo?: string;
     programa?: string;
@@ -71,6 +92,7 @@ export interface RegisterData {
   program?: string;
   role_id?: 'SUPERADMIN' | 'ADMIN' | 'APRENDIZ' | 'MONITOR' | 'INSTRUCTOR';
   is_alternate_program?: boolean;
+  accepted_terms?: boolean;
 }
 
 export interface ApiSubject {
@@ -896,6 +918,23 @@ export async function switchRole(role?: string): Promise<ApiUser> {
     body: JSON.stringify({ role }),
   });
   return handleResponse<ApiUser>(response);
+}
+
+export async function switchContext(data: {
+  ficha_id?: string | number;
+  role?: string;
+  ficha_code?: string;
+  program_name?: string;
+}): Promise<any> {
+  const response = await safeFetch(`${API_BASE}/auth/switch-context/`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<any>(response);
 }
 
 // ── Solicitudes de Ficha Alterna (Multi-programa SENA) ─────────────────────

@@ -131,9 +131,74 @@ def _build_user_response(user, person):
     programa = user.program or ''
     ficha_code = getattr(user, 'ficha', '') or getattr(user, 'ficha_code', '') or ''
 
+    # Construcción estructurada de contextos (Ficha, Programa, Rol)
+    import re
+    user_records = list(User.objects.filter(person=person).select_related('person'))
+    available_contexts = []
+    seen_contexts = set()
+
+    for u in user_records:
+        r = str(u.role_id).upper() if u.role_id else 'APRENDIZ'
+        prog_raw = (u.program or '').strip()
+        m = re.search(r'\d{6,8}', prog_raw)
+        f_code = m.group(0) if m else (getattr(u, 'ficha_code', '') or '2670123')
+        p_name = re.sub(r'[-\s]*\d{6,8}[-\s]*', '', prog_raw).strip() or prog_raw or 'Análisis y Desarrollo de Software'
+        ctx_key = (r, f_code, p_name)
+        if ctx_key not in seen_contexts:
+            seen_contexts.add(ctx_key)
+            available_contexts.append({
+                'role': r,
+                'ficha_id': u.user_id,
+                'ficha_code': f_code,
+                'program_name': p_name,
+                'is_active': (u.user_id == user.user_id)
+            })
+
+    try:
+        from ..Models.modelsSENA import FichaRequest
+        approved_fichas = FichaRequest.objects.filter(person=person, status='APROBADA')
+        for f in approved_fichas:
+            r = 'APRENDIZ'
+            f_code = f.ficha_code
+            p_name = f.program_name
+            ctx_key = (r, f_code, p_name)
+            if ctx_key not in seen_contexts:
+                seen_contexts.add(ctx_key)
+                available_contexts.append({
+                    'role': r,
+                    'ficha_id': f.request_id + 10000,
+                    'ficha_code': f_code,
+                    'program_name': p_name,
+                    'is_active': False
+                })
+    except Exception:
+        pass
+
+    if not available_contexts:
+        prog_raw = (user.program or 'Análisis y Desarrollo de Software').strip()
+        available_contexts.append({
+            'role': str(user.role_id).upper() if user.role_id else 'APRENDIZ',
+            'ficha_id': user.user_id,
+            'ficha_code': '2670123',
+            'program_name': prog_raw,
+            'is_active': True
+        })
+
+    active_context = None
+    for ctx in available_contexts:
+        if ctx.get('is_active'):
+            active_context = ctx
+            break
+    if not active_context and available_contexts:
+        active_context = available_contexts[0]
+        active_context['is_active'] = True
+
+    is_special_case = len(available_contexts) > 1 or is_dual
+
     return {
         'id': str(user.user_id),
         'name': f"{person.first_name} {person.last_name}".strip(),
+        'full_name': f"{person.first_name} {person.last_name}".strip(),
         'email': person.email,
         'role': frontend_role,
         'active_role': active_role,
@@ -141,12 +206,16 @@ def _build_user_response(user, person):
         'roles': raw_roles,
         'is_dual_role': is_dual,
         'isDualRole': is_dual,
+        'is_special_case': is_special_case,
+        'isSpecialCase': is_special_case,
+        'active_context': active_context,
+        'available_contexts': available_contexts,
         'status': STATUS_MAP.get(getattr(person, 'status', None), 'inactive'),
         'permissions': get_permissions_by_role(frontend_role),
         'program': user.program,
         'ficha': {
-            'codigo': str(ficha_code),
-            'programa': programa,
+            'codigo': str(ficha_code or (active_context.get('ficha_code') if active_context else '')),
+            'programa': programa or (active_context.get('program_name') if active_context else ''),
         },
         'enrolledPrograms': enrolled_programs,
         'availableRoles': available_roles,
@@ -268,7 +337,7 @@ class AuthController:
                 'user': _build_user_response(user, existing_person),
             }, None
 
-        # Registro primera vez
+        acc_terms = bool(validated_data.get('accepted_terms') or validated_data.get('acceptTerms') or False)
         person = Person.objects.create(
             email=email,
             password=make_password(validated_data['password']),
@@ -279,6 +348,8 @@ class AuthController:
             phone_num=validated_data.get('phone_num'),
             country=validated_data.get('country', 'Colombia') or 'Colombia',
             status='ACTIVO',
+            accepted_terms=acc_terms,
+            terms_accepted_at=timezone.now() if acc_terms else None,
         )
 
         user = User.objects.create(
@@ -394,12 +465,56 @@ class UserController:
                 models.Q(program__icontains=s)
             )
 
+        # Agrupar por persona para evitar duplicación de filas en administración
+        grouped_by_person = {}
+        for user in queryset.order_by('-created_at'):
+            p_id = user.person.person_id
+            if p_id not in grouped_by_person:
+                grouped_by_person[p_id] = []
+            grouped_by_person[p_id].append(user)
+
+        import re
         users = []
-        for user in queryset:
-            person = user.person
-            data = _build_user_response(user, person)
-            data['createdAt'] = user.created_at.isoformat() if user.created_at else None
+        for p_id, user_list in grouped_by_person.items():
+            primary_user = user_list[0]
+            person = primary_user.person
+
+            # Recolectar todos los programas y fichas de esta persona sin duplicar
+            programs = []
+            seen_progs = set()
+            for u in user_list:
+                p_raw = (u.program or '').strip()
+                if p_raw:
+                    m = re.search(r'\d{6,8}', p_raw)
+                    f_code = m.group(0) if m else '2670123'
+                    p_name = re.sub(r'[-\s]*\d{6,8}[-\s]*', '', p_raw).strip() or p_raw
+                    key = (f_code, p_name)
+                    if key not in seen_progs:
+                        seen_progs.add(key)
+                        programs.append({
+                            'id': u.user_id,
+                            'name': p_name,
+                            'ficha_code': f_code,
+                        })
+
+            if not programs:
+                programs = [{
+                    'id': primary_user.user_id,
+                    'name': primary_user.program or 'Sin asignar',
+                    'ficha_code': 'N/A'
+                }]
+
+            roles = list(set([u.role_id for u in user_list if u.role_id]))
+            frontend_roles = list(set([ROLE_MAP.get(r, 'student') for r in roles]))
+
+            data = _build_user_response(primary_user, person)
+            data['programs'] = programs
+            data['roles'] = roles
+            data['frontend_roles'] = frontend_roles
+            data['is_special_case'] = len(user_list) > 1 or len(roles) > 1
+            data['createdAt'] = primary_user.created_at.isoformat() if primary_user.created_at else None
             users.append(data)
+
         return users
 
     @staticmethod
@@ -550,6 +665,59 @@ class UserController:
         return _build_user_response(user, user.person), None
 
     @staticmethod
+    def switch_context(user, ficha_id=None, role=None, ficha_code=None, program_name=None):
+        try:
+            person = user.person
+            target_user = None
+
+            if ficha_id:
+                try:
+                    f_id_int = int(ficha_id)
+                    target_user = User.objects.filter(person=person, user_id=f_id_int).first()
+                except (ValueError, TypeError):
+                    target_user = None
+
+            if not target_user and (role or program_name or ficha_code):
+                qs = User.objects.filter(person=person)
+                if role:
+                    backend_role = ROLE_MAP_REVERSE.get(str(role).lower(), str(role).upper())
+                    qs = qs.filter(role_id=backend_role)
+                if program_name:
+                    qs = qs.filter(program__icontains=program_name)
+                elif ficha_code:
+                    qs = qs.filter(program__icontains=ficha_code)
+                target_user = qs.first()
+
+            if not target_user:
+                target_user = user
+                if role:
+                    target_user.role_id = ROLE_MAP_REVERSE.get(str(role).lower(), str(role).upper())
+                if program_name:
+                    target_user.program = f"{ficha_code} - {program_name}" if (ficha_code and ficha_code not in program_name) else program_name
+                elif ficha_code:
+                    target_user.program = ficha_code
+                target_user.save()
+            else:
+                if role:
+                    target_user.role_id = ROLE_MAP_REVERSE.get(str(role).lower(), str(role).upper())
+                if program_name and not target_user.program:
+                    target_user.program = program_name
+                target_user.save()
+
+            access, refresh = _generate_tokens(target_user)
+            user_data = _build_user_response(target_user, person)
+
+            return {
+                'access': access,
+                'refresh': refresh,
+                'user': user_data,
+                'active_context': user_data.get('active_context'),
+                'available_contexts': user_data.get('available_contexts'),
+            }, None
+        except Exception as exc:
+            return None, f"Error al cambiar de contexto: {str(exc)}"
+
+    @staticmethod
     def delete(user_id):
         try:
             user = User.objects.get(pk=user_id)
@@ -674,7 +842,7 @@ class DictionaryController:
                 models.Q(synonyms__icontains=s)
             )
 
-        # Filtro inteligente por programa / ficha (Aislamiento Multi-tenant)
+        # Filtro estricto por programa / ficha (Aislamiento Multi-tenant)
         target_prog = (program or ficha_id or '').strip()
         if target_prog and target_prog.lower() != 'all':
             import re
@@ -682,23 +850,25 @@ class DictionaryController:
             ficha_code = m.group(0) if m else None
             prog_name_clean = re.sub(r'[-\s]*\d{6,8}[-\s]*', '', target_prog).strip()
 
-            filter_q = models.Q(program__iexact=target_prog) | models.Q(program__icontains=target_prog)
+            filter_q = (
+                models.Q(program__iexact=target_prog) |
+                models.Q(program__icontains=target_prog) |
+                models.Q(program__in=['', None])
+            )
             if ficha_code:
                 filter_q |= models.Q(program__icontains=ficha_code)
             if prog_name_clean:
                 filter_q |= models.Q(program__icontains=prog_name_clean) | models.Q(program__iexact=prog_name_clean)
 
-            filtered_qs = queryset.filter(filter_q)
+            filtered_qs = queryset.filter(filter_q).distinct()
 
             if not filtered_qs.exists() and any(k in target_prog.upper() for k in ['ADSO', 'SOFTWARE', 'DESARROLLO', 'PROGRAM']):
                 filtered_qs = queryset.filter(models.Q(program__icontains='ADSO') | models.Q(program__icontains='SOFTWARE'))
 
-            if filtered_qs.exists():
-                queryset = filtered_qs
-            else:
-                adso_qs = queryset.filter(program__icontains='ADSO')
-                if adso_qs.exists():
-                    queryset = adso_qs
+            queryset = filtered_qs
+        elif program is not None and not program.strip() and not ficha_id:
+            # Si el usuario no tiene ficha o programa activo, retornar [] nunca un error 500
+            return []
 
         documents = []
         for doc in queryset:

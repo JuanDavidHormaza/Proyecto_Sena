@@ -29,6 +29,8 @@ class Person(models.Model):
     status = models.CharField(max_length=50, choices=PERSTATUS_CHOICES)
 
     created_at = models.DateTimeField(default=timezone.now)
+    accepted_terms = models.BooleanField(default=False)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

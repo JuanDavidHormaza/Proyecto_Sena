@@ -468,6 +468,32 @@ class MeAPIView(APIView):
         return Response(AuthController.get_me(request.user))
 
 
+class SwitchContextAPIView(APIView):
+    """
+    POST /auth/switch-context/
+    Permite alternar entre los contextos (rol, ficha, programa) disponibles del usuario.
+    Body: {"ficha_id": 102, "role": "INSTRUCTOR", "ficha_code": "2680456", "program_name": "..."}
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        ficha_id = request.data.get('ficha_id') or request.data.get('fichaId')
+        role = request.data.get('role')
+        ficha_code = request.data.get('ficha_code') or request.data.get('fichaCode')
+        program_name = request.data.get('program_name') or request.data.get('programName')
+
+        data, error = UserController.switch_context(
+            request.user,
+            ficha_id=ficha_id,
+            role=role,
+            ficha_code=ficha_code,
+            program_name=program_name
+        )
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data, status=status.HTTP_200_OK)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ACCESO PRIVILEGIADO SIN JWT (sesión Django)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1143,11 +1169,20 @@ class DigitalDictionaryViewSet(viewsets.ViewSet):
         ficha_id = request.query_params.get('fichaId') or request.query_params.get('ficha_id')
         program = request.query_params.get('program')
 
-        # Si es docente y no especificó filtro, segmentar exclusivamente a su ficha asignada
+        # Segmentación estricta por programa y ficha del usuario
         user = request.user
-        if getattr(user, 'role_id', None) in ('INSTRUCTOR', 'MONITOR') and getattr(user, 'program', None):
+        role_id = getattr(user, 'role_id', None)
+        user_program = getattr(user, 'program', None)
+
+        if role_id in ('INSTRUCTOR', 'MONITOR') and user_program:
             if not program and not ficha_id:
-                program = user.program
+                program = user_program
+        elif role_id == 'APRENDIZ' and not program and not ficha_id:
+            program = user_program
+
+        # Si el aprendiz no tiene ficha ni programa activo, retornar 200 OK con array vacío []
+        if role_id == 'APRENDIZ' and not program and not ficha_id:
+            return Response([])
 
         return Response(DictionaryController.list_all(
             subject_id=request.query_params.get('subject'),
