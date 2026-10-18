@@ -33,9 +33,19 @@ import {
   Layers,
   Sparkles,
   GitBranch,
-  Terminal,
   RotateCcw,
 } from "lucide-react";
+import {
+  IconCode,
+  IconDatabase,
+  IconTerminal2,
+  IconServer,
+  IconNetwork,
+  IconShieldCheck,
+  IconHeadphones,
+  IconPencil,
+  IconBook2,
+} from "@tabler/icons-react";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
@@ -108,6 +118,37 @@ export function getTermSemanticIcon(termName?: string) {
   }
   return Code2;
 }
+
+export const getTablerFallbackIcon = (doc: { name?: string; wordId?: string; competence?: string; skill?: string; category?: string }) => {
+  const word = (doc.wordId || doc.name || "").toLowerCase();
+  const comp = (doc.competence || doc.skill || doc.category || "").toLowerCase();
+
+  if (word.includes("database") || word.includes("sql") || word.includes("data") || comp.includes("data")) {
+    return { Icon: IconDatabase, color: "text-blue-600" };
+  }
+  if (word.includes("terminal") || word.includes("cli") || word.includes("command") || word.includes("shell") || word.includes("bash")) {
+    return { Icon: IconTerminal2, color: "text-slate-700 dark:text-slate-300" };
+  }
+  if (word.includes("server") || word.includes("backend") || word.includes("api") || word.includes("endpoint") || word.includes("microservice")) {
+    return { Icon: IconServer, color: "text-indigo-600" };
+  }
+  if (word.includes("network") || word.includes("cloud") || word.includes("deploy") || word.includes("docker")) {
+    return { Icon: IconNetwork, color: "text-cyan-600" };
+  }
+  if (word.includes("security") || word.includes("encrypt") || word.includes("auth") || word.includes("vulnerab")) {
+    return { Icon: IconShieldCheck, color: "text-rose-600" };
+  }
+  if (comp.includes("speaking") || word.includes("listen") || word.includes("speak") || word.includes("audio")) {
+    return { Icon: IconHeadphones, color: "text-cyan-600" };
+  }
+  if (comp.includes("writing") || word.includes("write") || word.includes("text")) {
+    return { Icon: IconPencil, color: "text-rose-600" };
+  }
+  if (comp.includes("reading") || comp.includes("grammar") || word.includes("read") || word.includes("book")) {
+    return { Icon: IconBook2, color: "text-amber-600" };
+  }
+  return { Icon: IconCode, color: "text-emerald-600" };
+};
 
 export function TeacherDictionariesPage() {
   const navigate = useNavigate();
@@ -298,7 +339,7 @@ export function TeacherDictionariesPage() {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "en-US";
-      utterance.rate = 0.9;
+      utterance.rate = 0.85;
       setPlayingAudioId(docId);
       utterance.onend = () => {
         setPlayingAudioId(null);
@@ -711,39 +752,37 @@ export function TeacherDictionariesPage() {
                 className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between group"
               >
                 <div>
-                  {/* Vista Previa de Ilustración con Fallback Semántico Tolerante a 404 (aspect-video siempre constante) */}
-                  <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 mb-4 group/img flex items-center justify-center">
+                  {/* Vista Previa de Ilustración con Fallback Semántico Tolerante a 404 (Estilo MatDash) */}
+                  <div className="relative w-full h-36 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100/80 dark:border-slate-700/80 mb-4 overflow-hidden flex items-center justify-center">
                     {doc.imageUrl && !imageErrors[doc.id] ? (
                       <img
                         src={resolveMediaUrl(doc.imageUrl)}
                         alt={doc.name || doc.wordId || "Ilustración técnica"}
                         loading="lazy"
                         decoding="async"
-                        onError={() => {
-                          console.warn(`[MediaProxy 404] Imagen no encontrada: ${doc.imageUrl}`);
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
                           setImageErrors((prev) => ({ ...prev, [doc.id]: true }));
                         }}
-                        className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover/img:scale-105"
+                        className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 text-center">
-                        {(() => {
-                          const SemanticIcon = getTermSemanticIcon(doc.name || doc.wordId);
-                          return (
-                            <>
-                              <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-700/90 border border-slate-200 dark:border-slate-600 flex items-center justify-center mb-1.5 shadow-xs text-slate-600 dark:text-slate-300">
-                                <SemanticIcon className="w-6 h-6" strokeWidth={1.75} />
-                              </div>
-                              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 tracking-tight truncate max-w-full px-2">
+                      (() => {
+                        const { Icon: FallbackIcon, color: iconColor } = getTablerFallbackIcon(doc);
+                        return (
+                          <div className="w-full h-36 rounded-2xl bg-slate-50 border border-slate-100/80 dark:bg-slate-800/50 dark:border-slate-800 flex flex-col items-center justify-center gap-2 group-hover:bg-slate-100/60 dark:group-hover:bg-slate-800/80 transition-colors">
+                            <FallbackIcon size={36} className={iconColor} stroke={1.75} />
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 shadow-xs">
+                                {doc.level || "A1"}
+                              </span>
+                              <span className="text-[10px] font-medium text-slate-400">
                                 {doc.name || doc.wordId}
                               </span>
-                              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                                Recurso institucional
-                              </span>
-                            </>
-                          );
-                        })()}
-                      </div>
+                            </div>
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
 

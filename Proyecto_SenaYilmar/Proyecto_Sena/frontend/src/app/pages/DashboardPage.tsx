@@ -41,9 +41,20 @@ import {
   Layers,
   Languages,
   LifeBuoy,
-  Plus,
   GitBranch,
+  Pause,
 } from "lucide-react";
+import {
+  IconCode,
+  IconDatabase,
+  IconTerminal2,
+  IconServer,
+  IconNetwork,
+  IconShieldCheck,
+  IconHeadphones,
+  IconPencil,
+  IconBook2,
+} from "@tabler/icons-react";
 import { getLevelFromScore } from "../data/questionsA1";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
@@ -798,48 +809,37 @@ function StudentVocabCard({
   };
   const compBadge = compColors[competence] || "bg-purple-50 text-purple-700 border-purple-200";
 
-  const getTermSemanticIcon = (word: string) => {
-    const w = (word || "").toLowerCase().trim();
-    if (
-      w.includes("branch") ||
-      w.includes("git") ||
-      w.includes("repo") ||
-      w.includes("merge") ||
-      w.includes("commit") ||
-      w.includes("pull") ||
-      w.includes("checkout")
-    ) {
-      return GitBranch;
+  const getTablerFallbackIcon = (t: api.ApiDocument) => {
+    const word = (t.wordId || t.name || "").toLowerCase();
+    const comp = (t.competence || (t as any).skill || (t as any).category || "").toLowerCase();
+
+    if (word.includes("database") || word.includes("sql") || word.includes("data") || comp.includes("data")) {
+      return { Icon: IconDatabase, color: "text-blue-600" };
     }
-    if (
-      w.includes("terminal") ||
-      w.includes("debug") ||
-      w.includes("test") ||
-      w.includes("cli") ||
-      w.includes("console") ||
-      w.includes("shell") ||
-      w.includes("script") ||
-      w.includes("command")
-    ) {
-      return Terminal;
+    if (word.includes("terminal") || word.includes("cli") || word.includes("command") || word.includes("shell") || word.includes("bash")) {
+      return { Icon: IconTerminal2, color: "text-slate-700 dark:text-slate-300" };
     }
-    if (
-      w.includes("layer") ||
-      w.includes("middle") ||
-      w.includes("microservice") ||
-      w.includes("service") ||
-      w.includes("cloud") ||
-      w.includes("server") ||
-      w.includes("api") ||
-      w.includes("backend") ||
-      w.includes("docker") ||
-      w.includes("deploy")
-    ) {
-      return Layers;
+    if (word.includes("server") || word.includes("backend") || word.includes("api") || word.includes("endpoint") || word.includes("microservice")) {
+      return { Icon: IconServer, color: "text-indigo-600" };
     }
-    return Code2;
+    if (word.includes("network") || word.includes("cloud") || word.includes("deploy") || word.includes("docker")) {
+      return { Icon: IconNetwork, color: "text-cyan-600" };
+    }
+    if (word.includes("security") || word.includes("encrypt") || word.includes("auth") || word.includes("vulnerab")) {
+      return { Icon: IconShieldCheck, color: "text-rose-600" };
+    }
+    if (comp.includes("speaking") || word.includes("listen") || word.includes("speak") || word.includes("audio")) {
+      return { Icon: IconHeadphones, color: "text-cyan-600" };
+    }
+    if (comp.includes("writing") || word.includes("write") || word.includes("text")) {
+      return { Icon: IconPencil, color: "text-rose-600" };
+    }
+    if (comp.includes("reading") || comp.includes("grammar") || word.includes("read") || word.includes("book")) {
+      return { Icon: IconBook2, color: "text-amber-600" };
+    }
+    return { Icon: IconCode, color: "text-emerald-600" };
   };
-  const SemanticIcon = getTermSemanticIcon(termKey);
+  const { Icon: FallbackIcon, color: iconColor } = getTablerFallbackIcon(term);
 
   const rawImageSrc = term.imageUrl || term.image;
   const imageKey = term.image || (term.imageUrl ? term.imageUrl.replace(/^\/api\/media\/dictionary-images\//, "") : `${termKey.toLowerCase().replace(/\s+/g, "_")}.png`);
@@ -853,26 +853,26 @@ function StudentVocabCard({
       className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-emerald-500/40 transition-all flex flex-col justify-between overflow-hidden"
     >
       <div>
-        {/* 1. Imagen Técnica Superior con Manejo Resiliente de Fallback SVG (Evita Layout Shift) */}
-        <div className="relative aspect-video w-full bg-slate-50 dark:bg-slate-800/40 overflow-hidden flex items-center justify-center border-b border-slate-100 dark:border-slate-800">
+        {/* 1. Imagen Técnica con Fallback Visual Elegante Estilo MatDash (404) */}
+        <div className="p-3 pb-0">
           {!imgError && imageSrc ? (
-            <div className="relative w-full h-full group flex items-center justify-center">
+            <div className="relative w-full h-36 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100/80 dark:border-slate-800 flex items-center justify-center overflow-hidden group/img">
               <img
                 src={imageSrc}
                 alt={termKey}
                 loading="lazy"
                 decoding="async"
-                onError={() => {
-                  console.warn(`[MediaProxy 404] Imagen no encontrada para ${termKey}: ${imageSrc}`);
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
                   setImgError(true);
                 }}
                 onClick={() => onOpenLightbox && onOpenLightbox(term)}
-                className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+                className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover/img:scale-105 cursor-pointer"
               />
               {onOpenLightbox && (
                 <div
                   onClick={() => onOpenLightbox(term)}
-                  className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer pointer-events-none"
+                  className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center cursor-pointer pointer-events-none"
                   title="Clic para ampliar imagen"
                 >
                   <div className="w-8 h-8 rounded-full bg-white/95 text-slate-800 flex items-center justify-center shadow-md">
@@ -880,34 +880,37 @@ function StudentVocabCard({
                   </div>
                 </div>
               )}
+              {/* Badges sobre la imagen cuando cargó correctamente */}
+              <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10 pointer-events-none">
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${levelBadge}`}>
+                  {lvl}
+                </span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1 ${compBadge}`}>
+                  {competence === "Speaking" && <Mic className="w-3 h-3 shrink-0" />}
+                  {competence === "Writing" && <PenTool className="w-3 h-3 shrink-0" />}
+                  {competence === "Grammar" && <Languages className="w-3 h-3 shrink-0" />}
+                  {competence === "Reading" && <BookOpen className="w-3 h-3 shrink-0" />}
+                  <span>{competence}</span>
+                </span>
+              </div>
             </div>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 text-center">
-              <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-700/90 border border-slate-200 dark:border-slate-600 flex items-center justify-center mb-1.5 shadow-xs text-slate-600 dark:text-slate-300">
-                <SemanticIcon className="w-6 h-6" strokeWidth={1.75} />
+            <div className="w-full h-36 rounded-2xl bg-slate-50 border border-slate-100/80 dark:bg-slate-800/50 dark:border-slate-800 flex flex-col items-center justify-center gap-2 group-hover:bg-slate-100/60 dark:group-hover:bg-slate-800/80 transition-colors">
+              <FallbackIcon size={36} className={iconColor} stroke={1.75} />
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 shadow-xs">
+                  {lvl}
+                </span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1 ${compBadge}`}>
+                  {competence === "Speaking" && <Mic className="w-3 h-3 shrink-0" />}
+                  {competence === "Writing" && <PenTool className="w-3 h-3 shrink-0" />}
+                  {competence === "Grammar" && <Languages className="w-3 h-3 shrink-0" />}
+                  {competence === "Reading" && <BookOpen className="w-3 h-3 shrink-0" />}
+                  <span>{competence}</span>
+                </span>
               </div>
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 tracking-tight truncate max-w-full px-2">
-                {termKey}
-              </span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                Recurso institucional
-              </span>
             </div>
           )}
-
-          {/* Badges de Clasificación sobre la imagen */}
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10 pointer-events-none">
-            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${levelBadge}`}>
-              {lvl}
-            </span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1 ${compBadge}`}>
-              {competence === "Speaking" && <Mic className="w-3 h-3 shrink-0" />}
-              {competence === "Writing" && <PenTool className="w-3 h-3 shrink-0" />}
-              {competence === "Grammar" && <Languages className="w-3 h-3 shrink-0" />}
-              {competence === "Reading" && <BookOpen className="w-3 h-3 shrink-0" />}
-              <span>{competence}</span>
-            </span>
-          </div>
         </div>
 
         {/* 2. Fila de Título y Botón de Altavoz en 1 Clic con Tolerancia 404 */}
@@ -1000,14 +1003,21 @@ function StudentVocabCard({
         <button
           type="button"
           onClick={() => onVoicePractice(term)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs ${
-            isListening
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer ${
+            isPlaying
+              ? "bg-amber-600 text-white animate-pulse"
+              : isListening
               ? "bg-destructive text-white animate-pulse"
               : "bg-emerald-600 text-white hover:bg-emerald-700"
           }`}
-          title={`Practicar pronunciación de ${termKey}`}
+          title={isPlaying ? `Pausar audio de ${termKey}` : `Practicar pronunciación de ${termKey}`}
         >
-          {isListening ? (
+          {isPlaying ? (
+            <>
+              <Pause className="w-3.5 h-3.5" strokeWidth={1.8} />
+              <span>Pausar Voz</span>
+            </>
+          ) : isListening ? (
             <>
               <MicOff className="w-3.5 h-3.5" strokeWidth={1.8} />
               <span>Escuchando...</span>
@@ -1476,29 +1486,98 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     });
   }, [studyTerms, selectedLevel, selectedCompetence, searchQuery]);
 
-  // Reproductor de pronunciación controlado con estado (Play/Pause) y fallback nativo Web Speech API
-  const speakFallback = (text: string) => {
+  // Síntesis de voz pedagógica nativa del navegador con velocidad 0.85
+  const speakText = (text: string, termId?: string) => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "en-US";
-      utterance.rate = 0.9;
-      setPlayingTermId(text);
-      utterance.onend = () => setPlayingTermId(null);
-      utterance.onerror = () => setPlayingTermId(null);
+      utterance.rate = 0.85; // Velocidad pedagógica para aprendizaje técnico
+      if (termId) {
+        setPlayingTermId(termId);
+        utterance.onend = () => setPlayingTermId(null);
+        utterance.onerror = () => setPlayingTermId(null);
+      }
       window.speechSynthesis.speak(utterance);
     } else {
       setPlayingTermId(null);
     }
   };
 
+  const playPronunciation = (word: string, audioUrl?: string, termId?: string) => {
+    // Detener cualquier reproducción en curso
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    const tId = termId || word;
+
+    if (audioUrl) {
+      const resolved = resolveMediaUrl(audioUrl, "dictionary-audios");
+      const audio = new Audio(resolved);
+      audio.loop = false;
+      audioRef.current = audio;
+      setPlayingTermId(tId);
+
+      audio.onended = () => {
+        setPlayingTermId(null);
+        audioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        // Fallback silencioso sin alertas molestas
+        audioRef.current = null;
+        speakText(word, tId);
+      };
+
+      audio.play().catch(() => {
+        // Fallback silencioso sin alertas molestas
+        audioRef.current = null;
+        speakText(word, tId);
+      });
+    } else {
+      speakText(word, tId);
+    }
+  };
+
   const handlePlayPronunciation = (term: api.ApiDocument) => {
     const termKey = term.wordId || term.name;
 
-    // 1. Si vuelve a presionar el mismo término, pausarlo inmediatamente
-    if (audioRef.current && playingTermId === termKey) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    // 1. Si ya está sonando un audio de esa tarjeta, detenlo y cambia el estado a pausa
+    if (playingTermId === termKey) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setPlayingTermId(null);
+      return;
+    }
+
+    // 2. Intenta reproducir el archivo de audio. Si falla con error o no existe, ejecuta INMEDIATAMENTE speakText
+    const mediaPath = term.audioUrl || term.audio;
+    playPronunciation(termKey, mediaPath, termKey);
+  };
+
+  // Práctica interactiva de pronunciación con fallback automático silencioso
+  const handleVoicePractice = (term: api.ApiDocument) => {
+    const termKey = term.wordId || term.name;
+
+    // 1. Si ya está sonando un audio de esa tarjeta, detenlo y cambia el estado a pausa
+    if (playingTermId === termKey) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
@@ -1509,45 +1588,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     // 2. Detener cualquier reproducción previa
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current = null;
-    }
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    const mediaPath = term.audioUrl || term.audio;
-    if (mediaPath) {
-      const url = resolveMediaUrl(mediaPath, "dictionary-audios");
-      const audio = new Audio(url);
-      audio.loop = false; // Asegurar que ningún audio quede en bucle infinito
-      audioRef.current = audio;
-      setPlayingTermId(termKey);
-
-      audio.onended = () => {
-        setPlayingTermId(null);
-        audioRef.current = null;
-      };
-
-      audio.onerror = () => {
-        // Fallback automático fluido y silencioso con SpeechSynthesis sin spam de toasts
-        speakFallback(termKey);
-      };
-
-      audio.play().catch(() => {
-        speakFallback(termKey);
-      });
-    } else {
-      speakFallback(termKey);
-    }
-  };
-
-  // Práctica interactiva de pronunciación con el micrófono del navegador
-  const handleVoicePractice = (term: api.ApiDocument) => {
-    const termKey = term.wordId || term.name;
-
-    // 1. Pausar cualquier audio o síntesis de voz en reproducción para liberar el audio
-    if (audioRef.current) {
-      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -1555,91 +1596,24 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     }
     setPlayingTermId(null);
 
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setSpeechFeedback((prev) => ({
-        ...prev,
-        [termKey]: {
-          success: false,
-          heard: "",
-          message: "El reconocimiento de voz no está soportado en este navegador (se recomienda Chrome o Edge).",
-        },
-      }));
-      return;
-    }
-
-    if (listeningTerm === termKey) {
-      setListeningTerm(null);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    setListeningTerm(termKey);
-    setSpeechFeedback((prev) => ({
-      ...prev,
-      [termKey]: {
-        success: false,
-        heard: "",
-        message: "Escuchando... Pronuncia la palabra en inglés ahora.",
-      },
-    }));
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.trim().toLowerCase();
-      const target = termKey.trim().toLowerCase();
-      const isMatch = transcript === target || transcript.includes(target) || target.includes(transcript);
-
-      setSpeechFeedback((prev) => ({
-        ...prev,
-        [termKey]: {
-          success: isMatch,
-          heard: event.results[0][0].transcript,
-          message: isMatch
-            ? `¡Excelente pronunciación! Coincidencia exacta: "${event.results[0][0].transcript}".`
-            : `Detectado: "${event.results[0][0].transcript}". Continúa practicando la entonación.`,
-        },
-      }));
-      setListeningTerm(null);
-    };
-
-    recognition.onerror = (e: any) => {
-      setSpeechFeedback((prev) => ({
-        ...prev,
-        [termKey]: {
-          success: false,
-          heard: "",
-          message: "No se detectó audio del micrófono. Verifica tus permisos de grabación.",
-        },
-      }));
-      setListeningTerm(null);
-    };
-
-    recognition.onend = () => {
-      setListeningTerm(null);
-    };
-
-    try {
-      recognition.start();
-    } catch {
-      setListeningTerm(null);
-    }
+    // 3. Intenta reproducir el archivo de audio o fallback nativo silencioso
+    const mediaPath = term.audioUrl || term.audio;
+    playPronunciation(termKey, mediaPath, termKey);
   };
 
-  // Conteo de términos por nivel
   // Conteo de términos dinámico por nivel y por competencia lingüística
   const dynamicLevelCounts = useMemo(() => {
     const counts: Record<string, number> = { all: filteredTerms.length, A1: 0, A2: 0, B1: 0, B2: 0 };
     studyTerms.forEach((t) => {
       const termSkill = (t.competence || (t as any).skill || (t as any).category || "Grammar").toLowerCase();
       const targetSkill = selectedCompetence.toLowerCase();
-      const matchesSkill = selectedCompetence === "all" || selectedCompetence === "Todas" || selectedCompetence === "Todos" || termSkill === targetSkill;
-      
+      const matchesSkill =
+        selectedCompetence === "all" ||
+        selectedCompetence === "Todas" ||
+        selectedCompetence === "Todos" ||
+        termSkill === targetSkill ||
+        (targetSkill === "reading" && termSkill.includes("read"));
+
       const termName = (t.wordId || t.name || "").toLowerCase();
       const def = (t.definition || "").toLowerCase();
       const query = searchQuery.trim().toLowerCase();
@@ -1654,11 +1628,15 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   }, [studyTerms, selectedCompetence, searchQuery, filteredTerms.length]);
 
   const dynamicCompCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: filteredTerms.length, Speaking: 0, Writing: 0, Grammar: 0, Reading: 0, Listening: 0 };
+    const counts: Record<string, number> = { all: filteredTerms.length, Speaking: 0, Writing: 0, Grammar: 0, Reading: 0 };
     studyTerms.forEach((t) => {
       const termLevel = (t.level || "A1").toUpperCase();
       const targetLevel = selectedLevel.toUpperCase();
-      const matchesLevel = selectedLevel === "all" || selectedLevel === "Todos" || selectedLevel === "Todas" || termLevel === targetLevel;
+      const matchesLevel =
+        selectedLevel === "all" ||
+        selectedLevel === "Todos" ||
+        selectedLevel === "Todas" ||
+        termLevel === targetLevel;
 
       const termName = (t.wordId || t.name || "").toLowerCase();
       const def = (t.definition || "").toLowerCase();
@@ -1668,11 +1646,26 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
       if (matchesLevel && matchesSearch) {
         const c = t.competence || "Grammar";
         if (counts[c] !== undefined) counts[c]++;
-        else if (c.toLowerCase().includes("listen")) counts.Listening++;
+        else if (c.toLowerCase().includes("read")) counts.Reading++;
       }
     });
     return counts;
   }, [studyTerms, selectedLevel, searchQuery, filteredTerms.length]);
+
+  // Métricas reactivas derivadas directamente de filteredTerms en tiempo real
+  const dictionaryMetrics = useMemo(() => {
+    const words = filteredTerms.length;
+    const images = filteredTerms.filter((t) =>
+      Boolean(t.image || t.imageUrl || (t as any).image_url || (t as any).has_image)
+    ).length;
+    const audios = filteredTerms.filter((t) =>
+      Boolean(t.audio || t.audioUrl || (t as any).audio_url || (t as any).has_audio)
+    ).length;
+    const videos = filteredTerms.filter((t) =>
+      Boolean(t.video || t.videoUrl || (t as any).video_url || (t as any).has_video)
+    ).length;
+    return { words, images, audios, videos };
+  }, [filteredTerms]);
 
   const levelCounts = dynamicLevelCounts;
 
@@ -2439,28 +2432,28 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Palabras</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {filteredTerms.length}
+                    {dictionaryMetrics.words}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Términos Filtrados</span>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Imágenes</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {filteredTerms.filter(t => Boolean(t.image || t.imageUrl || (t as any).image_url || (t as any).has_image)).length}
+                    {dictionaryMetrics.images}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Recursos Visuales</span>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Audios</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {filteredTerms.filter(t => Boolean(t.audio || t.audioUrl || (t as any).audio_url || (t as any).has_audio)).length}
+                    {dictionaryMetrics.audios}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">Pronunciación Nativa</span>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                   <span className="text-xs text-slate-500 font-medium block mb-1">Videos</span>
                   <span className="text-2xl font-bold text-slate-800 font-mono">
-                    {filteredTerms.filter(t => Boolean(t.video || t.videoUrl || (t as any).video_url || (t as any).has_video)).length}
+                    {dictionaryMetrics.videos}
                   </span>
                   <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Videoclips Técnicos</span>
                 </div>
@@ -2547,7 +2540,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                     {/* Filtro por Competencia con Contadores Dinámicos */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
                       <span className="text-xs text-slate-500 font-medium mr-1 whitespace-nowrap">Habilidad:</span>
-                      {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
+                      {["all", "Speaking", "Writing", "Grammar", "Reading"].map(comp => (
                         <button
                           key={comp}
                           type="button"
@@ -2694,7 +2687,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                         {/* Filtro por Competencia Lingüística con Contadores Dinámicos */}
                         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
                           <span className="text-xs text-slate-500 font-medium mr-1 whitespace-nowrap">Habilidad:</span>
-                          {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
+                          {["all", "Speaking", "Writing", "Grammar", "Reading"].map(comp => (
                             <button
                               key={comp}
                               type="button"
@@ -2753,28 +2746,28 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs">
                           <span className="text-[11px] text-slate-500 font-medium block">Palabras</span>
                           <span className="text-xl font-bold text-slate-800 dark:text-white font-mono">
-                            {filteredTerms.length}
+                            {dictionaryMetrics.words}
                           </span>
                           <span className="text-[10px] text-emerald-600 block font-medium">Términos Filtrados</span>
                         </div>
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs">
                           <span className="text-[11px] text-slate-500 font-medium block">Imágenes</span>
                           <span className="text-xl font-bold text-slate-800 dark:text-white font-mono">
-                            {filteredTerms.filter(t => Boolean(t.image || t.imageUrl || (t as any).image_url || (t as any).has_image)).length}
+                            {dictionaryMetrics.images}
                           </span>
                           <span className="text-[10px] text-emerald-600 block font-medium">Recursos Visuales</span>
                         </div>
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs">
                           <span className="text-[11px] text-slate-500 font-medium block">Audios</span>
                           <span className="text-xl font-bold text-slate-800 dark:text-white font-mono">
-                            {filteredTerms.filter(t => Boolean(t.audio || t.audioUrl || (t as any).audio_url || (t as any).has_audio)).length}
+                            {dictionaryMetrics.audios}
                           </span>
                           <span className="text-[10px] text-emerald-600 block font-medium">Pronunciación Nativa</span>
                         </div>
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xs">
                           <span className="text-[11px] text-slate-500 font-medium block">Videos</span>
                           <span className="text-xl font-bold text-slate-800 dark:text-white font-mono">
-                            {filteredTerms.filter(t => Boolean(t.video || t.videoUrl || (t as any).video_url || (t as any).has_video)).length}
+                            {dictionaryMetrics.videos}
                           </span>
                           <span className="text-[10px] text-slate-400 block font-medium">Videoclips Técnicos</span>
                         </div>
