@@ -1699,7 +1699,8 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 <img
                   src="/logo-sena.png"
                   alt="SENA"
-                  className="h-8 sm:h-9 w-auto object-contain shrink-0 opacity-90"
+                  className="h-8 sm:h-9 w-auto object-contain bg-transparent mix-blend-multiply dark:mix-blend-normal shrink-0 opacity-90"
+                  style={{ imageRendering: "-webkit-optimize-contrast" }}
                 />
               </button>
               <div className="hidden lg:flex items-center">

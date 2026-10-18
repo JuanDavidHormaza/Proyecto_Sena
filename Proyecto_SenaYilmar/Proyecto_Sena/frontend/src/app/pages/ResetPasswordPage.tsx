@@ -24,6 +24,7 @@ import * as api from "../services/api";
 import { useToast } from "../components/Toast";
 import { validateEmail } from "../utils/validation";
 import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { BrandHeader } from "../components/BrandHeader";
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -330,14 +331,8 @@ export function ResetPasswordPage() {
           </button>
 
           {/* Logo y Encabezado */}
-          <div className="flex items-center gap-4 sm:gap-5 mb-8 logo-container">
-            <WorklexBrandLogo size="lg" />
-            <div className="h-10 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
-            <img
-              src="/logo-sena.png"
-              alt="SENA"
-              className="h-10 sm:h-12 w-auto object-contain shrink-0 opacity-90"
-            />
+          <div className="mb-8">
+            <BrandHeader size="lg" onClick={() => navigate("/login")} />
           </div>
 
           {/* Banner de error centralizado y limpio */}

@@ -17,6 +17,7 @@ import {
   IconUserCheck,
 } from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
+import { BrandHeader } from "../components/BrandHeader";
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -50,17 +51,9 @@ export function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           {/* Identidad de marca WorkLex y SENA */}
           <div className="flex-shrink-0 flex items-center">
-            <img
-              src="/worklex.png"
-              alt="WorkLex"
-              className="h-10 sm:h-12 w-auto object-contain shrink-0"
-              style={{ imageRendering: "-webkit-optimize-contrast" }}
-            />
-            <span className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0" />
-            <img
-              src="/logo-sena.png"
-              alt="SENA"
-              className="h-8 sm:h-9 w-auto object-contain shrink-0 opacity-90"
+            <BrandHeader
+              size="md"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             />
           </div>
 

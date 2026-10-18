@@ -55,12 +55,19 @@ export const WorklexBrandLogo: React.FC<WorklexBrandLogoProps> = ({
 
   const logoAvatar = (
     <div
-      className={`rounded-full bg-white shadow-md border-2 border-emerald-500/20 flex items-center justify-center overflow-hidden transition-transform duration-200 group-hover:scale-105 hover:scale-105 shrink-0 ${config.container}`}
+      className={`bg-transparent border-0 shadow-none flex items-center justify-center transition-transform duration-200 group-hover:scale-105 hover:scale-105 shrink-0 ${config.container}`}
     >
       <img
-        src="/worklex.png"
+        src="/worklex-transparent.png"
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (img.src !== window.location.origin + "/worklex.png") {
+            img.src = "/worklex.png";
+          }
+        }}
         alt="WorkLex"
-        className="w-full h-full object-contain rounded-full select-none"
+        className="w-full h-full object-contain bg-transparent mix-blend-multiply dark:mix-blend-normal select-none"
+        style={{ imageRendering: "-webkit-optimize-contrast" }}
         loading="eager"
       />
     </div>

@@ -28,6 +28,7 @@ import {
   sanitizeEmail,
 } from "../utils/validation";
 import { FieldError } from "../components/FieldError";
+import { BrandHeader } from "../components/BrandHeader";
 
 type LoginStep = "credentials" | "otp";
 
@@ -332,23 +333,9 @@ export function LoginPage() {
             <span>{step === "otp" ? "Volver a credenciales" : "Volver al inicio"}</span>
           </button>
 
-          {/* ── LOGOTIPOS WORKLEX Y SENA (SIN CAJA NI BORDES RÍGIDOS) ── */}
-          <div className="flex items-center mb-8">
-            {/* Logo WorkLex Limpio y Nítido */}
-            <img
-              src="/worklex.png"
-              alt="WorkLex"
-              className="h-14 sm:h-16 w-auto object-contain shrink-0"
-              style={{ imageRendering: "-webkit-optimize-contrast" }}
-            />
-            {/* Divisor sutil */}
-            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0" />
-            {/* Logo SENA */}
-            <img
-              src="/logo-sena.png"
-              alt="SENA"
-              className="h-10 sm:h-12 w-auto object-contain shrink-0 opacity-90"
-            />
+          {/* ── LOGOTIPOS WORKLEX Y SENA (TRANSPARENTE ESTILO MATDASH) ── */}
+          <div className="mb-8">
+            <BrandHeader size="lg" onClick={() => navigate("/")} />
           </div>
 
           <AnimatePresence mode="wait">
@@ -610,9 +597,16 @@ export function LoginPage() {
           {/* Insignia Circular Blanca */}
           <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white shadow-2xl border-4 border-white/90 p-2.5 flex items-center justify-center transition-transform hover:scale-105 mb-4">
             <img 
-              src="/worklex.png" 
+              src="/worklex-transparent.png"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (img.src !== window.location.origin + "/worklex.png") {
+                  img.src = "/worklex.png";
+                }
+              }}
               alt="WorkLex" 
-              className="w-full h-full object-contain rounded-full" 
+              className="w-full h-full object-contain select-none"
+              style={{ imageRendering: "-webkit-optimize-contrast" }}
             />
           </div>
 
