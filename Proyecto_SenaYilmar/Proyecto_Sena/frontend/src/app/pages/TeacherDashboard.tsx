@@ -16,7 +16,7 @@ import { HeaderActionTools } from "../components/HeaderActionTools";
 import { RoleSwitcher } from "../components/RoleSwitcher";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { BrandLogo } from "../components/BrandLogo";
 
 function normalizeText(value?: string | null) {
   return (value || "").trim().toLowerCase();
@@ -246,11 +246,9 @@ export function TeacherDashboard() {
         <div className="container mx-auto px-4 lg:px-8 h-full">
           <div className="flex items-center justify-between h-full">
             <div className="flex items-center gap-3">
-              <WorklexBrandLogo
-                size="md"
-                showText={true}
-                subtitle="Seguimiento Formativo"
-              />
+              <BrandLogo size="sm" showSena={true} onClick={() => navigate("/")} />
+              <div className="hidden sm:block h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+              <span className="hidden sm:inline-block text-xs text-slate-500 font-medium">Seguimiento Formativo</span>
             </div>
 
             <div className="flex items-center gap-3">

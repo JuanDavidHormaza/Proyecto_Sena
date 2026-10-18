@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Image, Video, X, Play, ChevronRight, Film, Camera, ZoomIn, Languages } from "lucide-react";
 import { useState } from "react";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { BrandLogo } from "../components/BrandLogo";
 
 // ─── Datos de ejemplo ───────────────────────────────────────────────────────
 // Reemplaza estos src por tus archivos reales importados con:
@@ -103,10 +103,10 @@ export function MediaPage() {
             transition={{ duration: 0.5 }}
             className="flex items-center justify-between"
           >
-            <WorklexBrandLogo
+            <BrandLogo
               size="md"
-              showText={true}
-              subtitle="English Level Test"
+              showSena={true}
+              onClick={() => navigate("/")}
             />
             <button
               onClick={() => navigate("/login")}
@@ -390,10 +390,10 @@ export function MediaPage() {
       <footer className="py-8 px-6 border-t border-border bg-white">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <WorklexBrandLogo
+            <BrandLogo
               size="sm"
-              showText={true}
-              subtitle="SENA - 2026"
+              showSena={true}
+              onClick={() => navigate("/")}
             />
             <p className="text-sm text-muted-foreground">
               Plataforma educativa para la evaluación de competencias en inglés

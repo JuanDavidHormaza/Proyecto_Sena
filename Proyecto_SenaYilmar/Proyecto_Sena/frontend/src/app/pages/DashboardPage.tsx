@@ -70,8 +70,7 @@ import { getTermsForProgram } from "../data/dictionariesByFicha";
 import { questions } from "../data";
 import { toast } from "../components/Toast";
 import { playEnglishSpeech } from "../utils/speech";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
-import { BrandHeader } from "../components/BrandHeader";
+import { BrandLogo } from "../components/BrandLogo";
 import { RoleSwitcher } from "../components/RoleSwitcher";
 
 const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
@@ -1702,7 +1701,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
           <div className="h-16 sm:h-20 flex items-center justify-between gap-3">
             {/* Isotipo/Logos e Identidad Institucional Worklex */}
             <div className="flex items-center gap-3 sm:gap-4">
-              <BrandHeader size="md" onClick={() => navigate("/")} />
+              <BrandLogo size="md" onClick={() => navigate("/")} />
               <div className="hidden lg:flex items-center">
                 <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

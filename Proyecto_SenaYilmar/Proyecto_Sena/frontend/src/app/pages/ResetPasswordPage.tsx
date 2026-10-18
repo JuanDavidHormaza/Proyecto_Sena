@@ -23,8 +23,7 @@ import {
 import * as api from "../services/api";
 import { useToast } from "../components/Toast";
 import { validateEmail } from "../utils/validation";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
-import { BrandHeader } from "../components/BrandHeader";
+import { BrandLogo } from "../components/BrandLogo";
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -331,8 +330,8 @@ export function ResetPasswordPage() {
           </button>
 
           {/* Logo y Encabezado */}
-          <div className="mb-8">
-            <BrandHeader size="lg" onClick={() => navigate("/login")} />
+          <div className="mb-8 bg-transparent p-0 border-0 shadow-none">
+            <BrandLogo size="md" onClick={() => navigate("/login")} />
           </div>
 
           {/* Banner de error centralizado y limpio */}

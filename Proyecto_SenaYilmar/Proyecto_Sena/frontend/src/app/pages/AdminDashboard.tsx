@@ -34,7 +34,7 @@ import { resolveMediaUrl } from "../services/api";
 import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightboxModal";
 import { SafeImage } from "../components/SafeImage";
 import { playEnglishSpeech } from "../utils/speech";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { BrandLogo } from "../components/BrandLogo";
 
 // ─── Tipos de archivo ─────────────────────────────────────────────────────────
 type FileCategory = "document" | "audio" | "video" | "image";
@@ -1563,11 +1563,8 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 z-40 hidden lg:block">
         <div className="p-6">
           <div className="mb-6">
-            <WorklexBrandLogo
-              size="sm"
-              showText={true}
-              subtitle="Gestión y Administración"
-            />
+            <BrandLogo size="sm" showSena={true} />
+            <p className="text-[11px] text-slate-500 font-medium mt-1.5 pl-0.5">Gestión y Administración</p>
           </div>
           <nav className="space-y-1.5">
             {tabs.map((tab) => {
@@ -1612,7 +1609,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
       <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 z-40 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <WorklexBrandLogo size="sm" showText={true} />
+            <BrandLogo size="sm" showSena={true} />
           </div>
           <div className="flex items-center gap-2">
             {/* Campana de Notificaciones en Móvil */}

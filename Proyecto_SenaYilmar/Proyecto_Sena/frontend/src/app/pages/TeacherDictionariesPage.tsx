@@ -49,7 +49,7 @@ import {
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { BrandLogo } from "../components/BrandLogo";
 import { RoleSwitcher } from "../components/RoleSwitcher";
 import { resolveMediaUrl } from "../services/api";
 import { Document, mockDocuments } from "../data/users";
@@ -538,12 +538,9 @@ export function TeacherDictionariesPage() {
               className="flex items-center gap-3 sm:gap-4 p-1.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group text-left"
               title="Regresar al panel del docente"
             >
-              <WorklexBrandLogo
+              <BrandLogo
                 size="md"
-                showText={true}
-                showBadge={true}
-                badgeText="Ecosistema Digital"
-                subtitle="Plataforma de Gestión y Aprendizaje"
+                showSena={true}
               />
             </button>
           </div>

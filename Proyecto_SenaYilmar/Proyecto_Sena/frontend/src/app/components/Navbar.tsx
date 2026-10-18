@@ -4,7 +4,7 @@ import { UserAccountMenu } from "./UserAccountMenu";
 import { HeaderActionTools } from "./HeaderActionTools";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { useAuth } from "../context/AuthContext";
-import { BrandHeader } from "./BrandHeader";
+import { BrandLogo } from "./BrandLogo";
 
 interface NavLinkItem {
   label: string;
@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
       <div className="container mx-auto px-4 lg:px-8 h-full flex items-center justify-between">
         {/* Identidad de marca WorkLex y SENA a la izquierda */}
         <div className="flex items-center">
-          <BrandHeader size="sm" onClick={() => navigate("/")} />
+          <BrandLogo size="sm" onClick={() => navigate("/")} />
         </div>
 
         {/* Menú de navegación centrado */}

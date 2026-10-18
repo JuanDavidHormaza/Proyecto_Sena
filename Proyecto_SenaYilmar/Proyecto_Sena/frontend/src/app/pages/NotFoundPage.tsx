@@ -11,7 +11,7 @@ import {
   Search,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { BrandLogo } from "../components/BrandLogo";
 
 export function NotFoundPage() {
   const navigate = useNavigate();
@@ -39,10 +39,9 @@ export function NotFoundPage() {
       {/* Header simplificado */}
       <header className="w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between">
-          <WorklexBrandLogo
+          <BrandLogo
             size="md"
-            showText={true}
-            subtitle="English Evaluation & Technical Practice"
+            showSena={true}
             onClick={() => navigate("/")}
           />
 

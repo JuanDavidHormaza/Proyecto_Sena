@@ -58,11 +58,13 @@ export const WorklexBrandLogo: React.FC<WorklexBrandLogoProps> = ({
       className={`bg-transparent border-0 shadow-none flex items-center justify-center transition-transform duration-200 group-hover:scale-105 hover:scale-105 shrink-0 ${config.container}`}
     >
       <img
-        src="/worklex-transparent.png"
+        src="/assets/logo-worklex.png"
         onError={(e) => {
           const img = e.currentTarget;
-          if (img.src !== window.location.origin + "/worklex.png") {
-            img.src = "/worklex.png";
+          if (!img.src.includes('logo-worklex.png')) {
+            img.src = '/logo-worklex.png';
+          } else if (!img.src.includes('worklex-transparent.png')) {
+            img.src = '/worklex-transparent.png';
           }
         }}
         alt="WorkLex"
