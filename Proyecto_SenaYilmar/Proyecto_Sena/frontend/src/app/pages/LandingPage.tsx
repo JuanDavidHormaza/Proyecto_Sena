@@ -17,7 +17,7 @@ import {
   IconUserCheck,
 } from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
-import { BrandHeader } from "../components/BrandHeader";
+import { BrandLogo } from "../components/BrandLogo";
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -51,7 +51,7 @@ export function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           {/* Identidad de marca WorkLex y SENA */}
           <div className="flex-shrink-0 flex items-center">
-            <BrandHeader
+            <BrandLogo
               size="md"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             />
@@ -374,15 +374,10 @@ export function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center">
-              <img
-                src="/worklex.png"
-                alt="WorkLex"
-                className="h-9 sm:h-10 w-auto object-contain"
-                style={{ imageRendering: "-webkit-optimize-contrast" }}
-              />
-              <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0" />
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                SENA — Ecosistema Digital de Formación Profesional
+              <BrandLogo size="md" showSena={true} />
+              <span className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-3 shrink-0 hidden sm:block" />
+              <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+                Ecosistema Digital de Formación Profesional
               </p>
             </div>
 

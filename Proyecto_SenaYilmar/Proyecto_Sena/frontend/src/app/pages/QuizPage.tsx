@@ -34,7 +34,7 @@ import {
 } from "../services/examEngine";
 import { playEnglishSpeech } from "../utils/speech";
 import { QuizSkeleton } from "../components/QuizSkeleton";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
+import { BrandLogo } from "../components/BrandLogo";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
 
@@ -889,7 +889,7 @@ export function QuizPage() {
         >
           {/* Header */}
           <div className="flex items-center gap-3.5 mb-6 pb-5 border-b border-slate-100">
-            <WorklexBrandLogo size="md" />
+            <BrandLogo size="md" showSena={true} />
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-sena-green">Plataforma SENA</span>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
@@ -1001,7 +1001,7 @@ export function QuizPage() {
           className="flex items-center justify-between mb-6"
         >
           <div className="flex items-center gap-3">
-            <WorklexBrandLogo size="md" />
+            <BrandLogo size="md" showSena={true} />
             <div>
               <span className="text-white font-bold text-lg block leading-tight">WorkLex English Test</span>
               <span className="text-white/80 text-xs font-medium">Evaluación Progresiva CEFR A1 → B2</span>

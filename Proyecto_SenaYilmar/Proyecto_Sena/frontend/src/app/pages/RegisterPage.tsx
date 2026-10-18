@@ -33,8 +33,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";
 import { useToast } from "../components/Toast";
-import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
-import { BrandHeader } from "../components/BrandHeader";
+import { BrandLogo } from "../components/BrandLogo";
 import { TermsModal } from "../components/TermsModal";
 import {
   validateName,
@@ -766,8 +765,8 @@ export function RegisterPage() {
           </button>
 
           {/* ── LOGOTIPOS WORKLEX Y SENA (TRANSPARENTE ESTILO MATDASH) ── */}
-          <div className="mb-8">
-            <BrandHeader size="lg" onClick={() => navigate("/")} />
+          <div className="mb-8 bg-transparent p-0 border-0 shadow-none">
+            <BrandLogo size="md" onClick={() => navigate("/")} />
           </div>
 
           <div>
