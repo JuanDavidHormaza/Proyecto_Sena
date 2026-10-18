@@ -1187,26 +1187,36 @@ export function RegisterPage() {
                 </div>
 
                 {/* Términos y condiciones */}
-                <div className="flex items-start gap-2.5 pt-1">
+                <div className="flex items-start gap-3 my-4 p-3 bg-slate-50/70 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl">
                   <input
-                    id="terms"
                     type="checkbox"
-                    required
+                    id="terms-checkbox"
                     checked={formData.acceptTerms}
                     onChange={(e) => setFormData({ ...formData, acceptTerms: e.target.checked })}
-                    className="mt-0.5 w-4 h-4 rounded border-slate-300 text-[#39A900] focus:ring-[#39A900]/30 cursor-pointer"
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer transition-colors"
                   />
-                  <label htmlFor="terms" className="text-xs text-slate-600 dark:text-slate-400 leading-snug cursor-pointer select-none">
-                    Acepto los{" "}
+                  <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed select-none">
+                    <span>Acepto los </span>
                     <button
                       type="button"
                       onClick={() => setShowTermsModal(true)}
-                      className="text-[#39A900] hover:underline font-semibold inline cursor-pointer"
+                      className="font-medium text-emerald-600 dark:text-emerald-400 underline hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors inline cursor-pointer"
                     >
-                      términos de servicio, políticas de privacidad y datos SENA
+                      Términos de Servicio y la Política de Confidencialidad del SENA
                     </button>
-                    , y el reglamento del aprendiz.
-                  </label>
+                    <span>, autorizando el tratamiento de mis datos personales según la Ley 1581 de 2012 y el reglamento del aprendiz. </span>
+                    <a
+                      href="https://portal.senasofiaplus.edu.co/index.php/seguridad/politica-de-confidencialidad"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline ml-1 cursor-pointer"
+                    >
+                      <span>Ver fuente oficial</span>
+                      <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-2">
