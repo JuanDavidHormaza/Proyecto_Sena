@@ -933,12 +933,13 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
         })
         .map(u => ({
           id: u.id, name: u.name, email: u.email, password: '',
-          role: u.role as any, permissions: u.permissions, status: u.status,
+          role: u.role as any, roles: u.roles, permissions: u.permissions, status: u.status,
           createdAt: new Date().toISOString().split('T')[0],
           docType: u.docType, docNum: u.docNum,
           phoneNum: u.phoneNum?.toString(),
           firstName: u.firstName, lastName: u.lastName,
           program: u.program || '',
+          programs: u.programs,
         }));
 
       const convertedSubjects: Subject[] = apiSubjects.map(s => ({
@@ -2171,7 +2172,32 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                 </span>
                               </td>
                               <td className="py-3.5 px-5 whitespace-nowrap">
-                                {isSelf || isTargetSuperAdmin ? (
+                                {user.roles && user.roles.length > 1 ? (
+                                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                    {user.roles.map((r, idx) => {
+                                      const lower = r.toLowerCase();
+                                      const normRole =
+                                        lower === 'instructor' || lower === 'docente'
+                                          ? 'teacher'
+                                          : lower === 'aprendiz' || lower === 'alumno' || lower === 'estudiante'
+                                          ? 'student'
+                                          : lower === 'superadmin' || lower === 'super_admin'
+                                          ? 'superadmin'
+                                          : lower === 'admin' || lower === 'administrador'
+                                          ? 'admin'
+                                          : lower;
+                                      return (
+                                        <span
+                                          key={idx}
+                                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold inline-flex items-center gap-1 ${ROLE_COLORS[normRole] || 'bg-slate-100 text-slate-700'}`}
+                                        >
+                                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                                          {ROLE_LABELS[normRole] || r}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                ) : isSelf || isTargetSuperAdmin ? (
                                   <span
                                     className={`rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5 opacity-90 cursor-not-allowed ${ROLE_COLORS[user.role] || 'bg-slate-100 text-slate-600'}`}
                                     title={isSelf ? "Tu cuenta activa (No modificable)" : "Super Administrador (Protegido)"}
@@ -2196,9 +2222,28 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                 )}
                               </td>
                               <td className="py-3.5 px-5">
-                                <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate max-w-[200px] inline-block" title={user.program || "Sin asignar"}>
-                                  {user.program || "—"}
-                                </span>
+                                {user.programs && user.programs.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1.5 max-w-[280px]">
+                                    {user.programs.map((p, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 rounded-md text-xs font-medium border border-slate-200/60"
+                                        title={`${p.name}${p.ficha_code ? ` (Ficha: ${p.ficha_code})` : ''}`}
+                                      >
+                                        <span className="truncate max-w-[160px]">{p.name}</span>
+                                        {p.ficha_code && (
+                                          <span className="font-mono text-[10px] bg-white dark:bg-slate-700 px-1 py-0.2 rounded text-emerald-700 dark:text-emerald-400 font-semibold border border-slate-200 dark:border-slate-600">
+                                            {p.ficha_code}
+                                          </span>
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate max-w-[200px] inline-block" title={user.program || "Sin asignar"}>
+                                    {user.program || "—"}
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3.5 px-5 whitespace-nowrap">
                                 <button

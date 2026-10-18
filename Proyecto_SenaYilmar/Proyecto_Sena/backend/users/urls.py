@@ -11,6 +11,7 @@ from .Views.api_views import (
     VerifyOTPAPIView, ResendOTPAPIView, ResetPasswordAPIView, CustomTokenRefreshView,
     RegisterSendOTPAPIView, RegisterVerifyOTPAPIView,
     CheckDocumentAPIView, CheckEmailAPIView,
+    SwitchContextAPIView,
     PrivilegedLoginAPIView, PrivilegedMeAPIView,
     UserViewSet, SubjectViewSet,
     DigitalDictionaryViewSet, TestResultViewSet, RankingViewSet,
@@ -70,6 +71,8 @@ urlpatterns = [
     path('auth/refresh',  CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('auth/me/',      MeAPIView.as_view(),              name='me_slash'),
     path('auth/me',       MeAPIView.as_view(),              name='me'),
+    path('auth/switch-context/', SwitchContextAPIView.as_view(), name='switch_context_slash'),
+    path('auth/switch-context',  SwitchContextAPIView.as_view(), name='switch_context'),
 
     # Acceso sin JWT para roles privilegiados
     path('auth/privileged-login/', PrivilegedLoginAPIView.as_view(), name='privileged_login'),

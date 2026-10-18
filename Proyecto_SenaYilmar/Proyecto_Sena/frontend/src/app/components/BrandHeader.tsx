@@ -103,4 +103,5 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
   return content;
 };
 
+export const AppLogo = BrandHeader;
 export default BrandHeader;

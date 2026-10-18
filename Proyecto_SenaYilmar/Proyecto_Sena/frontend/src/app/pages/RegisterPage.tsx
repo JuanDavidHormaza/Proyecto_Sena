@@ -35,6 +35,7 @@ import * as api from "../services/api";
 import { useToast } from "../components/Toast";
 import { WorklexBrandLogo } from "../components/WorklexBrandLogo";
 import { BrandHeader } from "../components/BrandHeader";
+import { TermsModal } from "../components/TermsModal";
 import {
   validateName,
   sanitizeName,
@@ -127,6 +128,7 @@ export function RegisterPage() {
   const [existingData, setExistingData] = useState<api.CheckDocumentResponse | null>(null);
   const [isDocDuplicate, setIsDocDuplicate] = useState(false);
   const [isEmailDuplicate, setIsEmailDuplicate] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // ── Validaciones estrictas campo por campo ────────────────────────────────
   const [fieldErrors, setFieldErrors] = useState<{
@@ -553,6 +555,7 @@ export function RegisterPage() {
           ? parseInt(formData.phoneNum.replace(/\D/g, ""), 10)
           : undefined,
         role_id: "APRENDIZ",
+        accepted_terms: true,
       });
 
       setOtpEmail(res?.email || emailTrimmed);
@@ -1194,8 +1197,16 @@ export function RegisterPage() {
                     onChange={(e) => setFormData({ ...formData, acceptTerms: e.target.checked })}
                     className="mt-0.5 w-4 h-4 rounded border-slate-300 text-[#39A900] focus:ring-[#39A900]/30 cursor-pointer"
                   />
-                  <label htmlFor="terms" className="text-xs text-slate-600 dark:text-slate-400 leading-snug cursor-pointer">
-                    Acepto los términos de servicio, políticas de privacidad y el reglamento del aprendiz SENA.
+                  <label htmlFor="terms" className="text-xs text-slate-600 dark:text-slate-400 leading-snug cursor-pointer select-none">
+                    Acepto los{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTermsModal(true)}
+                      className="text-[#39A900] hover:underline font-semibold inline cursor-pointer"
+                    >
+                      términos de servicio, políticas de privacidad y datos SENA
+                    </button>
+                    , y el reglamento del aprendiz.
                   </label>
                 </div>
 
@@ -1209,7 +1220,7 @@ export function RegisterPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !formData.acceptTerms}
                     className="flex-1 h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-medium text-sm rounded-md shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isLoading ? (
@@ -1520,6 +1531,15 @@ export function RegisterPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => {
+          setFormData((prev) => ({ ...prev, acceptTerms: true }));
+          setShowTermsModal(false);
+        }}
+      />
     </div>
   );
 }

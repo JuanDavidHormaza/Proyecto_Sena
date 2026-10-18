@@ -32,7 +32,8 @@ class PersonSerializer(serializers.ModelSerializer):
         model = Person
         fields = [
             'person_id', 'email', 'password', 'doc_type', 'doc_num',
-            'first_name', 'last_name', 'phone_num', 'country', 'status', 'created_at'
+            'first_name', 'last_name', 'phone_num', 'country', 'status', 'created_at',
+            'accepted_terms', 'terms_accepted_at'
         ]
         extra_kwargs = {
             'password': {'write_only': True},
@@ -217,6 +218,7 @@ class RegisterSerializer(serializers.Serializer):
         required=False
     )
     is_alternate_program = serializers.BooleanField(required=False, default=False)
+    accepted_terms = serializers.BooleanField(required=False, default=False)
 
     def validate_first_name(self, value):
         return validate_name_anti_spam(value, "El nombre")
@@ -242,9 +244,13 @@ class RegisterSerializer(serializers.Serializer):
 
         # Programa opcional en registro inicial; aprendices vinculan fichas en perfil o alerta
         attrs['program'] = program or None
+        if 'accepted_terms' in self.initial_data:
+            attrs['accepted_terms'] = bool(self.initial_data['accepted_terms'])
         return attrs
     
     def create(self, validated_data):
+        from django.utils import timezone
+        accepted_terms = validated_data.get('accepted_terms', False)
         # Crear Person
         person = Person.objects.create(
             email=validated_data['email'],
@@ -254,18 +260,19 @@ class RegisterSerializer(serializers.Serializer):
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             phone_num=validated_data.get('phone_num'),
-            status='ACTIVO'
+            status='ACTIVO',
+            accepted_terms=accepted_terms,
+            terms_accepted_at=timezone.now() if accepted_terms else None
         )
         
         # Crear User con rol APRENDIZ por defecto
         user = User.objects.create(
-    person=person,
-    role_id=validated_data['role_id'],
-    status='EN_FORMACION',
-    program=validated_data.get('program'),
-    mfa=''
-
-)
+            person=person,
+            role_id=validated_data['role_id'],
+            status='EN_FORMACION',
+            program=validated_data.get('program'),
+            mfa=''
+        )
         
         return user
 
