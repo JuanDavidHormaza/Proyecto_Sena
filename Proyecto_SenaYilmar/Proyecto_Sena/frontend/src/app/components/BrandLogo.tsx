@@ -49,8 +49,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
               const img = e.currentTarget;
               if (!img.src.includes('logo-sena.png')) {
                 img.src = '/assets/logo-sena.png';
-              } else if (!img.src.includes('logo.svg')) {
-                img.src = '/logo.svg';
+              } else if (!img.src.endsWith('/logo-sena.png')) {
+                img.src = '/logo-sena.png';
               }
             }}
             alt="SENA"

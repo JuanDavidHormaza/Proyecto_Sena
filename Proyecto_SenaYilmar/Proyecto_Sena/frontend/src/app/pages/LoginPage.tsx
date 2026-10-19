@@ -28,7 +28,6 @@ import {
   sanitizeEmail,
 } from "../utils/validation";
 import { FieldError } from "../components/FieldError";
-import { BrandLogo } from "../components/BrandLogo";
 
 type LoginStep = "credentials" | "otp";
 
@@ -334,8 +333,38 @@ export function LoginPage() {
           </button>
 
           {/* ── LOGOTIPOS WORKLEX Y SENA (TRANSPARENTE ESTILO MATDASH) ── */}
-          <div className="mb-8 bg-transparent p-0 border-0 shadow-none">
-            <BrandLogo size="md" onClick={() => navigate("/")} />
+          <div
+            onClick={() => navigate("/")}
+            className="flex items-center gap-3.5 bg-transparent p-0 mb-6 cursor-pointer"
+            role="button"
+            tabIndex={0}
+            title="WorkLex & SENA - Volver al inicio"
+          >
+            {/* 1. Logo WorkLex Transparente */}
+            <img
+              src="/assets/logo-worklex.png"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.src.includes('logo-worklex.png')) img.src = '/logo-worklex.png';
+              }}
+              alt="WorkLex"
+              className="h-9 sm:h-10 w-auto object-contain bg-transparent mix-blend-multiply dark:mix-blend-normal"
+              style={{ imageRendering: '-webkit-optimize-contrast' }}
+            />
+
+            {/* Separador fino */}
+            <div className="h-6 w-px bg-slate-300 dark:bg-slate-700" />
+
+            {/* 2. Logo Institucional SENA */}
+            <img
+              src="/assets/logo-sena.svg"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.src.includes('logo-sena.png')) img.src = '/assets/logo-sena.png';
+              }}
+              alt="SENA"
+              className="h-8 sm:h-9 w-auto object-contain bg-transparent"
+            />
           </div>
 
           <AnimatePresence mode="wait">
@@ -595,8 +624,16 @@ export function LoginPage() {
         {/* Contenedor Inferior: Logo Transparente sobre Cristal y Cita Institucional */}
         <div className="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center text-center w-full max-w-md px-4">
           {/* Logo sobre contenedor de cristal transparente */}
-          <div className="bg-black/20 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 flex items-center justify-center transition-transform hover:scale-105 mb-4 shadow-lg">
-            <BrandLogo size="lg" showSena={true} />
+          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-black/25 backdrop-blur-md border border-white/20 shadow-lg mb-4">
+            <img
+              src="/assets/logo-worklex.png"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.src.includes('logo-worklex.png')) img.src = '/logo-worklex.png';
+              }}
+              alt="WorkLex"
+              className="h-9 w-auto object-contain bg-transparent filter brightness-105"
+            />
           </div>
 
           {/* Texto pegado y bien legible */}
