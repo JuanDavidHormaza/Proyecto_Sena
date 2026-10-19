@@ -623,8 +623,8 @@ export function LoginPage() {
         
         {/* Contenedor Inferior: Logo Transparente sobre Cristal y Cita Institucional */}
         <div className="absolute bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center text-center w-full max-w-md px-4">
-          {/* Logo sobre contenedor de cristal transparente */}
-          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-black/25 backdrop-blur-md border border-white/20 shadow-lg mb-4">
+          {/* Contenedor circular amplio con efecto glassmorphism */}
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-black/35 backdrop-blur-md border border-white/30 shadow-2xl flex items-center justify-center p-4 transition-transform hover:scale-105 mb-4">
             <img
               src="/assets/logo-worklex.png"
               onError={(e) => {
@@ -632,7 +632,8 @@ export function LoginPage() {
                 if (!img.src.includes('logo-worklex.png')) img.src = '/logo-worklex.png';
               }}
               alt="WorkLex"
-              className="h-9 w-auto object-contain bg-transparent filter brightness-105"
+              className="w-20 sm:w-24 h-auto object-contain filter drop-shadow-md brightness-110"
+              style={{ imageRendering: '-webkit-optimize-contrast' }}
             />
           </div>
 
