@@ -42,9 +42,9 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
   const [showFichaPicker, setShowFichaPicker] = useState(false);
   const [isSwitchingFicha, setIsSwitchingFicha] = useState(false);
 
-  const userName = user?.name || localStorage.getItem("userName") || "Usuario";
-  const role = user?.role || localStorage.getItem("userRole") || "student";
-  const userProgram = user?.program || localStorage.getItem("userProgram") || "";
+  const userName = user?.name || sessionStorage.getItem("userName") || "Usuario";
+  const role = user?.role || sessionStorage.getItem("userRole") || "student";
+  const userProgram = user?.program || sessionStorage.getItem("userProgram") || "";
   const subtitle = userProgram || ROLE_LABELS[role] || "Usuario";
   const badgeInfo = ROLE_BADGE_STYLES[role] || { label: "Aprendiz", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
   const accentClass = accent === "blue" ? "bg-sena-blue" : accent === "purple" ? "bg-purple-600" : "bg-sena-green";
@@ -54,7 +54,7 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
     let list: string[] = user?.enrolledPrograms || [];
     if (!list || list.length === 0) {
       try {
-        const stored = localStorage.getItem("userEnrolledPrograms");
+        const stored = sessionStorage.getItem("userEnrolledPrograms");
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) list = parsed;
@@ -86,8 +86,8 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
     try {
       const updatedUser = await api.switchProgram(targetProg);
       updateUser(updatedUser);
-      localStorage.setItem("userProgram", targetProg);
-      localStorage.setItem("activeProgram", targetProg);
+      sessionStorage.setItem("userProgram", targetProg);
+      sessionStorage.setItem("activeProgram", targetProg);
       window.dispatchEvent(new Event("programChanged"));
       toast.success(`Ficha activa cambiada a: ${targetProg}`);
       setShowMenu(false);

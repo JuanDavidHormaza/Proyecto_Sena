@@ -11,6 +11,7 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { UsersPage } from "./pages/UsersPage";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
 import { TeacherDictionariesPage } from "./pages/TeacherDictionariesPage";
+import { DictionaryPage } from "./pages/DictionaryPage";
 import { MediaPage } from "./pages/MediaPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -60,7 +61,7 @@ export const router = createBrowserRouter([
     path: "/dictionary",
     element: (
       <ProtectedRoute allowedRoles={["student", "teacher", "admin", "superadmin"]}>
-        <DashboardPage defaultTab="study" />
+        <DictionaryPage />
       </ProtectedRoute>
     ),
   },
@@ -68,7 +69,7 @@ export const router = createBrowserRouter([
     path: "/diccionario",
     element: (
       <ProtectedRoute allowedRoles={["student", "teacher", "admin", "superadmin"]}>
-        <DashboardPage defaultTab="study" />
+        <DictionaryPage />
       </ProtectedRoute>
     ),
   },

@@ -45,6 +45,8 @@ import {
   IconHeadphones,
   IconPencil,
   IconBook2,
+  IconTool,
+  IconMovie,
 } from "@tabler/icons-react";
 import { UserAccountMenu } from "../components/UserAccountMenu";
 import { useAuth } from "../context/AuthContext";
@@ -119,10 +121,45 @@ export function getTermSemanticIcon(termName?: string) {
   return Code2;
 }
 
-export const getTablerFallbackIcon = (doc: { name?: string; wordId?: string; competence?: string; skill?: string; category?: string }) => {
+export const getTablerFallbackIcon = (doc: { name?: string; wordId?: string; competence?: string; skill?: string; category?: string; program?: string; subjectName?: string }) => {
+  const prog = ((doc as any).program || (doc as any).subjectName || "").toLowerCase();
   const word = (doc.wordId || doc.name || "").toLowerCase();
   const comp = (doc.competence || doc.skill || doc.category || "").toLowerCase();
 
+  // 1. Especialidad: Mecánica Industrial
+  if (
+    prog.includes("mecanica") ||
+    prog.includes("mecánica") ||
+    prog.includes("3520681") ||
+    word.includes("torque") ||
+    word.includes("gearbox") ||
+    word.includes("lathe") ||
+    word.includes("caliper") ||
+    word.includes("bearing") ||
+    word.includes("piston") ||
+    word.includes("valve")
+  ) {
+    return { Icon: IconTool, color: "text-amber-600" };
+  }
+
+  // 2. Especialidad: Producción Multimedia
+  if (
+    prog.includes("multimedia") ||
+    prog.includes("2554901") ||
+    prog.includes("diseño") ||
+    word.includes("storyboard") ||
+    word.includes("keyframe") ||
+    word.includes("rendering") ||
+    word.includes("vector") ||
+    word.includes("raster") ||
+    word.includes("typography") ||
+    word.includes("aspect") ||
+    word.includes("timeline")
+  ) {
+    return { Icon: IconMovie, color: "text-purple-600" };
+  }
+
+  // 3. Especialidad: ADSO
   if (word.includes("database") || word.includes("sql") || word.includes("data") || comp.includes("data")) {
     return { Icon: IconDatabase, color: "text-blue-600" };
   }
@@ -195,8 +232,8 @@ export function TeacherDictionariesPage() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const teacherName = user?.name || localStorage.getItem("userName") || "Instructor";
-  const teacherProgram = user?.program || localStorage.getItem("userProgram") || "ADSO";
+  const teacherName = user?.name || sessionStorage.getItem("userName") || "Instructor";
+  const teacherProgram = user?.program || sessionStorage.getItem("userProgram") || "ADSO";
 
   // Cargar asignaturas disponibles
   useEffect(() => {

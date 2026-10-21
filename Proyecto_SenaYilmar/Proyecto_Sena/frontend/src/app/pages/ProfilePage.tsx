@@ -165,7 +165,7 @@ export function ProfilePage() {
         docNum: user.docNum || "",
         email: user.email || "",
         phoneNum: user.phoneNum ? String(user.phoneNum) : "",
-        avatar: user.avatar || localStorage.getItem("userAvatar") || "",
+        avatar: user.avatar || sessionStorage.getItem("userAvatar") || "",
       });
     }
   }, [user]);
@@ -422,9 +422,9 @@ export function ProfilePage() {
       const updated = await api.updateUser(user.id, payload);
       const userWithAvatar = { ...updated, avatar: finalAvatar };
       updateUser(userWithAvatar);
-      localStorage.setItem("userAvatar", finalAvatar || "");
-      localStorage.setItem("userName", updated.name);
-      localStorage.setItem("userEmail", updated.email);
+      sessionStorage.setItem("userAvatar", finalAvatar || "");
+      sessionStorage.setItem("userName", updated.name);
+      sessionStorage.setItem("userEmail", updated.email);
 
       // Sincronizar preferencias del usuario
       localStorage.setItem("pref_emailNotifications", String(preferences.emailNotifications));
@@ -485,7 +485,7 @@ export function ProfilePage() {
 
   // ─── 3. Módulo de Racha de Estudio (Streak) y Progreso Diario ────────────
   const todayStr = new Date().toISOString().slice(0, 10);
-  const lastActiveDate = localStorage.getItem("studyLastActiveDate") || "";
+  const lastActiveDate = sessionStorage.getItem("studyLastActiveDate") || "";
 
   // Estado dinámico de historial de pruebas
   const [examHistory, setExamHistory] = useState<{
@@ -501,9 +501,9 @@ export function ProfilePage() {
     isLoading: boolean;
   }>(() => {
     try {
-      const storedScore = localStorage.getItem("quizScore");
-      const storedLevel = localStorage.getItem("quizLevel");
-      const storedQuestions = localStorage.getItem("totalQuestions");
+      const storedScore = sessionStorage.getItem("quizScore");
+      const storedLevel = sessionStorage.getItem("quizLevel");
+      const storedQuestions = sessionStorage.getItem("totalQuestions");
       if (storedScore !== null && storedLevel) {
         return {
           lastScore: Number(storedScore),
@@ -537,7 +537,7 @@ export function ProfilePage() {
   useEffect(() => {
     let isCancelled = false;
     const fetchHistory = async () => {
-      const uId = user?.id || localStorage.getItem("userId");
+      const uId = user?.id || sessionStorage.getItem("userId");
       try {
         const results = await api.getExamHistory(uId ? String(uId) : undefined);
         if (isCancelled) return;
@@ -599,7 +599,7 @@ export function ProfilePage() {
 
           // Si el examen fue completado hoy, registrar actividad hoy
           if (latest.completedAt && latest.completedAt.slice(0, 10) === todayStr) {
-            localStorage.setItem("studyLastActiveDate", todayStr);
+            sessionStorage.setItem("studyLastActiveDate", todayStr);
           }
         } else {
           setExamHistory((prev) => ({
@@ -675,11 +675,11 @@ export function ProfilePage() {
     loadRequests();
   }, []);
 
-  const name = user?.name || localStorage.getItem("userName") || "Usuario";
-  const role = user?.role || localStorage.getItem("userRole") || "student";
+  const name = user?.name || sessionStorage.getItem("userName") || "Usuario";
+  const role = user?.role || sessionStorage.getItem("userRole") || "student";
   const isStudent = role === "student";
   const roleLabel = ROLE_LABELS[role] || "Usuario";
-  const program = user?.program || localStorage.getItem("userProgram") || "";
+  const program = user?.program || sessionStorage.getItem("userProgram") || "";
   const mainBadgeLabel = isStudent ? (program || "Programa no registrado") : roleLabel;
   const subtitle = isStudent ? "Aprendiz SENA" : (program || "Instructor SENA");
   const activePermissions = PERMISSIONS.filter((permission) => Boolean(user?.permissions?.[permission.key as keyof typeof user.permissions]));

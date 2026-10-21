@@ -36,16 +36,16 @@ export function ResetPasswordPage() {
       sessionStorage.getItem("reset_email") ||
       sessionStorage.getItem("recover_email") ||
       sessionStorage.getItem("resetEmail") ||
-      localStorage.getItem("reset_email") ||
-      localStorage.getItem("recover_email") ||
-      localStorage.getItem("resetEmail") ||
+      sessionStorage.getItem("reset_email") ||
+      sessionStorage.getItem("recover_email") ||
+      sessionStorage.getItem("resetEmail") ||
       ""
     ).trim().toLowerCase();
   };
 
   // Retención persistente de estado entre pasos y recargas
   const [step, setStep] = useState<"email" | "otp" | "success">(() => {
-    const savedStep = sessionStorage.getItem("recover_step") || localStorage.getItem("recover_step");
+    const savedStep = sessionStorage.getItem("recover_step") || sessionStorage.getItem("recover_step");
     const savedEmail = getStoredEmail();
     if (savedStep === "otp" && savedEmail) {
       return "otp";
@@ -114,10 +114,10 @@ export function ResetPasswordPage() {
       sessionStorage.setItem("recover_email", cleanEmail);
       sessionStorage.setItem("resetEmail", cleanEmail);
       sessionStorage.setItem("recover_step", "otp");
-      localStorage.setItem("reset_email", cleanEmail);
-      localStorage.setItem("recover_email", cleanEmail);
-      localStorage.setItem("resetEmail", cleanEmail);
-      localStorage.setItem("recover_step", "otp");
+      sessionStorage.setItem("reset_email", cleanEmail);
+      sessionStorage.setItem("recover_email", cleanEmail);
+      sessionStorage.setItem("resetEmail", cleanEmail);
+      sessionStorage.setItem("recover_step", "otp");
       setEmail(cleanEmail);
       setSearchParams({ email: cleanEmail }, { replace: true });
       setStep("otp");
@@ -150,7 +150,7 @@ export function ResetPasswordPage() {
   const handleBackToEmail = () => {
     setStep("email");
     sessionStorage.removeItem("recover_step");
-    localStorage.removeItem("recover_step");
+    sessionStorage.removeItem("recover_step");
     setError("");
     setOtp(["", "", "", "", "", ""]);
     setNewPassword("");
@@ -247,10 +247,10 @@ export function ResetPasswordPage() {
       sessionStorage.removeItem("recover_email");
       sessionStorage.removeItem("resetEmail");
       sessionStorage.removeItem("recover_step");
-      localStorage.removeItem("reset_email");
-      localStorage.removeItem("recover_email");
-      localStorage.removeItem("resetEmail");
-      localStorage.removeItem("recover_step");
+      sessionStorage.removeItem("reset_email");
+      sessionStorage.removeItem("recover_email");
+      sessionStorage.removeItem("resetEmail");
+      sessionStorage.removeItem("recover_step");
 
       toast.success("¡Contraseña restablecida con éxito! Redirigiendo al inicio de sesión...", "Éxito");
       setStep("success");

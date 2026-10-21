@@ -112,13 +112,24 @@ class DigitalDictionarySerializer(serializers.ModelSerializer):
     imageUrl = serializers.SerializerMethodField()
     audioUrl = serializers.SerializerMethodField()
     videoUrl = serializers.SerializerMethodField()
+    program = serializers.SerializerMethodField()
+
+    def get_program(self, obj):
+        p = (getattr(obj, 'program', '') or (obj.subject.description if getattr(obj, 'subject', None) else '') or (obj.subject.subject_id if getattr(obj, 'subject', None) else '')).lower()
+        if 'mecanic' in p or 'mecánica' in p:
+            return 'Mecánica Industrial'
+        if 'multi' in p:
+            return 'Producción Multimedia'
+        if 'adso' in p or 'software' in p:
+            return 'ADSO'
+        return getattr(obj, 'program', '') or 'General' 
     
     class Meta:
         model = DigitalDictionary
         fields = [
             'id', 'word_id', 'subject', 'subject_name', 'definition',
             'synonyms', 'audio', 'video', 'image', 'level', 'competence',
-            'program', 'imageUrl', 'audioUrl', 'videoUrl'
+            'program', 'spanish_translation', 'ficha', 'imageUrl', 'audioUrl', 'videoUrl'
         ]
 
     def _strip_key(self, val):

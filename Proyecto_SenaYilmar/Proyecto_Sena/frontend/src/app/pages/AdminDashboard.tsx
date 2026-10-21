@@ -32,9 +32,9 @@ import {
 } from "recharts";
 import { resolveMediaUrl } from "../services/api";
 import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightboxModal";
-import { SafeImage } from "../components/SafeImage";
 import { playEnglishSpeech } from "../utils/speech";
 import { BrandLogo } from "../components/BrandLogo";
+import { IconSettings, IconMovie, IconCode } from "@tabler/icons-react";
 
 // ─── Tipos de archivo ─────────────────────────────────────────────────────────
 type FileCategory = "document" | "audio" | "video" | "image";
@@ -117,9 +117,30 @@ function VideoPlayer({ src, name }: { src: string; name: string }) {
   );
 }
 
-// ─── VocabCard (Flashcard Encapsulada para Diccionario Técnico ADSO) ────────
+// ─── Funciones Auxiliares de Formato de Programa SENA ──────────────────────
+export const getProgramTitle = (termProg?: string, selected?: string) => {
+  const p = (termProg || selected || '').toLowerCase();
+  if (p.includes('mecanic') || p.includes('mecánica')) return 'Mecánica Industrial';
+  if (p.includes('multi') || p.includes('multimedia')) return 'Producción Multimedia';
+  return 'ADSO';
+};
+
+export const formatProgramName = (programName?: string, selected?: string) => {
+  const p = (programName || selected || '').toLowerCase();
+  if (p.includes('mecanic') || p.includes('mecánica')) return 'Programa SENA: Mecánica Industrial';
+  if (p.includes('multi') || p.includes('multimedia')) return 'Programa SENA: Producción Multimedia';
+  if (p.includes('adso') || p.includes('software')) return 'Programa SENA: ADSO';
+  return `Programa SENA: ${programName || 'Formación Titulada'}`;
+};
+
+export const getProgramDisplayName = (programName?: string) => {
+  return getProgramTitle(programName);
+};
+
+// ─── VocabCard (Flashcard Encapsulada para Diccionario Técnico Multi-Programa) ────────
 function VocabCard({
   doc,
+  selectedProgram,
   onDelete,
   onEdit,
   onOpenLightbox,
@@ -141,6 +162,7 @@ function VocabCard({
     program?: string;
     uploadedAt?: string | null;
   };
+  selectedProgram?: string;
   subjects?: Subject[];
   onDelete?: (id: string) => void;
   onEdit?: (doc: any) => void;
@@ -150,10 +172,19 @@ function VocabCard({
 }) {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const wordName = doc.name;
   const level = (doc.level || "A1").toUpperCase();
   const competence = doc.competence || doc.subjectId || "Speaking";
+
+  // Identificación del programa e icono de especialidad Tabler
+  const progLower = (doc.program || selectedProgram || '').toLowerCase();
+  const isMecanica = progLower.includes('mecanic') || progLower.includes('mecánica');
+  const isMultimedia = progLower.includes('multi') || progLower.includes('multimedia');
+
+  const SpecialtyIcon = isMecanica ? IconSettings : isMultimedia ? IconMovie : IconCode;
+  const initialLetter = (wordName || 'T').charAt(0).toUpperCase();
 
   // Badges por Nivel CEFR (Tonos sobrios)
   const levelColors: Record<string, string> = {
@@ -179,8 +210,25 @@ function VocabCard({
   const cleanImageKey = rawImage.replace(/^\/api\/media\/dictionary-images\//, '');
   const imageSrc = `/api/media/dictionary-images/${cleanImageKey}`;
 
-  // Reproducción de audio interactiva en un clic
+  // Reproducción de audio interactiva en un clic con soporte para pausar
   const handlePlayAudio = () => {
+    if (isPlayingAudio) {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    const fallbackTTS = () => {
+      playEnglishSpeech(wordName, {
+        rate: 0.88,
+        onEnd: () => setIsPlayingAudio(false),
+        onError: () => setIsPlayingAudio(false),
+      });
+      setIsPlayingAudio(true);
+    };
+
     setIsPlayingAudio(true);
     const rawAudio = doc.audio || (doc.audioUrl ? doc.audioUrl.replace(/^\/api\/media\/dictionary-audios\//, '') : `${wordName.toLowerCase().replace(/\s+/g, '_')}.mp3`);
     const cleanAudioKey = rawAudio.replace(/^\/api\/media\/dictionary-audios\//, '');
@@ -188,13 +236,6 @@ function VocabCard({
 
     const audio = new Audio(audioUrl);
     audio.onended = () => setIsPlayingAudio(false);
-    const fallbackTTS = () => {
-      playEnglishSpeech(wordName, {
-        rate: 0.85,
-        onEnd: () => setIsPlayingAudio(false),
-        onError: () => setIsPlayingAudio(false),
-      });
-    };
     audio.onerror = fallbackTTS;
     audio.play().catch(fallbackTTS);
   };
@@ -204,16 +245,48 @@ function VocabCard({
   return (
     <div className="bg-white rounded-2xl border border-border shadow-xs hover:shadow-md hover:border-emerald-500/40 transition-all flex flex-col justify-between overflow-hidden relative group">
       <div>
-        {/* Elemento 1: Imagen Completa con SafeImage, Skeleton Shimmer, Hover Zoom y Lightbox al Clic */}
-        <div className="w-full h-44 bg-slate-50 rounded-t-xl overflow-hidden relative border-b border-slate-100">
-          <SafeImage
-            src={imageSrc}
-            alt={wordName}
-            fallbackText={wordName}
-            showHoverZoom={true}
-            onClick={() => onOpenLightbox && onOpenLightbox(doc)}
-            containerClassName="rounded-t-xl"
-          />
+        {/* Elemento 1: Imagen con Fallback Resiliente ante 404 de MinIO */}
+        <div className="w-full h-44 bg-slate-50 rounded-t-xl overflow-hidden relative border-b border-slate-100 flex items-center justify-center">
+          {!imgError && imageSrc ? (
+            <img
+              src={imageSrc}
+              alt={wordName}
+              loading="lazy"
+              decoding="async"
+              onError={() => setImgError(true)}
+              onClick={() => onOpenLightbox && onOpenLightbox(doc)}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+            />
+          ) : (
+            <div className={`w-full h-full flex flex-col items-center justify-center gap-2 p-4 text-center select-none ${
+              isMecanica ? "bg-amber-50 text-amber-700" : isMultimedia ? "bg-indigo-50 text-indigo-700" : "bg-emerald-50 text-emerald-700"
+            }`}>
+              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center">
+                <SpecialtyIcon size={24} stroke={1.8} className={isMecanica ? "text-amber-600" : isMultimedia ? "text-purple-600" : "text-emerald-600"} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-md bg-slate-200/80 text-slate-700 font-bold text-[11px] flex items-center justify-center font-mono">
+                  {initialLetter}
+                </span>
+                <span className="text-xs font-semibold text-slate-600 truncate max-w-[140px]">
+                  {wordName}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Hover Zoom para Lightbox si la imagen cargó correctamente */}
+          {!imgError && imageSrc && onOpenLightbox && (
+            <div
+              onClick={() => onOpenLightbox(doc)}
+              className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer pointer-events-none"
+              title="Clic para ampliar imagen"
+            >
+              <div className="w-9 h-9 rounded-full bg-white/95 text-slate-800 flex items-center justify-center shadow-lg backdrop-blur-xs transform scale-90 group-hover:scale-100 transition-transform">
+                <ZoomIn className="w-4 h-4 text-emerald-700" strokeWidth={1.8} />
+              </div>
+            </div>
+          )}
 
           {/* Badges Flotantes: Nivel CEFR y Competencia Lingüística */}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10 pointer-events-none">
@@ -311,7 +384,7 @@ function VocabCard({
 
           {/* Elemento 4: Breve Descripción Técnica y Contextualizada */}
           <p className="text-sm text-slate-600 leading-relaxed line-clamp-3">
-            {doc.definition || "Concepto técnico clave para el desarrollo de software en ADSO."}
+            {doc.definition || `Concepto técnico clave para ${formatProgramName(doc.program, selectedProgram)}.`}
           </p>
 
           {/* Micro-tags de sinónimos o sintaxis técnica relacionada */}
@@ -329,7 +402,9 @@ function VocabCard({
 
       {/* Metadatos de Pie */}
       <div className="px-4 pb-3 pt-2 flex items-center justify-between text-[11px] text-muted-foreground border-t border-slate-100">
-        <span className="font-semibold text-slate-600">Programa SENA: ADSO</span>
+        <span className="font-semibold text-slate-600">
+          Programa: <strong className="text-slate-700">{doc.program || selectedProgram || 'Formación Titulada'}</strong>
+        </span>
         <span className="text-[10px] text-slate-500 font-mono">
           {doc.uploadedAt ? `Reg: ${doc.uploadedAt}` : "v1.0 (2026)"}
         </span>
@@ -699,18 +774,32 @@ export const SYSTEM_ASIGNATURAS = SYSTEM_COMPETENCIAS;
 // Helper para matching exacto / flexible de programas SENA
 export function matchesSelectedProgram(docProgram?: string, targetProgram?: string): boolean {
   if (!targetProgram || targetProgram === "ALL") return true;
-  const dp = (docProgram || "ADSO").trim().toLowerCase();
+  const dp = (docProgram || "").trim().toLowerCase();
   const tp = targetProgram.trim().toLowerCase();
 
-  if (tp === "adso" || tp.startsWith("adso")) {
-    return dp.includes("adso") || !docProgram || dp === "adso";
-  }
+  // Si el objetivo es ADSO (Análisis y Desarrollo de Software)
+  const isAdsoT = tp.includes("adso") || tp.includes("software");
+  const isAdsoD = dp.includes("adso") || dp.includes("software");
+  if (isAdsoT && isAdsoD) return true;
+
+  // Si el objetivo es Mecánica Industrial
+  const isMecT = tp.includes("mecanic") || tp.includes("mecánica");
+  const isMecD = dp.includes("mecanic") || dp.includes("mecánica");
+  if (isMecT && isMecD) return true;
+
+  // Si el objetivo es Producción Multimedia
+  const isMultiT = tp.includes("multi") || tp.includes("multimedia");
+  const isMultiD = dp.includes("multi") || dp.includes("multimedia");
+  if (isMultiT && isMultiD) return true;
 
   const fichaTarget = tp.match(/\d{6,8}/);
   const fichaDoc = dp.match(/\d{6,8}/);
   if (fichaTarget && fichaDoc && fichaTarget[0] === fichaDoc[0]) {
     return true;
   }
+
+  // Fallback si no tiene programa explícito y el target es ADSO
+  if (!dp && isAdsoT) return true;
 
   return dp === tp || dp.includes(tp) || tp.includes(dp);
 }
@@ -831,7 +920,19 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDictionaryExplorerModal, setShowDictionaryExplorerModal] = useState(false);
+  const [dictModalTab, setDictModalTab] = useState<"vocab" | "videos">("vocab");
+  const [programVideos, setProgramVideos] = useState<api.ProgramVideo[]>([]);
   const [selectedLightboxDoc, setSelectedLightboxDoc] = useState<LightboxDocItem | null>(null);
+
+  useEffect(() => {
+    if (showDictionaryExplorerModal) {
+      api.getProgramVideos(selectedAdminProgram).then((vids) => {
+        if (vids && vids.length > 0) {
+          setProgramVideos(vids);
+        }
+      });
+    }
+  }, [showDictionaryExplorerModal, selectedAdminProgram]);
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1832,7 +1933,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                   {
                     label: "Diccionario Institucional",
                     value: `${stats.totalDocuments} ${stats.totalDocuments === 1 ? "Diccionario" : "Diccionarios"}`,
-                    subtitle: `(${stats.totalTerms} Términos ADSO)`,
+                    subtitle: `(${stats.totalTerms} Términos Disponibles)`,
                     icon: BookOpen,
                     color: "warning",
                     badge: `${stats.totalTerms} términos`,
@@ -2754,7 +2855,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Botones de acceso rápido */}
-                    {["ADSO", "Análisis de Datos", "Mecánica Automotriz"].map((prog) => {
+                    {["ADSO", "Mecánica Industrial", "Producción Multimedia"].map((prog) => {
                       const isSelected = matchesSelectedProgram(selectedAdminProgram, prog);
                       const count = documents.filter(d => matchesSelectedProgram(d.program, prog)).length;
                       return (
@@ -2787,9 +2888,9 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                         title="Seleccionar programa de formación SENA"
                       >
                         <option value="ADSO">ADSO (Análisis y Desarrollo de Software)</option>
-                        <option value="Análisis de Datos">Análisis de Datos</option>
-                        <option value="Mecánica Automotriz">Mecánica Automotriz</option>
-                        {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Análisis de Datos") && !p.includes("Mecánica Automotriz")).map(p => (
+                        <option value="Mecánica Industrial">Mecánica Industrial</option>
+                        <option value="Producción Multimedia">Producción Multimedia</option>
+                        {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Mecánica Industrial") && !p.includes("Producción Multimedia")).map(p => (
                           <option key={p} value={p}>{p}</option>
                         ))}
                       </select>
@@ -2810,7 +2911,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                         </span>
                       </div>
                       <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
-                        {selectedAdminProgram} — Diccionario Técnico Especializado
+                        Vocabulario Técnico {getProgramDisplayName(selectedAdminProgram)} — {currentProgramDocs.length} Términos Disponibles
                       </h3>
                       <p className="text-sm text-slate-500 max-w-3xl leading-relaxed">
                         Repositorio central de vocabulario técnico, pronunciación nativa y recursos pedagógicos multimedia asociados a la ficha de formación.
@@ -2825,7 +2926,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                       <span className="text-2xl font-bold text-slate-900 font-mono">
                         {currentProgramDocs.length}
                       </span>
-                      <span className="text-[10px] text-[#39A900] block mt-0.5 font-medium">Términos Registrados</span>
+                      <span className="text-[10px] text-[#39A900] block mt-0.5 font-medium">Términos Disponibles</span>
                     </div>
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                       <span className="text-xs text-slate-500 font-medium block mb-1">Imágenes</span>
@@ -2929,9 +3030,9 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                       <tbody className="divide-y divide-slate-200 text-xs">
                         {[
                           { name: "ADSO", title: "ADSO (Análisis y Desarrollo de Software)" },
-                          { name: "Análisis de Datos", title: "Análisis de Datos" },
-                          { name: "Mecánica Automotriz", title: "Mecánica Automotriz" },
-                          ...senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Análisis de Datos") && !p.includes("Mecánica Automotriz")).map(p => ({ name: p, title: p }))
+                          { name: "Mecánica Industrial", title: "Mecánica Industrial" },
+                          { name: "Producción Multimedia", title: "Producción Multimedia" },
+                          ...senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Mecánica Industrial") && !p.includes("Producción Multimedia")).map(p => ({ name: p, title: p }))
                         ].map(progItem => {
                           const pDocs = documents.filter(d => matchesSelectedProgram(d.program, progItem.name));
                           const isCurrent = matchesSelectedProgram(progItem.name, selectedAdminProgram);
@@ -3808,10 +3909,10 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-foreground tracking-tight">
-                        Vocabulario Técnico {selectedAdminProgram} — {filteredDocs.length} Término{filteredDocs.length !== 1 ? "s" : ""}
+                        Vocabulario Técnico {getProgramTitle(undefined, selectedAdminProgram)} — {filteredDocs.length} Términos Disponibles
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        Explorador multimedia de pronunciación nativa, conceptos técnicos y recursos gráficos por programa
+                        Explorador multimedia de pronunciación nativa y recursos técnicos — <span className="font-semibold text-emerald-600 dark:text-emerald-400">{filteredDocs.length} Términos Disponibles</span>
                       </p>
                     </div>
                   </div>
@@ -3825,67 +3926,144 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                   </button>
                 </div>
 
-                {/* Filtros: Buscador en Vivo, Filtro por Competencia y Nivel CEFR */}
-                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1">
-                  {/* Buscador en Vivo */}
-                  <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
-                    <input
-                      type="text"
-                      placeholder="Buscar por término técnico o definición (ej. Polymorphism, Database, API)..."
-                      value={searchDocTerm}
-                      onChange={e => setSearchDocTerm(e.target.value)}
-                      className="w-full pl-10 pr-9 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                    />
-                    {searchDocTerm && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchDocTerm("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                      >
-                        <X className="w-4 h-4" strokeWidth={1.8} />
-                      </button>
-                    )}
+                {/* Switcher de Pestañas: Vocabulario Técnico vs Videos del Programa (3) */}
+                <div className="flex items-center gap-3 border-b border-slate-100 pt-1 -mb-1">
+                  <button
+                    type="button"
+                    onClick={() => setDictModalTab("vocab")}
+                    className={`pb-2.5 px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                      dictModalTab === "vocab"
+                        ? "border-emerald-600 text-emerald-700"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    <span>Vocabulario Técnico</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-medium">
+                      {filteredDocs.length}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDictModalTab("videos")}
+                    className={`pb-2.5 px-3 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                      dictModalTab === "videos"
+                        ? "border-emerald-600 text-emerald-700"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Video className="w-4 h-4" />
+                    <span>Videos del Programa (3)</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono font-bold">
+                      {programVideos.length || 3}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Filtros: Buscador en Vivo, Filtro por Competencia y Nivel CEFR (sólo en pestaña Vocabulario) */}
+                {dictModalTab === "vocab" && (
+                  <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1">
+                    {/* Buscador en Vivo */}
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
+                      <input
+                        type="text"
+                        placeholder="Buscar por término técnico o definición (ej. Polymorphism, Database, API)..."
+                        value={searchDocTerm}
+                        onChange={e => setSearchDocTerm(e.target.value)}
+                        className="w-full pl-10 pr-9 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      />
+                      {searchDocTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchDocTerm("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                          <X className="w-4 h-4" strokeWidth={1.8} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtro por Competencia Lingüística Evaluada */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+                      <span className="text-xs text-muted-foreground font-medium mr-1">Competencia:</span>
+                      {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
+                        <button
+                          key={comp}
+                          type="button"
+                          onClick={() => setFilterDocCompetence(comp)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                            filterDocCompetence === comp
+                              ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                              : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {comp === "all" ? "Todas" : comp}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Filtro por Nivel CEFR */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+                      <span className="text-xs text-muted-foreground font-medium mr-1">Nivel:</span>
+                      {["all", "A1", "A2", "B1", "B2"].map(lvl => (
+                        <button
+                          key={lvl}
+                          type="button"
+                          onClick={() => setFilterDocLevel(lvl)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                            filterDocLevel === lvl
+                              ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                              : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {lvl === "all" ? "Todos" : lvl}
+                        </button>
+                      ))}
+
+                      {(filterDocLevel !== "all" || filterDocCompetence !== "all" || searchDocTerm) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilterDocLevel("all");
+                            setFilterDocCompetence("all");
+                            setSearchDocTerm("");
+                          }}
+                          className="ml-2 text-xs text-rose-600 hover:underline flex items-center gap-1 font-medium whitespace-nowrap"
+                        >
+                          <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
+                          Restablecer
+                        </button>
+                      )}
+                    </div>
                   </div>
+                )}
+              </div>
 
-                  {/* Filtro por Competencia Lingüística Evaluada */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                    <span className="text-xs text-muted-foreground font-medium mr-1">Competencia:</span>
-                    {["all", "Speaking", "Writing", "Grammar", "Listening"].map(comp => (
-                      <button
-                        key={comp}
-                        type="button"
-                        onClick={() => setFilterDocCompetence(comp)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          filterDocCompetence === comp
-                            ? "bg-emerald-600 text-white shadow-xs font-semibold"
-                            : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
-                        }`}
-                      >
-                        {comp === "all" ? "Todas" : comp}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Filtro por Nivel CEFR */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                    <span className="text-xs text-muted-foreground font-medium mr-1">Nivel:</span>
-                    {["all", "A1", "A2", "B1", "B2"].map(lvl => (
-                      <button
-                        key={lvl}
-                        type="button"
-                        onClick={() => setFilterDocLevel(lvl)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          filterDocLevel === lvl
-                            ? "bg-emerald-600 text-white shadow-xs font-semibold"
-                            : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
-                        }`}
-                      >
-                        {lvl === "all" ? "Todos" : lvl}
-                      </button>
-                    ))}
-
-                    {(filterDocLevel !== "all" || filterDocCompetence !== "all" || searchDocTerm) && (
+              {/* Cuerpo del Modal (Grid Responsivo o Galería de Videos con preload="metadata") */}
+              <div className="overflow-y-auto p-6 flex-1 bg-slate-50/50">
+                {dictModalTab === "vocab" ? (
+                  filteredDocs.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                      {filteredDocs.map(doc => (
+                        <VocabCard
+                          key={doc.id}
+                          doc={doc as any}
+                          selectedProgram={selectedAdminProgram}
+                          onDelete={handleDeleteDocument}
+                          onEdit={handleEditDocument}
+                          onOpenLightbox={(d) => setSelectedLightboxDoc(d)}
+                          userRole={authUser?.role || "admin"}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 bg-white rounded-2xl border border-border p-8 shadow-xs space-y-3 max-w-lg mx-auto my-8">
+                      <FolderOpen className="w-12 h-12 text-muted-foreground/40 mx-auto" strokeWidth={1.8} />
+                      <h3 className="font-bold text-foreground text-base">No se encontraron términos</h3>
+                      <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                        No hay términos que coincidan con la búsqueda o filtros seleccionados en este momento.
+                      </p>
                       <button
                         type="button"
                         onClick={() => {
@@ -3893,50 +4071,41 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                           setFilterDocCompetence("all");
                           setSearchDocTerm("");
                         }}
-                        className="ml-2 text-xs text-rose-600 hover:underline flex items-center gap-1 font-medium whitespace-nowrap"
+                        className="px-4 py-2 bg-muted text-foreground rounded-xl text-xs font-semibold hover:bg-muted/80 transition-all inline-flex items-center gap-1.5"
                       >
-                        <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
-                        Restablecer
+                        <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
+                        Limpiar Filtros
                       </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Cuerpo del Modal (Grid Responsivo con scroll vertical independiente) */}
-              <div className="overflow-y-auto p-6 flex-1 bg-slate-50/50">
-                {filteredDocs.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                    {filteredDocs.map(doc => (
-                      <VocabCard
-                        key={doc.id}
-                        doc={doc as any}
-                        onDelete={handleDeleteDocument}
-                        onEdit={handleEditDocument}
-                        onOpenLightbox={(d) => setSelectedLightboxDoc(d)}
-                        userRole={authUser?.role || "admin"}
-                      />
-                    ))}
-                  </div>
+                    </div>
+                  )
                 ) : (
-                  <div className="text-center py-16 bg-white rounded-2xl border border-border p-8 shadow-xs space-y-3 max-w-lg mx-auto my-8">
-                    <FolderOpen className="w-12 h-12 text-muted-foreground/40 mx-auto" strokeWidth={1.8} />
-                    <h3 className="font-bold text-foreground text-base">No se encontraron términos</h3>
-                    <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                      No hay términos que coincidan con la búsqueda o filtros seleccionados en este momento.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilterDocLevel("all");
-                        setFilterDocCompetence("all");
-                        setSearchDocTerm("");
-                      }}
-                      className="px-4 py-2 bg-muted text-foreground rounded-xl text-xs font-semibold hover:bg-muted/80 transition-all inline-flex items-center gap-1.5"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
-                      Limpiar Filtros
-                    </button>
+                  /* Vista de Videos del Programa (3) */
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto py-2">
+                    {programVideos.map((vid) => (
+                      <div key={vid.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                        <div>
+                          <div className="relative aspect-video bg-slate-900 overflow-hidden">
+                            <video
+                              controls
+                              preload="metadata"
+                              className="w-full h-full object-cover"
+                              src={vid.url}
+                            />
+                            <span className="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-md pointer-events-none">
+                              {vid.duration}
+                            </span>
+                          </div>
+                          <div className="p-4 space-y-2">
+                            <h4 className="font-bold text-slate-900 text-sm leading-snug">{vid.title}</h4>
+                            <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">{vid.description}</p>
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                          <span>Programa: <strong className="text-slate-700">{getProgramTitle(undefined, selectedAdminProgram)}</strong></span>
+                          <span className="text-emerald-700 font-semibold font-mono">{vid.duration}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -4107,9 +4276,9 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                       className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sena-green/50 bg-background text-foreground cursor-pointer"
                     >
                       <option value="ADSO">ADSO — Análisis y Desarrollo de Software</option>
-                      <option value="Análisis de Datos">Análisis de Datos</option>
-                      <option value="Mecánica Automotriz">Mecánica Automotriz</option>
-                      {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Análisis de Datos") && !p.includes("Mecánica Automotriz")).map(prog => (
+                      <option value="Mecánica Industrial">Mecánica Industrial</option>
+                      <option value="Producción Multimedia">Producción Multimedia</option>
+                      {senaPrograms.filter(p => !p.includes("ADSO") && !p.includes("Mecánica Industrial") && !p.includes("Producción Multimedia")).map(prog => (
                         <option key={prog} value={prog}>{prog}</option>
                       ))}
                     </select>

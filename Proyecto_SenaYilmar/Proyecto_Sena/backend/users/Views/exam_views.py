@@ -149,11 +149,14 @@ class ExamStartAPIView(APIView):
 
         session_id = uuid.uuid4().hex
         user_id = request.data.get('user_id')
+        program = request.data.get('program')
+        if not program and request.user and request.user.is_authenticated:
+            program = getattr(request.user, 'program', None)
         if request.user and request.user.is_authenticated:
             user_id = getattr(request.user, 'user_id', request.user.pk)
 
         # Generar preguntas dinámicas desde el diccionario en orden aleatorio
-        dictionary_questions = ExamEngineService.generate_questions_from_dictionary()
+        dictionary_questions = ExamEngineService.generate_questions_from_dictionary(program=program)
         random.shuffle(dictionary_questions)
         a1_questions = [q for q in dictionary_questions if q.get('level') == 'A1']
         random.shuffle(a1_questions)
@@ -190,7 +193,12 @@ class ExamAdaptiveBankAPIView(APIView):
         level = request.query_params.get('level')
         competence = request.query_params.get('competence')
 
+        program = request.query_params.get('program')
+        if not program and request.user and request.user.is_authenticated:
+            program = getattr(request.user, 'program', None)
+
         questions = ExamEngineService.generate_questions_from_dictionary(
+            program=program,
             level=level,
             competence=competence
         )

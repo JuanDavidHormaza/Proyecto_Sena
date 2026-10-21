@@ -30,8 +30,8 @@ export function ContextSwitcher() {
     user?.is_dual_role ||
     user?.isDualRole ||
     (user?.roles && user.roles.length > 1) ||
-    localStorage.getItem("is_dual_role") === "true" ||
-    localStorage.getItem("isDualRole") === "true"
+    sessionStorage.getItem("is_dual_role") === "true" ||
+    sessionStorage.getItem("isDualRole") === "true"
   );
 
   // REGLA ESTRICTA DE CASOS ESPECIALES:
@@ -76,11 +76,11 @@ export function ContextSwitcher() {
       });
 
       if (resp?.access) {
-        localStorage.setItem("accessToken", resp.access);
-        localStorage.setItem("access_token", resp.access);
+        sessionStorage.setItem("accessToken", resp.access);
+        sessionStorage.setItem("access_token", resp.access);
       }
       if (resp?.refresh) {
-        localStorage.setItem("refreshToken", resp.refresh);
+        sessionStorage.setItem("refreshToken", resp.refresh);
       }
 
       const updatedUser = resp?.user || resp;
@@ -90,10 +90,10 @@ export function ContextSwitcher() {
     } catch {
       // Fallback local en frontend si backend estuviese desconectado
       const nextFrontendRole = targetContext.role.toLowerCase() === "instructor" ? "teacher" : "student";
-      localStorage.setItem("active_role", targetContext.role);
-      localStorage.setItem("activeRole", targetContext.role);
-      localStorage.setItem("userRole", nextFrontendRole);
-      localStorage.setItem("userProgram", targetContext.program_name);
+      sessionStorage.setItem("active_role", targetContext.role);
+      sessionStorage.setItem("activeRole", targetContext.role);
+      sessionStorage.setItem("userRole", nextFrontendRole);
+      sessionStorage.setItem("userProgram", targetContext.program_name);
 
       if (user) {
         updateUser({

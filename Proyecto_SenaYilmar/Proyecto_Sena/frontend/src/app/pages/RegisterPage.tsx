@@ -643,14 +643,14 @@ export function RegisterPage() {
       api.clearAllTokens();
 
       // Guardar tokens y sesión en el frontend
-      localStorage.setItem("accessToken", response.access);
-      localStorage.setItem("refreshToken", response.refresh);
-      localStorage.setItem("userName", response.user.name);
-      localStorage.setItem("userRole", response.user.role);
-      localStorage.setItem("userId", response.user.id);
-      localStorage.setItem("userEmail", response.user.email || otpEmail);
+      sessionStorage.setItem("accessToken", response.access);
+      sessionStorage.setItem("refreshToken", response.refresh);
+      sessionStorage.setItem("userName", response.user.name);
+      sessionStorage.setItem("userRole", response.user.role);
+      sessionStorage.setItem("userId", response.user.id);
+      sessionStorage.setItem("userEmail", response.user.email || otpEmail);
       if (response.user.permissions) {
-        localStorage.setItem("userPermissions", JSON.stringify(response.user.permissions));
+        sessionStorage.setItem("userPermissions", JSON.stringify(response.user.permissions));
       }
       updateUser(response.user);
 
@@ -663,7 +663,7 @@ export function RegisterPage() {
 
       // CASO 1: SIN FICHAS (Aprendiz registrado limpio sin ficha asignada)
       if (programs.length === 0) {
-        localStorage.removeItem("userProgram");
+        sessionStorage.removeItem("userProgram");
         setAuthenticatedUser(response.user);
         setShowManualFichaModal(true);
         return;
@@ -671,7 +671,7 @@ export function RegisterPage() {
 
       // CASO 2: EXACTAMENTE 1 FICHA -> Redirección directa al Dashboard
       if (programs.length === 1) {
-        localStorage.setItem("userProgram", programs[0]);
+        sessionStorage.setItem("userProgram", programs[0]);
         navigate("/dashboard");
         return;
       }
@@ -692,7 +692,7 @@ export function RegisterPage() {
 
   // ── Selección en Alert View Multiprograma ──────────────────────────────────
   const handleSelectFicha = (selectedProgram: string) => {
-    localStorage.setItem("userProgram", selectedProgram);
+    sessionStorage.setItem("userProgram", selectedProgram);
     if (authenticatedUser) {
       updateUser({ ...authenticatedUser, program: selectedProgram });
     }
@@ -718,7 +718,7 @@ export function RegisterPage() {
       });
       updateUser(updatedUser);
       const fullProg = updatedUser.program || `${manualProgramInput} - Ficha ${cleanFicha}`;
-      localStorage.setItem("userProgram", fullProg);
+      sessionStorage.setItem("userProgram", fullProg);
       toast.success("Ficha y programa vinculados correctamente.", "Formación Actualizada");
       setShowManualFichaModal(false);
       navigate("/dashboard");

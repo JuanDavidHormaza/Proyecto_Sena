@@ -4,32 +4,32 @@ import { useIdleTimer } from "../hooks/useIdleTimer";
 import { IdleSessionModal } from "./IdleSessionModal";
 import { router } from "../routes";
 import { toast } from "./Toast";
+import {
+  IDLE_LOGOUT_MESSAGE,
+  SESSION_IDLE_TIMEOUT_MS,
+  SESSION_WARNING_MS,
+  destroyClientSession,
+} from "../utils/sessionManager";
 
 /**
  * Gestor global de inactividad de sesión para Worklex SENA.
  * - Monitorea actividad solo cuando hay un usuario autenticado.
- * - Límite: 15 minutos (900.000 ms).
- * - Modal de advertencia con cuenta regresiva en el minuto 13 (a falta de 2 minutos).
- * - Cierre de sesión automático al expirar: limpia almacenamiento/estado, redirige a /login y notifica.
+ * - Límite: 15 minutos (900.000 ms) sin eventos click / keydown / mousemove (y scroll / touch).
+ * - Modal de advertencia con cuenta regresiva a falta de 2 minutos.
+ * - Cierre de sesión automático al expirar: sessionStorage.clear(), logout(), redirige a /login y notifica.
  */
 export function IdleSessionManager() {
   const { user, isAuthenticated, logout } = useAuth();
 
   const handleTimeout = useCallback(() => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_data');
-    sessionStorage.clear();
+    destroyClientSession(); // sessionStorage.clear() + purga de residuos en localStorage
     logout("idle_timeout");
     try {
-      router.navigate("/login?reason=timeout");
+      router.navigate("/login?reason=idle_timeout");
     } catch {
-      window.location.href = "/login?reason=timeout";
+      window.location.href = "/login?reason=idle_timeout";
     }
-    toast.warning(
-      "Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.",
-      "Sesión Finalizada"
-    );
+    toast.warning(IDLE_LOGOUT_MESSAGE, "Sesión Finalizada");
   }, [logout]);
 
   const handleManualLogout = useCallback(() => {
@@ -39,8 +39,8 @@ export function IdleSessionManager() {
   }, [logout]);
 
   const { isWarning, formattedRemaining, resetTimer } = useIdleTimer({
-    timeoutMs: 15 * 60 * 1000, // 15 minutos
-    warningMs: 2 * 60 * 1000,  // 2 minutos antes
+    timeoutMs: SESSION_IDLE_TIMEOUT_MS, // 15 minutos
+    warningMs: SESSION_WARNING_MS,      // 2 minutos antes
     onTimeout: handleTimeout,
     enabled: Boolean(isAuthenticated && user),
   });

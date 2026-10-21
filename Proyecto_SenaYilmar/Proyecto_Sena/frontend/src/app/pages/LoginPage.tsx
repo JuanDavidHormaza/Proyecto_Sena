@@ -28,6 +28,7 @@ import {
   sanitizeEmail,
 } from "../utils/validation";
 import { FieldError } from "../components/FieldError";
+import { IDLE_LOGOUT_MESSAGE, TOKEN_EXPIRED_MESSAGE } from "../utils/sessionManager";
 
 type LoginStep = "credentials" | "otp";
 
@@ -50,16 +51,15 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const reason = searchParams?.get("reason") ?? (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("reason") : null);
   const isIdleTimeout = reason === "timeout" || reason === "idle_timeout";
+  const isSessionExpired = reason === "session_expired";
+  const sessionNotice = isIdleTimeout ? IDLE_LOGOUT_MESSAGE : isSessionExpired ? TOKEN_EXPIRED_MESSAGE : null;
   const { login, updateUser } = useAuth();
 
   useEffect(() => {
-    if (isIdleTimeout) {
-      toast.warning(
-        "Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.",
-        "Sesión Finalizada"
-      );
+    if (sessionNotice) {
+      toast.warning(sessionNotice, "Sesión Finalizada");
     }
-  }, [isIdleTimeout]);
+  }, [sessionNotice]);
 
   const [step, setStep] = useState<LoginStep>("credentials");
   const [showPassword, setShowPassword] = useState(false);
@@ -120,7 +120,7 @@ export function LoginPage() {
       });
       updateUser(updatedUser);
       const fullProg = updatedUser.program || `${manualProgramInput} - Ficha ${cleanFicha}`;
-      localStorage.setItem("userProgram", fullProg);
+      sessionStorage.setItem("userProgram", fullProg);
       toast.success("Ficha y programa vinculados correctamente.", "Formación Actualizada");
       setShowManualFichaModal(false);
       navigate("/dashboard");
@@ -152,7 +152,7 @@ export function LoginPage() {
 
     // CASO 1: SIN FICHAS (Aprendiz registrado limpio sin ficha asignada)
     if (programs.length === 0) {
-      localStorage.removeItem("userProgram");
+      sessionStorage.removeItem("userProgram");
       setAuthenticatedUser(loggedUser);
       setShowManualFichaModal(true);
       return;
@@ -160,7 +160,7 @@ export function LoginPage() {
 
     // CASO 2: EXACTAMENTE 1 FICHA -> Ingreso directo al Dashboard
     if (programs.length === 1) {
-      localStorage.setItem("userProgram", programs[0]);
+      sessionStorage.setItem("userProgram", programs[0]);
       navigate("/dashboard");
       return;
     }
@@ -305,7 +305,7 @@ export function LoginPage() {
   // ── Selección de Ficha en Alert View ─────────────────────────────────────
   const handleSelectFicha = async (selectedProgram: string) => {
     try {
-      localStorage.setItem("userProgram", selectedProgram);
+      sessionStorage.setItem("userProgram", selectedProgram);
       await api.switchProgram(selectedProgram);
       if (authenticatedUser) {
         updateUser({ ...authenticatedUser, program: selectedProgram });
@@ -387,14 +387,14 @@ export function LoginPage() {
                   </p>
                 </div>
 
-                {isIdleTimeout && (
+                {sessionNotice && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-800 dark:text-amber-200 text-sm sm:text-base font-medium"
                   >
                     <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                    <p className="leading-snug">Tu sesión ha finalizado por inactividad. Inicia sesión nuevamente por seguridad.</p>
+                    <p className="leading-snug">{sessionNotice}</p>
                   </motion.div>
                 )}
 

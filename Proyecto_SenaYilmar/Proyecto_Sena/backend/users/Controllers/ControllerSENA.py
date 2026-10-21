@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -826,7 +827,17 @@ def _clean_media_key(val):
 class DictionaryController:
 
     @staticmethod
-    def list_all(subject_id=None, level=None, competence=None, search=None, program=None, ficha_id=None):
+    def list_all(subject_id=None, level=None, competence=None, search=None, program=None, ficha_id=None, ficha=None):
+        """
+        Devuelve el catálogo COMPLETO (sin paginar ni truncar) de términos, segmentado de forma estricta
+        por programa (ADSO / Mecánica Industrial / Producción Multimedia) y, opcionalmente, por ficha.
+        """
+        import re
+        from django.db.models.functions import Lower
+        from ..dictionary_programs import (
+            canonical_program_key, program_q, extract_ficha_code, clean_program_name,
+        )
+
         queryset = DigitalDictionary.objects.select_related('subject').all()
         if subject_id:
             queryset = queryset.filter(subject_id=subject_id)
@@ -837,38 +848,44 @@ class DictionaryController:
         if search:
             s = search.strip().lower()
             queryset = queryset.filter(
-                models.Q(word_id__icontains=s) |
-                models.Q(definition__icontains=s) |
-                models.Q(synonyms__icontains=s)
+                Q(word_id__icontains=s) |
+                Q(definition__icontains=s) |
+                Q(synonyms__icontains=s) |
+                Q(spanish_translation__icontains=s)
             )
 
-        # Filtro estricto por programa / ficha (Aislamiento Multi-tenant)
-        target_prog = (program or ficha_id or '').strip()
-        if target_prog and target_prog.lower() != 'all':
-            import re
-            m = re.search(r'\d{6,8}', target_prog)
-            ficha_code = m.group(0) if m else None
-            prog_name_clean = re.sub(r'[-\s]*\d{6,8}[-\s]*', '', target_prog).strip()
+        # Filtro estricto por programa / ficha (aislamiento multi-tenant)
+        program_text = (program or '').strip()
+        ficha_text = (ficha or ficha_id or '').strip()
+        if program_text.lower() == 'all':
+            program_text = ''
+        if ficha_text.lower() == 'all':
+            ficha_text = ''
+        # Compatibilidad: el frontend envía el nombre del programa también en `fichaId`
+        if not program_text and ficha_text and not re.fullmatch(r'\d{6,8}', ficha_text):
+            program_text = ficha_text
 
-            filter_q = (
-                models.Q(program__iexact=target_prog) |
-                models.Q(program__icontains=target_prog) |
-                models.Q(program__in=['', None])
-            )
-            if ficha_code:
-                filter_q |= models.Q(program__icontains=ficha_code)
-            if prog_name_clean:
-                filter_q |= models.Q(program__icontains=prog_name_clean) | models.Q(program__iexact=prog_name_clean)
-
-            filtered_qs = queryset.filter(filter_q).distinct()
-
-            if not filtered_qs.exists() and any(k in target_prog.upper() for k in ['ADSO', 'SOFTWARE', 'DESARROLLO', 'PROGRAM']):
-                filtered_qs = queryset.filter(models.Q(program__icontains='ADSO') | models.Q(program__icontains='SOFTWARE'))
-
-            queryset = filtered_qs
-        elif program is not None and not program.strip() and not ficha_id:
-            # Si el usuario no tiene ficha o programa activo, retornar [] nunca un error 500
+        if program_text:
+            program_key = canonical_program_key(program_text)
+            if program_key:
+                queryset = queryset.filter(program_q(program_key))
+            else:
+                clean_name = clean_program_name(program_text)
+                if not clean_name:
+                    return []
+                queryset = queryset.filter(program__icontains=clean_name)
+        elif program is not None and not program.strip() and not ficha_text:
+            # Sin ficha ni programa activo: 200 OK con lista vacía, nunca un 500
             return []
+
+        ficha_code = extract_ficha_code(ficha_text, program_text)
+        if ficha_code:
+            # Los términos sin ficha asignada aplican a todas las fichas del programa
+            queryset = queryset.filter(
+                Q(ficha__isnull=True) | Q(ficha='') | Q(ficha__icontains=ficha_code)
+            )
+
+        queryset = queryset.order_by(Lower('word_id'), 'id')
 
         documents = []
         for doc in queryset:
@@ -883,29 +900,43 @@ class DictionaryController:
 
             subject_id = doc.subject.subject_id if doc.subject else getattr(doc, 'competence', 'Grammar')
             subject_name = doc.subject.description if doc.subject else f"Asignatura {subject_id}"
+            skill = getattr(doc, 'competence', subject_id) or subject_id
+            translation = getattr(doc, 'spanish_translation', '') or ''
 
             documents.append({
                 'id': str(doc.id),
                 'name': doc.word_id,
+                'word': doc.word_id,
                 'subjectId': subject_id,
                 'subjectName': subject_name,
-                'program': getattr(doc, 'program', 'ADSO') or 'ADSO',
+                'program': (
+                    'Mecánica Industrial' if ('mecanic' in str(getattr(doc, 'program', '')).lower() or subject_id == 'MECANICA')
+                    else 'Producción Multimedia' if ('multi' in str(getattr(doc, 'program', '')).lower() or subject_id == 'MULTIMEDIA')
+                    else 'ADSO' if ('adso' in str(getattr(doc, 'program', '')).lower() or 'software' in str(getattr(doc, 'program', '')).lower() or subject_id == 'ADSO')
+                    else (getattr(doc, 'program', None) or 'General')
+                ),
+                'ficha': getattr(doc, 'ficha', '') or '',
                 'uploadedAt': None,
                 'fileType': 'DICT',
                 'size': '-',
                 'uploadedBy': 'Sistema',
                 'wordId': doc.word_id,
                 'definition': doc.definition,
+                'spanish_translation': translation,
+                'spanishTranslation': translation,
                 'synonyms': doc.synonyms,
                 'image': img_key,
                 'audio': audio_key,
                 'video': video_key,
                 'imageUrl': image_url,
                 'audioUrl': audio_url,
+                'image_url': image_url,
+                'audio_url': audio_url,
                 'videoUrl': video_url,
                 'objectUrl': object_url,
                 'level': getattr(doc, 'level', 'A1') or 'A1',
-                'competence': getattr(doc, 'competence', subject_id) or subject_id,
+                'competence': skill,
+                'skill': skill,
             })
         return documents
 
@@ -955,6 +986,8 @@ class DictionaryController:
             level=data.get("level", "A1") or "A1",
             competence=competence_val,
             program=program_val,
+            spanish_translation=(data.get("spanish_translation") or data.get("spanishTranslation") or "")[:255],
+            ficha=str(data.get("ficha") or "")[:50],
         )
 
         return doc, None
@@ -973,7 +1006,7 @@ class DictionaryController:
             except Subject.DoesNotExist:
                 return None, 'Asignatura no encontrada'
 
-        for field in ('word_id', 'definition', 'synonyms', 'level', 'competence', 'program'):
+        for field in ('word_id', 'definition', 'synonyms', 'level', 'competence', 'program', 'spanish_translation', 'ficha'):
             if field in data:
                 setattr(doc, field, data[field])
 
@@ -1519,3 +1552,55 @@ class SupportTicketController:
         if update_fields:
             ticket.save(update_fields=update_fields)
         return ticket, None
+
+
+class ControllerSENA:
+    """Controlador unificado SENA con asignación garantizada de Ficha al Registrarse o Aprobarse."""
+
+    @classmethod
+    def assign_student_ficha(cls, user_id, ficha_code):
+        user = User.objects.filter(user_id=user_id).first() if (isinstance(user_id, int) or str(user_id).isdigit()) else User.objects.filter(pk=user_id).first()
+        if not user:
+            return False
+
+        clean_code = str(ficha_code).strip()
+        SENA_CATALOG = [
+            {"code": "3520681", "name": "Mecánica - Ficha 3520681", "area": "Mecánica Industrial"},
+            {"code": "3411643", "name": "Análisis de Datos - Ficha 3411643", "area": "Tecnologías de la Información"},
+            {"code": "2670142", "name": "Desarrollo de Software - Ficha 2670142", "area": "ADSO"},
+            {"code": "2710321", "name": "Redes y Telecomunicaciones - Ficha 2710321", "area": "Infraestructura TI"},
+            {"code": "2554901", "name": "Producción Multimedia - Ficha 2554901", "area": "Diseño y Medios"},
+            {"code": "2901412", "name": "Seguridad Informática - Ficha 2901412", "area": "Ciberseguridad"},
+            {"code": "2894102", "name": "Automatización Industrial - Ficha 2894102", "area": "Mecatrónica"},
+            {"code": "2689104", "name": "Gestión Empresarial - Ficha 2689104", "area": "Administración"},
+            {"code": "2450912", "name": "Diseño Gráfico - Ficha 2450912", "area": "Comunicación Visual"},
+            {"code": "ADSO", "name": "ADSO (Análisis y Desarrollo de Software)", "area": "Desarrollo de Software"},
+        ]
+        matched_name = None
+        for item in SENA_CATALOG:
+            if clean_code.lower() == item['code'].lower() or clean_code in item['name'] or item['code'] in clean_code:
+                matched_name = item['name']
+                break
+        if not matched_name:
+            matched_name = f"Programa Técnico - Ficha {clean_code}"
+
+        user.program = matched_name
+        user.status = 'EN_FORMACION'
+        user.save(update_fields=['program', 'status'])
+
+        if hasattr(user, 'person') and user.person:
+            if user.person.status != 'ACTIVO':
+                user.person.status = 'ACTIVO'
+                user.person.save(update_fields=['status'])
+
+        FichaRequest.objects.update_or_create(
+            user=user,
+            ficha_code=clean_code,
+            defaults={
+                'person': user.person,
+                'program_name': matched_name,
+                'status': 'APROBADA',
+                'reviewed_at': timezone.now(),
+            }
+        )
+        return True

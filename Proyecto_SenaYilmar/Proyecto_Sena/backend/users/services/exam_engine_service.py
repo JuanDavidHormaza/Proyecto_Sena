@@ -1,21 +1,7 @@
-"""
-ExamEngineService - Motor adaptativo unificado CEFR (A1-B2) alimentado por el Diccionario ADSO.
-
-Principios:
-1. El Diccionario Digital es la fuente viva de vocabulario, audios e imágenes para el examen.
-2. Generación dinámica de preguntas para las 5 competencias:
-   - Listening (audios de pronunciación MinIO / ElevenLabs)
-   - Reading (contextos técnicos ADSO y deducción de definiciones)
-   - Grammar (sintaxis y uso de conceptos de software)
-   - Writing (evaluación abierta con rúbrica semántica de palabras clave)
-   - Speaking (grabación oral evaluada con MediaRecorder -> MinIO exam-submissions)
-3. Progresión continua adaptativa: A1 -> A2 -> B1 -> B2 sin particiones ni recargas.
-4. Identificación de términos ADSO dominados y términos recomendados para reforzar.
-"""
-
 import random
 import logging
-from typing import Dict, List, Optional, Any
+from typing import List, Dict, Optional, Any
+from django.db.models import Q
 from users.Models.modelsSENA import DigitalDictionary, Subject
 
 logger = logging.getLogger(__name__)
@@ -40,196 +26,172 @@ def get_difficulty_tier(difficulty: int) -> str:
 
 
 class ExamEngineService:
+    """
+    Motor de Evaluación Lingüística CEFR Adaptativo (A1-B2).
+    Genera bancos de preguntas dinámicos y balanceados según el programa formativo
+    (ADSO, Mecánica Industrial, Producción Multimedia).
+    """
+
+    @staticmethod
+    def _strip_key(val: Any) -> str:
+        """Limpia una clave de texto o referencia multimedia."""
+        return val.strip() if isinstance(val, str) else (str(val) if val is not None else "")
 
     @classmethod
-    def get_terms_by_level(cls, level: str) -> List[DigitalDictionary]:
-        """Obtiene los términos de DigitalDictionary para el nivel dado de forma aleatoria."""
-        return list(DigitalDictionary.objects.filter(level=level).select_related('subject').order_by('?'))
+    def get_terms_by_level(cls, level: str, program: Optional[str] = None) -> List[Any]:
+        """
+        Obtiene los términos activos filtrados por nivel CEFR y programa de formación.
+        Garantiza un solo retorno limpio y orden aleatorio.
+        """
+        qs = DigitalDictionary.objects.filter(level__iexact=level).select_related('subject')
+        if program and program != 'all':
+            qs = qs.filter(
+                Q(program__icontains=program) |
+                Q(subject__description__icontains=program) |
+                Q(subject__subject_id__icontains=program)
+            )
+        return list(qs.order_by('?'))
 
     @classmethod
     def generate_questions_from_dictionary(
         cls,
+        program: Optional[str] = None,
         level: Optional[str] = None,
-        competence: Optional[str] = None
+        competence: Optional[str] = None,
+        limit_per_level: int = 5,
+        total_questions: int = 15
     ) -> List[Dict[str, Any]]:
         """
-        Construye preguntas dinámicas a partir de los términos activos del Diccionario Digital,
-        con orden aleatorio garantizado en cada intento de examen.
+        Construye un banco balanceado de preguntas de opción múltiple a partir de los
+        términos del diccionario asociados al programa formativo del aprendiz.
         """
-        queryset = DigitalDictionary.objects.select_related('subject').order_by('?')
-        if level and level != 'all':
-            queryset = queryset.filter(level=level)
+        # Tolerancia a llamada posicional si se pasa el nivel como primer parámetro
+        if program in CEFR_LEVELS and level is None:
+            level = program
+            program = None
+
+        qs = DigitalDictionary.objects.select_related('subject')
+
+        # Filtrar por programa de formación si se proporciona
+        if program and program != 'all':
+            qs = qs.filter(
+                Q(program__icontains=program) |
+                Q(subject__description__icontains=program) |
+                Q(subject__subject_id__icontains=program)
+            )
+
         if competence and competence != 'all':
-            queryset = queryset.filter(competence=competence)
+            qs = qs.filter(competence__iexact=competence)
 
-        terms = list(queryset)
+        # Si se especifica un único nivel
+        if level and level != 'all':
+            terms = list(qs.filter(level__iexact=level).order_by('?')[:total_questions])
+        else:
+            # Distribución balanceada a lo largo del marco CEFR
+            terms = []
+            for lvl in CEFR_LEVELS:
+                lvl_pool = list(qs.filter(level__iexact=lvl).order_by('?')[:limit_per_level])
+                terms.extend(lvl_pool)
+            random.shuffle(terms)
+            terms = terms[:total_questions]
+
+        # Si el filtro fue demasiado restrictivo y no arrojó términos, recurrir al catálogo general
         if not terms:
-            logger.warning(f"No hay términos en el diccionario para nivel '{level}' / competencia '{competence}'")
-            return []
-
-        # Barajar términos para garantizar secuencia única en cada examen
-        random.shuffle(terms)
-
-        all_terms_by_level: Dict[str, List[DigitalDictionary]] = {}
-        for lvl in CEFR_LEVELS:
-            lvl_pool = list(DigitalDictionary.objects.filter(level=lvl).order_by('?'))
-            random.shuffle(lvl_pool)
-            all_terms_by_level[lvl] = lvl_pool
+            logger.warning(
+                "No se encontraron términos para programa '%s', nivel '%s'. Usando catálogo general.",
+                program,
+                level
+            )
+            fallback_qs = DigitalDictionary.objects.select_related('subject')
+            if level and level != 'all':
+                terms = list(fallback_qs.filter(level__iexact=level).order_by('?')[:total_questions])
+            else:
+                for lvl in CEFR_LEVELS:
+                    lvl_pool = list(fallback_qs.filter(level__iexact=lvl).order_by('?')[:limit_per_level])
+                    terms.extend(lvl_pool)
+                random.shuffle(terms)
+                terms = terms[:total_questions]
 
         questions: List[Dict[str, Any]] = []
-
         for term in terms:
-            term_lvl = getattr(term, 'level', 'A1') or 'A1'
-            comp = getattr(term, 'competence', 'Reading') or 'Reading'
-            if comp == 'Grammar':
-                comp = 'Reading'
-            level_pool = [t for t in all_terms_by_level.get(term_lvl, []) if t.id != term.id]
-
-            # Distractores aleatorios del mismo nivel
-            if len(level_pool) >= 3:
-                distractor_names = [t.word_id for t in random.sample(level_pool, 3)]
-            else:
-                distractor_names = [t.word_id for t in level_pool]
-                while len(distractor_names) < 3:
-                    distractor_names.append(f"Concept_{len(distractor_names) + 1}")
-
-            # Dificultad base según nivel
-            base_diff = 2 if term_lvl == 'A1' else (4 if term_lvl == 'A2' else (6 if term_lvl == 'B1' else 8))
-
-            # Pregunta según la competencia asignada
-            q_obj = cls._build_question_for_competence(
-                term=term,
-                competence=comp,
-                distractors=distractor_names,
-                difficulty=base_diff
+            spanish_meaning = (
+                getattr(term, 'spanish_translation', None)
+                or getattr(term, 'meaning', None)
+                or getattr(term, 'word_id', '')
             )
-            if q_obj:
-                questions.append(q_obj)
+            term_word = getattr(term, 'word_id', None) or getattr(term, 'word', '')
+            term_def = getattr(term, 'definition', '') or ''
+            term_lvl = getattr(term, 'level', 'A1') or 'A1'
+            comp = getattr(term, 'competence', None) or getattr(term, 'skill', 'Reading')
 
-        # Barajar todas las preguntas para que cada sesión sea completamente aleatoria
-        random.shuffle(questions)
-        return questions
+            # Extraer 3 distractores del mismo programa o catálogo general
+            distractor_qs = (
+                DigitalDictionary.objects.exclude(id=term.id)
+                .filter(Q(program=term.program) | Q(level=term.level))
+            )
+            distractor_texts = list(
+                distractor_qs.exclude(spanish_translation__isnull=True)
+                .exclude(spanish_translation='')
+                .order_by('?')
+                .values_list('spanish_translation', flat=True)[:6]
+            )
 
-    @classmethod
-    def _build_question_for_competence(
-        cls,
-        term: DigitalDictionary,
-        competence: str,
-        distractors: List[str],
-        difficulty: int
-    ) -> Optional[Dict[str, Any]]:
-        term_lvl = getattr(term, 'level', 'A1') or 'A1'
-        image_url = f"/api/media/dictionary-images/{term.image}" if term.image else None
-        audio_url = f"/api/media/dictionary-audios/{term.audio}" if term.audio else None
+            # Evitar distractores duplicados o idénticos a la respuesta correcta
+            clean_meaning = str(spanish_meaning).strip().lower()
+            distractors = [
+                d.strip() for d in distractor_texts
+                if d and d.strip().lower() != clean_meaning
+            ][:3]
 
-        if competence == 'Listening':
-            options = [term.word_id] + distractors[:3]
+            # Si faltan distractores traducidos, completar con vocabulario en inglés
+            if len(distractors) < 3:
+                alt_words = list(
+                    DigitalDictionary.objects.exclude(id=term.id)
+                    .order_by('?')
+                    .values_list('word_id', flat=True)[:6]
+                )
+                for w in alt_words:
+                    if w and w not in distractors and w.strip().lower() != clean_meaning:
+                        distractors.append(w)
+                    if len(distractors) >= 3:
+                        break
+
+            # Si faltan distractores, completar con valores genéricos legibles
+            while len(distractors) < 3:
+                distractors.append(f"Opción alternativa {len(distractors) + 1}")
+
+            options = distractors + [spanish_meaning]
             random.shuffle(options)
-            return {
-                'id': term.id,
-                'uniqueKey': f"DICT-LST-{term.id}",
-                'level': term_lvl,
-                'competency': 'Listening',
-                'type': 'listening',
-                'question': "¿Qué término técnico acabas de escuchar?",
-                'prompt': None,
-                'audio': audio_url,
-                'options': options,
-                'correctAnswer': options.index(term.word_id),
-                'difficulty': difficulty,
-                'difficultyTier': get_difficulty_tier(difficulty),
-                'category': f"ADSO Listening",
-                'wordId': term.word_id,
-                'definition': term.definition,
-                'image': None,
-            }
+            correct_index = options.index(spanish_meaning)
 
-        if competence == 'Reading':
-            options = [term.word_id] + distractors[:3]
-            random.shuffle(options)
-            return {
+            diff_val = 2 if term_lvl == 'A1' else (4 if term_lvl == 'A2' else (6 if term_lvl == 'B1' else 8))
+            audio_url = f"/api/media/dictionary-audios/{term.audio}" if getattr(term, 'audio', None) else None
+            image_url = f"/api/media/dictionary-images/{term.image}" if getattr(term, 'image', None) else None
+
+            questions.append({
                 'id': term.id,
-                'uniqueKey': f"DICT-READ-{term.id}",
+                'word': term_word,
+                'wordId': term_word,
+                'definition': term_def,
                 'level': term_lvl,
-                'competency': 'Reading',
+                'competence': comp,
+                'competency': 'Reading' if comp == 'Grammar' else comp,
                 'type': 'multiple',
-                'question': f"Lee el siguiente contexto técnico de ADSO e identifica el concepto correspondiente:\n\n\"{term.definition}\"",
-                'prompt': None,
+                'question': f"¿Cuál es el significado o traducción correcta para '{term_word}'?\n\n\"{term_def}\"",
+                'prompt': term_def,
                 'options': options,
-                'correctAnswer': options.index(term.word_id),
-                'difficulty': difficulty,
-                'difficultyTier': get_difficulty_tier(difficulty),
-                'category': f"ADSO Reading",
-                'wordId': term.word_id,
-                'definition': term.definition,
-                'image': None,
-            }
-
-        elif competence == 'Grammar':
-            options = [term.word_id] + distractors[:3]
-            random.shuffle(options)
-            return {
-                'id': term.id,
-                'uniqueKey': f"DICT-READ-{term.id}",
-                'level': term_lvl,
-                'competency': 'Reading',
-                'type': 'multiple',
-                'question': f"Completa la regla técnica con el término adecuado según el estándar ADSO:\n\n'En desarrollo de software, la entidad que representa \"{term.definition}\" se denomina _____.'",
-                'prompt': None,
-                'options': options,
-                'correctAnswer': options.index(term.word_id),
-                'difficulty': difficulty,
-                'difficultyTier': get_difficulty_tier(difficulty),
-                'category': f"ADSO Reading",
-                'wordId': term.word_id,
-                'definition': term.definition,
-                'image': None,
-            }
-
-        elif competence == 'Writing':
-            keywords = [term.word_id.lower()]
-            if term.synonyms:
-                keywords.extend([s.strip().lower() for s in term.synonyms.split(',') if s.strip()])
-
-            return {
-                'id': term.id,
-                'uniqueKey': f"DICT-WRIT-{term.id}",
-                'level': term_lvl,
-                'competency': 'Writing',
-                'type': 'writing',
-                'question': "Escribe en inglés el término técnico correspondiente a la siguiente definición:",
-                'prompt': f"\"{term.definition}\"",
-                'difficulty': difficulty,
-                'difficultyTier': get_difficulty_tier(difficulty),
-                'category': f"ADSO Writing",
-                'wordId': term.word_id,
-                'definition': term.definition,
-                'rubric': {
-                    'minWords': 1,
-                    'keywords': keywords,
-                },
-                'image': None,
-            }
-
-        elif competence == 'Speaking':
-            return {
-                'id': term.id,
-                'uniqueKey': f"DICT-SPK-{term.id}",
-                'level': term_lvl,
-                'competency': 'Speaking',
-                'type': 'speaking',
-                'question': f"Pronuncia claramente en inglés el término técnico objetivo:",
-                'prompt': f"\"{term.word_id}\" — {term.definition}",
+                'correctAnswer': correct_index,
+                'correct_answer': spanish_meaning,
+                'difficulty': diff_val,
+                'difficultyTier': get_difficulty_tier(diff_val),
+                'category': f"{getattr(term, 'program', 'Técnico') or 'Técnico'} {term_lvl}",
                 'audio': audio_url,
-                'difficulty': difficulty,
-                'difficultyTier': get_difficulty_tier(difficulty),
-                'category': f"ADSO Speaking",
-                'wordId': term.word_id,
-                'definition': term.definition,
                 'image': image_url,
-            }
+                'uniqueKey': f"DICT-{term_lvl}-{term.id}",
+                'isDictionaryTerm': True,
+            })
 
-        return None
+        return questions
 
     @classmethod
     def evaluate_adaptive_step(
@@ -252,7 +214,6 @@ class ExamEngineService:
         threshold = LEVEL_PASS_THRESHOLDS.get(current_level, 60)
         curr_idx = CEFR_LEVELS.index(current_level)
 
-        # Regla: mínimo 4 preguntas respondidas en el nivel para evaluar avance
         if total_in_level >= 4 and percentage >= threshold:
             if curr_idx < len(CEFR_LEVELS) - 1:
                 next_level = CEFR_LEVELS[curr_idx + 1]

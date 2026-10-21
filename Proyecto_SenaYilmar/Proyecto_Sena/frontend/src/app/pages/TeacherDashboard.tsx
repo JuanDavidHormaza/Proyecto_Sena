@@ -40,8 +40,8 @@ export function TeacherDashboard() {
   const [rejectModalRequest, setRejectModalRequest] = useState<api.ApiFichaRequest | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const teacherName = user?.name || localStorage.getItem("userName") || "Instructor";
-  const teacherProgram = user?.program || localStorage.getItem("userProgram") || "";
+  const teacherName = user?.name || sessionStorage.getItem("userName") || "Instructor";
+  const teacherProgram = user?.program || sessionStorage.getItem("userProgram") || "";
 
   // Cargar datos desde API
   const loadDataFromApi = async () => {

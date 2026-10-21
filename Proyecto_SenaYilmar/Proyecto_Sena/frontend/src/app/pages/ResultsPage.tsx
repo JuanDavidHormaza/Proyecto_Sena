@@ -123,22 +123,22 @@ export function ResultsPage() {
       }
     | null;
 
-  const lastTestResultStr = localStorage.getItem("lastTestResult");
+  const lastTestResultStr = sessionStorage.getItem("lastTestResult");
   const lastTestResult = lastTestResultStr ? JSON.parse(lastTestResultStr) : null;
-  const lastTestSummaryStr = localStorage.getItem("lastTestSummary");
+  const lastTestSummaryStr = sessionStorage.getItem("lastTestSummary");
   const lastTestSummary = lastTestSummaryStr ? JSON.parse(lastTestSummaryStr) : null;
-  const storedAnswersStr = localStorage.getItem("quizAnswers");
+  const storedAnswersStr = sessionStorage.getItem("quizAnswers");
   const storedAnswers = storedAnswersStr ? JSON.parse(storedAnswersStr) : [];
 
-  const finalScore = resultsState?.score ?? lastTestSummary?.finalScore ?? parseInt(localStorage.getItem("quizScore") || "0");
+  const finalScore = resultsState?.score ?? lastTestSummary?.finalScore ?? parseInt(sessionStorage.getItem("quizScore") || "0");
   const correctAnswers =
-    resultsState?.correctAnswers ?? lastTestSummary?.correctAnswers ?? parseInt(localStorage.getItem("correctAnswers") || "0");
+    resultsState?.correctAnswers ?? lastTestSummary?.correctAnswers ?? parseInt(sessionStorage.getItem("correctAnswers") || "0");
   const totalQuestions =
-    resultsState?.totalQuestions ?? lastTestSummary?.totalQuestions ?? parseInt(localStorage.getItem("totalQuestions") || "0");
+    resultsState?.totalQuestions ?? lastTestSummary?.totalQuestions ?? parseInt(sessionStorage.getItem("totalQuestions") || "0");
   const answers: ResultAnswer[] = (resultsState?.answers && resultsState.answers.length > 0)
     ? resultsState.answers
     : (storedAnswers.length > 0 ? storedAnswers : []);
-  const duration = resultsState?.duration ?? lastTestSummary?.duration ?? localStorage.getItem("quizDuration") ?? "00:00";
+  const duration = resultsState?.duration ?? lastTestSummary?.duration ?? sessionStorage.getItem("quizDuration") ?? "00:00";
   const levelReached = resultsState?.levelReached ?? lastTestSummary?.finalLevel ?? lastTestResult?.level ?? "A1";
 
   const isIncomplete =
@@ -186,7 +186,7 @@ export function ResultsPage() {
       setCurrentInstructorFeedback(instructorDraft);
       if (lastTestResult) {
         lastTestResult.feedback = instructorDraft;
-        localStorage.setItem("lastTestResult", JSON.stringify(lastTestResult));
+        sessionStorage.setItem("lastTestResult", JSON.stringify(lastTestResult));
       }
       toast.success("Retroalimentación guardada con éxito");
     } catch (err: any) {
@@ -197,7 +197,7 @@ export function ResultsPage() {
   };
 
   // Vocabulario técnico evaluado del programa activo (Mastered & Reinforce)
-  const activeProgram = localStorage.getItem("userProgram") || "Programa Formativo";
+  const activeProgram = sessionStorage.getItem("userProgram") || "Programa Formativo";
   const masteredTerms: string[] =
     resultsState?.masteredTerms ??
     lastTestSummary?.masteredTerms ??
@@ -324,7 +324,7 @@ export function ResultsPage() {
 
   // Cargar historial consolidado de pruebas anteriores
   useEffect(() => {
-    const userId = localStorage.getItem("userId");
+    const userId = sessionStorage.getItem("userId");
     if (!userId) return;
     api.getTestResults(userId)
       .then((res) => {

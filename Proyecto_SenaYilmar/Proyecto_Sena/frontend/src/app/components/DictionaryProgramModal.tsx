@@ -67,9 +67,9 @@ export function DictionaryProgramModal({
     const activeFichaId = fichaInfo.ficha !== "Principal" ? fichaInfo.ficha : selectedProg;
 
     // Persistir parámetro y estado de la ficha activa globalmente
-    localStorage.setItem("activeFichaId", activeFichaId);
-    localStorage.setItem("activeProgram", selectedProg);
-    localStorage.setItem("userProgram", selectedProg);
+    sessionStorage.setItem("activeFichaId", activeFichaId);
+    sessionStorage.setItem("activeProgram", selectedProg);
+    sessionStorage.setItem("userProgram", selectedProg);
 
     onSelectProgram(selectedProg);
     onClose();

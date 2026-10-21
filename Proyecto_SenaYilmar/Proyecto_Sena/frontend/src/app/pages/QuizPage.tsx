@@ -158,8 +158,8 @@ export function QuizPage() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const advanceTimerRef = useRef<any>(null);
 
-  const userId = localStorage.getItem("userId") || "";
-  const userProgram = localStorage.getItem("userProgram") || "SENA";
+  const userId = sessionStorage.getItem("userId") || "";
+  const userProgram = sessionStorage.getItem("userProgram") || "SENA";
 
   // Sincronizar estado del motor
   const refreshEngine = () => {
@@ -782,11 +782,11 @@ export function QuizPage() {
 
     try {
       const savedResult = await api.createTestResult(payload);
-      localStorage.setItem("lastTestResult", JSON.stringify(savedResult));
+      sessionStorage.setItem("lastTestResult", JSON.stringify(savedResult));
       await api.recordStreakActivity("EVALUACION_QUIZ_CEFR").catch(() => null);
 
-      localStorage.setItem("lastTestSummary", JSON.stringify(summary));
-      localStorage.setItem("quizAnswers", JSON.stringify(serializableAnswers));
+      sessionStorage.setItem("lastTestSummary", JSON.stringify(summary));
+      sessionStorage.setItem("quizAnswers", JSON.stringify(serializableAnswers));
 
       navigate("/results", {
         state: {
@@ -808,8 +808,8 @@ export function QuizPage() {
       });
     } catch (saveError) {
       console.error("Error guardando el resultado en base de datos:", saveError);
-      localStorage.setItem("lastTestSummary", JSON.stringify(summary));
-      localStorage.setItem("quizAnswers", JSON.stringify(serializableAnswers));
+      sessionStorage.setItem("lastTestSummary", JSON.stringify(summary));
+      sessionStorage.setItem("quizAnswers", JSON.stringify(serializableAnswers));
 
       navigate("/results", {
         state: {

@@ -12,7 +12,7 @@ export function HeaderActionTools({ className = "", onTicketCreated }: HeaderAct
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const { user } = useAuth();
 
-  const role = (user?.role || localStorage.getItem("userRole") || "").toLowerCase();
+  const role = (user?.role || sessionStorage.getItem("userRole") || "").toLowerCase();
   const isAdminOrSuperAdmin = role === "admin" || role === "superadmin";
 
   // El botón superior Soporte / PQRS solo debe existir para Aprendices e Instructores

@@ -102,6 +102,8 @@ urlpatterns = [
     # ── Métricas Administrativas del Sistema ───────────────────────────
     path('admin/metrics/',                          AdminMetricsAPIView.as_view(),       name='admin-metrics-slash'),
     path('admin/metrics',                           AdminMetricsAPIView.as_view(),       name='admin-metrics'),
+    path('admin/dashboard-stats/',                  AdminMetricsAPIView.as_view(),       name='admin-dashboard-stats-slash'),
+    path('admin/dashboard-stats',                   AdminMetricsAPIView.as_view(),       name='admin-dashboard-stats'),
     path('metrics/',                                AdminMetricsAPIView.as_view(),       name='metrics-slash'),
     path('metrics',                                 AdminMetricsAPIView.as_view(),       name='metrics'),
 

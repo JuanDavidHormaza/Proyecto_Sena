@@ -23,7 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
   const { user, isAuthenticated } = useAuth();
 
   const token = typeof window !== "undefined"
-    ? localStorage.getItem("accessToken") || localStorage.getItem("access_token") || localStorage.getItem("token")
+    ? sessionStorage.getItem("accessToken") || sessionStorage.getItem("access_token") || sessionStorage.getItem("token")
     : null;
   const hasValidSession = Boolean(isAuthenticated || (user && token));
 
@@ -49,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
   };
 
   const getDashboardPath = () => {
-    const role = (user?.role || localStorage.getItem("userRole") || "").toLowerCase();
+    const role = (user?.role || sessionStorage.getItem("userRole") || "").toLowerCase();
     if (role === "admin" || role === "superadmin") return "/admin";
     if (role === "teacher") return "/teacher";
     return "/dashboard";

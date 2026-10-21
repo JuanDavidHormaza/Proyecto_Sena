@@ -49,7 +49,8 @@ class OptionalJWTAuthentication(CustomJWTAuthentication):
     """
     Autenticación JWT opcional:
     - Si el token es válido, autentica al usuario.
-    - Si no hay token, o el token es inválido/expirado, retorna None sin fallar con 401.
+    - Si no hay token, o el token es invalido, retorna None sin fallar con 401.
+    - Si el token esta EXPIRADO, responde 401 (la sesion vencida exige autenticacion).
     """
     def authenticate(self, request):
         header = self.get_header(request)
@@ -63,6 +64,12 @@ class OptionalJWTAuthentication(CustomJWTAuthentication):
         try:
             validated_token = self.get_validated_token(raw_token)
             return self.get_user(validated_token), validated_token
+        except InvalidToken as exc:
+            # Un token VENCIDO nunca debe degradarse a anonimo: se responde estrictamente 401.
+            # Otros tokens invalidos mantienen el comportamiento opcional (anonimo).
+            if 'expired' in str(getattr(exc, 'detail', '')).lower():
+                raise
+            return None
         except Exception:
             return None
 

@@ -1,0 +1,211 @@
+import React, { useState, useRef } from 'react';
+import { IconSettings, IconCode, IconMovie, IconVolume, IconPlayerPause } from '@tabler/icons-react';
+import { resolveMediaUrl } from '../services/api';
+import { playEnglishSpeech } from '../utils/speech';
+
+export const getProgramTitle = (termProg?: string, selected?: string) => {
+  const p = (termProg || selected || '').toLowerCase();
+  if (p.includes('mecanic') || p.includes('mecánica')) return 'Mecánica Industrial';
+  if (p.includes('multi') || p.includes('multimedia')) return 'Producción Multimedia';
+  return 'ADSO';
+};
+
+export interface DictionaryCardProps {
+  term: {
+    id?: string | number;
+    word?: string;
+    wordId?: string;
+    name?: string;
+    definition?: string;
+    spanish_translation?: string;
+    spanishTranslation?: string;
+    synonyms?: string;
+    level?: string;
+    competence?: string;
+    skill?: string;
+    program?: string;
+    ficha?: string;
+    image?: string;
+    imageUrl?: string;
+    image_url?: string;
+    audio?: string;
+    audioUrl?: string;
+    audio_url?: string;
+  };
+  activeProgram?: string;
+  index?: number;
+  onPlayPronunciation?: (term: any) => void;
+  onVoicePractice?: (term: any) => void;
+  onOpenLightbox?: (term: any) => void;
+  className?: string;
+}
+
+export const DictionaryCard = ({ term, activeProgram, className = '' }: DictionaryCardProps) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Determinar icono y estilo vectorial según el programa real
+  const progLower = (term.program || activeProgram || '').toLowerCase();
+  const isMecanica = progLower.includes('mecánica') || progLower.includes('mecanica') || progLower.includes('3520681');
+  const isMultimedia = progLower.includes('multimedia') || progLower.includes('2554901') || progLower.includes('diseño') || progLower.includes('medios');
+
+  const wordText = term.word || term.wordId || term.name || '';
+  const rawImage = term.image_url || term.imageUrl || term.image;
+  const imageSrc = rawImage ? resolveMediaUrl(rawImage, 'dictionary-images') : '';
+  const rawAudio = term.audio_url || term.audioUrl || term.audio;
+
+  // Fallback de pronunciación nativa inmediata con SpeechSynthesis (en-US, rate = 0.88)
+  const triggerNativeTTS = (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setIsPlaying(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    playEnglishSpeech(text, {
+      rate: 0.88,
+      onStart: () => setIsPlaying(true),
+      onEnd: () => setIsPlaying(false),
+      onError: () => setIsPlaying(false),
+    });
+    setIsPlaying(true);
+  };
+
+  const handlePlayAudio = () => {
+    // Si ya está reproduciendo, pausar inmediatamente (toggle)
+    if (isPlaying) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlaying(false);
+      return;
+    }
+
+    if (rawAudio) {
+      try {
+        const resolvedAudio = resolveMediaUrl(rawAudio, 'dictionary-audios');
+        const audio = new Audio(resolvedAudio);
+        audioRef.current = audio;
+        setIsPlaying(true);
+        audio.onended = () => setIsPlaying(false);
+        audio.onerror = () => {
+          setIsPlaying(false);
+          triggerNativeTTS(wordText);
+        };
+        audio.play().catch(() => {
+          setIsPlaying(false);
+          triggerNativeTTS(wordText);
+        });
+        return;
+      } catch {
+        triggerNativeTTS(wordText);
+        return;
+      }
+    }
+    triggerNativeTTS(wordText);
+  };
+
+  // Tema vectorial dinámico según programa oficial
+  const avatarTheme = isMecanica
+    ? {
+        bg: 'bg-amber-50 text-amber-700 border-amber-200',
+        icon: <IconSettings size={36} stroke={1.8} />,
+        border: 'border-amber-200/80',
+      }
+    : isMultimedia
+    ? {
+        bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        icon: <IconMovie size={36} stroke={1.8} />,
+        border: 'border-indigo-200/80',
+      }
+    : {
+        bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        icon: <IconCode size={36} stroke={1.8} />,
+        border: 'border-emerald-200/80',
+      };
+
+  const initialLetter = (wordText || 'T').charAt(0).toUpperCase();
+  const currentProgram = term.program || activeProgram || 'Formación Titulada';
+
+  return (
+    <div className={`bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${className}`}>
+      <div>
+        {/* Contenedor de Imagen con Cero Bloqueos por 404 de MinIO */}
+        <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center mb-4 relative select-none">
+          {!imgFailed && imageSrc ? (
+            <img
+              src={imageSrc}
+              alt={wordText}
+              loading="lazy"
+              decoding="async"
+              onError={() => setImgFailed(true)}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className={`w-full h-full flex flex-col items-center justify-center gap-1.5 p-3 ${avatarTheme.bg}`}>
+              <div className="w-12 h-12 rounded-2xl bg-white/90 shadow-xs flex items-center justify-center border border-current/20">
+                {avatarTheme.icon}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-md bg-white/95 text-current font-bold text-[11px] flex items-center justify-center font-mono shadow-xs">
+                  {initialLetter}
+                </span>
+                <span className="text-xs font-bold tracking-wider uppercase opacity-90 truncate max-w-[130px]">
+                  {term.skill || term.competence || 'Vocabulary'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Badge de Nivel CEFR flotante */}
+          <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-xs bg-white/95 text-slate-800 border-slate-200/80 backdrop-blur-xs">
+              {term.level || 'A1'}
+            </span>
+          </div>
+        </div>
+
+        {/* Título y Pronunciación en 1 Clic con Opción de Pausa */}
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <h3 className="text-lg font-bold text-slate-800 tracking-tight truncate" title={wordText}>{wordText}</h3>
+          <button
+            type="button"
+            onClick={handlePlayAudio}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+              isPlaying
+                ? 'bg-amber-500 text-white animate-pulse shadow-xs ring-2 ring-amber-300'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600'
+            }`}
+            title={isPlaying ? "Pausar pronunciación" : "Escuchar pronunciación"}
+          >
+            {isPlaying ? <IconPlayerPause size={18} /> : <IconVolume size={18} />}
+          </button>
+        </div>
+
+        {/* Definición */}
+        <p className="text-xs text-slate-500 line-clamp-3 mb-3 leading-relaxed">
+          {term.definition || `Concepto técnico clave para formación ${currentProgram}.`}
+        </p>
+
+        {/* Traducción al Español */}
+        {(term.spanish_translation || term.spanishTranslation) && (
+          <p className="text-[11px] font-medium text-emerald-600 mb-2">
+            ES: {term.spanish_translation || term.spanishTranslation}
+          </p>
+        )}
+      </div>
+
+      {/* Pie dinámico: NUNCA texto quemado */}
+      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+        <span>Programa: <strong className="text-slate-700">{term.program || activeProgram || 'Formación Titulada'}</strong></span>
+        <span className="font-mono text-[10px] text-slate-400">SENA CEFR</span>
+      </div>
+    </div>
+  );
+};
+
+export default DictionaryCard;

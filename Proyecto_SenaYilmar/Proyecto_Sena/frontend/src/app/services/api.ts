@@ -1,3 +1,10 @@
+import {
+  getValidAccessToken,
+  isSessionInactive,
+  purgeLegacyLocalStorageSession,
+  readRawAccessToken,
+} from '../utils/sessionManager';
+
 const API_BASE = (() => {
   if (typeof window !== 'undefined') {
     // Si corre en Vite (5173) o Nginx (80/443/custom), usar ruta relativa '/api' para evitar fallos de CORS y accesos móviles
@@ -201,6 +208,7 @@ export function clearAllTokens(): void {
       'refreshToken',
       'refresh_token',
       'token',
+      'user',
       'user_data',
       'userData',
       'userId',
@@ -222,12 +230,14 @@ export function clearAllTokens(): void {
       'studyStreak',
       'studyLastActiveDate',
       'worklex_last_active',
+      'last_activity_time',
       'reset_email',
       'recover_email',
       'resetEmail',
       'recover_step',
     ];
 
+    // Residuos heredados de versiones anteriores que guardaban la sesión en localStorage
     authKeys.forEach((key) => {
       try {
         localStorage.removeItem(key);
@@ -235,6 +245,7 @@ export function clearAllTokens(): void {
         // ignore
       }
     });
+    purgeLegacyLocalStorageSession();
 
     try {
       sessionStorage.clear();
@@ -257,9 +268,30 @@ export function clearAllTokens(): void {
   }
 }
 
+/**
+ * Devuelve el token de acceso solo si la sesión es válida (JWT sin vencer y < 20 min de inactividad).
+ * Si la sesión venció, la destruye y redirige a /login con el motivo correspondiente.
+ */
+function getAccessTokenOrExpire(): string | null {
+  if (typeof window === 'undefined') return null;
+  const raw = readRawAccessToken();
+  if (!raw) return null;
+
+  const inactive = isSessionInactive();
+  const valid = getValidAccessToken();
+  if (valid) return valid;
+
+  clearAllTokens();
+  const reason = inactive ? 'idle_timeout' : 'session_expired';
+  if (window.location.pathname !== '/login') {
+    window.location.href = `/login?reason=${reason}`;
+  }
+  return null;
+}
+
 function getAuthHeaders(includeJsonContentType = true): HeadersInit {
   const token = typeof window !== 'undefined'
-    ? localStorage.getItem('access_token') || localStorage.getItem('accessToken') || localStorage.getItem('token')
+    ? getAccessTokenOrExpire()
     : null;
   const headers: HeadersInit = {};
 
@@ -351,6 +383,31 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
   }
 }
 
+export async function get<T = any>(path: string, options?: { headers?: HeadersInit }): Promise<T> {
+  const token = typeof window !== 'undefined'
+    ? (sessionStorage.getItem('token') ||
+       sessionStorage.getItem('accessToken') ||
+       sessionStorage.getItem('access_token') ||
+       localStorage.getItem('token') ||
+       localStorage.getItem('accessToken') ||
+       getAccessTokenOrExpire())
+    : null;
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(options?.headers || {}),
+  };
+
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const response = await safeFetch(`${API_BASE}${cleanPath}`, {
+    method: 'GET',
+    headers,
+  });
+
+  return handleResponse<T>(response);
+}
+
 export async function post<T = any>(path: string, body: BodyInit): Promise<T> {
   const isFormData = body instanceof FormData;
   const response = await safeFetch(`${API_BASE}${path}`, {
@@ -399,7 +456,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
       response.url.includes("/auth/privileged-me")
     );
     const hasToken = typeof window !== 'undefined' && Boolean(
-      localStorage.getItem("accessToken") || localStorage.getItem("access_token") || localStorage.getItem("token")
+      readRawAccessToken()
     );
 
     if (response.status === 401 && hasToken && !isAuthEndpoint && !isPublicRoute) {
@@ -420,7 +477,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
  
 
 async function refreshToken(): Promise<boolean> {
-  const refresh = localStorage.getItem('refreshToken');
+  const refresh = sessionStorage.getItem('refreshToken');
   if (!refresh) return false;
   
   try {
@@ -433,7 +490,7 @@ async function refreshToken(): Promise<boolean> {
     if (!response.ok) return false;
     
     const data = await response.json();
-    localStorage.setItem('accessToken', data.access);
+    sessionStorage.setItem('accessToken', data.access);
     return true;
   } catch {
     return false;
@@ -464,7 +521,7 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
 
 export async function getMe(): Promise<ApiUser> {
   const token = typeof window !== 'undefined'
-    ? localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('accessToken')
+    ? getAccessTokenOrExpire()
     : null;
 
   if (!token) {
@@ -493,7 +550,7 @@ export async function privilegedLogin(credentials: LoginCredentials): Promise<{ 
 
 export async function privilegedMe(): Promise<{ user: ApiUser } | null> {
   const token = typeof window !== 'undefined'
-    ? localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('accessToken')
+    ? getAccessTokenOrExpire()
     : null;
 
   // Si no hay token en el cliente, no ejecutar la llamada para evitar el 401 innecesario
@@ -712,7 +769,7 @@ export async function uploadMediaFile(
   formData.append('file', file);
   formData.append('bucket', bucket);
 
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  const token = getAccessTokenOrExpire();
   const headers: HeadersInit = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -1231,7 +1288,7 @@ export async function uploadSpeakingAudio(
     formData.append('user_id', userId);
   }
 
-  const token = localStorage.getItem('accessToken');
+  const token = getAccessTokenOrExpire();
   const headers: HeadersInit = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -1274,7 +1331,7 @@ export async function evaluateSpeakingAudio(
   if (level) formData.append('level', level);
   if (transcript) formData.append('transcript', transcript);
 
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  const token = getAccessTokenOrExpire();
   const headers: HeadersInit = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -1345,7 +1402,7 @@ export interface AdaptiveExamStartResponse {
 }
 
 export async function startAdaptiveExam(userId?: string | number): Promise<AdaptiveExamStartResponse> {
-  const token = localStorage.getItem('accessToken');
+  const token = getAccessTokenOrExpire();
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -1418,23 +1475,120 @@ export interface AdminMetrics {
   };
 }
 
+const emptyAdminMetrics: AdminMetrics = {
+  total_users: 0,
+  active_users: 0,
+  distribution: {
+    students: 0,
+    instructors: 0,
+    admins: 0,
+  },
+  dictionaries: 0,
+  total_dictionaries: 0,
+  terms: 0,
+  total_terms: 0,
+  competencies: 4,
+  competencies_count: 4,
+  media: {
+    audios: 0,
+    videos: 0,
+    images: 0,
+  },
+};
+
 export async function getAdminMetrics(): Promise<AdminMetrics> {
+  const token = typeof window !== 'undefined'
+    ? (sessionStorage.getItem('token') ||
+       sessionStorage.getItem('accessToken') ||
+       sessionStorage.getItem('access_token') ||
+       localStorage.getItem('token') ||
+       localStorage.getItem('accessToken') ||
+       getAccessTokenOrExpire())
+    : null;
+
+  if (!token) {
+    // Si no hay sesión activa, retorna métricas vacías seguras sin disparar 401
+    return emptyAdminMetrics;
+  }
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
+
   try {
-    const response = await fetch(`${API_BASE}/metrics/`, {
-      headers: getAuthHeaders(),
+    const response = await fetch(`${API_BASE}/admin/metrics/`, {
+      headers,
     });
     if (response.ok) {
-      return await handleResponse<AdminMetrics>(response);
+      const data = await response.json();
+      return { ...emptyAdminMetrics, ...data };
     }
-  } catch {
-    // fallback to /admin/metrics/
+    if (response.status === 401 || response.status === 403) {
+      console.warn(`[getAdminMetrics] Acceso administrativo no autorizado (${response.status})`);
+      return emptyAdminMetrics;
+    }
+
+    // Fallback con /admin/dashboard-stats/
+    const statsResponse = await fetch(`${API_BASE}/admin/dashboard-stats/`, {
+      headers,
+    });
+    if (statsResponse.ok) {
+      const data = await statsResponse.json();
+      return { ...emptyAdminMetrics, ...data };
+    }
+  } catch (err) {
+    console.warn('[getAdminMetrics] Error al obtener métricas del servidor:', err);
   }
-  const fallback = await fetch(`${API_BASE}/admin/metrics/`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<AdminMetrics>(fallback);
+
+  return emptyAdminMetrics;
 }
 
+export interface ProgramVideo {
+  id: number;
+  title: string;
+  duration: string;
+  url: string;
+  description: string;
+}
+
+export async function getProgramVideos(program?: string): Promise<ProgramVideo[]> {
+  const query = program ? `?program=${encodeURIComponent(program)}` : '';
+  try {
+    const res = await safeFetch(`${API_BASE}/dictionary/videos/${query}`, {
+      headers: getAuthHeaders(),
+    });
+    if (res.ok) {
+      return await handleResponse<ProgramVideo[]>(res);
+    }
+  } catch {
+    // fallback
+  }
+
+  const progUpper = (program || '').toUpperCase();
+  if (progUpper.includes('MECANICA') || progUpper.includes('3520681')) {
+    return [
+      { id: 1, title: 'Mecanizado CNC y Herramientas Rotativas', duration: '14:30', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', description: 'Operación de tornos, fresadoras y metrología.' },
+      { id: 2, title: 'Tribología y Sistemas de Lubricación', duration: '11:15', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', description: 'Reducción de fricción y mantenimiento predictivo industrial.' },
+      { id: 3, title: 'Tolerancias Geométricas e ISO', duration: '16:40', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', description: 'Ajustes, holguras y calibración dimensional.' },
+    ];
+  }
+  if (progUpper.includes('MULTI') || progUpper.includes('2554901') || progUpper.includes('DISEÑO')) {
+    return [
+      { id: 1, title: 'Composición Digital y Animación 2D', duration: '13:50', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', description: 'Principios de animación, keyframes y renderizado vectorial.' },
+      { id: 2, title: 'Diseño UI/UX y Prototipado Interactivo', duration: '17:25', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', description: 'Jerarquía visual, wireframes y experiencia de usuario.' },
+      { id: 3, title: 'Producción y Masterización Audiovisual', duration: '19:00', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', description: 'Captura, sincronización de sonido y códecs de compresión.' },
+    ];
+  }
+  return [
+    { id: 1, title: 'Fundamentos de Desarrollo de Software', duration: '12:45', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', description: 'Introducción al ciclo de vida del software y metodologías ágiles.' },
+    { id: 2, title: 'Arquitectura de APIs RESTful y Django', duration: '15:20', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', description: 'Diseño y consumo de servicios backend estructurados.' },
+    { id: 3, title: 'Control de Versiones y Flujos Git', duration: '18:10', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', description: 'Gestión de repositorios, ramas y despliegue continuo.' },
+  ];
+}
+
+
+export const getAdminDashboardStats = getAdminMetrics;
 export const getMetrics = getAdminMetrics;
 
 export interface DayStreakItem {
@@ -1491,7 +1645,10 @@ export const api = {
   getDocuments,
   createDocument,
   getAdminMetrics,
+  getAdminDashboardStats,
   getMetrics,
+  getProgramVideos,
+  get,
   getStudyStreak,
   recordStreakActivity,
   updateDocument,

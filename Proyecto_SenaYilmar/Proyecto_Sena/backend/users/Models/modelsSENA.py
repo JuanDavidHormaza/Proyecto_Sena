@@ -139,6 +139,9 @@ class DigitalDictionary(models.Model):
     level = models.CharField(max_length=10, choices=LEVEL_CHOICES, default='A1', blank=True)
     competence = models.CharField(max_length=20, choices=COMPETENCE_CHOICES, default='Grammar', blank=True)
     program = models.CharField(max_length=120, default='ADSO', blank=True, null=True, db_index=True)
+    spanish_translation = models.CharField(max_length=255, blank=True, default='')
+    # Ficha específica a la que aplica el término (vacío = aplica a todas las fichas del programa)
+    ficha = models.CharField(max_length=50, blank=True, default='', db_index=True)
 
     class Meta:
         unique_together = ('word_id', 'subject')

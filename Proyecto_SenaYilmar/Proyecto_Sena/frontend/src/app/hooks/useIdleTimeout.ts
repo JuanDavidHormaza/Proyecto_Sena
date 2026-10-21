@@ -1,25 +1,29 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, clearAllTokens } from '../context/AuthContext';
+import {
+  SESSION_IDLE_TIMEOUT_MS,
+  destroyClientSession,
+  getLastActivityTime,
+  touchActivity,
+} from '../utils/sessionManager';
 
-const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos
+const TIMEOUT_MS = SESSION_IDLE_TIMEOUT_MS; // 15 minutos
 
 export const useIdleTimeout = () => {
   const navigate = useNavigate();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTouchRef = useRef<number>(0);
   const { logout } = useAuth();
 
   const handleLogout = () => {
     // 1. Limpiar tokens y almacenamiento
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_data');
     clearAllTokens();
-    sessionStorage.clear();
+    destroyClientSession();
 
     if (logout) {
       try {
-        logout('timeout');
+        logout('idle_timeout');
       } catch {
         // ignore
       }
@@ -27,13 +31,19 @@ export const useIdleTimeout = () => {
 
     // 2. Redireccionar con aviso amigable
     try {
-      navigate('/login?reason=timeout');
+      navigate('/login?reason=idle_timeout');
     } catch {
-      window.location.href = '/login?reason=timeout';
+      window.location.href = '/login?reason=idle_timeout';
     }
   };
 
   const resetTimer = () => {
+    // Registrar la marca de actividad (con throttling de 1s para evitar escrituras excesivas)
+    const now = Date.now();
+    if (now - lastTouchRef.current > 1000) {
+      lastTouchRef.current = now;
+      touchActivity();
+    }
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(handleLogout, TIMEOUT_MS);
   };
@@ -46,8 +56,11 @@ export const useIdleTimeout = () => {
       window.addEventListener(event, resetTimer, { passive: true });
     });
 
-    // Inicializar el temporizador
-    resetTimer();
+    // Inicializar el temporizador respetando la última actividad registrada (p. ej. tras recargar)
+    const last = getLastActivityTime();
+    const remaining = last ? Math.max(0, TIMEOUT_MS - (Date.now() - last)) : TIMEOUT_MS;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(handleLogout, remaining);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);

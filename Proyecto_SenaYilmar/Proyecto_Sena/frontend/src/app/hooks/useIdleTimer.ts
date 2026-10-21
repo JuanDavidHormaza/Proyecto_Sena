@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { LAST_ACTIVITY_KEY, SESSION_IDLE_TIMEOUT_MS, SESSION_WARNING_MS } from "../utils/sessionManager";
 
 interface UseIdleTimerOptions {
   /**
@@ -31,8 +32,8 @@ export interface UseIdleTimerReturn {
  * Escucha: mousemove, keydown, click, scroll, touchstart.
  */
 export function useIdleTimer({
-  timeoutMs = 15 * 60 * 1000, // 15 minutos (900.000 ms)
-  warningMs = 2 * 60 * 1000,  // 2 minutos (120.000 ms)
+  timeoutMs = SESSION_IDLE_TIMEOUT_MS, // 15 minutos (900.000 ms)
+  warningMs = SESSION_WARNING_MS,  // 2 minutos (120.000 ms)
   onTimeout,
   enabled = true,
 }: UseIdleTimerOptions): UseIdleTimerReturn {
@@ -59,7 +60,7 @@ export function useIdleTimer({
     lastActivityRef.current = now;
     lastEventLoggedRef.current = now;
     try {
-      localStorage.setItem("worklex_last_active", String(now));
+      sessionStorage.setItem(LAST_ACTIVITY_KEY, String(now));
     } catch {
       // ignore
     }
@@ -83,7 +84,7 @@ export function useIdleTimer({
       if (now - lastStorageSyncRef.current > 3000) {
         lastStorageSyncRef.current = now;
         try {
-          localStorage.setItem("worklex_last_active", String(now));
+          sessionStorage.setItem(LAST_ACTIVITY_KEY, String(now));
         } catch {
           // ignore
         }
@@ -130,7 +131,7 @@ export function useIdleTimer({
       const now = Date.now();
       let remoteLastActive = 0;
       try {
-        remoteLastActive = Number(localStorage.getItem("worklex_last_active") || 0);
+        remoteLastActive = Number(sessionStorage.getItem(LAST_ACTIVITY_KEY) || 0);
       } catch {
         remoteLastActive = 0;
       }

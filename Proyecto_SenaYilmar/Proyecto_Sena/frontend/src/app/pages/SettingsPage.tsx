@@ -62,7 +62,7 @@ export function SettingsPage() {
     email?: boolean;
   }>({});
 
-  const role = user?.role || localStorage.getItem("userRole") || "student";
+  const role = user?.role || sessionStorage.getItem("userRole") || "student";
   const enrolledPrograms = user?.enrolledPrograms && user.enrolledPrograms.length > 0
     ? user.enrolledPrograms
     : (user?.program ? [user.program] : []);
@@ -79,7 +79,7 @@ export function SettingsPage() {
   };
 
   useEffect(() => {
-    setName(user?.name || localStorage.getItem("userName") || "");
+    setName(user?.name || sessionStorage.getItem("userName") || "");
     setEmail(user?.email || "");
     setPhoneNum(user?.phoneNum ? String(user.phoneNum) : "");
     loadFichaRequests();

@@ -1,4 +1,5 @@
 import { uploadMediaFile } from "./api";
+import { getValidAccessToken } from "../utils/sessionManager";
 import {
   DictionaryWord,
   CreateDictionaryWord,
@@ -12,7 +13,7 @@ const API_BASE = (() => {
 })();
 
 function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+  const token = getValidAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };

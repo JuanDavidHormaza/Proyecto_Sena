@@ -22,15 +22,15 @@ export function ProtectedRoute({ children, allowedRoles }: Props) {
     user.isDualRole ||
     (roles.includes("INSTRUCTOR") && roles.includes("APRENDIZ")) ||
     (user.availableRoles && user.availableRoles.includes("teacher") && user.availableRoles.includes("student")) ||
-    localStorage.getItem("is_dual_role") === "true" ||
-    localStorage.getItem("isDualRole") === "true"
+    sessionStorage.getItem("is_dual_role") === "true" ||
+    sessionStorage.getItem("isDualRole") === "true"
   );
 
   const activeRole = (
     user.active_role ||
     user.activeRole ||
-    localStorage.getItem("active_role") ||
-    localStorage.getItem("activeRole") ||
+    sessionStorage.getItem("active_role") ||
+    sessionStorage.getItem("activeRole") ||
     (user.role === "teacher" ? "INSTRUCTOR" : "APRENDIZ")
   ).toUpperCase();
 

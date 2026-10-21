@@ -56,6 +56,8 @@ import {
   IconHeadphones,
   IconPencil,
   IconBook2,
+  IconTool,
+  IconMovie,
 } from "@tabler/icons-react";
 import { getLevelFromScore } from "../data/questionsA1";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -812,9 +814,44 @@ function StudentVocabCard({
   const compBadge = compColors[competence] || "bg-purple-50 text-purple-700 border-purple-200";
 
   const getTablerFallbackIcon = (t: api.ApiDocument) => {
+    const prog = (t.program || t.subjectName || "").toLowerCase();
     const word = (t.wordId || t.name || "").toLowerCase();
     const comp = (t.competence || (t as any).skill || (t as any).category || "").toLowerCase();
 
+    // 1. Especialidad: Mecánica Industrial
+    if (
+      prog.includes("mecanica") ||
+      prog.includes("mecánica") ||
+      prog.includes("3520681") ||
+      word.includes("torque") ||
+      word.includes("gearbox") ||
+      word.includes("lathe") ||
+      word.includes("caliper") ||
+      word.includes("bearing") ||
+      word.includes("piston") ||
+      word.includes("valve")
+    ) {
+      return { Icon: IconTool, color: "text-amber-600" };
+    }
+
+    // 2. Especialidad: Producción Multimedia
+    if (
+      prog.includes("multimedia") ||
+      prog.includes("2554901") ||
+      prog.includes("diseño") ||
+      word.includes("storyboard") ||
+      word.includes("keyframe") ||
+      word.includes("rendering") ||
+      word.includes("vector") ||
+      word.includes("raster") ||
+      word.includes("typography") ||
+      word.includes("aspect") ||
+      word.includes("timeline")
+    ) {
+      return { Icon: IconMovie, color: "text-purple-600" };
+    }
+
+    // 3. Especialidad: ADSO (Bases de datos, Terminal, Servidor, Código)
     if (word.includes("database") || word.includes("sql") || word.includes("data") || comp.includes("data")) {
       return { Icon: IconDatabase, color: "text-blue-600" };
     }
@@ -938,7 +975,7 @@ function StudentVocabCard({
           </div>
 
           <p className="text-xs text-foreground/90 leading-relaxed min-h-[2.8rem]">
-            {term.definition || `Concepto técnico clave para ${term.subjectName || "formación SENA"}.`}
+            {term.definition || `Concepto técnico clave para ${term.program || term.subjectName || "formación SENA"}.`}
           </p>
 
           {term.synonyms && (
@@ -1000,8 +1037,8 @@ function StudentVocabCard({
       </div>
 
       {/* 3. Práctica de Pronunciación por Voz (Modo Estudio Aprendiz) */}
-      <div className="px-4 pb-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-        <span className="font-semibold text-[11px] text-slate-600">Programa: {term.subjectName || term.program || "Técnico"}</span>
+      <div className="px-4 pb-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+        <span>Programa: <strong className="text-slate-700 dark:text-slate-300">{term.program || 'General'}</strong></span>
         <button
           type="button"
           onClick={() => onVoicePractice(term)}
@@ -1064,7 +1101,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, updateUser, logout } = useAuth();
-  const userName = user?.name || localStorage.getItem("userName") || "Usuario";
+  const userName = user?.name || sessionStorage.getItem("userName") || "Usuario";
 
   // Tab de navegación principal: 'overview' (Evaluación y Progreso) vs 'study' (Espacio de Estudio)
   const isDictionaryPath = location.pathname.startsWith("/dictionary") || location.pathname.startsWith("/diccionario");
@@ -1103,7 +1140,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
         list = availableContexts.map((c: any) => c.program_name || c.ficha_code).filter(Boolean);
       } else {
         try {
-          const stored = localStorage.getItem("userEnrolledPrograms");
+          const stored = sessionStorage.getItem("userEnrolledPrograms");
           if (stored) {
             const parsed = JSON.parse(stored);
             if (Array.isArray(parsed)) list = parsed;
@@ -1114,13 +1151,13 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     if (list.length > 0) {
       return Array.from(new Set(list.filter(Boolean)));
     }
-    const prog = user?.program || localStorage.getItem("userProgram");
+    const prog = user?.program || sessionStorage.getItem("userProgram");
     return prog ? [prog] : [];
   }, [user, availableContexts, activeProgramKey]);
 
-  // Si active_context guardado en localStorage ya no existe en el perfil, seleccionar primer válido
+  // Si active_context guardado en sessionStorage ya no existe en el perfil, seleccionar primer válido
   const activeProgram = useMemo(() => {
-    const saved = localStorage.getItem("userProgram") || localStorage.getItem("activeProgram");
+    const saved = sessionStorage.getItem("userProgram") || sessionStorage.getItem("activeProgram");
     if (availableContexts.length > 0) {
       const match = availableContexts.find((c: any) => c.program_name === saved || c.ficha_code === saved);
       if (match) return match.program_name || match.ficha_code;
@@ -1138,8 +1175,8 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
       const updated = await api.switchProgram(targetProg);
       updateUser(updated);
       setSelectedDictProgram(targetProg);
-      localStorage.setItem("activeProgram", targetProg);
-      localStorage.setItem("userProgram", targetProg);
+      sessionStorage.setItem("activeProgram", targetProg);
+      sessionStorage.setItem("userProgram", targetProg);
       toast.success(`Ficha activa: ${targetProg}`);
     } catch (err) {
       console.error("Error al conmutar programa SENA:", err);
@@ -1172,7 +1209,7 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   // Aislamiento Multi-tenant de Diccionario por Ficha
   const [selectedDictProgram, setSelectedDictProgram] = useState<string>(() => {
     const qProg = searchParams.get("program");
-    const savedActiveProg = localStorage.getItem("activeProgram") || localStorage.getItem("userProgram");
+    const savedActiveProg = sessionStorage.getItem("activeProgram") || sessionStorage.getItem("userProgram");
     return qProg || savedActiveProg || activeProgram;
   });
   const [isDictModalOpen, setIsDictModalOpen] = useState(false);
@@ -1262,12 +1299,12 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
   >({});
   const [selectedLightboxDoc, setSelectedLightboxDoc] = useState<LightboxDocItem | null>(null);
 
-  const lastScore = Number(localStorage.getItem("quizScore") || "0");
-  const lastCorrectAnswers = Number(localStorage.getItem("correctAnswers") || "0");
-  const lastTotalQuestions = Number(localStorage.getItem("totalQuestions") || "0");
-  const lastDuration = localStorage.getItem("quizDuration") || "00:00";
+  const lastScore = Number(sessionStorage.getItem("quizScore") || "0");
+  const lastCorrectAnswers = Number(sessionStorage.getItem("correctAnswers") || "0");
+  const lastTotalQuestions = Number(sessionStorage.getItem("totalQuestions") || "0");
+  const lastDuration = sessionStorage.getItem("quizDuration") || "00:00";
 
-  const userId = user?.id || localStorage.getItem("userId") || undefined;
+  const userId = user?.id || sessionStorage.getItem("userId") || undefined;
 
   // Sincronizar tab con URL query y rutas reactivas
   useEffect(() => {

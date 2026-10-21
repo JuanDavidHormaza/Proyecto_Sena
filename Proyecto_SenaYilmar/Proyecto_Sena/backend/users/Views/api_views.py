@@ -8,6 +8,8 @@ import random
 import string
 from datetime import timedelta
 
+from django.db import models
+from django.db.models import Q, Count, Avg
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import viewsets, status, permissions, parsers
@@ -1163,26 +1165,41 @@ class SubjectViewSet(viewsets.ViewSet):
 
 
 class DigitalDictionaryViewSet(viewsets.ViewSet):
+    pagination_class = None  # El catálogo se entrega completo en una sola respuesta JSON (sin tope de 20)
     permission_classes = [permissions.IsAuthenticated, IsDictionaryAdminOrReadOnly]
 
     def list(self, request):
-        ficha_id = request.query_params.get('fichaId') or request.query_params.get('ficha_id')
-        program = request.query_params.get('program')
+        """
+        GET /api/dictionary/?program=...&ficha=...
+        - ADMIN / SUPERADMIN: ven todo el catálogo o filtran por programa / ficha.
+        - APRENDIZ / INSTRUCTOR / MONITOR: aislamiento estricto por el programa asignado a su cuenta
+          (si la cuenta no trae un programa reconocible se usa el solicitado; sin programa -> []).
+        """
+        from ..dictionary_programs import canonical_program_key, extract_ficha_code
 
-        # Segmentación estricta por programa y ficha del usuario
         user = request.user
-        role_id = getattr(user, 'role_id', None)
-        user_program = getattr(user, 'program', None)
+        role_id = str(getattr(user, 'role_id', '') or getattr(user, 'role', '') or '').upper()
+        req_program = request.query_params.get('program')
+        req_ficha = (
+            request.query_params.get('ficha')
+            or request.query_params.get('fichaId')
+            or request.query_params.get('ficha_id')
+        )
 
-        if role_id in ('INSTRUCTOR', 'MONITOR') and user_program:
-            if not program and not ficha_id:
+        if role_id in ('ADMIN', 'SUPERADMIN', 'ADMINISTRADOR'):
+            program, ficha = req_program, req_ficha
+        else:
+            user_program = getattr(user, 'program', None)
+            if canonical_program_key(user_program):
                 program = user_program
-        elif role_id == 'APRENDIZ' and not program and not ficha_id:
-            program = user_program
-
-        # Si el aprendiz no tiene ficha ni programa activo, retornar 200 OK con array vacío []
-        if role_id == 'APRENDIZ' and not program and not ficha_id:
-            return Response([])
+            elif canonical_program_key(req_program):
+                program = req_program
+            else:
+                return Response([])
+            # La ficha se toma de la cuenta; solo si no la trae se acepta un código numérico solicitado
+            ficha = extract_ficha_code(user_program)
+            if not ficha:
+                ficha = extract_ficha_code(req_ficha)
 
         return Response(DictionaryController.list_all(
             subject_id=request.query_params.get('subject'),
@@ -1190,7 +1207,7 @@ class DigitalDictionaryViewSet(viewsets.ViewSet):
             competence=request.query_params.get('competence'),
             search=request.query_params.get('search'),
             program=program,
-            ficha_id=ficha_id,
+            ficha=ficha,
         ))
 
     def retrieve(self, request, pk=None):
@@ -1222,6 +1239,36 @@ class DigitalDictionaryViewSet(viewsets.ViewSet):
         if error:
             return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['get'], url_path='videos')
+    def get_program_videos(self, request):
+        program = (request.query_params.get('program') or getattr(request.user, 'program', '') or 'ADSO').upper()
+        
+        videos_catalog = {
+            'ADSO': [
+                {'id': 1, 'title': 'Fundamentos de Desarrollo de Software', 'duration': '12:45', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'description': 'Introducción al ciclo de vida del software y metodologías ágiles.'},
+                {'id': 2, 'title': 'Arquitectura de APIs RESTful y Django', 'duration': '15:20', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 'description': 'Diseño y consumo de servicios backend estructurados.'},
+                {'id': 3, 'title': 'Control de Versiones y Flujos Git', 'duration': '18:10', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 'description': 'Gestión de repositorios, ramas y despliegue continuo.'},
+            ],
+            'MECANICA': [
+                {'id': 1, 'title': 'Mecanizado CNC y Herramientas Rotativas', 'duration': '14:30', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'description': 'Operación de tornos, fresadoras y metrología.'},
+                {'id': 2, 'title': 'Tribología y Sistemas de Lubricación', 'duration': '11:15', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 'description': 'Reducción de fricción y mantenimiento predictivo industrial.'},
+                {'id': 3, 'title': 'Tolerancias Geométricas e ISO', 'duration': '16:40', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 'description': 'Ajustes, holguras y calibración dimensional.'},
+            ],
+            'MULTIMEDIA': [
+                {'id': 1, 'title': 'Composición Digital y Animación 2D', 'duration': '13:50', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'description': 'Principios de animación, keyframes y renderizado vectorial.'},
+                {'id': 2, 'title': 'Diseño UI/UX y Prototipado Interactivo', 'duration': '17:25', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 'description': 'Jerarquía visual, wireframes y experiencia de usuario.'},
+                {'id': 3, 'title': 'Producción y Masterización Audiovisual', 'duration': '19:00', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 'description': 'Captura, sincronización de sonido y códecs de compresión.'},
+            ]
+        }
+
+        key = 'MECANICA' if ('MECANICA' in program or '3520681' in program) else 'MULTIMEDIA' if ('MULTI' in program or '2554901' in program or 'DISEÑO' in program) else 'ADSO'
+        return Response(videos_catalog.get(key, videos_catalog['ADSO']), status=status.HTTP_200_OK)
+
+
+# Alias para DictionaryViewSet
+DictionaryViewSet = DigitalDictionaryViewSet
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1601,9 +1648,11 @@ class AdminMetricsAPIView(APIView):
     def get(self, request):
         total_users = User.objects.count()
         # Filtrado de usuarios activos a través de Person o User status
-        active_users = User.objects.filter(person__status='ACTIVO').count()
+        active_users = User.objects.filter(
+            Q(person__status='ACTIVO') | Q(status='EN_FORMACION')
+        ).distinct().count()
         if active_users == 0 and total_users > 0:
-            active_users = User.objects.filter(status='EN_FORMACION').count() or total_users
+            active_users = total_users
 
         # Desglose de usuarios por rol institucional
         students_count = User.objects.filter(role_id='APRENDIZ').count()
@@ -1769,3 +1818,9 @@ class StudyStreakAPIView(APIView):
 
 
 
+
+
+# Vista y alias para estadísticas de dashboard administrativo
+class AdminDashboardStatsView(AdminMetricsAPIView):
+    """Estadísticas consolidadas del sistema para el Dashboard de Administración."""
+    pass
