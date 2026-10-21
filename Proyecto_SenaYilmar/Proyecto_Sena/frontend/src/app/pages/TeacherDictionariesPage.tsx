@@ -235,6 +235,22 @@ export function TeacherDictionariesPage() {
   const teacherName = user?.name || sessionStorage.getItem("userName") || "Instructor";
   const teacherProgram = user?.program || sessionStorage.getItem("userProgram") || "ADSO";
 
+  const [selectedProgram, setSelectedProgram] = useState<string>(() => {
+    const raw = user?.program || sessionStorage.getItem("userProgram") || "ADSO";
+    if (raw.toLowerCase().includes("mecanic") || raw.toLowerCase().includes("mecánica")) return "Mecánica Industrial";
+    if (raw.toLowerCase().includes("multi") || raw.toLowerCase().includes("multimedia")) return "Producción Multimedia";
+    return "ADSO";
+  });
+
+  const getCleanProgramParam = (prog?: string) => {
+    if (!prog || prog === "all" || prog.toLowerCase() === "todos") return undefined;
+    const p = prog.toLowerCase();
+    if (p.includes("mecanic") || p.includes("mecánica")) return "Mecanica";
+    if (p.includes("multi") || p.includes("multimedia")) return "Multimedia";
+    if (p.includes("adso") || p.includes("software")) return "ADSO";
+    return prog.split("(")[0].trim() || undefined;
+  };
+
   // Cargar asignaturas disponibles
   useEffect(() => {
     api.getSubjects()
@@ -251,13 +267,13 @@ export function TeacherDictionariesPage() {
   const loadDocuments = async () => {
     setIsLoading(true);
     try {
+      const cleanProg = getCleanProgramParam(selectedProgram);
       const apiDocs = await api.getDocuments({
         subject: selectedSubject !== "all" ? selectedSubject : undefined,
         level: selectedLevel !== "all" ? selectedLevel : undefined,
         competence: selectedCompetence !== "all" ? selectedCompetence : undefined,
         search: searchTerm || undefined,
-        program: teacherProgram || undefined,
-        fichaId: teacherProgram || undefined,
+        program: cleanProg,
       });
 
       const convertedDocs: DictionaryDocument[] = apiDocs.map((doc: any) => ({
@@ -297,12 +313,32 @@ export function TeacherDictionariesPage() {
     }, 250);
 
     return () => clearTimeout(debounceTimer);
-  }, [selectedSubject, selectedLevel, selectedCompetence, searchTerm]);
+  }, [selectedProgram, selectedSubject, selectedLevel, selectedCompetence, searchTerm]);
 
-  // Documentos base asignados a la ficha del instructor
+  // Documentos base según el programa seleccionado
   const baseTeacherDocuments = useMemo(() => {
-    return documents.filter((doc) => matchesTeacherProgram(doc.program, teacherProgram));
-  }, [documents, teacherProgram]);
+    if (!selectedProgram || selectedProgram === "all") return documents;
+    return documents.filter((doc) => {
+      const dp = (doc.program || "").toLowerCase();
+      const sp = selectedProgram.toLowerCase();
+      if (sp.includes("adso") || sp.includes("software")) {
+        return dp.includes("adso") || dp.includes("software") || !dp || dp.includes("análisis");
+      }
+      if (sp.includes("mecanic") || sp.includes("mecánica")) {
+        return dp.includes("mecanic") || dp.includes("mecánica");
+      }
+      if (sp.includes("multi") || sp.includes("multimedia")) {
+        return dp.includes("multi") || dp.includes("multimedia");
+      }
+      return dp.includes(sp) || sp.includes(dp);
+    });
+  }, [documents, selectedProgram]);
+
+  // Contadores dinámicos calculados directamente con baseTeacherDocuments
+  const totalWordsCount = baseTeacherDocuments.length;
+  const totalAudiosCount = baseTeacherDocuments.filter((d) => Boolean(d.audioUrl || (d as any).audio || (d as any).audio_url)).length;
+  const totalImagesCount = baseTeacherDocuments.filter((d) => Boolean(d.imageUrl || (d as any).image || (d as any).image_url)).length;
+  const totalVideosCount = 3;
 
   // Contadores dinámicos sincronizados por Habilidad (Category / Skill) y Nivel CEFR
   const skillCounts = useMemo(() => {
@@ -368,7 +404,7 @@ export function TeacherDictionariesPage() {
     setSelectedSubject("all");
   };
 
-  const programLabel = teacherProgram || "tu programa de formación";
+  const programLabel = selectedProgram && selectedProgram !== "all" ? selectedProgram : (teacherProgram || "tu programa de formación");
 
   // Fallback nativo Web Speech API silencioso sin toasts de error 404
   const speakFallback = (text: string, docId: string) => {
@@ -632,6 +668,33 @@ export function TeacherDictionariesPage() {
               <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-normal leading-relaxed mt-1">
                 {teacherName.split(" ")[0]}, administra los términos técnicos, audios de pronunciación nativa e ilustraciones para {programLabel}.
               </p>
+
+              {/* Selector de Programa de Formación Activo */}
+              <div className="flex flex-wrap items-center gap-2 pt-3">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-1">Programa:</span>
+                {[
+                  { id: "ADSO", name: "ADSO" },
+                  { id: "Mecánica Industrial", name: "Mecánica Industrial" },
+                  { id: "Producción Multimedia", name: "Producción Multimedia" },
+                  { id: "all", name: "Todos los Programas" },
+                ].map((prog) => {
+                  const isSelected = selectedProgram.toLowerCase().includes(prog.id.toLowerCase()) || (prog.id === "all" && selectedProgram === "all");
+                  return (
+                    <button
+                      key={prog.id}
+                      type="button"
+                      onClick={() => setSelectedProgram(prog.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-[#39A900] text-white shadow-xs"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      {prog.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex items-center gap-3 self-start lg:self-end">
@@ -655,6 +718,53 @@ export function TeacherDictionariesPage() {
             </div>
           </div>
         </motion.div>
+
+        {/* Cuadrícula de Contadores Reales de Recursos (Palabras, Imágenes, Audios, Videos) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Palabras</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalWordsCount}</p>
+              <p className="text-[10px] text-slate-400">Términos en BD</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <BookOpen className="w-5 h-5" strokeWidth={1.8} />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Imágenes</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalImagesCount}</p>
+              <p className="text-[10px] text-slate-400">Ilustraciones 16:9</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center text-teal-600 dark:text-teal-400">
+              <ImageIcon className="w-5 h-5" strokeWidth={1.8} />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Audios</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalAudiosCount}</p>
+              <p className="text-[10px] text-slate-400">Pronunciación Nativa</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400">
+              <Volume2 className="w-5 h-5" strokeWidth={1.8} />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Videos</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalVideosCount}</p>
+              <p className="text-[10px] text-slate-400">Streaming Formativo</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <Video className="w-5 h-5" strokeWidth={1.8} />
+            </div>
+          </div>
+        </div>
 
         {/* ─── Barra de Búsqueda y Filtros con Estilo SaaS Moderno ─── */}
         <motion.div

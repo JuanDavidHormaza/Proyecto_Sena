@@ -29,9 +29,17 @@ export { clearAllTokens } from '../services/api';
  * 4. Invalidar cookies cliente.
  * 5. Redirección dura sin historial (window.location.replace('/login')).
  */
-export const executeFullLogout = async (redirectUrl: string = '/login'): Promise<void> => {
+/**
+ * Protocolo estricto de Logout Total:
+ * 1. Purgar storages (localStorage, sessionStorage).
+ * 2. Desregistrar Service Workers activos.
+ * 3. Purgar CacheStorage.
+ * 4. Limpiar cookies del dominio.
+ * 5. Redirección forzada sin historial previo (/login?logout=success).
+ */
+export const logout = async (redirectUrl: string = '/login?logout=success'): Promise<void> => {
   try {
-    // 1. Limpieza de todos los almacenamientos web
+    // 1. Purgar storages
     try {
       localStorage.clear();
       sessionStorage.clear();
@@ -39,29 +47,29 @@ export const executeFullLogout = async (redirectUrl: string = '/login'): Promise
       // ignore
     }
 
-    // 2. Desregistrar Service Workers si existen
+    // 2. Desregistrar Service Workers activos
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       try {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const registration of registrations) {
-          await registration.unregister();
+        for (const reg of registrations) {
+          await reg.unregister();
         }
       } catch {
         // ignore
       }
     }
 
-    // 3. Purgar Cache Storage del navegador
+    // 3. Purgar CacheStorage
     if (typeof window !== 'undefined' && 'caches' in window) {
       try {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map((name) => caches.delete(name)));
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
       } catch {
         // ignore
       }
     }
 
-    // 4. Invalidador de cookies cliente
+    // 4. Limpiar cookies del dominio
     if (typeof document !== 'undefined' && document.cookie) {
       try {
         document.cookie.split(";").forEach((c) => {
@@ -74,12 +82,14 @@ export const executeFullLogout = async (redirectUrl: string = '/login'): Promise
       }
     }
   } finally {
-    // 5. Redirección dura sin historial
+    // 5. Redirección forzada sin historial previo
     if (typeof window !== 'undefined') {
       window.location.replace(redirectUrl);
     }
   }
 };
+
+export const executeFullLogout = logout;
 
 // Motivo por el que una sesión previa fue descartada al cargar la app.
 type SessionDropReason = 'idle_timeout' | 'session_expired' | null;

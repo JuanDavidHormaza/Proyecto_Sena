@@ -1186,21 +1186,13 @@ class DigitalDictionaryViewSet(viewsets.ViewSet):
             or request.query_params.get('ficha_id')
         )
 
-        if role_id in ('ADMIN', 'SUPERADMIN', 'ADMINISTRADOR'):
+        is_admin = role_id in ('ADMIN', 'SUPERADMIN', 'ADMINISTRADOR', 'COORDINADOR')
+        if is_admin:
             program, ficha = req_program, req_ficha
         else:
             user_program = getattr(user, 'program', None)
-            if canonical_program_key(user_program):
-                program = user_program
-            elif canonical_program_key(req_program):
-                program = req_program
-            else:
-                return Response([])
-            # La ficha se toma de la cuenta; solo si no la trae se acepta un código numérico solicitado
-            ficha = extract_ficha_code(user_program)
-            if not ficha:
-                ficha = extract_ficha_code(req_ficha)
-
+            program = req_program or user_program or 'ADSO'
+            ficha = extract_ficha_code(req_ficha) or extract_ficha_code(user_program)
         return Response(DictionaryController.list_all(
             subject_id=request.query_params.get('subject'),
             level=request.query_params.get('level'),
@@ -1848,19 +1840,53 @@ class AdminDashboardStatsView(APIView):
             distinct_progs = DigitalDictionary.objects.values('program').distinct().count()
             total_dictionaries = distinct_progs if distinct_progs > 0 else 1
 
-        # 2. Total Términos / Vocabulario en el diccionario (64)
-        total_terms = DigitalDictionary.objects.count()
+        # 2. Total Términos / Vocabulario en el diccionario (flexible por programa)
+        program = request.query_params.get('program')
+        terms_qs = DigitalDictionary.objects.all()
+
+        if program and program.lower() not in ('all', 'todos', 'todos los programas'):
+            prog_clean = program.split('(')[0].strip()
+            p_upper = prog_clean.upper()
+            if 'ADSO' in p_upper or 'SOFTWARE' in p_upper:
+                terms_qs = terms_qs.filter(
+                    Q(program__icontains=prog_clean) |
+                    Q(program__icontains='ADSO') |
+                    Q(program__icontains='Software') |
+                    Q(subject__subject_id='ADSO') |
+                    Q(program__isnull=True) |
+                    Q(program='')
+                )
+            elif 'MECANIC' in p_upper or 'MECANICA' in p_upper or 'MECÁNICA' in p_upper:
+                terms_qs = terms_qs.filter(
+                    Q(program__icontains=prog_clean) |
+                    Q(program__icontains='Mecanic') |
+                    Q(program__icontains='Mecánica') |
+                    Q(subject__subject_id='MECANICA')
+                )
+            elif 'MULTI' in p_upper:
+                terms_qs = terms_qs.filter(
+                    Q(program__icontains=prog_clean) |
+                    Q(program__icontains='Multi') |
+                    Q(program__icontains='Multimedia') |
+                    Q(subject__subject_id='MULTIMEDIA')
+                )
+            else:
+                terms_qs = terms_qs.filter(
+                    Q(program__icontains=prog_clean) |
+                    Q(subject__description__icontains=prog_clean)
+                )
+
+        total_terms = terms_qs.count()
 
         # 3. Competencias: Contar competencias únicas registradas o activas (4: Speaking, Writing, Grammar, Reading)
-        competencies_count = DigitalDictionary.objects.values('competence').distinct().count()
+        competencies_count = terms_qs.values('competence').distinct().count()
         if competencies_count < 4:
             competencies_count = 4
 
         # 4. Recursos Multimedia reales asociados a términos
-        audio_count = DigitalDictionary.objects.exclude(audio__isnull=True).exclude(audio='').count()
-        video_count = DigitalDictionary.objects.exclude(video__isnull=True).exclude(video='').count()
-        image_count = DigitalDictionary.objects.exclude(image__isnull=True).exclude(image='').count()
-
+        audio_count = terms_qs.exclude(audio__isnull=True).exclude(audio='').count()
+        video_count = terms_qs.exclude(video__isnull=True).exclude(video='').count()
+        image_count = terms_qs.exclude(image__isnull=True).exclude(image='').count()
         return Response({
             'total_users': total_users,
             'active_users': active_users,

@@ -328,6 +328,9 @@ class Command(BaseCommand):
                     'audio': item['audio'],
                     'image': item['image'],
                     'video': '',
+                    'program': 'ADSO',
+                    'ficha': '',
+                    'spanish_translation': item.get('spanish_translation', ''),
                 }
             )
             if created:

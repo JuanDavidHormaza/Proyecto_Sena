@@ -854,31 +854,54 @@ class DictionaryController:
                 Q(spanish_translation__icontains=s)
             )
 
-        # Filtro estricto por programa / ficha (aislamiento multi-tenant)
+        # Filtro flexible por programa / ficha (aislamiento multi-tenant)
         program_text = (program or '').strip()
         ficha_text = (ficha or ficha_id or '').strip()
-        if program_text.lower() == 'all':
+        if program_text.lower() in ('all', 'todos', 'todos los programas'):
             program_text = ''
-        if ficha_text.lower() == 'all':
+        if ficha_text.lower() in ('all', 'todas', 'todas las fichas'):
             ficha_text = ''
-        # Compatibilidad: el frontend envía el nombre del programa también en `fichaId`
+
+        # Compatibilidad: si envían el nombre del programa en fichaId
         if not program_text and ficha_text and not re.fullmatch(r'\d{6,8}', ficha_text):
             program_text = ficha_text
+            ficha_text = ''
 
         if program_text:
-            program_key = canonical_program_key(program_text)
-            if program_key:
-                queryset = queryset.filter(program_q(program_key))
+            prog_clean = program_text.split('(')[0].strip()
+            p_upper = prog_clean.upper()
+            if 'ADSO' in p_upper or 'SOFTWARE' in p_upper:
+                queryset = queryset.filter(
+                    Q(program__icontains=prog_clean) |
+                    Q(program__icontains='ADSO') |
+                    Q(program__icontains='Software') |
+                    Q(subject__subject_id='ADSO') |
+                    Q(program__isnull=True) |
+                    Q(program='')
+                )
+            elif 'MECANIC' in p_upper or 'MECANICA' in p_upper or 'MECÁNICA' in p_upper:
+                queryset = queryset.filter(
+                    Q(program__icontains=prog_clean) |
+                    Q(program__icontains='Mecanic') |
+                    Q(program__icontains='Mecánica') |
+                    Q(subject__subject_id='MECANICA')
+                )
+            elif 'MULTI' in p_upper:
+                queryset = queryset.filter(
+                    Q(program__icontains=prog_clean) |
+                    Q(program__icontains='Multi') |
+                    Q(program__icontains='Multimedia') |
+                    Q(subject__subject_id='MULTIMEDIA')
+                )
             else:
-                clean_name = clean_program_name(program_text)
-                if not clean_name:
-                    return []
-                queryset = queryset.filter(program__icontains=clean_name)
-        elif program is not None and not program.strip() and not ficha_text:
-            # Sin ficha ni programa activo: 200 OK con lista vacía, nunca un 500
-            return []
+                clean_name = clean_program_name(prog_clean)
+                if clean_name:
+                    queryset = queryset.filter(
+                        Q(program__icontains=clean_name) |
+                        Q(subject__description__icontains=clean_name)
+                    )
 
-        ficha_code = extract_ficha_code(ficha_text, program_text)
+        ficha_code = extract_ficha_code(ficha_text)
         if ficha_code:
             # Los términos sin ficha asignada aplican a todas las fichas del programa
             queryset = queryset.filter(

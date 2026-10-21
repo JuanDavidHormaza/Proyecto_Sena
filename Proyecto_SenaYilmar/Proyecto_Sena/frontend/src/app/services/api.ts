@@ -388,8 +388,6 @@ export async function get<T = any>(path: string, options?: { headers?: HeadersIn
     ? (sessionStorage.getItem('token') ||
        sessionStorage.getItem('accessToken') ||
        sessionStorage.getItem('access_token') ||
-       localStorage.getItem('token') ||
-       localStorage.getItem('accessToken') ||
        getAccessTokenOrExpire())
     : null;
 
@@ -1501,8 +1499,6 @@ export async function getAdminMetrics(): Promise<AdminMetrics> {
     ? (sessionStorage.getItem('token') ||
        sessionStorage.getItem('accessToken') ||
        sessionStorage.getItem('access_token') ||
-       localStorage.getItem('token') ||
-       localStorage.getItem('accessToken') ||
        getAccessTokenOrExpire())
     : null;
 

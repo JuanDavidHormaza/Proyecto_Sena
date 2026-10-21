@@ -30,16 +30,16 @@ PROGRAM_NAMES = {
 
 # Palabras clave (sin tildes, en minúscula) que identifican cada programa en textos libres
 _KEYWORDS = {
-    PROGRAM_ADSO: ('adso', 'software', 'analisis y desarrollo'),
-    PROGRAM_MECANICA: ('mecanica',),
-    PROGRAM_MULTIMEDIA: ('multimedia',),
+    PROGRAM_ADSO: ('adso', 'software', 'analisis y desarrollo', 'analisis'),
+    PROGRAM_MECANICA: ('mecanica', 'mecanic'),
+    PROGRAM_MULTIMEDIA: ('multimedia', 'multi'),
 }
 
 # Variantes (con y sin tilde) buscadas con icontains sobre la columna `program` de la BD
 _DB_TERMS = {
-    PROGRAM_ADSO: ('ADSO', 'Software', 'Análisis y Desarrollo', 'Analisis y Desarrollo'),
+    PROGRAM_ADSO: ('ADSO', 'Software', 'Análisis y Desarrollo', 'Analisis y Desarrollo', 'Analisis'),
     PROGRAM_MECANICA: ('Mecánica', 'Mecanica'),
-    PROGRAM_MULTIMEDIA: ('Multimedia',),
+    PROGRAM_MULTIMEDIA: ('Multimedia', 'Producción Multimedia', 'Produccion Multimedia'),
 }
 
 _FICHA_RE = re.compile(r'\d{6,8}')
@@ -47,7 +47,7 @@ _FICHA_RE = re.compile(r'\d{6,8}')
 
 def _strip_accents(text: str) -> str:
     return ''.join(
-        c for c in unicodedata.normalize('NFKD', text) if not unicodedata.combining(c)
+        c for c in unicodedata.normalize('NFKD', str(text)) if not unicodedata.combining(c)
     )
 
 
@@ -65,11 +65,15 @@ def canonical_program_key(text: Optional[str]) -> Optional[str]:
 def program_q(key: str) -> Q:
     """Filtro ORM para los términos de un programa canónico (incluye filas heredadas sin programa en ADSO)."""
     q = Q()
-    for term in _DB_TERMS[key]:
+    for term in _DB_TERMS.get(key, ()):
         q |= Q(program__icontains=term)
     if key == PROGRAM_ADSO:
         # Filas anteriores a la segmentación (columna vacía) pertenecían al diccionario ADSO
-        q |= Q(program__isnull=True) | Q(program='')
+        q |= Q(program__isnull=True) | Q(program='') | Q(subject__subject_id='ADSO')
+    elif key == PROGRAM_MECANICA:
+        q |= Q(subject__subject_id='MECANICA')
+    elif key == PROGRAM_MULTIMEDIA:
+        q |= Q(subject__subject_id='MULTIMEDIA')
     return q
 
 

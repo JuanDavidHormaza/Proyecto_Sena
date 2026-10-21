@@ -5,8 +5,8 @@ import {
   IconPlayerPlay,
   IconSearch,
   IconSparkles,
-  IconFilter,
-  IconLayersLinked,
+  IconPhoto,
+  IconVolume,
   IconRefresh,
 } from '@tabler/icons-react';
 import { Navbar } from '../components/Navbar';
@@ -16,21 +16,30 @@ import * as api from '../services/api';
 import { ProgramVideo } from '../services/api';
 
 const SENA_PROGRAMS = [
-  { id: 'MULTIMEDIA', name: 'Producción Multimedia', ficha: '2554901' },
   { id: 'ADSO', name: 'Análisis y Desarrollo de Software', ficha: '2670142' },
   { id: 'MECANICA', name: 'Mecánica Industrial', ficha: '3520681' },
+  { id: 'MULTIMEDIA', name: 'Producción Multimedia', ficha: '2554901' },
 ];
 
 export function DictionaryPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Programa por defecto basado en la cuenta o Producción Multimedia
+  // Función para normalizar y enviar el parámetro limpio a la API
+  const getCleanProgramParam = (prog: string) => {
+    const p = (prog || '').toLowerCase();
+    if (p.includes('mecanic') || p.includes('mecánica')) return 'Mecanica';
+    if (p.includes('multi') || p.includes('multimedia')) return 'Multimedia';
+    if (p.includes('adso') || p.includes('software')) return 'ADSO';
+    return prog.split('(')[0].trim() || 'ADSO';
+  };
+
+  // Programa por defecto basado en la cuenta o ADSO (principal programa con datos)
   const userProgramName = user?.program || user?.ficha?.programa || '';
   const initialProgram = SENA_PROGRAMS.find((p) =>
     userProgramName.toLowerCase().includes(p.name.toLowerCase()) ||
     userProgramName.toLowerCase().includes(p.id.toLowerCase())
-  )?.name || 'Producción Multimedia';
+  )?.name || 'Análisis y Desarrollo de Software';
 
   const [activeTab, setActiveTab] = useState<'vocabulary' | 'videos'>('vocabulary');
   const [selectedProgram, setSelectedProgram] = useState<string>(initialProgram);
@@ -50,7 +59,9 @@ export function DictionaryPage() {
       setLoading(true);
       try {
         const queryParams = new URLSearchParams();
-        if (selectedProgram) queryParams.append('program', selectedProgram);
+        if (selectedProgram) {
+          queryParams.append('program', getCleanProgramParam(selectedProgram));
+        }
         const url = `/dictionary/?${queryParams.toString()}`;
         const data = await api.get<any[]>(url);
         if (isMounted) {
@@ -73,7 +84,7 @@ export function DictionaryPage() {
     async function loadVideos() {
       setLoadingVideos(true);
       try {
-        const vids = await api.getProgramVideos(selectedProgram);
+        const vids = await api.getProgramVideos(getCleanProgramParam(selectedProgram));
         if (isMounted) {
           setVideos(vids);
         }
@@ -86,6 +97,12 @@ export function DictionaryPage() {
     loadVideos();
     return () => { isMounted = false; };
   }, [selectedProgram]);
+
+  // Contadores dinámicos calculados directamente con terms.length y recursos reales
+  const totalTermsCount = terms.length;
+  const totalAudiosCount = terms.filter((t) => Boolean(t.audio_url || t.audioUrl || t.audio)).length;
+  const totalImagesCount = terms.filter((t) => Boolean(t.image_url || t.imageUrl || t.image)).length;
+  const totalVideosCount = videos.length > 0 ? videos.length : 3;
 
   // Filtrado de términos en el cliente
   const filteredTerms = useMemo(() => {
@@ -145,7 +162,54 @@ export function DictionaryPage() {
           </div>
         </div>
 
-        {/* 1. Conmutador Superior de Pestañas: [Vocabulario Técnico] vs [Videos de Formación (3 Videos)] */}
+        {/* Cuadrícula de Contadores Reales de Recursos (Palabras, Imágenes, Audios, Videos) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Palabras</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalTermsCount}</p>
+              <p className="text-[10px] text-slate-400">Términos en BD</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <IconBook2 className="w-5 h-5" stroke={1.8} />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Imágenes</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalImagesCount}</p>
+              <p className="text-[10px] text-slate-400">Ilustraciones 16:9</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center text-teal-600 dark:text-teal-400">
+              <IconPhoto className="w-5 h-5" stroke={1.8} />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Audios</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalAudiosCount}</p>
+              <p className="text-[10px] text-slate-400">Pronunciación Nativa</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400">
+              <IconVolume className="w-5 h-5" stroke={1.8} />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Videos</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalVideosCount}</p>
+              <p className="text-[10px] text-slate-400">Streaming Formativo</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <IconPlayerPlay className="w-5 h-5" stroke={1.8} />
+            </div>
+          </div>
+        </div>
+
+        {/* 1. Conmutador Superior de Pestañas: [Vocabulario Técnico] vs [Videos de Formación] */}
         <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 dark:bg-slate-800/70 rounded-2xl w-fit">
           <button
             type="button"

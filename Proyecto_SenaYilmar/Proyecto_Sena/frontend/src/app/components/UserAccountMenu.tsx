@@ -72,9 +72,8 @@ export function UserAccountMenu({ accent = "green", compact = false, showRole = 
     navigate(path);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
   };
 
   const handleSwitchFicha = async (targetProg: string) => {
