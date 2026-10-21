@@ -34,8 +34,7 @@ services:
     container_name: worklex_minio_provision
     restart: "no"
     depends_on:
-      worklex_minio:
-        condition: service_healthy
+      - worklex_minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Admin123*}
