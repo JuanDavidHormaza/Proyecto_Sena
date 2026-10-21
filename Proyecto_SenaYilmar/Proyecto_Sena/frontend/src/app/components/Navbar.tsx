@@ -25,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
   const token = typeof window !== "undefined"
     ? sessionStorage.getItem("accessToken") || sessionStorage.getItem("access_token") || sessionStorage.getItem("token")
     : null;
-  const hasValidSession = Boolean(isAuthenticated || (user && token));
+  const hasValidSession = Boolean(token && isAuthenticated && user);
 
   const currentPath = activePath || location.pathname;
 

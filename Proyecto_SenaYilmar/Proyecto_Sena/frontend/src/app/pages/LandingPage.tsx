@@ -27,7 +27,7 @@ export function LandingPage() {
   const token = typeof window !== "undefined"
     ? sessionStorage.getItem("accessToken") || sessionStorage.getItem("access_token") || sessionStorage.getItem("token")
     : null;
-  const hasValidSession = Boolean(isAuthenticated || (user && token));
+  const hasValidSession = Boolean(token && isAuthenticated && user);
 
   const getDashboardPath = () => {
     const role = (user?.role || sessionStorage.getItem("userRole") || "").toLowerCase();

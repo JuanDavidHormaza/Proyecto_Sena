@@ -27,17 +27,13 @@ export { clearAllTokens } from '../services/api';
  * 2. Desregistrar Service Workers activos si existen.
  * 3. Purgar Cache Storage del navegador.
  * 4. Invalidar cookies cliente.
- * 5. Redirección dura sin historial (window.location.replace).
+ * 5. Redirección dura sin historial (window.location.replace('/login')).
  */
-export const executeFullLogout = async (redirectUrl: string = '/login?logout=success'): Promise<void> => {
+export const executeFullLogout = async (redirectUrl: string = '/login'): Promise<void> => {
   try {
     // 1. Limpieza de todos los almacenamientos web
     try {
       localStorage.clear();
-    } catch {
-      // ignore
-    }
-    try {
       sessionStorage.clear();
     } catch {
       // ignore
@@ -122,9 +118,10 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  // AUDITORÍA DE RE-HIDRATACIÓN: El estado inicial SIEMPRE es null.
+  // AUDITORÍA DE RE-HIDRATACIÓN: El estado inicial SIEMPRE es null y false.
   // PROHIBIDO asignar usuarios por defecto o estados simulados en memoria antes de validar.
   const [user, setUser] = useState<ApiUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Verificación estricta de token y sesión contra el backend (/api/auth/me/)
@@ -139,6 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearAllTokens();
         if (isMounted) {
           setUser(null);
+          setIsAuthenticated(false);
           setIsLoading(false);
         }
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
@@ -149,10 +147,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const token = typeof window !== 'undefined' ? getValidAccessToken() : null;
 
-      // Si no hay token en el cliente, finalizar carga como no autenticado (null)
+      // Si no hay token en el cliente, finalizar carga como no autenticado (null, false)
       if (!token) {
         if (isMounted) {
           setUser(null);
+          setIsAuthenticated(false);
           setIsLoading(false);
         }
         return;
@@ -168,6 +167,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (isMounted) {
           const storedAvatar = sessionStorage.getItem('userAvatar') || '';
           setUser({ ...userData, avatar: userData.avatar || storedAvatar });
+          setIsAuthenticated(true);
         }
 
         // Actualizar sessionStorage exclusivamente con los datos validados por Django
@@ -201,6 +201,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearAllTokens();
         if (isMounted) {
           setUser(null);
+          setIsAuthenticated(false);
         }
       } finally {
         if (isMounted) {
@@ -224,6 +225,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const syncData = JSON.parse(e.newValue);
           if (syncData.type === 'logout' || syncData.type === 'idle_timeout') {
             setUser(null);
+            setIsAuthenticated(false);
             clearAllTokens();
             if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
               window.location.href = syncData.type === 'idle_timeout' ? '/login?reason=idle_timeout' : '/login';
@@ -233,8 +235,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
               try {
                 const refreshedUser = await getMe();
                 setUser(refreshedUser);
+                setIsAuthenticated(true);
               } catch {
                 setUser(null);
+                setIsAuthenticated(false);
                 window.location.href = '/login';
               }
             }
@@ -246,6 +250,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (e.key === 'accessToken' && !e.newValue) {
         setUser(null);
+        setIsAuthenticated(false);
         clearAllTokens();
         if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
           window.location.href = '/login';
@@ -261,6 +266,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (credentials: any) => {
     clearAllTokens();
     setUser(null);
+    setIsAuthenticated(false);
 
     try {
       const response = (credentials?.otp_email && credentials?.otp_code)
@@ -278,6 +284,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         avatar: response.user.avatar || '',
       };
       setUser(cleanUser);
+      setIsAuthenticated(true);
 
       sessionStorage.setItem('userName', cleanUser.name);
       sessionStorage.setItem('userRole', cleanUser.role);
@@ -318,6 +325,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const register = async (data: RegisterData) => {
     clearAllTokens();
     setUser(null);
+    setIsAuthenticated(false);
 
     const response = await apiRegister(data);
 
@@ -326,6 +334,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     touchActivity();
 
     setUser(response.user);
+    setIsAuthenticated(true);
 
     sessionStorage.setItem('userName', response.user.name);
     sessionStorage.setItem('userRole', response.user.role);
@@ -347,10 +356,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Logout con protocolo estricto de purga de sesión
+  // Logout con protocolo estricto de purga de sesión total
   const logout = useCallback(async (reason?: string) => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
     setUser(null);
-    clearAllTokens();
+    setIsAuthenticated(false);
+
     try {
       sessionStorage.setItem(
         'auth_sync_event',
@@ -363,7 +379,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // ignore
     }
 
-    const targetUrl = reason === 'idle_timeout' ? '/login?reason=idle_timeout' : '/login?logout=success';
+    const targetUrl = reason === 'idle_timeout' ? '/login?reason=idle_timeout' : '/login';
     await executeFullLogout(targetUrl);
   }, []);
 
@@ -425,6 +441,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const mergedUser = { ...updatedUser, avatar: finalAvatar };
 
     setUser(mergedUser);
+    setIsAuthenticated(true);
     sessionStorage.setItem('userName', updatedUser.name);
     sessionStorage.setItem('userRole', updatedUser.role);
     sessionStorage.setItem('userId', updatedUser.id);
@@ -444,7 +461,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        isAuthenticated,
         isLoading,
         login,
         register,
