@@ -35,6 +35,15 @@ import {
 import { playEnglishSpeech } from "../utils/speech";
 import { QuizSkeleton } from "../components/QuizSkeleton";
 import { BrandLogo } from "../components/BrandLogo";
+import {
+  IconMicrophone,
+  IconHeadphones,
+  IconVolumeOff,
+  IconWifi,
+  IconClock,
+  IconTrophy,
+  IconArrowRight,
+} from "@tabler/icons-react";
 
 type AnswerState = "idle" | "correct" | "incorrect" | "submitted";
 
@@ -881,13 +890,13 @@ export function QuizPage() {
   // ── Pantalla Previa Informativa (Instrucciones antes de iniciar el quiz) ──
   if (!hasStartedExam) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sena-blue via-sena-blue-light to-sena-green flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-sena-blue via-sena-blue-light to-sena-green flex items-center justify-center p-4 py-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl border border-white/20"
+          className="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 lg:p-10 max-w-4xl lg:max-w-5xl w-full shadow-2xl border border-white/20"
         >
-          {/* Header */}
+          {/* Header Institucional */}
           <div className="flex items-center gap-3.5 mb-6 pb-5 border-b border-slate-100">
             <BrandLogo size="md" showSena={true} />
             <div>
@@ -898,77 +907,126 @@ export function QuizPage() {
             </div>
           </div>
 
-          {/* Cards informativas */}
-          <div className="space-y-4 mb-6">
+          {/* Panel Técnico Detallado con Cuadrícula de 6 Especificaciones */}
+          <div className="space-y-4">
             <p className="text-sm text-slate-600 leading-relaxed">
-              Bienvenido a la prueba de nivel adaptativa de WorkLex. Antes de comenzar, por favor ten en cuenta las siguientes especificaciones técnicas e instrucciones pedagógicas:
+              Bienvenido a la prueba de nivel adaptativa de WorkLex. Antes de comenzar, por favor revisa cuidadosamente las siguientes especificaciones técnicas, requerimientos de hardware y condiciones de conectividad para garantizar una experiencia óptima:
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                <Clock className="w-5 h-5 text-sena-blue flex-shrink-0 mt-0.5" strokeWidth={1.8} />
-                <div className="text-xs">
-                  <p className="font-bold text-slate-800">Duración Estimada</p>
-                  <p className="text-slate-500">15 a 20 minutos (35s por pregunta con cuenta regresiva).</p>
+            {/* Cuadrícula responsiva de 6 especificaciones (MatDash Style) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
+              {/* 1. Dispositivo y Micrófono Dedicado (Speaking) */}
+              <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-start hover:shadow-xs transition-all">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 flex-shrink-0">
+                    <IconMicrophone size={22} stroke={1.8} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">Micrófono y Dispositivo</h3>
                 </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Se requiere micrófono funcional (preferiblemente diadema o auriculares con micrófono integrado). Evita micrófonos lejanos con eco y autoriza los permisos de audio en el navegador antes de iniciar.
+                </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                <Trophy className="w-5 h-5 text-sena-green flex-shrink-0 mt-0.5" strokeWidth={1.8} />
-                <div className="text-xs">
-                  <p className="font-bold text-slate-800">Niveles Evaluados</p>
-                  <p className="text-slate-500">Evaluación progresiva MCER desde A1 hasta B2.</p>
+              {/* 2. Salida de Audio y Escucha (Listening) */}
+              <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-start hover:shadow-xs transition-all">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 flex-shrink-0">
+                    <IconHeadphones size={22} stroke={1.8} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">Salida de Audio Verificada</h3>
                 </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Asegura un nivel de volumen adecuado en tus altavoces o auriculares. Las locuciones y pronunciaciones técnicas de los reactivos se reproducen sin bucles infinitos.
+                </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                <Headphones className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
-                <div className="text-xs">
-                  <p className="font-bold text-slate-800">Audio y Video</p>
-                  <p className="text-slate-500">Se requiere salida de audio para escuchar modelos y pronunciaciones.</p>
+              {/* 3. Entorno Silencioso y Sin Interferencia */}
+              <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-start hover:shadow-xs transition-all">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 flex-shrink-0">
+                    <IconVolumeOff size={22} stroke={1.8} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">Entorno Silencioso</h3>
                 </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Ubícate en un espacio cerrado y silencioso. Ruidos ambientales, conversaciones externas o música de fondo pueden distorsionar la evaluación fonética del reconocimiento de voz.
+                </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                <Mic className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
-                <div className="text-xs">
-                  <p className="font-bold text-slate-800">Micrófono (Speaking)</p>
-                  <p className="text-slate-500">Podrás grabarte y escucharte antes de enviar tu evaluación oral.</p>
+              {/* 4. Navegador y Conexión de Red */}
+              <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-start hover:shadow-xs transition-all">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="p-2.5 rounded-xl bg-teal-50 text-teal-600 flex-shrink-0">
+                    <IconWifi size={22} stroke={1.8} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">Conectividad y Navegador</h3>
                 </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Utiliza navegadores actualizados basados en Chromium (Google Chrome o Microsoft Edge) con una conexión a Internet estable (cableada o Wi-Fi cercana) para evitar cortes de sesión.
+                </p>
+              </div>
+
+              {/* 5. Duración y Temporizador por Pregunta */}
+              <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-start hover:shadow-xs transition-all">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 flex-shrink-0">
+                    <IconClock size={22} stroke={1.8} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">Temporizador por Reactivo</h3>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Duración estimada de 15 a 20 minutos. Cada pregunta dispone de una cuenta regresiva individual de 35 segundos para emitir tu respuesta.
+                </p>
+              </div>
+
+              {/* 6. Medición del Dominio Técnico */}
+              <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-start hover:shadow-xs transition-all">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 flex-shrink-0">
+                    <IconTrophy size={22} stroke={1.8} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">Dominio de Vocabulario</h3>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Evaluación formativa sobre el catálogo técnico oficial homologado para tu programa de formación (ADSO, Mecánica Industrial o Producción Multimedia).
+                </p>
               </div>
             </div>
 
-            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
+            {/* Caja de Advertencia Institucional Reforzada */}
+            <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-amber-900 text-xs sm:text-sm leading-relaxed mb-6">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
               <span>
-                <strong>Importante:</strong> Si inicias la prueba y decides abandonarla sin responder preguntas, se registrará formalmente como <strong>"Sin Nivel / No Presentado"</strong> para no alterar tus estadísticas.
+                <strong>Advertencia de Abandono:</strong> Al presionar &apos;Comenzar Examen de Nivel&apos;, la sesión se considerará oficialmente iniciada. Si decides cerrar la pestaña, recargar la página o abandonar la prueba sin responder, el intento se registrará formalmente como &apos;Sin Nivel / No Presentado&apos; para proteger la integridad de tus estadísticas y métricas académicas.
               </span>
             </div>
           </div>
 
-          {/* Botones de acción */}
-          <div className="flex flex-col sm:flex-row items-center gap-3">
+          {/* Acciones y Botones de Pie */}
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-2">
             <button
               type="button"
               onClick={() => navigate("/dashboard")}
-              className="w-full sm:w-auto px-5 py-3.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition cursor-pointer"
+              className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-3 rounded-xl transition-all cursor-pointer text-center"
             >
               Volver al Dashboard
             </button>
             <button
               type="button"
               onClick={handleStartExam}
-              className="w-full flex-1 py-3.5 px-6 rounded-xl bg-sena-green hover:bg-sena-green/90 text-white font-bold text-sm shadow-lg shadow-sena-green/30 transition flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isLoadingBank}
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isLoadingBank ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   <span>Preparando Banco de Preguntas...</span>
                 </>
               ) : (
                 <>
                   <span>Comenzar Examen de Nivel</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <IconArrowRight size={20} stroke={2} />
                 </>
               )}
             </button>
