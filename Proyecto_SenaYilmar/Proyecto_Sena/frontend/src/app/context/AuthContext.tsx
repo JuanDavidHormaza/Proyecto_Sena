@@ -21,6 +21,20 @@ import {
 
 export { clearAllTokens } from '../services/api';
 
+export const SESSION_NAMESPACES = {
+  ADMIN: 'worklex_session_admin',
+  INSTRUCTOR: 'worklex_session_instructor',
+  STUDENT: 'worklex_session_student',
+} as const;
+
+export function getSessionNamespace(role?: string): 'worklex_session_admin' | 'worklex_session_instructor' | 'worklex_session_student' {
+  const r = (role || '').toLowerCase();
+  if (r.includes('admin') || r.includes('superadmin')) return SESSION_NAMESPACES.ADMIN;
+  if (r.includes('teacher') || r.includes('instructor') || r.includes('docente') || r.includes('monitor')) return SESSION_NAMESPACES.INSTRUCTOR;
+  return SESSION_NAMESPACES.STUDENT;
+}
+
+
 /**
  * Protocolo estricto de Logout Total:
  * 1. Limpieza de todos los almacenamientos web (localStorage, sessionStorage).
@@ -218,6 +232,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // PROHIBIDO asignar usuarios por defecto o estados simulados en bloques catch.
         console.warn('[AuthContext] Validación de sesión con /api/auth/me/ falló. Purgando sesión cliente:', error);
         clearAllTokens();
+        [SESSION_NAMESPACES.ADMIN, SESSION_NAMESPACES.INSTRUCTOR, SESSION_NAMESPACES.STUDENT].forEach((ns) => {
+          sessionStorage.removeItem(ns);
+        });
         if (isMounted) {
           setUser(null);
           setToken(null);
@@ -307,6 +324,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(cleanUser);
       setToken(response.access);
       setIsAuthenticated(true);
+
+      const activeNs = getSessionNamespace(cleanUser.role);
+      sessionStorage.setItem(
+        activeNs,
+        JSON.stringify({
+          token: response.access,
+          user: cleanUser,
+          role: cleanUser.role,
+          timestamp: Date.now(),
+        })
+      );
+      [SESSION_NAMESPACES.ADMIN, SESSION_NAMESPACES.INSTRUCTOR, SESSION_NAMESPACES.STUDENT].forEach((ns) => {
+        if (ns !== activeNs) sessionStorage.removeItem(ns);
+      });
 
       sessionStorage.setItem('userName', cleanUser.name);
       sessionStorage.setItem('userRole', cleanUser.role);

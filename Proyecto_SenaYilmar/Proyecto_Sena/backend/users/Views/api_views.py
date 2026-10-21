@@ -1164,98 +1164,90 @@ class SubjectViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class DigitalDictionaryViewSet(viewsets.ViewSet):
-    pagination_class = None  # El catálogo se entrega completo en una sola respuesta JSON (sin tope de 20)
+DictionaryWord = DigitalDictionary
+
+
+class DigitalDictionaryViewSet(viewsets.ModelViewSet):
+    queryset = DigitalDictionary.objects.select_related('subject').all()
+    serializer_class = DigitalDictionarySerializer
+    pagination_class = None
     permission_classes = [permissions.IsAuthenticated, IsDictionaryAdminOrReadOnly]
 
-    def list(self, request):
-        """
-        GET /api/dictionary/?program=...&ficha=...
-        - ADMIN / SUPERADMIN: ven todo el catálogo o filtran por programa / ficha.
-        - APRENDIZ / INSTRUCTOR / MONITOR: aislamiento estricto por el programa asignado a su cuenta
-          (si la cuenta no trae un programa reconocible se usa el solicitado; sin programa -> []).
-        """
-        from ..dictionary_programs import canonical_program_key, extract_ficha_code
+    def get_queryset(self):
+        user = self.request.user
+        role = str(getattr(user, 'role_id', '') or getattr(user, 'role', '') or '').upper()
 
-        user = request.user
-        role_id = str(getattr(user, 'role_id', '') or getattr(user, 'role', '') or '').upper()
-        req_program = request.query_params.get('program')
-        req_ficha = (
-            request.query_params.get('ficha')
-            or request.query_params.get('fichaId')
-            or request.query_params.get('ficha_id')
+        # SUPERADMIN / ADMINISTRADOR: Acceso global con filtros opcionales
+        if role in ['ADMINISTRADOR', 'SUPERADMIN', 'ADMIN', 'COORDINADOR']:
+            prog = self.request.query_params.get('program')
+            fch = self.request.query_params.get('ficha') or self.request.query_params.get('fichaId')
+            qs = DictionaryWord.objects.select_related('subject').all()
+            if prog and prog.lower() not in ('all', 'todos', 'todos los programas'):
+                clean_p = prog.split('(')[0].strip()
+                qs = qs.filter(Q(program__icontains=clean_p) | Q(subject__subject_id__icontains=clean_p))
+            if fch and fch.lower() not in ('all', 'todas', 'todas las fichas'):
+                qs = qs.filter(ficha__icontains=fch)
+            return qs.order_by('word_id')
+
+        # INSTRUCTOR: Solo términos de los programas o fichas que tiene formalmente asignados
+        if role in ['INSTRUCTOR', 'DOCENTE', 'MONITOR']:
+            user_prog = getattr(user, 'program', None) or self.request.query_params.get('program')
+            user_fch = getattr(user, 'ficha_code', None) or getattr(user, 'ficha', None) or self.request.query_params.get('ficha')
+            if hasattr(user_fch, 'code'):
+                user_fch = user_fch.code
+            if not user_prog and not user_fch:
+                return DictionaryWord.objects.none()
+            qs = DictionaryWord.objects.select_related('subject').all()
+            if user_prog:
+                clean_prog = str(user_prog).split('(')[0].strip()
+                qs = qs.filter(Q(program__icontains=clean_prog) | Q(subject__subject_id__icontains=clean_prog))
+            if user_fch:
+                qs = qs.filter(ficha__icontains=str(user_fch))
+            return qs.order_by('word_id')
+
+        # APRENDIZ: Aislamiento absoluto por su ficha y programa activos
+        # Si no tiene ficha o programa asignado, no ve NINGÚN diccionario de otras áreas
+        active_prog = getattr(user, 'program', None)
+        active_fch = getattr(user, 'ficha', None)
+        if hasattr(active_fch, 'code'):
+            active_fch = active_fch.code
+
+        if not active_prog:
+            return DictionaryWord.objects.none()
+
+        clean_active_prog = str(active_prog).split('(')[0].strip()
+
+        # Consulta restringida exclusivamente a su programa
+        qs = DictionaryWord.objects.select_related('subject').filter(
+            Q(program__icontains=clean_active_prog) | Q(subject__subject_id__icontains=clean_active_prog)
         )
-
-        is_admin = role_id in ('ADMIN', 'SUPERADMIN', 'ADMINISTRADOR', 'COORDINADOR')
-        if is_admin:
-            program, ficha = req_program, req_ficha
+        if active_fch:
+            qs = qs.filter(Q(ficha__iexact=str(active_fch)) | Q(ficha__in=['', None]))
         else:
-            user_program = getattr(user, 'program', None)
-            program = req_program or user_program or 'ADSO'
-            ficha = extract_ficha_code(req_ficha) or extract_ficha_code(user_program)
-        return Response(DictionaryController.list_all(
-            subject_id=request.query_params.get('subject'),
-            level=request.query_params.get('level'),
-            competence=request.query_params.get('competence'),
-            search=request.query_params.get('search'),
-            program=program,
-            ficha=ficha,
-        ))
+            qs = qs.filter(ficha__in=['', None])
 
-    def retrieve(self, request, pk=None):
-        doc, error = DictionaryController.get_by_id(pk)
-        if error:
-            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
-        return Response(DigitalDictionarySerializer(doc).data)
+        return qs.order_by('word_id')
 
-    def create(self, request):
-        doc, error = DictionaryController.create(request.data)
-        if error:
-            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(DigitalDictionarySerializer(doc).data, status=status.HTTP_201_CREATED)
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        search = request.query_params.get('search')
+        level = request.query_params.get('level')
+        competence = request.query_params.get('competence')
+        if search:
+            s = search.strip().lower()
+            qs = qs.filter(
+                Q(word_id__icontains=s) |
+                Q(definition__icontains=s) |
+                Q(synonyms__icontains=s) |
+                Q(spanish_translation__icontains=s)
+            )
+        if level and level != 'all':
+            qs = qs.filter(level=level)
+        if competence and competence != 'all':
+            qs = qs.filter(competence=competence)
 
-    def update(self, request, pk=None):
-        doc, error = DictionaryController.update(pk, request.data)
-        if error:
-            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(DigitalDictionarySerializer(doc).data)
-
-    def partial_update(self, request, pk=None):
-        doc, error = DictionaryController.update(pk, request.data)
-        if error:
-            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(DigitalDictionarySerializer(doc).data)
-
-    def destroy(self, request, pk=None):
-        ok, error = DictionaryController.delete(pk)
-        if error:
-            return Response({'error': error}, status=status.HTTP_404_NOT_FOUND)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(detail=False, methods=['get'], url_path='videos')
-    def get_program_videos(self, request):
-        program = (request.query_params.get('program') or getattr(request.user, 'program', '') or 'ADSO').upper()
-        
-        videos_catalog = {
-            'ADSO': [
-                {'id': 1, 'title': 'Fundamentos de Desarrollo de Software', 'duration': '12:45', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'description': 'Introducción al ciclo de vida del software y metodologías ágiles.'},
-                {'id': 2, 'title': 'Arquitectura de APIs RESTful y Django', 'duration': '15:20', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 'description': 'Diseño y consumo de servicios backend estructurados.'},
-                {'id': 3, 'title': 'Control de Versiones y Flujos Git', 'duration': '18:10', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 'description': 'Gestión de repositorios, ramas y despliegue continuo.'},
-            ],
-            'MECANICA': [
-                {'id': 1, 'title': 'Mecanizado CNC y Herramientas Rotativas', 'duration': '14:30', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'description': 'Operación de tornos, fresadoras y metrología.'},
-                {'id': 2, 'title': 'Tribología y Sistemas de Lubricación', 'duration': '11:15', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 'description': 'Reducción de fricción y mantenimiento predictivo industrial.'},
-                {'id': 3, 'title': 'Tolerancias Geométricas e ISO', 'duration': '16:40', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 'description': 'Ajustes, holguras y calibración dimensional.'},
-            ],
-            'MULTIMEDIA': [
-                {'id': 1, 'title': 'Composición Digital y Animación 2D', 'duration': '13:50', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'description': 'Principios de animación, keyframes y renderizado vectorial.'},
-                {'id': 2, 'title': 'Diseño UI/UX y Prototipado Interactivo', 'duration': '17:25', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 'description': 'Jerarquía visual, wireframes y experiencia de usuario.'},
-                {'id': 3, 'title': 'Producción y Masterización Audiovisual', 'duration': '19:00', 'url': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 'description': 'Captura, sincronización de sonido y códecs de compresión.'},
-            ]
-        }
-
-        key = 'MECANICA' if ('MECANICA' in program or '3520681' in program) else 'MULTIMEDIA' if ('MULTI' in program or '2554901' in program or 'DISEÑO' in program) else 'ADSO'
-        return Response(videos_catalog.get(key, videos_catalog['ADSO']), status=status.HTTP_200_OK)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
 
 # Alias para DictionaryViewSet

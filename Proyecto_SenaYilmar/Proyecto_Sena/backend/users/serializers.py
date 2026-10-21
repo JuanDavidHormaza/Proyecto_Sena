@@ -108,6 +108,10 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 class DigitalDictionarySerializer(serializers.ModelSerializer):
     """Serializer para el modelo DigitalDictionary con URLs de streaming proxy de Django."""
+    word = serializers.CharField(source='word_id', read_only=True)
+    wordId = serializers.CharField(source='word_id', read_only=True)
+    name = serializers.CharField(source='word_id', read_only=True)
+    spanishTranslation = serializers.CharField(source='spanish_translation', read_only=True)
     subject_name = serializers.CharField(source='subject.description', read_only=True)
     imageUrl = serializers.SerializerMethodField()
     audioUrl = serializers.SerializerMethodField()
@@ -127,9 +131,9 @@ class DigitalDictionarySerializer(serializers.ModelSerializer):
     class Meta:
         model = DigitalDictionary
         fields = [
-            'id', 'word_id', 'subject', 'subject_name', 'definition',
+            'id', 'word_id', 'word', 'wordId', 'name', 'subject', 'subject_name', 'definition',
             'synonyms', 'audio', 'video', 'image', 'level', 'competence',
-            'program', 'spanish_translation', 'ficha', 'imageUrl', 'audioUrl', 'videoUrl'
+            'program', 'spanish_translation', 'spanishTranslation', 'ficha', 'imageUrl', 'audioUrl', 'videoUrl'
         ]
 
     def _strip_key(self, val):

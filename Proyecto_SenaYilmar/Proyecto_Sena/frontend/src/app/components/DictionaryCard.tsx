@@ -117,27 +117,27 @@ export const DictionaryCard: React.FC<DictionaryCardProps> = ({
     triggerNativeTTS(wordText);
   };
 
-  // Tema visual y vectorial en 0ms según la especialidad técnica del SENA
+  // Avatar SVG estilizado con degradado inmediato según la especialidad técnica del SENA
   const avatarTheme = isMecanica
     ? {
-        bg: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
-        icon: <IconSettings size={36} stroke={1.8} />,
+        bg: 'bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-orange-500/20 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+        icon: <IconSettings size={36} stroke={1.8} className="text-amber-600 dark:text-amber-400" />,
         border: 'border-amber-200/80',
       }
     : isMultimedia
     ? {
-        bg: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
-        icon: <IconMovie size={36} stroke={1.8} />,
+        bg: 'bg-gradient-to-br from-indigo-500/15 via-indigo-500/5 to-purple-500/20 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
+        icon: <IconMovie size={36} stroke={1.8} className="text-indigo-600 dark:text-indigo-400" />,
         border: 'border-indigo-200/80',
       }
     : {
-        bg: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
-        icon: <IconCode size={36} stroke={1.8} />,
+        bg: 'bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-teal-500/20 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+        icon: <IconCode size={36} stroke={1.8} className="text-emerald-600 dark:text-emerald-400" />,
         border: 'border-emerald-200/80',
       };
 
   const initialLetter = (wordText || 'T').charAt(0).toUpperCase();
-  const currentProgram = term.program || activeProgram || 'Formación Técnica';
+  const currentProgram = term.program || 'Formación Técnica';
 
   return (
     <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between ${className}`}>
@@ -211,7 +211,7 @@ export const DictionaryCard: React.FC<DictionaryCardProps> = ({
 
       {/* Pie dinámico: NUNCA texto quemado */}
       <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Programa: <strong className="text-slate-700 dark:text-slate-300">{term.program || activeProgram || 'Formación Técnica'}</strong></span>
+        <span>Programa: <strong className="text-slate-700 dark:text-slate-300">{term.program || 'Formación Técnica'}</strong></span>
         <span className="font-mono text-[10px] text-slate-400">SENA CEFR</span>
       </div>
     </div>
