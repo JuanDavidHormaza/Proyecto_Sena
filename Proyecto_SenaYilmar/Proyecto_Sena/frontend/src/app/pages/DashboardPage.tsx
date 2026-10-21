@@ -71,6 +71,7 @@ import { HeaderActionTools } from "../components/HeaderActionTools";
 import { getTermsForProgram } from "../data/dictionariesByFicha";
 import { questions } from "../data";
 import { toast } from "../components/Toast";
+import { QuestionAuditCard } from "../components/QuestionAuditCard";
 import { playEnglishSpeech } from "../utils/speech";
 import { BrandLogo } from "../components/BrandLogo";
 import { RoleSwitcher } from "../components/RoleSwitcher";
@@ -2968,48 +2969,13 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
                 </div>
 
                 {selectedTest.answers && selectedTest.answers.length > 0 ? (
-                  <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                     {selectedTest.answers.map((ans, idx) => (
-                      <div
-                        key={ans.questionId || idx}
-                        className={`p-3 rounded-xl border text-xs transition-colors ${
-                          ans.isCorrect
-                            ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
-                            : "bg-red-50/70 border-red-200 text-red-950"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <span className="font-semibold text-slate-800">
-                            {idx + 1}. {ans.question}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${
-                              ans.isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {ans.isCorrect ? "Correcto" : "Incorrecto"}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 mt-1.5 p-2 bg-white/80 rounded-lg border border-slate-200">
-                          <p>
-                            <strong className="text-slate-800">Tu respuesta:</strong>{" "}
-                            <span className={ans.isCorrect ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
-                              {getOptionSemanticText(ans, ans.userAnswer)}
-                            </span>
-                          </p>
-                          <p>
-                            <strong className="text-emerald-800">Respuesta correcta:</strong>{" "}
-                            <span className="text-emerald-700 font-semibold">
-                              {getOptionSemanticText(ans, ans.correctAnswer)}
-                            </span>
-                          </p>
-                        </div>
-                        {(ans.category || ans.competency) && (
-                          <p className="text-[10px] text-slate-500 mt-1 font-semibold">
-                            Macro-habilidad: {normalizeCompetency(ans.competency || ans.category)}
-                          </p>
-                        )}
-                      </div>
+                      <QuestionAuditCard
+                        key={(ans as any).question_id || ans.questionId || idx}
+                        item={ans as any}
+                        index={idx}
+                      />
                     ))}
                   </div>
                 ) : (

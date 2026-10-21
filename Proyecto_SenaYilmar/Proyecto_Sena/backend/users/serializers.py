@@ -206,6 +206,156 @@ class TestResultSerializer(serializers.ModelSerializer):
     def get_student_program(self, obj):
         return obj.user.program
 
+def resolve_audited_question(ans: dict) -> dict:
+    """
+    Normaliza y resuelve el texto explícito de respuestas seleccionadas y correctas
+    para auditoría pedagógica estricta de exámenes.
+    Garantiza que una pregunta sin responder NUNCA sea marcada como correcta.
+    """
+    if not isinstance(ans, dict):
+        return {
+            "question_id": 0,
+            "question_text": "Pregunta no disponible",
+            "type": "multiple_choice",
+            "competence": "General",
+            "user_answer_text": "Sin responder",
+            "correct_answer_text": "N/A",
+            "is_correct": False,
+            "is_unanswered": True,
+            "technical_term": "",
+            "feedback": "Sin datos de la pregunta.",
+            "options": [],
+            "userAnswer": None,
+            "correctAnswer": None,
+            "question": "Pregunta no disponible",
+            "isCorrect": False,
+        }
+
+    question_id = ans.get('questionId') or ans.get('question_id') or ans.get('id')
+    question_text = ans.get('question') or ans.get('question_text') or ans.get('prompt') or ans.get('text') or 'Pregunta técnica'
+    q_type = ans.get('type') or 'multiple_choice'
+    competence = ans.get('competence') or ans.get('competency') or ans.get('category') or 'General'
+    technical_term = ans.get('technical_term') or ans.get('wordId') or ans.get('targetWord') or ''
+
+    options = ans.get('options')
+    if not isinstance(options, list):
+        options = []
+
+    user_answer = ans.get('userAnswer')
+    if user_answer is None:
+        user_answer = ans.get('user_answer')
+
+    correct_answer = ans.get('correctAnswer')
+    if correct_answer is None:
+        correct_answer = ans.get('correct_answer')
+
+    writing_answer = ans.get('writingAnswer') or ans.get('writing_answer') or ''
+    audio_url = ans.get('audioUrl') or ans.get('audio_url') or ''
+
+    is_unanswered = False
+    user_answer_str = ''
+
+    if writing_answer:
+        user_answer_str = str(writing_answer).strip()
+    elif audio_url:
+        transcription = ans.get('transcription') or ans.get('speakingTranscription')
+        user_answer_str = f"Audio grabado ({transcription})" if transcription else "Audio grabado por el aprendiz"
+    elif user_answer is not None and user_answer != -1 and user_answer != '':
+        if isinstance(user_answer, int) or (isinstance(user_answer, str) and user_answer.lstrip('-').isdigit()):
+            idx = int(user_answer)
+            if 0 <= idx < len(options):
+                user_answer_str = str(options[idx]).strip()
+            elif idx == -1:
+                is_unanswered = True
+                user_answer_str = 'Sin responder'
+            else:
+                user_answer_str = f"Opción {idx + 1}"
+        else:
+            user_answer_str = str(user_answer).strip()
+    else:
+        is_unanswered = True
+        user_answer_str = 'Sin responder'
+
+    if not user_answer_str or user_answer_str.lower() in ('sin responder', 'n/a', 'none', 'null', '', 'opción 0', 'opción sin responder', '-1'):
+        is_unanswered = True
+        user_answer_str = 'Sin responder'
+
+    correct_answer_str = ''
+    if isinstance(correct_answer, int) or (isinstance(correct_answer, str) and str(correct_answer).isdigit()):
+        c_idx = int(correct_answer)
+        if 0 <= c_idx < len(options):
+            correct_answer_str = str(options[c_idx]).strip()
+        else:
+            correct_answer_str = ans.get('correct_answer_text') or ans.get('targetWord') or ans.get('wordId') or f"Opción {c_idx + 1}"
+    elif correct_answer:
+        correct_answer_str = str(correct_answer).strip()
+    else:
+        correct_answer_str = ans.get('correct_answer_text') or ans.get('targetWord') or ans.get('wordId') or 'Respuesta indicada en rúbrica'
+
+    # Regla estricta de calificación y estado:
+    # Si is_unanswered == True o está sin responder, is_correct DEBE ser False
+    if is_unanswered:
+        is_correct = False
+    else:
+        raw_is_correct = ans.get('isCorrect')
+        if raw_is_correct is None:
+            raw_is_correct = ans.get('is_correct')
+
+        if raw_is_correct is not None:
+            is_correct = bool(raw_is_correct) and not is_unanswered
+        else:
+            is_correct = (user_answer_str.lower() == correct_answer_str.lower()) and not is_unanswered
+
+    feedback = ans.get('feedback') or ans.get('rubricFeedback') or ''
+    if not feedback:
+        if is_unanswered:
+            feedback = "El estudiante no proporcionó una respuesta antes de que finalizara el tiempo."
+        elif is_correct:
+            feedback = f"Respuesta correcta. Dominio adecuado del concepto técnico '{technical_term or 'evaluado'}'."
+        else:
+            feedback = f"Respuesta incorrecta. Se sugiere reforzar el término '{technical_term or correct_answer_str}'."
+
+    return {
+        "question_id": question_id,
+        "question_text": question_text,
+        "type": q_type,
+        "competence": competence,
+        "category": competence,
+        "user_answer_text": user_answer_str,
+        "correct_answer_text": correct_answer_str,
+        "is_correct": is_correct,
+        "is_unanswered": is_unanswered,
+        "technical_term": technical_term,
+        "feedback": feedback,
+        "options": options,
+        "userAnswer": user_answer,
+        "correctAnswer": correct_answer,
+        "question": question_text,
+        "isCorrect": is_correct,
+    }
+
+
+
+class TestResultDetailSerializer(TestResultSerializer):
+    """
+    Serializer de detalle para auditoría pedagógica de exámenes.
+    Entrega audit_questions con textos reales y calificación estricta.
+    """
+    audit_questions = serializers.SerializerMethodField()
+    answers = serializers.SerializerMethodField()
+
+    class Meta(TestResultSerializer.Meta):
+        fields = TestResultSerializer.Meta.fields + ['audit_questions', 'answers']
+
+    def get_audit_questions(self, obj):
+        process = obj.process or {}
+        raw_answers = process.get('userAnswers', [])
+        return [resolve_audited_question(ans) for ans in raw_answers]
+
+    def get_answers(self, obj):
+        return self.get_audit_questions(obj)
+
+
 
 # ─── Serializers de Autenticacion ────────────────────────────────────────────
 

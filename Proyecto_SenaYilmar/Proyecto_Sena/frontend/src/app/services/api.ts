@@ -784,6 +784,25 @@ export async function uploadMediaFile(
 
 // ─── Test Results API ────────────────────────────────────────────────────────
 
+export interface AuditedQuestion {
+  question_id?: string | number;
+  question_text: string;
+  type?: string;
+  user_answer_text: string;
+  correct_answer_text: string;
+  is_correct: boolean;
+  is_unanswered?: boolean;
+  technical_term?: string;
+  feedback?: string;
+  options?: string[];
+  competence?: string;
+  category?: string;
+  userAnswer?: any;
+  correctAnswer?: any;
+  question?: string;
+  isCorrect?: boolean;
+}
+
 export interface StudentTrackingHistoryItem {
   id: string;
   score: number;
@@ -794,6 +813,7 @@ export interface StudentTrackingHistoryItem {
   totalQuestions?: number;
   duration?: string;
   feedback?: string;
+  answers?: AuditedQuestion[];
 }
 
 export interface StudentTrackingItem {
@@ -831,6 +851,13 @@ export async function getTestResults(userId?: string): Promise<ApiTestResult[]> 
   });
   
   return handleResponse<ApiTestResult[]>(response);
+}
+
+export async function getExamReview(resultId: string | number): Promise<any> {
+  const response = await fetch(`${API_BASE}/exam/review/${resultId}/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<any>(response);
 }
 
 export async function getExamHistory(userId?: string): Promise<ApiTestResult[]> {

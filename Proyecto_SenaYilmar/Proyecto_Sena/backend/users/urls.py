@@ -18,6 +18,7 @@ from .Views.api_views import (
     FichaRequestViewSet, SupportTicketViewSet, AdminMetricsAPIView,
     StudyStreakAPIView,
     TeacherTrackingView,
+    ExamReviewView,
 )
 from .Views.media_views import MediaProxyAPIView, MediaUploadAPIView
 from .Views.exam_views import (
@@ -97,6 +98,12 @@ urlpatterns = [
     path('exam/speaking',                           SpeakingSubmissionAPIView.as_view(), name='exam-speaking'),
     path('exam/tts/',                               ExamTTSAPIView.as_view(),            name='exam-tts-slash'),
     path('exam/tts',                                ExamTTSAPIView.as_view(),            name='exam-tts'),
+    # ── Auditoría Pedagógica de Preguntas (Exam Review) ────────────────
+    path('exam/review/<int:result_id>/',            ExamReviewView.as_view(),            name='exam-review-slash'),
+    path('exam/review/<int:result_id>',             ExamReviewView.as_view(),            name='exam-review'),
+    path('results/<int:result_id>/review/',         ExamReviewView.as_view(),            name='results-review-slash'),
+    path('results/<int:result_id>/review',          ExamReviewView.as_view(),            name='results-review'),
+
     path('exam/history/',                           TestResultViewSet.as_view({'get': 'list'}), name='exam-history-slash'),
     path('exam/history',                            TestResultViewSet.as_view({'get': 'list'}), name='exam-history'),
 

@@ -17,6 +17,7 @@ import { RoleSwitcher } from "../components/RoleSwitcher";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
 import { BrandLogo } from "../components/BrandLogo";
+import { QuestionAuditCard } from "../components/QuestionAuditCard";
 
 function normalizeText(value?: string | null) {
   return (value || "").trim().toLowerCase();
@@ -166,9 +167,29 @@ export function TeacherDashboard() {
     }
   };
 
-  const handleViewDetails = (result: TestResult) => {
+  const handleViewDetails = async (result: TestResult) => {
     setSelectedResult(result);
     setFeedback(result.feedback || "");
+
+    if (result.id) {
+      try {
+        const fullReview = await api.getExamReview(result.id);
+        if (fullReview) {
+          const resolvedAnswers = fullReview.audit_questions || fullReview.answers || result.answers || [];
+          setSelectedResult(prev => ({
+            ...prev,
+            ...result,
+            ...fullReview,
+            answers: resolvedAnswers,
+          }));
+          if (fullReview.feedback) {
+            setFeedback(fullReview.feedback);
+          }
+        }
+      } catch (err) {
+        console.warn("[TeacherDashboard] Could not fetch detailed review, using local:", err);
+      }
+    }
   };
 
   const handleSaveFeedback = async () => {
@@ -1034,44 +1055,13 @@ export function TeacherDashboard() {
                   </div>
 
                   {selectedResult.answers && selectedResult.answers.length > 0 ? (
-                    <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                       {selectedResult.answers.map((ans, idx) => (
-                        <div
-                          key={ans.questionId || idx}
-                          className={`p-3.5 rounded-xl border text-xs transition-colors ${
-                            ans.isCorrect
-                              ? "bg-emerald-50/60 border-emerald-200 text-emerald-950"
-                              : "bg-red-50/60 border-red-200 text-red-950"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <span className="font-semibold text-slate-800">
-                              {idx + 1}. {ans.question}
-                            </span>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${
-                                ans.isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {ans.isCorrect ? "Correcto" : "Incorrecto"}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-600 mt-1">
-                            <p>
-                              <strong className="text-slate-700">Respuesta del aprendiz:</strong>{" "}
-                              Opción {(ans.userAnswer !== undefined && ans.userAnswer !== null) ? Number(ans.userAnswer) + 1 : "Sin responder"}
-                            </p>
-                            <p>
-                              <strong className="text-emerald-700">Respuesta correcta:</strong>{" "}
-                              Opción {(ans.correctAnswer !== undefined && ans.correctAnswer !== null) ? Number(ans.correctAnswer) + 1 : "N/A"}
-                            </p>
-                          </div>
-                          {ans.category && (
-                            <p className="text-[10px] text-slate-400 mt-1 font-medium">
-                              Competencia: {ans.category}
-                            </p>
-                          )}
-                        </div>
+                        <QuestionAuditCard
+                          key={(ans as any).question_id || ans.questionId || idx}
+                          item={ans as any}
+                          index={idx}
+                        />
                       ))}
                     </div>
                   ) : (

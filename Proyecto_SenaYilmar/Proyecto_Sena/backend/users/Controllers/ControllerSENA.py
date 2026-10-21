@@ -1107,10 +1107,15 @@ class TestResultController:
                 Q(user__program__icontains=str(program_filter).strip())
             ).distinct()
 
+        from ..serializers import resolve_audited_question
+
         results = []
         for result in queryset:
             person = getattr(result.user, 'person', None)
             u_name = f"{person.first_name} {person.last_name}" if person else (result.user.program or "Aprendiz")
+            raw_answers = (result.process or {}).get('userAnswers', [])
+            resolved_answers = [resolve_audited_question(ans) for ans in raw_answers]
+
             results.append({
                 'id': str(result.id),
                 'userId': str(result.user.user_id),
@@ -1128,7 +1133,8 @@ class TestResultController:
                 'duration': result.duration,
                 'completedAt': result.created_at.isoformat() if result.created_at else None,
                 'process': result.process,
-                'answers': (result.process or {}).get('userAnswers', []),
+                'answers': resolved_answers,
+                'audit_questions': resolved_answers,
             })
         return results
 

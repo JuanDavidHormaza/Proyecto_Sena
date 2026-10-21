@@ -32,6 +32,7 @@ from ..Controllers.ControllerSENA import (
     RankingController, FichaRequestController, SupportTicketController, _build_user_response,
 )
 from ..Models.modelsSENA import EmailOTP, RegisterPendingOTP, Person, User, TestResult, FichaRequest, SupportTicket, Subject, DigitalDictionary, UserLog
+from ..serializers import resolve_audited_question, TestResultDetailSerializer
 from ..serializers import (
     LoginSerializer, RegisterSerializer, PersonSerializer,
     DigitalDictionarySerializer, TestResultSerializer, UserSerializer,
@@ -1323,6 +1324,23 @@ class TestResultViewSet(viewsets.ViewSet):
             ficha_filter=ficha_filter,
         ))
 
+    def retrieve(self, request, pk=None):
+        """
+        Retorna el detalle completo y auditado pedagógicamente de una evaluación.
+        """
+        try:
+            test_result = TestResult.objects.select_related('user__person').get(pk=pk)
+        except TestResult.DoesNotExist:
+            return Response({'error': 'Evaluación no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        req_role = getattr(request.user, 'role_id', '')
+        req_user_id = getattr(request.user, 'user_id', None) or getattr(request.user, 'pk', None)
+        if req_role == 'APRENDIZ' and test_result.user_id != req_user_id:
+            return Response({'error': 'No tienes permisos para ver esta evaluación.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = TestResultDetailSerializer(test_result)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     def create(self, request):
         """
         Crea el resultado del quiz.
@@ -1464,6 +1482,36 @@ class TestResultViewSet(viewsets.ViewSet):
 # RANKING
 # ─────────────────────────────────────────────────────────────────────────────
 
+
+
+class ExamReviewView(APIView):
+    """
+    GET /api/exam/review/<int:result_id>/ o /api/results/<int:result_id>/review/
+    
+    Endpoint de auditoría pedagógica detallada. Entrega los reactivos resueltos
+    con textos reales seleccionados por el estudiante y la respuesta correcta esperada.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, result_id=None, pk=None):
+        target_id = result_id or pk or request.query_params.get('id')
+        if not target_id:
+            return Response({'error': 'ID de evaluación requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            test_result = TestResult.objects.select_related('user__person').get(pk=target_id)
+        except TestResult.DoesNotExist:
+            return Response({'error': 'Evaluación no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        req_role = getattr(request.user, 'role_id', '')
+        req_user_id = getattr(request.user, 'user_id', None) or getattr(request.user, 'pk', None)
+        if req_role == 'APRENDIZ' and test_result.user_id != req_user_id:
+            return Response({'error': 'No tienes permisos para auditar esta evaluación.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = TestResultDetailSerializer(test_result)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class RankingViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1586,6 +1634,7 @@ class TeacherTrackingView(APIView):
                         'totalQuestions': getattr(t, 'total_questions', 0),
                         'duration': getattr(t, 'duration', ''),
                         'feedback': getattr(t, 'feedback', ''),
+                        'answers': [resolve_audited_question(ans) for ans in (t.process or {}).get('userAnswers', [])],
                     } for t in student_tests[:10]
                 ]
             })
