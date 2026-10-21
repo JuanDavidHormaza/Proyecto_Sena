@@ -23,11 +23,27 @@ export function LandingPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
-  // Detección estricta y resiliente de sesión activa
+  // Detección estricta y obligatoria de sesión activa:
+  // Condición 1: Token existente y no vacío en sessionStorage o localStorage
+  // Condición 2: isAuthenticated === true y user !== null
   const token = typeof window !== "undefined"
-    ? sessionStorage.getItem("accessToken") || sessionStorage.getItem("access_token") || sessionStorage.getItem("token")
+    ? (sessionStorage.getItem("accessToken") ||
+       sessionStorage.getItem("access_token") ||
+       sessionStorage.getItem("token") ||
+       localStorage.getItem("accessToken") ||
+       localStorage.getItem("access_token") ||
+       localStorage.getItem("token"))
     : null;
-  const hasValidSession = Boolean(token && isAuthenticated && user);
+
+  const hasValidSession = Boolean(
+    token &&
+    String(token).trim() !== "" &&
+    token !== "null" &&
+    token !== "undefined" &&
+    isAuthenticated === true &&
+    user !== null &&
+    user?.id
+  );
 
   const getDashboardPath = () => {
     const role = (user?.role || sessionStorage.getItem("userRole") || "").toLowerCase();
@@ -38,7 +54,7 @@ export function LandingPage() {
 
   const handleStartExamCTA = () => {
     if (hasValidSession) {
-      navigate("/quiz");
+      navigate(getDashboardPath());
     } else {
       navigate("/login");
     }
@@ -58,7 +74,7 @@ export function LandingPage() {
           </div>
 
           {/* Botón de navegación dinámico SaaS según estado de sesión */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {hasValidSession ? (
               <button
                 type="button"
@@ -70,14 +86,23 @@ export function LandingPage() {
                 <span>Ir a mi Panel</span>
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => navigate("/login")}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm hover:shadow transition-all cursor-pointer active:scale-98"
-              >
-                <IconLogin size={18} stroke={2} />
-                <span>Ingresar</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
+                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-all cursor-pointer"
+                >
+                  <IconLogin size={16} stroke={2} />
+                  <span>Iniciar Sesión</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/register")}
+                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm shadow-xs hover:shadow transition-all cursor-pointer active:scale-98"
+                >
+                  <span>Registrarse</span>
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -138,11 +163,11 @@ export function LandingPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => navigate("/login")}
+                    onClick={() => navigate("/register")}
                     className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs active:scale-98"
                   >
-                    <IconUserCheck size={20} stroke={1.8} className="text-slate-500 dark:text-slate-400" />
-                    <span>Ya tengo cuenta</span>
+                    <IconUsers size={20} stroke={1.8} className="text-slate-500 dark:text-slate-400" />
+                    <span>Crear Cuenta / Registrarse</span>
                   </button>
                 )}
               </div>

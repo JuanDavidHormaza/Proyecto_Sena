@@ -1639,14 +1639,12 @@ class AdminMetricsAPIView(APIView):
 
     def get(self, request):
         total_users = User.objects.count()
-        # Filtrado de usuarios activos a través de Person o User status
         active_users = User.objects.filter(
             Q(person__status='ACTIVO') | Q(status='EN_FORMACION')
         ).distinct().count()
         if active_users == 0 and total_users > 0:
             active_users = total_users
 
-        # Desglose de usuarios por rol institucional
         students_count = User.objects.filter(role_id='APRENDIZ').count()
         teachers_count = User.objects.filter(role_id__in=['INSTRUCTOR', 'MONITOR']).count()
         admins_count = User.objects.filter(role_id__in=['ADMIN', 'SUPERADMIN']).count()
@@ -1657,18 +1655,53 @@ class AdminMetricsAPIView(APIView):
             distinct_progs = DigitalDictionary.objects.values('program').distinct().count()
             total_dictionaries = distinct_progs if distinct_progs > 0 else 1
 
-        # 2. Total Términos / Vocabulario en el diccionario (64)
-        total_terms = DigitalDictionary.objects.count()
+        # 2. Total Términos / Vocabulario en el diccionario (flexible por programa)
+        program = request.query_params.get('program')
+        terms_qs = DigitalDictionary.objects.all()
+
+        if program and program.lower() not in ('all', 'todos', 'todos los programas'):
+            clean_prog = program.split('(')[0].strip()
+            p_upper = clean_prog.upper()
+            if 'ADSO' in p_upper or 'SOFTWARE' in p_upper:
+                terms_qs = terms_qs.filter(
+                    Q(program__icontains=clean_prog) |
+                    Q(program__icontains='ADSO') |
+                    Q(program__icontains='Software') |
+                    Q(subject__subject_id='ADSO') |
+                    Q(program__isnull=True) |
+                    Q(program='')
+                )
+            elif 'MECANIC' in p_upper or 'MECANICA' in p_upper or 'MECÁNICA' in p_upper:
+                terms_qs = terms_qs.filter(
+                    Q(program__icontains=clean_prog) |
+                    Q(program__icontains='Mecanic') |
+                    Q(program__icontains='Mecánica') |
+                    Q(subject__subject_id='MECANICA')
+                )
+            elif 'MULTI' in p_upper:
+                terms_qs = terms_qs.filter(
+                    Q(program__icontains=clean_prog) |
+                    Q(program__icontains='Multi') |
+                    Q(program__icontains='Multimedia') |
+                    Q(subject__subject_id='MULTIMEDIA')
+                )
+            else:
+                terms_qs = terms_qs.filter(
+                    Q(program__icontains=clean_prog) |
+                    Q(subject__description__icontains=clean_prog)
+                )
+
+        total_terms = terms_qs.count()
 
         # 3. Competencias: Contar competencias únicas registradas o activas (4: Speaking, Writing, Grammar, Reading)
-        competencies_count = DigitalDictionary.objects.values('competence').distinct().count()
+        competencies_count = terms_qs.values('competence').distinct().count()
         if competencies_count < 4:
             competencies_count = 4
 
         # 4. Recursos Multimedia reales asociados a términos
-        audio_count = DigitalDictionary.objects.exclude(audio__isnull=True).exclude(audio='').count()
-        video_count = DigitalDictionary.objects.exclude(video__isnull=True).exclude(video='').count()
-        image_count = DigitalDictionary.objects.exclude(image__isnull=True).exclude(image='').count()
+        audio_count = terms_qs.exclude(audio__isnull=True).exclude(audio='').count()
+        video_count = terms_qs.exclude(video__isnull=True).exclude(video='').count()
+        image_count = terms_qs.exclude(image__isnull=True).exclude(image='').count()
 
         return Response({
             'total_users': total_users,
@@ -1813,98 +1846,4 @@ class StudyStreakAPIView(APIView):
 
 
 # Vista y alias para estadísticas de dashboard administrativo
-class AdminDashboardStatsView(APIView):
-    """
-    Estadísticas consolidadas del sistema para el Dashboard de Administración
-    conectadas a la base de datos PostgreSQL real (0 datos quemados).
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        total_users = User.objects.count()
-        # Filtrado de usuarios activos a través de Person o User status
-        active_users = User.objects.filter(
-            Q(person__status='ACTIVO') | Q(status='EN_FORMACION')
-        ).distinct().count()
-        if active_users == 0 and total_users > 0:
-            active_users = total_users
-
-        # Desglose de usuarios por rol institucional
-        students_count = User.objects.filter(role_id='APRENDIZ').count()
-        teachers_count = User.objects.filter(role_id__in=['INSTRUCTOR', 'MONITOR']).count()
-        admins_count = User.objects.filter(role_id__in=['ADMIN', 'SUPERADMIN']).count()
-
-        # 1. Total Diccionarios: Contar asignaturas/programas creados (ej. 1 si es ADSO)
-        total_dictionaries = Subject.objects.count()
-        if total_dictionaries == 0:
-            distinct_progs = DigitalDictionary.objects.values('program').distinct().count()
-            total_dictionaries = distinct_progs if distinct_progs > 0 else 1
-
-        # 2. Total Términos / Vocabulario en el diccionario (flexible por programa)
-        program = request.query_params.get('program')
-        terms_qs = DigitalDictionary.objects.all()
-
-        if program and program.lower() not in ('all', 'todos', 'todos los programas'):
-            prog_clean = program.split('(')[0].strip()
-            p_upper = prog_clean.upper()
-            if 'ADSO' in p_upper or 'SOFTWARE' in p_upper:
-                terms_qs = terms_qs.filter(
-                    Q(program__icontains=prog_clean) |
-                    Q(program__icontains='ADSO') |
-                    Q(program__icontains='Software') |
-                    Q(subject__subject_id='ADSO') |
-                    Q(program__isnull=True) |
-                    Q(program='')
-                )
-            elif 'MECANIC' in p_upper or 'MECANICA' in p_upper or 'MECÁNICA' in p_upper:
-                terms_qs = terms_qs.filter(
-                    Q(program__icontains=prog_clean) |
-                    Q(program__icontains='Mecanic') |
-                    Q(program__icontains='Mecánica') |
-                    Q(subject__subject_id='MECANICA')
-                )
-            elif 'MULTI' in p_upper:
-                terms_qs = terms_qs.filter(
-                    Q(program__icontains=prog_clean) |
-                    Q(program__icontains='Multi') |
-                    Q(program__icontains='Multimedia') |
-                    Q(subject__subject_id='MULTIMEDIA')
-                )
-            else:
-                terms_qs = terms_qs.filter(
-                    Q(program__icontains=prog_clean) |
-                    Q(subject__description__icontains=prog_clean)
-                )
-
-        total_terms = terms_qs.count()
-
-        # 3. Competencias: Contar competencias únicas registradas o activas (4: Speaking, Writing, Grammar, Reading)
-        competencies_count = terms_qs.values('competence').distinct().count()
-        if competencies_count < 4:
-            competencies_count = 4
-
-        # 4. Recursos Multimedia reales asociados a términos
-        audio_count = terms_qs.exclude(audio__isnull=True).exclude(audio='').count()
-        video_count = terms_qs.exclude(video__isnull=True).exclude(video='').count()
-        image_count = terms_qs.exclude(image__isnull=True).exclude(image='').count()
-        return Response({
-            'total_users': total_users,
-            'active_users': active_users,
-            'distribution': {
-                'students': students_count,
-                'instructors': teachers_count,
-                'admins': admins_count,
-            },
-            'dictionaries': total_dictionaries,
-            'total_dictionaries': total_dictionaries,
-            'terms': total_terms,
-            'total_terms': total_terms,
-            'competencies': competencies_count,
-            'competencies_count': competencies_count,
-            'competencies_list': ['Speaking', 'Writing', 'Grammar', 'Reading'],
-            'media': {
-                'audios': audio_count,
-                'videos': video_count,
-                'images': image_count,
-            }
-        })
+AdminDashboardStatsView = AdminMetricsAPIView

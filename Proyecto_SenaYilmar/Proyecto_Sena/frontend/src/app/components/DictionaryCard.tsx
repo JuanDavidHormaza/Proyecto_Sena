@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { IconSettings, IconCode, IconMovie, IconVolume, IconPlayerPause } from '@tabler/icons-react';
 import { resolveMediaUrl } from '../services/api';
-import { playEnglishSpeech } from '../utils/speech';
 
 export const getProgramTitle = (termProg?: string, selected?: string) => {
   const p = (termProg || selected || '').toLowerCase();
@@ -40,14 +39,18 @@ export interface DictionaryCardProps {
   className?: string;
 }
 
-export const DictionaryCard = ({ term, activeProgram, className = '' }: DictionaryCardProps) => {
+export const DictionaryCard: React.FC<DictionaryCardProps> = ({
+  term,
+  activeProgram,
+  className = '',
+}) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Determinar icono y estilo vectorial según el programa real
+  // Determinar especialidad técnica según el programa real del término o del filtro activo
   const progLower = (term.program || activeProgram || '').toLowerCase();
-  const isMecanica = progLower.includes('mecánica') || progLower.includes('mecanica') || progLower.includes('3520681');
+  const isMecanica = progLower.includes('mecánica') || progLower.includes('mecanic') || progLower.includes('3520681');
   const isMultimedia = progLower.includes('multimedia') || progLower.includes('2554901') || progLower.includes('diseño') || progLower.includes('medios');
 
   const wordText = term.word || term.wordId || term.name || '';
@@ -61,18 +64,23 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
       setIsPlaying(false);
       return;
     }
-    window.speechSynthesis.cancel();
-    playEnglishSpeech(text, {
-      rate: 0.88,
-      onStart: () => setIsPlaying(true),
-      onEnd: () => setIsPlaying(false),
-      onError: () => setIsPlaying(false),
-    });
-    setIsPlaying(true);
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.88;
+      utterance.onstart = () => setIsPlaying(true);
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => setIsPlaying(false);
+      window.speechSynthesis.speak(utterance);
+      setIsPlaying(true);
+    } catch {
+      setIsPlaying(false);
+    }
   };
 
   const handlePlayAudio = () => {
-    // Si ya está reproduciendo, pausar inmediatamente (toggle)
+    // Si ya está reproduciendo, pausar inmediatamente (toggle de audio)
     if (isPlaying) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -109,21 +117,21 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
     triggerNativeTTS(wordText);
   };
 
-  // Tema vectorial dinámico según programa oficial
+  // Tema visual y vectorial en 0ms según la especialidad técnica del SENA
   const avatarTheme = isMecanica
     ? {
-        bg: 'bg-amber-50 text-amber-700 border-amber-200',
+        bg: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
         icon: <IconSettings size={36} stroke={1.8} />,
         border: 'border-amber-200/80',
       }
     : isMultimedia
     ? {
-        bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        bg: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
         icon: <IconMovie size={36} stroke={1.8} />,
         border: 'border-indigo-200/80',
       }
     : {
-        bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        bg: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
         icon: <IconCode size={36} stroke={1.8} />,
         border: 'border-emerald-200/80',
       };
@@ -132,10 +140,10 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
   const currentProgram = term.program || activeProgram || 'Formación Técnica';
 
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${className}`}>
+    <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between ${className}`}>
       <div>
-        {/* Contenedor de Imagen con Cero Bloqueos por 404 de MinIO */}
-        <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center mb-4 relative select-none">
+        {/* Contenedor de Imagen con Cero Bloqueos por 404 de MinIO (Fallback en 0ms) */}
+        <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center mb-4 relative select-none">
           {!imgFailed && imageSrc ? (
             <img
               src={imageSrc}
@@ -147,11 +155,11 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
             />
           ) : (
             <div className={`w-full h-full flex flex-col items-center justify-center gap-1.5 p-3 ${avatarTheme.bg}`}>
-              <div className="w-12 h-12 rounded-2xl bg-white/90 shadow-xs flex items-center justify-center border border-current/20">
+              <div className="w-12 h-12 rounded-2xl bg-white/90 dark:bg-slate-900/90 shadow-xs flex items-center justify-center border border-current/20">
                 {avatarTheme.icon}
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-md bg-white/95 text-current font-bold text-[11px] flex items-center justify-center font-mono shadow-xs">
+                <span className="w-5 h-5 rounded-md bg-white/95 dark:bg-slate-900 text-current font-bold text-[11px] flex items-center justify-center font-mono shadow-xs">
                   {initialLetter}
                 </span>
                 <span className="text-xs font-bold tracking-wider uppercase opacity-90 truncate max-w-[130px]">
@@ -163,7 +171,7 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
 
           {/* Badge de Nivel CEFR flotante */}
           <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
-            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-xs bg-white/95 text-slate-800 border-slate-200/80 backdrop-blur-xs">
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-xs bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-slate-700 backdrop-blur-xs">
               {term.level || 'A1'}
             </span>
           </div>
@@ -171,14 +179,16 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
 
         {/* Título y Pronunciación en 1 Clic con Opción de Pausa */}
         <div className="flex items-center justify-between mb-2 gap-2">
-          <h3 className="text-lg font-bold text-slate-800 tracking-tight truncate" title={wordText}>{wordText}</h3>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight truncate" title={wordText}>
+            {wordText}
+          </h3>
           <button
             type="button"
             onClick={handlePlayAudio}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
               isPlaying
                 ? 'bg-amber-500 text-white animate-pulse shadow-xs ring-2 ring-amber-300'
-                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600'
+                : 'bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400'
             }`}
             title={isPlaying ? "Pausar pronunciación" : "Escuchar pronunciación"}
           >
@@ -187,21 +197,21 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
         </div>
 
         {/* Definición */}
-        <p className="text-xs text-slate-500 line-clamp-3 mb-3 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 mb-3 leading-relaxed">
           {term.definition || `Concepto técnico clave para formación ${currentProgram}.`}
         </p>
 
         {/* Traducción al Español */}
         {(term.spanish_translation || term.spanishTranslation) && (
-          <p className="text-[11px] font-medium text-emerald-600 mb-2">
+          <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mb-2">
             ES: {term.spanish_translation || term.spanishTranslation}
           </p>
         )}
       </div>
 
       {/* Pie dinámico: NUNCA texto quemado */}
-      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Programa: <strong className="text-slate-700">{term.program || activeProgram || 'Formación Técnica'}</strong></span>
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+        <span>Programa: <strong className="text-slate-700 dark:text-slate-300">{term.program || activeProgram || 'Formación Técnica'}</strong></span>
         <span className="font-mono text-[10px] text-slate-400">SENA CEFR</span>
       </div>
     </div>

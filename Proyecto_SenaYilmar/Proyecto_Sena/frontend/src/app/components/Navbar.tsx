@@ -22,10 +22,27 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
 
+  // Detección estricta y obligatoria de sesión activa:
+  // Condición 1: Token existente y no vacío en sessionStorage o localStorage
+  // Condición 2: isAuthenticated === true y user !== null
   const token = typeof window !== "undefined"
-    ? sessionStorage.getItem("accessToken") || sessionStorage.getItem("access_token") || sessionStorage.getItem("token")
+    ? (sessionStorage.getItem("accessToken") ||
+       sessionStorage.getItem("access_token") ||
+       sessionStorage.getItem("token") ||
+       localStorage.getItem("accessToken") ||
+       localStorage.getItem("access_token") ||
+       localStorage.getItem("token"))
     : null;
-  const hasValidSession = Boolean(token && isAuthenticated && user);
+
+  const hasValidSession = Boolean(
+    token &&
+    String(token).trim() !== "" &&
+    token !== "null" &&
+    token !== "undefined" &&
+    isAuthenticated === true &&
+    user !== null &&
+    user?.id
+  );
 
   const currentPath = activePath || location.pathname;
 
@@ -102,19 +119,26 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
               <UserAccountMenu accent="green" />
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 rounded-xl shadow-xs hover:shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-98"
-            >
-              <span>Ingresar</span>
-              <LogIn className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="h-9 sm:h-10 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm px-3 sm:px-4 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Ingresar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/register")}
+                className="h-9 sm:h-10 bg-[#39A900] hover:bg-[#2e8600] text-white font-semibold text-xs sm:text-sm px-3 sm:px-4 rounded-xl shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-98"
+              >
+                <span>Registrarse</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
     </header>
   );
 };
-
-export default Navbar;
