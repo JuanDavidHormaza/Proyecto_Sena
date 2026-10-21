@@ -163,11 +163,11 @@ export function LandingPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => navigate("/register")}
-                    className="w-full sm:w-auto h-12 px-6 sm:px-8 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl text-base font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs active:scale-98"
+                    onClick={() => navigate("/login")}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-base shadow-sm transition-all dark:bg-slate-800 dark:hover:bg-slate-700/60 dark:border-slate-700 dark:text-white cursor-pointer active:scale-98"
                   >
-                    <IconUsers size={20} stroke={1.8} className="text-slate-500 dark:text-slate-400" />
-                    <span>Crear Cuenta / Registrarse</span>
+                    <IconLogin size={20} stroke={2} className="text-slate-600 dark:text-slate-300" />
+                    <span>Iniciar Sesión</span>
                   </button>
                 )}
               </div>
