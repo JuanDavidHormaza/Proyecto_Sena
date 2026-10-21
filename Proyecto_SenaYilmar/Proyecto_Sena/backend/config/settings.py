@@ -215,7 +215,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = Path(os.getenv('STATIC_ROOT') or (BASE_DIR / 'staticfiles'))
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Soporte completo de almacenamiento para Django 4.2+ y 5.x
@@ -234,7 +234,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
  
 # ─── MinIO / S3 Storage (100% interno en Docker) ─────────────────────────────
-MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'http://minio:9000')
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT') or os.getenv('AWS_S3_ENDPOINT_URL') or 'http://worklex_minio:9000'
 
 # Unificación de credenciales MinIO / S3
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', os.getenv('MINIO_ROOT_USER', os.getenv('MINIO_ACCESS_KEY', os.getenv('MINIO_USER', 'admin'))))

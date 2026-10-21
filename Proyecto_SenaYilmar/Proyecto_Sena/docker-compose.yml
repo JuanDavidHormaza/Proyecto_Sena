@@ -68,6 +68,7 @@ services:
       worklex_network:
         aliases:
           - minio
+          - worklex_minio
 
   # ── 3. Aprovisionamiento Inicial MinIO (Buckets y Permisos) ─────────────────
   worklex_minio_provision:
