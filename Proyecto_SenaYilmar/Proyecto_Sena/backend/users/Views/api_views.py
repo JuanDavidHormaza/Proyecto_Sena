@@ -1308,8 +1308,9 @@ class TestResultViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def list(self, request):
-        program_filter = None
-        if getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
+        program_filter = request.query_params.get('program')
+        ficha_filter = request.query_params.get('ficha')
+        if not program_filter and not ficha_filter and getattr(request.user, 'role_id', None) in {'INSTRUCTOR', 'MONITOR'}:
             program_filter = getattr(request.user, 'program', None)
 
         user_id = request.query_params.get('user_id')
@@ -1319,6 +1320,7 @@ class TestResultViewSet(viewsets.ViewSet):
         return Response(TestResultController.list_all(
             user_id=user_id,
             program_filter=program_filter,
+            ficha_filter=ficha_filter,
         ))
 
     def create(self, request):
@@ -1466,7 +1468,130 @@ class RankingViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def list(self, request):
-        return Response(RankingController.list_all())
+        program_param = request.query_params.get('program')
+        ficha_param = request.query_params.get('ficha')
+        return Response(RankingController.list_all(program_filter=program_param, ficha_filter=ficha_param))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SEGUIMIENTO PEDAGÓGICO DE APRENDICES (TEACHER TRACKING VIEW)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TeacherTrackingView(APIView):
+    """
+    Endpoint de seguimiento detallado y reactivo de aprendices para docentes e instructores.
+    Conecta directamente con PostgreSQL consultando TestResult reales, calculando promedios,
+    último nivel alcanzado y filtrando estrictamente por programa y ficha.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        role_id = getattr(user, 'role_id', '')
+
+        # Parámetros enviados desde la sesión o filtros del frontend
+        ficha_param = (request.query_params.get('ficha') or '').strip()
+        program_param = (request.query_params.get('program') or '').strip()
+
+        # Si el usuario es INSTRUCTOR / MONITOR y no se pasaron filtros explícitos, usar su programa asignado
+        if not ficha_param and not program_param and role_id in ('INSTRUCTOR', 'MONITOR'):
+            user_prog = getattr(user, 'program', '') or ''
+            if user_prog:
+                import re
+                f_match = re.search(r'\((\d+)\)', user_prog) or re.search(r'\b(\d{6,8})\b', user_prog)
+                if f_match:
+                    ficha_param = f_match.group(1)
+                else:
+                    program_param = user_prog.split('(')[0].strip()
+
+        students_qs = User.objects.filter(role_id__iexact='APRENDIZ')
+
+        if ficha_param and ficha_param.lower() != 'all':
+            students_qs = students_qs.filter(
+                Q(program__icontains=ficha_param) |
+                Q(ficha_requests__ficha_code__iexact=ficha_param, ficha_requests__status='APROBADA')
+            ).distinct()
+        elif program_param and program_param.lower() != 'all':
+            prog_clean = program_param.split('(')[0].strip()
+            students_qs = students_qs.filter(
+                Q(program__icontains=prog_clean) |
+                Q(program__icontains=program_param)
+            ).distinct()
+
+        # Excluir cuentas de prueba / seed mock
+        students_qs = students_qs.exclude(
+            Q(person__email__icontains='santiagolegarda') |
+            Q(person__first_name__icontains='legarda') |
+            Q(person__last_name__icontains='legarda')
+        )
+
+        tracking_data = []
+        for student in students_qs.select_related('person').prefetch_related('test_results', 'ficha_requests').order_by('person__first_name', 'person__last_name'):
+            student_tests = student.test_results.order_by('-created_at')
+            total_tests = student_tests.count()
+
+            # Calcular promedio real sobre el campo score (0-100) en PostgreSQL
+            avg_dict = student_tests.aggregate(Avg('score'))
+            avg_score = avg_dict.get('score__avg') or 0.0
+            last_test = student_tests.first()
+
+            # Clasificación por nivel pedagógico real
+            resolved_level = 'Sin nivel'
+            if last_test:
+                lvl = getattr(last_test, 'level', None)
+                if lvl and lvl not in ('Sin Nivel', 'No Presentado', 'Invalidada'):
+                    resolved_level = lvl
+                elif avg_score >= 70:
+                    resolved_level = 'B1-B2'
+                elif avg_score > 0:
+                    resolved_level = 'A1-A2'
+                else:
+                    resolved_level = lvl or 'Sin nivel'
+
+            # Resolver código de ficha asociada
+            approved_ficha = student.ficha_requests.filter(status='APROBADA').order_by('-reviewed_at').first()
+            ficha_code = approved_ficha.ficha_code if approved_ficha else ''
+            if not ficha_code:
+                import re
+                match = re.search(r'\((\d+)\)', student.program or '') or re.search(r'\b(\d{6,8})\b', student.program or '')
+                if match:
+                    ficha_code = match.group(1)
+
+            person = getattr(student, 'person', None)
+            full_name = f"{person.first_name} {person.last_name}".strip() if person else (student.program or 'Aprendiz')
+            email = person.email if person else ''
+            doc_num = person.doc_num if person else ''
+
+            tracking_data.append({
+                'id': str(student.user_id),
+                'full_name': full_name,
+                'name': full_name,
+                'email': email,
+                'document_number': doc_num,
+                'program': getattr(student, 'program', 'Sin programa') or 'Sin programa',
+                'ficha': ficha_code,
+                'has_records': total_tests > 0,
+                'total_tests': total_tests,
+                'average_score': round(float(avg_score), 1),
+                'last_level': resolved_level,
+                'last_test_date': last_test.created_at.strftime('%Y-%m-%d %H:%M') if (last_test and getattr(last_test, 'created_at', None)) else None,
+                'tests_history': [
+                    {
+                        'id': str(t.id),
+                        'score': getattr(t, 'score', 0),
+                        'level': getattr(t, 'level', 'A1'),
+                        'date': t.created_at.strftime('%d/%m/%Y') if getattr(t, 'created_at', None) else '',
+                        'completedAt': t.created_at.isoformat() if getattr(t, 'created_at', None) else None,
+                        'correctAnswers': getattr(t, 'correct_answers', 0),
+                        'totalQuestions': getattr(t, 'total_questions', 0),
+                        'duration': getattr(t, 'duration', ''),
+                        'feedback': getattr(t, 'feedback', ''),
+                    } for t in student_tests[:10]
+                ]
+            })
+
+        return Response(tracking_data, status=status.HTTP_200_OK)
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

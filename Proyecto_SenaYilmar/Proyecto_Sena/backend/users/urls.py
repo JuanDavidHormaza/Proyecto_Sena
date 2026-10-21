@@ -17,6 +17,7 @@ from .Views.api_views import (
     DigitalDictionaryViewSet, TestResultViewSet, RankingViewSet,
     FichaRequestViewSet, SupportTicketViewSet, AdminMetricsAPIView,
     StudyStreakAPIView,
+    TeacherTrackingView,
 )
 from .Views.media_views import MediaProxyAPIView, MediaUploadAPIView
 from .Views.exam_views import (
@@ -112,6 +113,12 @@ urlpatterns = [
     path('profile/streak',                          StudyStreakAPIView.as_view(),        name='study-streak'),
     path('profile/streak/activity/',                StudyStreakAPIView.as_view(),        name='study-streak-activity-slash'),
     path('profile/streak/activity',                 StudyStreakAPIView.as_view(),        name='study-streak-activity'),
+
+    # ── Seguimiento de Aprendices (Teacher / Instructor Tracking) ─────
+    path('instructor/students-tracking/',           TeacherTrackingView.as_view(),       name='instructor-students-tracking-slash'),
+    path('instructor/students-tracking',            TeacherTrackingView.as_view(),       name='instructor-students-tracking'),
+    path('teacher/students-tracking/',              TeacherTrackingView.as_view(),       name='teacher-students-tracking-slash'),
+    path('teacher/students-tracking',               TeacherTrackingView.as_view(),       name='teacher-students-tracking'),
 
     # ── ViewSets ───────────────────────────────────────────────────────
     path('', include(router.urls)),

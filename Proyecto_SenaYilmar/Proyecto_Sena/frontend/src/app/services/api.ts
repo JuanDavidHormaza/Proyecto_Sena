@@ -784,6 +784,46 @@ export async function uploadMediaFile(
 
 // ─── Test Results API ────────────────────────────────────────────────────────
 
+export interface StudentTrackingHistoryItem {
+  id: string;
+  score: number;
+  level: string;
+  date: string;
+  completedAt?: string;
+  correctAnswers?: number;
+  totalQuestions?: number;
+  duration?: string;
+  feedback?: string;
+}
+
+export interface StudentTrackingItem {
+  id: string;
+  full_name: string;
+  name: string;
+  email: string;
+  document_number: string;
+  program: string;
+  ficha: string;
+  has_records: boolean;
+  total_tests: number;
+  average_score: number;
+  last_level: string;
+  last_test_date: string | null;
+  tests_history: StudentTrackingHistoryItem[];
+}
+
+export async function getTeacherStudentsTracking(params?: { ficha?: string; program?: string }): Promise<StudentTrackingItem[]> {
+  const query = new URLSearchParams();
+  if (params?.ficha && params.ficha !== 'all') query.append('ficha', params.ficha);
+  if (params?.program && params.program !== 'all') query.append('program', params.program);
+  const qStr = query.toString() ? `?${query.toString()}` : '';
+
+  const response = await fetch(`${API_BASE}/instructor/students-tracking/${qStr}`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<StudentTrackingItem[]>(response);
+}
+
 export async function getTestResults(userId?: string): Promise<ApiTestResult[]> {
   const url = userId ? `${API_BASE}/results/?user_id=${userId}` : `${API_BASE}/results/`;
   const response = await fetch(url, {

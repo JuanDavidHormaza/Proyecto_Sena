@@ -31,6 +31,9 @@ export function TeacherDashboard() {
   const [feedback, setFeedback] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterLevel, setFilterLevel] = useState("all");
+  const [selectedFicha, setSelectedFicha] = useState<string>("all");
+  const [availableFichas, setAvailableFichas] = useState<string[]>([]);
+  const [studentsTracking, setStudentsTracking] = useState<api.StudentTrackingItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<User[]>([]);
   const [fichaRequests, setFichaRequests] = useState<api.ApiFichaRequest[]>([]);
@@ -43,21 +46,45 @@ export function TeacherDashboard() {
   const teacherName = user?.name || sessionStorage.getItem("userName") || "Instructor";
   const teacherProgram = user?.program || sessionStorage.getItem("userProgram") || "";
 
-  // Cargar datos desde API
-  const loadDataFromApi = async () => {
+  // Cargar datos reales desde API (Seguimiento de Aprendices y Pruebas en PostgreSQL)
+  const loadDataFromApi = async (fichaOverride?: string) => {
     setIsLoading(true);
+    const activeFicha = fichaOverride !== undefined ? fichaOverride : selectedFicha;
+    const trackingParams = activeFicha && activeFicha !== "all" ? { ficha: activeFicha } : undefined;
+
     try {
-      const [apiResults, apiUsers, apiRequests] = await Promise.all([
-        api.getTestResults(),
-        api.getUsers('student'),
+      const [trackingRes, apiResults, apiUsers, apiRequests] = await Promise.all([
+        api.getTeacherStudentsTracking(trackingParams).catch(err => {
+          console.warn("[TeacherDashboard] Error loading student tracking:", err);
+          return [] as api.StudentTrackingItem[];
+        }),
+        api.getTestResults().catch(err => {
+          console.warn("[TeacherDashboard] Error loading test results:", err);
+          return [] as api.ApiTestResult[];
+        }),
+        api.getUsers('student').catch(() => [] as api.ApiUser[]),
         api.getFichaRequests().catch(err => {
           console.warn("[TeacherDashboard] Error loading ficha requests:", err);
           return [] as api.ApiFichaRequest[];
         }),
       ]);
-      
+
+      const trackingList = Array.isArray(trackingRes) ? trackingRes : [];
+      setStudentsTracking(trackingList);
+
+      // Extraer fichas disponibles para el filtro
+      const fSet = new Set<string>();
+      trackingList.forEach(s => {
+        if (s.ficha) fSet.add(s.ficha);
+      });
+      (apiRequests || []).forEach(r => {
+        if (r.ficha_code) fSet.add(r.ficha_code);
+      });
+      if (user?.ficha?.codigo) fSet.add(user.ficha.codigo);
+      setAvailableFichas(Array.from(fSet));
+
       // Convertir resultados de API
-      const convertedResults: TestResult[] = apiResults.map((r) => ({
+      const convertedResults: TestResult[] = (apiResults || []).map((r) => ({
         id: r.id,
         userId: r.userId,
         userName: r.userName,
@@ -71,8 +98,8 @@ export function TeacherDashboard() {
         duration: r.duration,
         answers: r.answers || (r.process as any)?.answers || (r.process as any)?.userAnswers || [],
       }));
-      
-      // Convertir estudiantes de API (excluyendo cuentas de prueba)
+
+      // Convertir estudiantes de API
       const convertedStudents = (apiUsers || [])
         .filter((u) => {
           const email = (u.email || "").toLowerCase();
@@ -90,12 +117,13 @@ export function TeacherDashboard() {
           createdAt: new Date().toISOString().split('T')[0],
           program: u.program || '',
         }));
-      
+
       setResults(convertedResults);
       setStudents(convertedStudents);
       setFichaRequests(apiRequests || []);
     } catch (error) {
       console.error("[TeacherDashboard] Error al cargar datos del API institucional:", error);
+      setStudentsTracking([]);
       setResults([]);
       setStudents([]);
       setFichaRequests([]);
@@ -165,79 +193,46 @@ export function TeacherDashboard() {
 
   const pendingRequestsCount = fichaRequests.filter(r => r.status === "PENDIENTE").length;
 
-  const teacherProgramKey = normalizeText(teacherProgram);
+  // Conteo reactivo y dinámico de niveles basado en los registros reales de PostgreSQL
+  const basicoCount = studentsTracking.filter(s => s.has_records && (s.last_level.includes('A1') || s.last_level.includes('A2') || s.last_level.startsWith('A'))).length;
+  const avanzadoCount = studentsTracking.filter(s => s.has_records && (s.last_level.includes('B1') || s.last_level.includes('B2') || s.last_level.startsWith('B'))).length;
+  const evaluatedStudents = studentsTracking.filter(s => s.has_records);
+  const totalEvaluated = basicoCount + avanzadoCount || (evaluatedStudents.length || 1);
 
-  const filteredResults = results.filter(r => {
-    const student = students.find(s => s.id === r.userId);
-    const resultProgram = normalizeText(r.studentProgram || student?.program || "");
-    const matchesProgram = !teacherProgramKey ||
-      resultProgram === teacherProgramKey ||
-      resultProgram.includes(teacherProgramKey) ||
-      teacherProgramKey.includes(resultProgram) ||
-      teacherProgramKey.split(/\s+/).filter(t => t.length >= 4 || /^\d+$/.test(t)).some(t => resultProgram.includes(t));
-    const matchesSearch = r.userName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLevel = filterLevel === "all" || r.level.startsWith(filterLevel);
-    return matchesProgram && matchesSearch && matchesLevel;
-  });
+  const totalTestsCount = studentsTracking.reduce((acc, s) => acc + (s.total_tests || 0), 0);
+  const avgOverallScore = evaluatedStudents.length
+    ? Math.round(evaluatedStudents.reduce((acc, s) => acc + s.average_score, 0) / evaluatedStudents.length)
+    : 0;
 
-  const programStudents = teacherProgramKey
-    ? students.filter(student => {
-        const sp = normalizeText(student.program);
-        if (!sp) return false;
-        if (sp === teacherProgramKey) return true;
-        if (sp.includes(teacherProgramKey) || teacherProgramKey.includes(sp)) return true;
-        const teacherTokens = teacherProgramKey.split(/\s+/).filter(t => t.length >= 4 || /^\d+$/.test(t));
-        return teacherTokens.some(t => sp.includes(t));
-      })
-    : students;
-
-  // Group results by student
-  const studentResults = filteredResults.reduce((acc, result) => {
-    if (!acc[result.userId]) {
-      acc[result.userId] = [];
-    }
-    acc[result.userId].push(result);
-    return acc;
-  }, {} as Record<string, TestResult[]>);
-
-  const visibleProgramStudentEntries = programStudents
-    .filter(student => {
-      const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const hasMatchingLevel = filterLevel === "all" || Boolean(studentResults[student.id]?.length);
-      return matchesSearch && hasMatchingLevel;
-    })
-    .map(student => [student.id, studentResults[student.id] || []] as const);
-
-  const programStudentIds = new Set(programStudents.map(student => student.id));
-  const resultOnlyEntries = Object.entries(studentResults)
-    .filter(([userId, userResults]) => {
-      if (programStudentIds.has(userId)) return false;
-      const latestResult = userResults[0];
-      return latestResult?.userName.toLowerCase().includes(searchTerm.toLowerCase());
-    })
-    .map(([userId, userResults]) => [userId, userResults] as const);
-
-  const studentEntries = [...visibleProgramStudentEntries, ...resultOnlyEntries];
-  const totalStudentIds = new Set([
-    ...programStudents.map(student => student.id),
-    ...filteredResults.map(result => result.userId),
-  ]);
-
-  // Stats
   const stats = {
-    totalStudents: totalStudentIds.size,
-    totalTests: filteredResults.length,
-    averageScore: filteredResults.length
-      ? Math.round(filteredResults.reduce((acc, r) => acc + r.score, 0) / filteredResults.length)
-      : 0,
-    feedbackGiven: filteredResults.filter(r => r.feedback).length,
+    totalStudents: studentsTracking.length || students.length,
+    totalTests: totalTestsCount || results.length,
+    averageScore: avgOverallScore,
+    feedbackGiven: results.filter(r => r.feedback).length,
   };
 
   const levelDistribution = {
-    basic: filteredResults.filter(r => r.level.startsWith('A')).length,
-    intermediate: filteredResults.filter(r => r.level.startsWith('B')).length,
+    basic: basicoCount,
+    intermediate: avanzadoCount,
   };
-  const totalFilteredTests = filteredResults.length || 1;
+
+  // Filtrado reactivo de aprendices en tiempo real
+  const filteredStudents = studentsTracking.filter(s => {
+    const sTerm = searchTerm.toLowerCase().trim();
+    const matchesSearch = !sTerm ||
+      s.name.toLowerCase().includes(sTerm) ||
+      s.email.toLowerCase().includes(sTerm) ||
+      s.ficha.toLowerCase().includes(sTerm) ||
+      s.program.toLowerCase().includes(sTerm);
+
+    const matchesLevel =
+      filterLevel === "all" ? true :
+      filterLevel === "A" ? (s.has_records && (s.last_level.includes('A1') || s.last_level.includes('A2') || s.last_level.startsWith('A'))) :
+      filterLevel === "B" ? (s.has_records && (s.last_level.includes('B1') || s.last_level.includes('B2') || s.last_level.startsWith('B'))) :
+      filterLevel === "pending" ? !s.has_records : true;
+
+    return matchesSearch && matchesLevel;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -379,53 +374,79 @@ export function TeacherDashboard() {
           transition={{ delay: 0.4 }}
           className="bg-white rounded-2xl p-6 border border-border shadow-sm mb-8"
         >
-          <h3 className="font-semibold text-foreground mb-4">Distribucion por Nivel</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div>
+              <h3 className="font-bold text-foreground">Distribución por Nivel de Dominio CEFR</h3>
+              <p className="text-xs text-muted-foreground">Conteo reactivo de aprendices evaluados en la ficha y programa activo</p>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+              {evaluatedStudents.length} de {studentsTracking.length} aprendices evaluados
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { label: "Basico (A1-A2)", value: levelDistribution.basic, color: "#E21B3C", percentage: (levelDistribution.basic / totalFilteredTests) * 100 },
-              { label: "Intermedio / Avanzado (B1-B2)", value: levelDistribution.intermediate, color: "#39A900", percentage: (levelDistribution.intermediate / totalFilteredTests) * 100 },
+              { label: "Básico (A1-A2)", value: basicoCount, color: "#2563EB", bg: "bg-blue-600", percentage: (basicoCount / totalEvaluated) * 100 },
+              { label: "Intermedio / Avanzado (B1-B2)", value: avanzadoCount, color: "#059669", bg: "bg-emerald-600", percentage: (avanzadoCount / totalEvaluated) * 100 },
             ].map((level, index) => (
-              <div key={index} className="text-center">
+              <div key={index} className="text-center p-4 rounded-xl bg-slate-50/70 border border-slate-200/70 flex items-center justify-between gap-4">
+                <div className="text-left">
+                  <p className="text-sm font-bold text-foreground">{level.label}</p>
+                  <p className="text-xs text-muted-foreground">{level.percentage.toFixed(0)}% del total evaluado</p>
+                </div>
                 <div 
-                  className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-white text-xl font-bold mb-2"
-                  style={{ backgroundColor: level.color }}
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-xs ${level.bg}`}
                 >
                   {level.value}
                 </div>
-                <p className="text-sm font-medium text-foreground">{level.label}</p>
-                <p className="text-xs text-muted-foreground">{level.percentage.toFixed(0)}%</p>
               </div>
             ))}
           </div>
         </motion.div>
 
-        {/* Search and Filters */}
+        {/* Search, Filter by Level and Filter by Ficha */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="flex flex-col sm:flex-row gap-4 mb-6"
+          className="flex flex-col sm:flex-row gap-3 mb-6"
         >
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
             <input
               type="text"
-              placeholder="Buscar aprendiz..."
+              placeholder="Buscar aprendiz por nombre, documento o correo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50 text-sm"
             />
           </div>
-          <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" strokeWidth={1.8} />
+          <div className="relative min-w-[200px]">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
             <select
               value={filterLevel}
               onChange={(e) => setFilterLevel(e.target.value)}
-              className="pl-12 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50 appearance-none cursor-pointer"
+              className="w-full pl-10 pr-8 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50 appearance-none cursor-pointer text-sm font-medium"
             >
               <option value="all">Todos los niveles</option>
-              <option value="A">Basico (A1-A2)</option>
+              <option value="A">Básico (A1-A2)</option>
               <option value="B">Intermedio / Avanzado (B1-B2)</option>
+              <option value="pending">Sin evaluar (Pendiente)</option>
+            </select>
+          </div>
+          <div className="relative min-w-[180px]">
+            <select
+              value={selectedFicha}
+              onChange={(e) => {
+                const newFicha = e.target.value;
+                setSelectedFicha(newFicha);
+                loadDataFromApi(newFicha);
+              }}
+              className="w-full py-3 px-4 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-sena-blue/50 text-sm font-semibold text-foreground cursor-pointer"
+            >
+              <option value="all">Todas mis Fichas</option>
+              {availableFichas.map(f => (
+                <option key={f} value={f}>Ficha: {f}</option>
+              ))}
             </select>
           </div>
         </motion.div>
@@ -451,141 +472,183 @@ export function TeacherDashboard() {
               ))}
             </div>
           ) : (
-            studentEntries.map(([userId, userResults], index) => {
-            const student = students.find(s => s.id === userId);
-            const latestResult = userResults[0];
-            const studentName = student?.name || latestResult?.userName || "Aprendiz";
-            const studentProgram = student?.program || latestResult?.studentProgram || "Programa SENA";
-            const avgScore = userResults.length
-              ? Math.round(userResults.reduce((acc, r) => acc + r.score, 0) / userResults.length)
-              : 0;
-            
-            return (
-              <motion.div
-                key={userId}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden"
-              >
-                {/* Student Header */}
-                <div className="p-5 border-b border-border bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-sena-green rounded-xl flex items-center justify-center text-white font-medium text-lg">
-                        {studentName.charAt(0)}
-                      </div>
-                      <div className="min-w-0 max-w-[280px]">
-                        <h3 className="font-semibold text-foreground truncate" title={studentName}>{studentName}</h3>
-                        <p className="text-sm text-muted-foreground truncate" title={studentProgram}>
-                          {studentProgram} - {userResults.length} prueba{userResults.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right hidden sm:block">
-                        <p className="text-sm text-muted-foreground">Promedio</p>
-                        <p className={`text-xl font-bold ${
-                          avgScore >= 80 ? 'text-sena-green' : avgScore >= 60 ? 'text-warning' : 'text-destructive'
-                        }`}>{avgScore}%</p>
-                      </div>
-                      <div className={`px-3 py-1.5 rounded-xl text-sm font-medium ${
-                        latestResult?.level?.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
-                        latestResult?.level?.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
-                        'bg-warning/10 text-warning'
-                      }`}>
-                        {latestResult?.level || 'Sin nivel'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            filteredStudents.map((student, index) => {
+              const studentDetailedTests = results.filter(r => r.userId === student.id);
+              const effectiveTests: TestResult[] = studentDetailedTests.length > 0
+                ? studentDetailedTests
+                : (student.tests_history || []).map(h => ({
+                    id: h.id,
+                    userId: student.id,
+                    userName: student.name,
+                    studentProgram: student.program,
+                    score: h.score,
+                    level: h.level,
+                    correctAnswers: h.correctAnswers || 0,
+                    totalQuestions: h.totalQuestions || 0,
+                    feedback: h.feedback,
+                    completedAt: h.completedAt || h.date,
+                    duration: h.duration || '~15:00',
+                    answers: [],
+                  }));
 
-                {/* Results Table */}
-                {userResults.length > 0 ? (
-                  <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Fecha</th>
-                        <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Puntuacion</th>
-                        <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Nivel</th>
-                        <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Correctas</th>
-                        <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Duracion</th>
-                        <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Feedback</th>
-                        <th className="text-left py-3 px-5 text-sm font-medium text-muted-foreground">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {userResults.map((result) => (
-                        <tr key={result.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="py-4 px-5 text-sm">
-                            {new Date(result.completedAt).toLocaleDateString('es-ES', { 
-                              day: 'numeric', month: 'short', year: 'numeric' 
-                            })}
-                          </td>
-                          <td className="py-4 px-5">
-                            <span className={`text-lg font-bold ${
-                              result.score >= 80 ? 'text-sena-green' : 
-                              result.score >= 60 ? 'text-warning' : 'text-destructive'
-                            }`}>
-                              {result.score}%
-                            </span>
-                          </td>
-                          <td className="py-4 px-5">
-                            <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
-                              result.level.startsWith('C') ? 'bg-sena-green/10 text-sena-green' :
-                              result.level.startsWith('B') ? 'bg-sena-blue/10 text-sena-blue' :
-                              'bg-warning/10 text-warning'
-                            }`}>
-                              {result.level}
-                            </span>
-                          </td>
-                          <td className="py-4 px-5 text-sm text-muted-foreground">
-                            {result.correctAnswers}/{result.totalQuestions}
-                          </td>
-                          <td className="py-4 px-5">
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Clock className="w-4 h-4" strokeWidth={1.8} />
-                              {result.duration || '~9:00'}
-                            </div>
-                          </td>
-                          <td className="py-4 px-5">
-                            {result.feedback ? (
-                              <CheckCircle className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
+              const isAdvancedLevel = student.last_level.includes('B') || student.last_level.includes('C');
+              const isBasicLevel = student.last_level.includes('A');
+
+              return (
+                <motion.div
+                  key={student.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 * Math.min(index, 10) }}
+                  className="bg-white rounded-2xl border border-border shadow-xs overflow-hidden"
+                >
+                  {/* Student Header */}
+                  <div className="p-5 border-b border-border bg-muted/20">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-sena-green rounded-xl flex items-center justify-center text-white font-medium text-lg shadow-xs flex-shrink-0">
+                          {student.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 max-w-[340px]">
+                          <h3 className="font-semibold text-foreground truncate" title={student.name}>
+                            {student.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground truncate" title={student.program}>
+                            {student.program} {student.ficha ? `• Ficha: ${student.ficha}` : ''}
+                          </p>
+                          <div className="mt-1">
+                            {student.has_records ? (
+                              <span className="text-xs text-slate-500">
+                                Última prueba: <strong className="text-slate-800">{student.last_test_date}</strong> • {student.total_tests} intento{student.total_tests !== 1 ? 's' : ''}
+                              </span>
                             ) : (
-                              <XCircle className="w-5 h-5 text-muted-foreground/40" strokeWidth={1.8} />
+                              <span className="text-xs text-slate-400 italic">
+                                Pendiente por presentar evaluación
+                              </span>
                             )}
-                          </td>
-                          <td className="py-4 px-5">
-                            <button
-                              onClick={() => handleViewDetails(result)}
-                              className="flex items-center gap-2 px-4 py-2 bg-sena-blue text-white rounded-lg hover:bg-sena-blue-light transition-colors text-sm font-medium"
-                            >
-                              <Eye className="w-4 h-4" strokeWidth={1.8} />
-                              Revisar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                ) : (
-                  <div className="px-5 py-6 text-sm text-muted-foreground">
-                    Sin pruebas registradas.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-right hidden sm:block">
+                          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Promedio</p>
+                          {student.has_records ? (
+                            <p className={`text-xl font-bold ${
+                              student.average_score >= 70 ? 'text-emerald-600' : 'text-amber-600'
+                            }`}>
+                              {student.average_score}%
+                            </p>
+                          ) : (
+                            <p className="text-sm font-semibold text-muted-foreground">0%</p>
+                          )}
+                        </div>
+
+                        <div>
+                          {student.has_records ? (
+                            <span className={`px-3 py-1.5 rounded-xl text-xs font-bold inline-block ${
+                              isAdvancedLevel
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            }`}>
+                              {student.last_level}
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 inline-block">
+                              Sin evaluar
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </motion.div>
-            );
-          })
-        )}
+
+                  {/* Results Table or Pending State */}
+                  {student.has_records && effectiveTests.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border bg-slate-50/50">
+                            <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fecha</th>
+                            <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Puntuación</th>
+                            <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nivel</th>
+                            <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Correctas</th>
+                            <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Duración</th>
+                            <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Feedback</th>
+                            <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {effectiveTests.map((result) => (
+                            <tr key={result.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                              <td className="py-3.5 px-5 text-sm text-foreground">
+                                {result.completedAt ? new Date(result.completedAt).toLocaleDateString('es-ES', {
+                                  day: 'numeric', month: 'short', year: 'numeric'
+                                }) : '-'}
+                              </td>
+                              <td className="py-3.5 px-5">
+                                <span className={`text-base font-bold ${
+                                  result.score >= 70 ? 'text-emerald-600' : 'text-amber-600'
+                                }`}>
+                                  {result.score}%
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-5">
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                  result.level.startsWith('B') || result.level.startsWith('C')
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                                }`}>
+                                  {result.level}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-5 text-sm text-muted-foreground">
+                                {result.totalQuestions ? `${result.correctAnswers}/${result.totalQuestions}` : '-'}
+                              </td>
+                              <td className="py-3.5 px-5">
+                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                  <Clock className="w-3.5 h-3.5" strokeWidth={1.8} />
+                                  {result.duration || '~15:00'}
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-5">
+                                {result.feedback ? (
+                                  <CheckCircle className="w-5 h-5 text-sena-green" strokeWidth={1.8} />
+                                ) : (
+                                  <XCircle className="w-5 h-5 text-muted-foreground/40" strokeWidth={1.8} />
+                                )}
+                              </td>
+                              <td className="py-3.5 px-5">
+                                <button
+                                  onClick={() => handleViewDetails(result)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-sena-blue text-white rounded-lg hover:bg-sena-blue-light transition-colors text-xs font-medium cursor-pointer"
+                                >
+                                  <Eye className="w-3.5 h-3.5" strokeWidth={1.8} />
+                                  Revisar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="px-5 py-6 text-sm text-muted-foreground italic flex items-center gap-2 bg-slate-50/30">
+                      <Clock className="w-4 h-4 text-muted-foreground/60" strokeWidth={1.8} />
+                      <span>Pendiente por presentar evaluación. Aún no registra intentos en la plataforma.</span>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })
+          )}
         </div>
 
-        {!isLoading && studentEntries.length === 0 && (
+        {!isLoading && filteredStudents.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-border">
             <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" strokeWidth={1.8} />
             <h3 className="text-lg font-semibold text-foreground mb-2">No hay resultados</h3>
-            <p className="text-muted-foreground">No se encontraron pruebas que coincidan con tu busqueda</p>
+            <p className="text-muted-foreground">No se encontraron aprendices que coincidan con la búsqueda o ficha seleccionada</p>
           </div>
         )}
         </>

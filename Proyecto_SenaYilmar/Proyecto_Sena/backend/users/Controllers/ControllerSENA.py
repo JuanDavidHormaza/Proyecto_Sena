@@ -1090,20 +1090,31 @@ def _derive_character_from_score(score, level='A1'):
 class TestResultController:
 
     @staticmethod
-    def list_all(user_id=None, program_filter=None):
+    def list_all(user_id=None, program_filter=None, ficha_filter=None):
         queryset = TestResult.objects.select_related('user__person').all()
         if user_id:
             queryset = queryset.filter(user_id=user_id)
-        if program_filter:
-            queryset = queryset.filter(user__program__iexact=program_filter.strip())
+        if ficha_filter:
+            f = str(ficha_filter).strip()
+            queryset = queryset.filter(
+                Q(user__program__icontains=f) |
+                Q(user__ficha_requests__ficha_code__iexact=f, user__ficha_requests__status='APROBADA')
+            ).distinct()
+        elif program_filter:
+            prog_clean = str(program_filter).split('(')[0].strip()
+            queryset = queryset.filter(
+                Q(user__program__icontains=prog_clean) |
+                Q(user__program__icontains=str(program_filter).strip())
+            ).distinct()
 
         results = []
         for result in queryset:
-            person = result.user.person
+            person = getattr(result.user, 'person', None)
+            u_name = f"{person.first_name} {person.last_name}" if person else (result.user.program or "Aprendiz")
             results.append({
                 'id': str(result.id),
                 'userId': str(result.user.user_id),
-                'userName': f"{person.first_name} {person.last_name}",
+                'userName': u_name,
                 'studentProgram': result.user.program,
                 'score': result.score,
                 'level': result.level,
@@ -1246,13 +1257,25 @@ class RankingController:
         return ranking
 
     @staticmethod
-    def list_all():
+    def list_all(program_filter=None, ficha_filter=None):
         """Devuelve el leaderboard ordenado por mejor puntaje."""
         queryset = (
             Ranking.objects
             .select_related('user__person', 'best_result')
             .order_by('-best_score', '-updated_at')
         )
+        if ficha_filter:
+            f = str(ficha_filter).strip()
+            queryset = queryset.filter(
+                Q(user__program__icontains=f) |
+                Q(user__ficha_requests__ficha_code__iexact=f, user__ficha_requests__status='APROBADA')
+            ).distinct()
+        elif program_filter:
+            prog_clean = str(program_filter).split('(')[0].strip()
+            queryset = queryset.filter(
+                Q(user__program__icontains=prog_clean) |
+                Q(user__program__icontains=str(program_filter).strip())
+            ).distinct()
 
         leaderboard = []
         for position, ranking in enumerate(queryset, start=1):
