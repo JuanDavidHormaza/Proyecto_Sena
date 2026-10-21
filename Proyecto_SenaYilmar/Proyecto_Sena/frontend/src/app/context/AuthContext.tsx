@@ -81,6 +81,11 @@ export const logout = async (redirectUrl: string = '/login?logout=success'): Pro
         // ignore
       }
     }
+
+    // 5. Eliminar cabecera Authorization si axios esta presente
+    if (typeof window !== 'undefined' && (window as any).axios?.defaults?.headers?.common) {
+      delete (window as any).axios.defaults.headers.common['Authorization'];
+    }
   } finally {
     // 5. Redirección forzada sin historial previo
     if (typeof window !== 'undefined') {
@@ -108,6 +113,7 @@ function evaluateStoredSession(): SessionDropReason {
 
 interface AuthContextType {
   user: ApiUser | null;
+  token?: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: any) => Promise<ApiUser>;
@@ -131,6 +137,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // AUDITORÍA DE RE-HIDRATACIÓN: El estado inicial SIEMPRE es null y false.
   // PROHIBIDO asignar usuarios por defecto o estados simulados en memoria antes de validar.
   const [user, setUser] = useState<ApiUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -146,6 +153,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearAllTokens();
         if (isMounted) {
           setUser(null);
+          setToken(null);
           setIsAuthenticated(false);
           setIsLoading(false);
         }
@@ -161,6 +169,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!token) {
         if (isMounted) {
           setUser(null);
+          setToken(null);
           setIsAuthenticated(false);
           setIsLoading(false);
         }
@@ -211,6 +220,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearAllTokens();
         if (isMounted) {
           setUser(null);
+          setToken(null);
           setIsAuthenticated(false);
         }
       } finally {
@@ -276,6 +286,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (credentials: any) => {
     clearAllTokens();
     setUser(null);
+    setToken(null);
     setIsAuthenticated(false);
 
     try {
@@ -294,6 +305,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         avatar: response.user.avatar || '',
       };
       setUser(cleanUser);
+      setToken(response.access);
       setIsAuthenticated(true);
 
       sessionStorage.setItem('userName', cleanUser.name);
@@ -335,6 +347,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const register = async (data: RegisterData) => {
     clearAllTokens();
     setUser(null);
+    setToken(null);
     setIsAuthenticated(false);
 
     const response = await apiRegister(data);
@@ -375,6 +388,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // ignore
     }
     setUser(null);
+    setToken(null);
     setIsAuthenticated(false);
 
     try {
@@ -471,6 +485,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     <AuthContext.Provider
       value={{
         user,
+        token,
         isAuthenticated,
         isLoading,
         login,
