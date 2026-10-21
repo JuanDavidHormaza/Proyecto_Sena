@@ -1177,56 +1177,37 @@ class DigitalDictionaryViewSet(viewsets.ModelViewSet):
         user = self.request.user
         role = str(getattr(user, 'role_id', '') or getattr(user, 'role', '') or '').upper()
 
-        # SUPERADMIN / ADMINISTRADOR: Acceso global con filtros opcionales
+        # Administrador: Acceso total o filtro explícito
         if role in ['ADMINISTRADOR', 'SUPERADMIN', 'ADMIN', 'COORDINADOR']:
             prog = self.request.query_params.get('program')
             fch = self.request.query_params.get('ficha') or self.request.query_params.get('fichaId')
-            qs = DictionaryWord.objects.select_related('subject').all()
-            if prog and prog.lower() not in ('all', 'todos', 'todos los programas'):
-                clean_p = prog.split('(')[0].strip()
-                qs = qs.filter(Q(program__icontains=clean_p) | Q(subject__subject_id__icontains=clean_p))
-            if fch and fch.lower() not in ('all', 'todas', 'todas las fichas'):
+            qs = DictionaryWord.objects.all()
+            if prog:
+                qs = qs.filter(program__icontains=prog.split('(')[0].strip())
+            if fch:
                 qs = qs.filter(ficha__icontains=fch)
-            return qs.order_by('word_id')
+            order_field = 'word' if 'word' in [f.name for f in DictionaryWord._meta.get_fields()] else 'word_id'
+            return qs.order_by(order_field)
 
-        # INSTRUCTOR: Solo términos de los programas o fichas que tiene formalmente asignados
-        if role in ['INSTRUCTOR', 'DOCENTE', 'MONITOR']:
-            user_prog = getattr(user, 'program', None) or self.request.query_params.get('program')
-            user_fch = getattr(user, 'ficha_code', None) or getattr(user, 'ficha', None) or self.request.query_params.get('ficha')
-            if hasattr(user_fch, 'code'):
-                user_fch = user_fch.code
-            if not user_prog and not user_fch:
-                return DictionaryWord.objects.none()
-            qs = DictionaryWord.objects.select_related('subject').all()
-            if user_prog:
-                clean_prog = str(user_prog).split('(')[0].strip()
-                qs = qs.filter(Q(program__icontains=clean_prog) | Q(subject__subject_id__icontains=clean_prog))
-            if user_fch:
-                qs = qs.filter(ficha__icontains=str(user_fch))
-            return qs.order_by('word_id')
-
-        # APRENDIZ: Aislamiento absoluto por su ficha y programa activos
-        # Si no tiene ficha o programa asignado, no ve NINGÚN diccionario de otras áreas
-        active_prog = getattr(user, 'program', None)
-        active_fch = getattr(user, 'ficha', None)
+        # Aprendiz o Instructor: Filtrado estricto por su asignación activa
+        active_prog = getattr(user, 'program', None) or getattr(user, 'active_program', None)
+        active_fch = getattr(user, 'ficha', None) or getattr(user, 'active_ficha', None) or getattr(user, 'ficha_code', None)
         if hasattr(active_fch, 'code'):
             active_fch = active_fch.code
 
         if not active_prog:
             return DictionaryWord.objects.none()
 
-        clean_active_prog = str(active_prog).split('(')[0].strip()
+        clean_prog = str(active_prog).split('(')[0].strip()
+        qs = DictionaryWord.objects.filter(program__icontains=clean_prog)
 
-        # Consulta restringida exclusivamente a su programa
-        qs = DictionaryWord.objects.select_related('subject').filter(
-            Q(program__icontains=clean_active_prog) | Q(subject__subject_id__icontains=clean_active_prog)
-        )
         if active_fch:
             qs = qs.filter(Q(ficha__iexact=str(active_fch)) | Q(ficha__in=['', None]))
         else:
             qs = qs.filter(ficha__in=['', None])
 
-        return qs.order_by('word_id')
+        order_field = 'word' if 'word' in [f.name for f in DictionaryWord._meta.get_fields()] else 'word_id'
+        return qs.order_by(order_field)
 
     def list(self, request, *args, **kwargs):
         qs = self.get_queryset()

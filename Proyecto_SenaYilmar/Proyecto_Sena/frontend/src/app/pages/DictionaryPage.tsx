@@ -314,10 +314,10 @@ export function DictionaryPage() {
 
               <div className="space-y-2">
                 <h3 className="font-extrabold text-slate-900 dark:text-white text-lg sm:text-xl">
-                  Diccionario en construcción para esta ficha técnica
+                  Diccionario en construcción: Aún no se han homologado términos para esta ficha formativa.
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Aún no se han homologado términos para la ficha activa <strong>{userFichaCode || activeDisplayProgram}</strong>.
+                  Aún no se han homologado términos para esta ficha formativa <strong>{userFichaCode || activeDisplayProgram}</strong>.
                   El docente o instructor a cargo debe cargar el vocabulario técnico especializado correspondiente.
                 </p>
               </div>

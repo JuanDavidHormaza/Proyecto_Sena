@@ -108,6 +108,7 @@ export const logout = async (redirectUrl: string = '/login?logout=success'): Pro
   }
 };
 
+export const executeLogout = logout;
 export const executeFullLogout = logout;
 
 // Motivo por el que una sesión previa fue descartada al cargar la app.
@@ -134,6 +135,7 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>;
   logout: (reason?: string) => Promise<void>;
   updateUser: (user: ApiUser) => void;
+  executeLogout: (redirectUrl?: string) => Promise<void>;
   executeFullLogout: (redirectUrl?: string) => Promise<void>;
 }
 
@@ -523,6 +525,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         register,
         logout,
         updateUser,
+        executeLogout,
         executeFullLogout,
       }}
     >
