@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { 
   Search, Eye, MessageSquare, CheckCircle, XCircle,
   Users, BarChart3, TrendingUp, Send, X, Clock,
@@ -1068,3 +1068,5 @@ export function TeacherDashboard() {
     </div>
   );
 }
+
+export default TeacherDashboard;

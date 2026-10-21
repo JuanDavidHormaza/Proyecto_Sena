@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation } from "react-router-dom";
 import { IconChevronDown, IconCheck } from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
 import * as api from "../services/api";

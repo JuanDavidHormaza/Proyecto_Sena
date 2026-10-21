@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, Check, Lock, Mail, Phone, Save, User, GraduationCap, Plus, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -502,3 +502,5 @@ export function SettingsPage() {
     </div>
   );
 }
+
+export default SettingsPage;

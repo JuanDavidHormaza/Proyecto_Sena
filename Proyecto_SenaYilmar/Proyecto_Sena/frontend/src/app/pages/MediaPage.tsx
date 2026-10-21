@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { Image, Video, X, Play, ChevronRight, Film, Camera, ZoomIn, Languages } from "lucide-react";
 import { useState } from "react";
 import { BrandLogo } from "../components/BrandLogo";
@@ -404,3 +404,5 @@ export function MediaPage() {
     </div>
   );
 }
+
+export default MediaPage;

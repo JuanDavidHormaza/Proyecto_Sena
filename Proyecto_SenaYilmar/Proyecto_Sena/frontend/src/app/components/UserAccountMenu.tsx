@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "motion/react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { BookOpen, LogOut, Settings, User, LifeBuoy, GraduationCap, Presentation, ShieldCheck, ChevronDown, ChevronUp, Check, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { SupportTicketModal } from "./SupportTicketModal";

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "motion/react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Trophy,
   Download,
@@ -1503,3 +1503,5 @@ export function ResultsPage() {
     </div>
   );
 }
+
+export default ResultsPage;

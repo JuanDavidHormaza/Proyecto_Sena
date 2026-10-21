@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminDashboard.tsx
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users, Upload, FileText, Trash2, Plus, Search,
   BarChart3, BookOpen, Settings, X, Clock,
@@ -34,7 +34,7 @@ import { resolveMediaUrl } from "../services/api";
 import { ImageLightboxModal, LightboxDocItem } from "../components/ImageLightboxModal";
 import { playEnglishSpeech } from "../utils/speech";
 import { BrandLogo } from "../components/BrandLogo";
-import { IconSettings, IconMovie, IconCode } from "@tabler/icons-react";
+import { IconSettings, IconCode, IconMovie, IconVolume, IconPlayerPause } from "@tabler/icons-react";
 
 // ─── Tipos de archivo ─────────────────────────────────────────────────────────
 type FileCategory = "document" | "audio" | "video" | "image";
@@ -118,14 +118,14 @@ function VideoPlayer({ src, name }: { src: string; name: string }) {
 }
 
 // ─── Funciones Auxiliares de Formato de Programa SENA ──────────────────────
-export const getProgramTitle = (termProg?: string, selected?: string) => {
+export function getProgramTitle(termProg?: string, selected?: string) {
   const p = (termProg || selected || '').toLowerCase();
   if (p.includes('mecanic') || p.includes('mecánica')) return 'Mecánica Industrial';
   if (p.includes('multi') || p.includes('multimedia')) return 'Producción Multimedia';
   return 'ADSO';
 };
 
-export const formatProgramName = (programName?: string, selected?: string) => {
+export function formatProgramName(programName?: string, selected?: string) {
   const p = (programName || selected || '').toLowerCase();
   if (p.includes('mecanic') || p.includes('mecánica')) return 'Programa SENA: Mecánica Industrial';
   if (p.includes('multi') || p.includes('multimedia')) return 'Programa SENA: Producción Multimedia';
@@ -133,7 +133,7 @@ export const formatProgramName = (programName?: string, selected?: string) => {
   return `Programa SENA: ${programName || 'Formación Titulada'}`;
 };
 
-export const getProgramDisplayName = (programName?: string) => {
+export function getProgramDisplayName(programName?: string) {
   return getProgramTitle(programName);
 };
 
@@ -805,6 +805,43 @@ export function matchesSelectedProgram(docProgram?: string, targetProgram?: stri
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// ─── PermissionsEditor ───────────────────────────────────────────────────────
+function PermissionsEditor({ permissions, onSave, onCancel }: { permissions: UserPermissions; onSave: (p: UserPermissions) => void; onCancel: () => void }) {
+  const [edited, setEdited] = useState(permissions);
+  const items: { key: keyof UserPermissions; label: string; description: string }[] = [
+    { key: "canManageUsers",     label: "Gestionar Usuarios",    description: "Crear, editar y eliminar usuarios"     },
+    { key: "canManageDocuments", label: "Gestionar Diccionarios", description: "Subir y administrar términos técnicos" },
+    { key: "canViewStatistics",  label: "Ver Estadísticas",      description: "Acceder a reportes y métricas"         },
+    { key: "canGiveFeedback",    label: "Dar Retroalimentación", description: "Comentar en resultados"                },
+    { key: "canTakeQuiz",        label: "Realizar Pruebas",      description: "Acceso a evaluaciones de inglés"       },
+    { key: "canViewResults",     label: "Ver Resultados",        description: "Ver resultados de pruebas"             },
+    { key: "canManageSubjects",  label: "Gestionar Competencias", description: "Crear y editar competencias evaluadas" },
+    { key: "canConfigureLevels", label: "Configurar Niveles",   description: "Ajustar rangos de evaluación"          },
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
+        {items.map(perm => (
+          <button key={perm.key} type="button" onClick={() => setEdited(prev => ({ ...prev, [perm.key]: !prev[perm.key] }))}
+            className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${edited[perm.key] ? "border-sena-green bg-sena-green/5" : "border-border bg-white hover:border-muted-foreground/30"}`}>
+            <div className="text-left">
+              <p className="font-medium text-foreground">{perm.label}</p>
+              <p className="text-sm text-muted-foreground">{perm.description}</p>
+            </div>
+            <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${edited[perm.key] ? "bg-sena-green text-white" : "bg-muted"}`}>
+              {edited[perm.key] && <Check className="w-4 h-4" strokeWidth={1.8} />}
+            </div>
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-3 pt-4 border-t border-border">
+        <button onClick={() => onSave(edited)} className="flex-1 bg-sena-green text-white py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium">Guardar Cambios</button>
+        <button onClick={onCancel} className="flex-1 bg-muted text-muted-foreground py-2.5 rounded-xl font-medium">Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 interface AdminDashboardProps {
   initialTab?: TabType;
 }
@@ -4471,39 +4508,4 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   );
 }
 
-// ─── PermissionsEditor ───────────────────────────────────────────────────────
-function PermissionsEditor({ permissions, onSave, onCancel }: { permissions: UserPermissions; onSave: (p: UserPermissions) => void; onCancel: () => void }) {
-  const [edited, setEdited] = useState(permissions);
-  const items: { key: keyof UserPermissions; label: string; description: string }[] = [
-    { key: "canManageUsers",     label: "Gestionar Usuarios",    description: "Crear, editar y eliminar usuarios"     },
-    { key: "canManageDocuments", label: "Gestionar Diccionarios", description: "Subir y administrar términos técnicos" },
-    { key: "canViewStatistics",  label: "Ver Estadísticas",      description: "Acceder a reportes y métricas"         },
-    { key: "canGiveFeedback",    label: "Dar Retroalimentación", description: "Comentar en resultados"                },
-    { key: "canTakeQuiz",        label: "Realizar Pruebas",      description: "Acceso a evaluaciones de inglés"       },
-    { key: "canViewResults",     label: "Ver Resultados",        description: "Ver resultados de pruebas"             },
-    { key: "canManageSubjects",  label: "Gestionar Competencias", description: "Crear y editar competencias evaluadas" },
-    { key: "canConfigureLevels", label: "Configurar Niveles",   description: "Ajustar rangos de evaluación"          },
-  ];
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
-        {items.map(perm => (
-          <button key={perm.key} type="button" onClick={() => setEdited(prev => ({ ...prev, [perm.key]: !prev[perm.key] }))}
-            className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${edited[perm.key] ? "border-sena-green bg-sena-green/5" : "border-border bg-white hover:border-muted-foreground/30"}`}>
-            <div className="text-left">
-              <p className="font-medium text-foreground">{perm.label}</p>
-              <p className="text-sm text-muted-foreground">{perm.description}</p>
-            </div>
-            <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${edited[perm.key] ? "bg-sena-green text-white" : "bg-muted"}`}>
-              {edited[perm.key] && <Check className="w-4 h-4" strokeWidth={1.8} />}
-            </div>
-          </button>
-        ))}
-      </div>
-      <div className="flex gap-3 pt-4 border-t border-border">
-        <button onClick={() => onSave(edited)} className="flex-1 bg-sena-green text-white py-2.5 rounded-xl hover:bg-sena-green-dark transition-all font-medium">Guardar Cambios</button>
-        <button onClick={onCancel} className="flex-1 bg-muted text-muted-foreground py-2.5 rounded-xl font-medium">Cancelar</button>
-      </div>
-    </div>
-  );
-}
+export default AdminDashboard;

@@ -38,7 +38,7 @@ export interface AuthContextType {
 
 // ─── Context & Hook Declarations (Al inicio para prevenir TDZ) ─────────────────
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
  * Hook estándar para consumir el contexto de autenticación.

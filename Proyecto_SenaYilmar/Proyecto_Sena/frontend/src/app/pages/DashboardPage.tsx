@@ -3095,3 +3095,5 @@ export function DashboardPage({ defaultTab }: { defaultTab?: "overview" | "study
     </div>
   );
 }
+
+export default DashboardPage;

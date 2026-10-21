@@ -39,11 +39,11 @@ export interface DictionaryCardProps {
   className?: string;
 }
 
-export const DictionaryCard: React.FC<DictionaryCardProps> = ({
+export function DictionaryCard({
   term,
   activeProgram,
   className = '',
-}) => {
+}: DictionaryCardProps) {
   const [imgFailed, setImgFailed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -216,6 +216,6 @@ export const DictionaryCard: React.FC<DictionaryCardProps> = ({
       </div>
     </div>
   );
-};
+}
 
 export default DictionaryCard;
