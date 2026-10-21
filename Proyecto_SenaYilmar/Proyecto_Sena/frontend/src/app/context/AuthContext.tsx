@@ -21,6 +21,39 @@ import {
 
 export { clearAllTokens } from '../services/api';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface AuthContextType {
+  user: ApiUser | null;
+  token?: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (credentials: any) => Promise<ApiUser>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: (reason?: string) => Promise<void>;
+  updateUser: (user: ApiUser) => void;
+  executeLogout: (redirectUrl?: string) => void;
+  executeFullLogout: (redirectUrl?: string) => void;
+}
+
+// ─── Context & Hook Declarations (Al inicio para prevenir TDZ) ─────────────────
+
+export const AuthContext = createContext<AuthContextType | null>(null);
+
+/**
+ * Hook estándar para consumir el contexto de autenticación.
+ * Lanza un error explícito si se invoca fuera de AuthProvider.
+ */
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+  }
+  return context;
+}
+
+// ─── Namespaces de Sesión ───────────────────────────────────────────────────
+
 export const SESSION_NAMESPACES = {
   ADMIN: 'worklex_session_admin',
   INSTRUCTOR: 'worklex_session_instructor',
@@ -34,82 +67,54 @@ export function getSessionNamespace(role?: string): 'worklex_session_admin' | 'w
   return SESSION_NAMESPACES.STUDENT;
 }
 
+// ─── Rutina de Logout Definitiva ─────────────────────────────────────────────
 
 /**
- * Protocolo estricto de Logout Total:
- * 1. Limpieza de todos los almacenamientos web (localStorage, sessionStorage).
- * 2. Desregistrar Service Workers activos si existen.
- * 3. Purgar Cache Storage del navegador.
- * 4. Invalidar cookies cliente.
- * 5. Redirección dura sin historial (window.location.replace('/login')).
- */
-/**
- * Protocolo estricto de Logout Total:
+ * Protocolo estricto de Logout Definitivo:
  * 1. Purgar storages (localStorage, sessionStorage).
  * 2. Desregistrar Service Workers activos.
  * 3. Purgar CacheStorage.
  * 4. Limpiar cookies del dominio.
- * 5. Redirección forzada sin historial previo (/login?logout=success).
+ * 5. Eliminar cabecera Authorization de axios.
+ * 6. Redirección forzada sin historial previo (/login?logout=success).
  */
-export const logout = async (redirectUrl: string = '/login?logout=success'): Promise<void> => {
+export const executeLogout = (redirectUrl: string = '/login?logout=success'): void => {
   try {
-    // 1. Purgar storages
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-    } catch {
-      // ignore
-    }
+    sessionStorage.clear();
+    localStorage.clear();
 
-    // 2. Desregistrar Service Workers activos
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-      try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of registrations) {
-          await reg.unregister();
-        }
-      } catch {
-        // ignore
-      }
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      }).catch(() => {});
     }
 
-    // 3. Purgar CacheStorage
     if (typeof window !== 'undefined' && 'caches' in window) {
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      } catch {
-        // ignore
-      }
+      caches.keys().then((keys) => {
+        keys.forEach((k) => caches.delete(k));
+      }).catch(() => {});
     }
 
-    // 4. Limpiar cookies del dominio
     if (typeof document !== 'undefined' && document.cookie) {
-      try {
-        document.cookie.split(";").forEach((c) => {
-          document.cookie = c
-            .replace(/^ +/, "")
-            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-        });
-      } catch {
-        // ignore
-      }
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
     }
 
-    // 5. Eliminar cabecera Authorization si axios esta presente
     if (typeof window !== 'undefined' && (window as any).axios?.defaults?.headers?.common) {
       delete (window as any).axios.defaults.headers.common['Authorization'];
     }
   } finally {
-    // 5. Redirección forzada sin historial previo
     if (typeof window !== 'undefined') {
       window.location.replace(redirectUrl);
     }
   }
 };
 
-export const executeLogout = logout;
-export const executeFullLogout = logout;
+export const logout = executeLogout;
+export const executeFullLogout = executeLogout;
 
 // Motivo por el que una sesión previa fue descartada al cargar la app.
 type SessionDropReason = 'idle_timeout' | 'session_expired' | null;
@@ -123,25 +128,6 @@ function evaluateStoredSession(): SessionDropReason {
   if (isTokenExpired(raw)) return 'session_expired';
   return null;
 }
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface AuthContextType {
-  user: ApiUser | null;
-  token?: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (credentials: any) => Promise<ApiUser>;
-  register: (data: RegisterData) => Promise<void>;
-  logout: (reason?: string) => Promise<void>;
-  updateUser: (user: ApiUser) => void;
-  executeLogout: (redirectUrl?: string) => Promise<void>;
-  executeFullLogout: (redirectUrl?: string) => Promise<void>;
-}
-
-// ─── Context ─────────────────────────────────────────────────────────────────
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 
@@ -179,10 +165,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
-      const token = typeof window !== 'undefined' ? getValidAccessToken() : null;
+      const clientToken = typeof window !== 'undefined' ? getValidAccessToken() : null;
 
       // Si no hay token en el cliente, finalizar carga como no autenticado (null, false)
-      if (!token) {
+      if (!clientToken) {
         if (isMounted) {
           setUser(null);
           setToken(null);
@@ -199,9 +185,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
           throw new Error('Respuesta de usuario inválida desde /api/auth/me/');
         }
 
+        const activeNs = getSessionNamespace(userData.role);
+        sessionStorage.setItem(
+          activeNs,
+          JSON.stringify({
+            token: clientToken,
+            user: userData,
+            role: userData.role,
+            timestamp: Date.now(),
+          })
+        );
+        [SESSION_NAMESPACES.ADMIN, SESSION_NAMESPACES.INSTRUCTOR, SESSION_NAMESPACES.STUDENT].forEach((ns) => {
+          if (ns !== activeNs) sessionStorage.removeItem(ns);
+        });
+
         if (isMounted) {
           const storedAvatar = sessionStorage.getItem('userAvatar') || '';
           setUser({ ...userData, avatar: userData.avatar || storedAvatar });
+          setToken(clientToken);
           setIsAuthenticated(true);
         }
 
@@ -264,6 +265,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const syncData = JSON.parse(e.newValue);
           if (syncData.type === 'logout' || syncData.type === 'idle_timeout') {
             setUser(null);
+            setToken(null);
             setIsAuthenticated(false);
             clearAllTokens();
             if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
@@ -277,6 +279,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 setIsAuthenticated(true);
               } catch {
                 setUser(null);
+                setToken(null);
                 setIsAuthenticated(false);
                 window.location.href = '/login';
               }
@@ -289,6 +292,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (e.key === 'accessToken' && !e.newValue) {
         setUser(null);
+        setToken(null);
         setIsAuthenticated(false);
         clearAllTokens();
         if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
@@ -390,7 +394,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     touchActivity();
 
     setUser(response.user);
+    setToken(response.access);
     setIsAuthenticated(true);
+
+    const activeNs = getSessionNamespace(response.user.role);
+    sessionStorage.setItem(
+      activeNs,
+      JSON.stringify({
+        token: response.access,
+        user: response.user,
+        role: response.user.role,
+        timestamp: Date.now(),
+      })
+    );
+    [SESSION_NAMESPACES.ADMIN, SESSION_NAMESPACES.INSTRUCTOR, SESSION_NAMESPACES.STUDENT].forEach((ns) => {
+      if (ns !== activeNs) sessionStorage.removeItem(ns);
+    });
 
     sessionStorage.setItem('userName', response.user.name);
     sessionStorage.setItem('userRole', response.user.role);
@@ -413,13 +432,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Logout con protocolo estricto de purga de sesión total
-  const logout = useCallback(async (reason?: string) => {
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-    } catch {
-      // ignore
-    }
+  const logoutCallback = useCallback(async (reason?: string) => {
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);
@@ -436,8 +449,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // ignore
     }
 
-    const targetUrl = reason === 'idle_timeout' ? '/login?reason=idle_timeout' : '/login';
-    await executeFullLogout(targetUrl);
+    const targetUrl = reason === 'idle_timeout' ? '/login?reason=idle_timeout' : '/login?logout=success';
+    executeLogout(targetUrl);
   }, []);
 
   // 1. Destrucción de sesión en beforeunload (cierre de pestaña / ventana / navegador)
@@ -459,14 +472,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, []);
 
-  // 2. Auto-logout por inactividad tras 15 minutos sin registrar eventos (mousedown, keydown, scroll)
+  // 2. Auto-logout por inactividad tras 15 minutos sin registrar eventos
   useEffect(() => {
     if (!user) return;
 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const performAutoLogout = () => {
-      logout('idle_timeout');
+      logoutCallback('idle_timeout');
     };
 
     const resetTimer = () => {
@@ -490,7 +503,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         window.removeEventListener(evt, resetTimer);
       });
     };
-  }, [user, logout]);
+  }, [user, logoutCallback]);
 
   const updateUser = (updatedUser: ApiUser) => {
     const storedAvatar = sessionStorage.getItem('userAvatar') || '';
@@ -523,7 +536,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading,
         login,
         register,
-        logout,
+        logout: logoutCallback,
         updateUser,
         executeLogout,
         executeFullLogout,
@@ -532,18 +545,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-// ─── Hook ────────────────────────────────────────────────────────────────────
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-
-  return context;
 }
 
 export default AuthContext;

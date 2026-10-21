@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, clearAllTokens } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import { clearAllTokens } from '../services/api';
 import {
   SESSION_IDLE_TIMEOUT_MS,
   destroyClientSession,
