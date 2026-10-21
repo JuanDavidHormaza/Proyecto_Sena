@@ -6,7 +6,6 @@ import {
   ApiUser,
   RegisterData,
   verifyLoginOTP,
-  privilegedMe,
   clearAllTokens,
 } from '../services/api';
 
@@ -22,15 +21,76 @@ import {
 
 export { clearAllTokens } from '../services/api';
 
-// Motivo por el que una sesión previa (token vencido o inactividad > 15 min) fue descartada al cargar la app.
-// Se calcula una sola vez, ANTES de hidratar el usuario desde sessionStorage.
+/**
+ * Protocolo estricto de Logout Total:
+ * 1. Limpieza de todos los almacenamientos web (localStorage, sessionStorage).
+ * 2. Desregistrar Service Workers activos si existen.
+ * 3. Purgar Cache Storage del navegador.
+ * 4. Invalidar cookies cliente.
+ * 5. Redirección dura sin historial (window.location.replace).
+ */
+export const executeFullLogout = async (redirectUrl: string = '/login?logout=success'): Promise<void> => {
+  try {
+    // 1. Limpieza de todos los almacenamientos web
+    try {
+      localStorage.clear();
+    } catch {
+      // ignore
+    }
+    try {
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
+
+    // 2. Desregistrar Service Workers si existen
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 3. Purgar Cache Storage del navegador
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map((name) => caches.delete(name)));
+      } catch {
+        // ignore
+      }
+    }
+
+    // 4. Invalidador de cookies cliente
+    if (typeof document !== 'undefined' && document.cookie) {
+      try {
+        document.cookie.split(";").forEach((c) => {
+          document.cookie = c
+            .replace(/^ +/, "")
+            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+      } catch {
+        // ignore
+      }
+    }
+  } finally {
+    // 5. Redirección dura sin historial
+    if (typeof window !== 'undefined') {
+      window.location.replace(redirectUrl);
+    }
+  }
+};
+
+// Motivo por el que una sesión previa fue descartada al cargar la app.
 type SessionDropReason = 'idle_timeout' | 'session_expired' | null;
 let initialSessionDropReason: SessionDropReason = null;
 
 function evaluateStoredSession(): SessionDropReason {
-  // La sesión ya no debe persistir en localStorage: eliminar cualquier residuo heredado.
   purgeLegacyLocalStorageSession();
-
   const raw = readRawAccessToken();
   if (!raw) return null;
   if (isSessionInactive()) return 'idle_timeout';
@@ -46,8 +106,9 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: any) => Promise<ApiUser>;
   register: (data: RegisterData) => Promise<void>;
-  logout: (reason?: string) => void;
+  logout: (reason?: string) => Promise<void>;
   updateUser: (user: ApiUser) => void;
+  executeFullLogout: (redirectUrl?: string) => Promise<void>;
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -61,80 +122,55 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  // Pre-hidratar usuario desde sessionStorage para evitar desconexiones o parpadeos al recargar
-  const [user, setUser] = useState<ApiUser | null>(() => {
-    try {
-      // Rechazo inmediato si el JWT venció (exp) o si superó 15 minutos de inactividad
-      const dropReason = evaluateStoredSession();
-      if (dropReason) initialSessionDropReason = dropReason; // (StrictMode ejecuta el inicializador dos veces)
-      if (dropReason) {
-        clearAllTokens();
-        return null;
-      }
-      const token = getValidAccessToken();
-      const userId = sessionStorage.getItem('userId');
-      const userName = sessionStorage.getItem('userName');
-      const userRole = sessionStorage.getItem('userRole') as any;
-      if (token && userId && userName) {
-        const storedRoles = JSON.parse(sessionStorage.getItem('roles') || '[]');
-        const isDual = sessionStorage.getItem('is_dual_role') === 'true' || sessionStorage.getItem('isDualRole') === 'true';
-        return {
-          id: userId,
-          name: userName,
-          email: sessionStorage.getItem('userEmail') || '',
-          role: userRole || 'student',
-          active_role: sessionStorage.getItem('active_role') || (userRole === 'teacher' ? 'INSTRUCTOR' : 'APRENDIZ'),
-          activeRole: sessionStorage.getItem('activeRole') || (userRole === 'teacher' ? 'INSTRUCTOR' : 'APRENDIZ'),
-          roles: storedRoles,
-          is_dual_role: isDual,
-          isDualRole: isDual,
-          status: 'active',
-          program: sessionStorage.getItem('userProgram') || null,
-          enrolledPrograms: JSON.parse(sessionStorage.getItem('userEnrolledPrograms') || '[]'),
-          permissions: JSON.parse(sessionStorage.getItem('userPermissions') || '{}'),
-        } as ApiUser;
-      }
-    } catch {
-      // Ignorar error al parsear storage
-    }
-    return null;
-  });
+  // AUDITORÍA DE RE-HIDRATACIÓN: El estado inicial SIEMPRE es null.
+  // PROHIBIDO asignar usuarios por defecto o estados simulados en memoria antes de validar.
+  const [user, setUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verificar token al montar, evitando llamadas innecesarias en rutas públicas si no hay token
+  // Verificación estricta de token y sesión contra el backend (/api/auth/me/)
   useEffect(() => {
+    let isMounted = true;
+
     const checkAuth = async () => {
-      // Sesión descartada al cargar (token vencido / inactividad): exigir autenticación de nuevo
-      if (initialSessionDropReason) {
-        const reason = initialSessionDropReason;
+      // Sesión descartada al cargar (token vencido / inactividad): purgar y redirigir
+      const dropReason = evaluateStoredSession();
+      if (dropReason || initialSessionDropReason) {
         initialSessionDropReason = null;
         clearAllTokens();
-        setUser(null);
-        setIsLoading(false);
+        if (isMounted) {
+          setUser(null);
+          setIsLoading(false);
+        }
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          window.location.href = `/login?reason=${reason}`;
+          window.location.href = `/login?reason=${dropReason || 'session_expired'}`;
         }
         return;
       }
 
       const token = typeof window !== 'undefined' ? getValidAccessToken() : null;
 
-      // Rutas públicas que no deben chequear roles privilegiados de forma automática si no hay sesión
-      const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-      const isPublicRoute = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/recover' || pathname.startsWith('/reset-password');
-
-      // Si no hay token en el cliente (especialmente en rutas públicas), no ejecutar llamadas para evitar el 401 innecesario
+      // Si no hay token en el cliente, finalizar carga como no autenticado (null)
       if (!token) {
-        setIsLoading(false);
+        if (isMounted) {
+          setUser(null);
+          setIsLoading(false);
+        }
         return;
       }
 
       try {
+        // Validación obligatoria con el servidor
         const userData = await getMe();
-        const storedAvatar = sessionStorage.getItem('userAvatar') || '';
-        setUser({ ...userData, avatar: userData.avatar || storedAvatar });
+        if (!userData || !userData.id) {
+          throw new Error('Respuesta de usuario inválida desde /api/auth/me/');
+        }
 
-        // Actualizar sessionStorage para compatibilidad y persistencia
+        if (isMounted) {
+          const storedAvatar = sessionStorage.getItem('userAvatar') || '';
+          setUser({ ...userData, avatar: userData.avatar || storedAvatar });
+        }
+
+        // Actualizar sessionStorage exclusivamente con los datos validados por Django
         sessionStorage.setItem('userName', userData.name);
         sessionStorage.setItem('userRole', userData.role);
         sessionStorage.setItem('userId', userData.id);
@@ -149,71 +185,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const isDual = Boolean(userData.is_dual_role || userData.isDualRole);
         sessionStorage.setItem('is_dual_role', String(isDual));
         sessionStorage.setItem('isDualRole', String(isDual));
-        if (userData.avatar || storedAvatar) {
-          sessionStorage.setItem('userAvatar', userData.avatar || storedAvatar);
+        if (userData.avatar) {
+          sessionStorage.setItem('userAvatar', userData.avatar);
         }
-        sessionStorage.setItem('userPermissions', JSON.stringify(userData.permissions));
+        sessionStorage.setItem('userPermissions', JSON.stringify(userData.permissions || {}));
         sessionStorage.setItem('userProgram', userData.program || '');
         if (userData.enrolledPrograms) {
           sessionStorage.setItem('userEnrolledPrograms', JSON.stringify(userData.enrolledPrograms));
         }
-      } catch (error: any) {
-        if (!isPublicRoute) {
-          console.warn("Validación de sesión con getMe:", error);
-        }
-
-        // Solo en rutas protegidas se intenta fallback de sesión privilegiada si existe sesión
-        if (!isPublicRoute) {
-          try {
-            const resp = await privilegedMe();
-            if (resp?.user) {
-              setUser(resp.user);
-              sessionStorage.setItem('userName', resp.user.name);
-              sessionStorage.setItem('userRole', resp.user.role);
-              sessionStorage.setItem('userId', resp.user.id);
-              sessionStorage.setItem('userPermissions', JSON.stringify(resp.user.permissions));
-              sessionStorage.setItem('userProgram', resp.user.program || '');
-              if (resp.user.enrolledPrograms) {
-                sessionStorage.setItem('userEnrolledPrograms', JSON.stringify(resp.user.enrolledPrograms));
-              }
-              return;
-            }
-          } catch {
-            // no autenticado
-          }
-        }
-
-        // Si el token fue rechazado con 401 no recuperable, purgar almacenamiento
-        if (error?.status === 401) {
-          clearAllTokens();
+      } catch (error) {
+        // AUDITORÍA DE RE-HIDRATACIÓN:
+        // Si /api/auth/me/ devuelve 401 o falla por cualquier motivo, el estado de usuario DEBE ser null.
+        // PROHIBIDO asignar usuarios por defecto o estados simulados en bloques catch.
+        console.warn('[AuthContext] Validación de sesión con /api/auth/me/ falló. Purgando sesión cliente:', error);
+        clearAllTokens();
+        if (isMounted) {
           setUser(null);
         }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     checkAuth();
+    return () => {
+      isMounted = false;
+    };
   }, []);
-  // Detección y sincronización entre pestañas (storage event listener)
+
+  // Sincronización entre pestañas (storage event listener)
   useEffect(() => {
     const handleStorageEvent = async (e: StorageEvent) => {
-      // Sincronización explícita mediante evento de canal auth_sync_event
       if (e.key === 'auth_sync_event') {
         if (!e.newValue) return;
         try {
           const syncData = JSON.parse(e.newValue);
-          if (syncData.type === 'logout') {
+          if (syncData.type === 'logout' || syncData.type === 'idle_timeout') {
             setUser(null);
             clearAllTokens();
             if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
-              window.location.href = '/login';
-            }
-          } else if (syncData.type === 'idle_timeout') {
-            setUser(null);
-            clearAllTokens();
-            if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
-              window.location.href = '/login?reason=idle_timeout';
+              window.location.href = syncData.type === 'idle_timeout' ? '/login?reason=idle_timeout' : '/login';
             }
           } else if (syncData.type === 'login') {
             if (syncData.userId && syncData.userId !== user?.id) {
@@ -227,26 +240,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
           }
         } catch {
-          // ignorar errores de parseo
+          // ignore
         }
       }
 
-      // Modificación o revocación de token en otra pestaña
-      if (e.key === 'accessToken') {
-        if (!e.newValue) {
-          setUser(null);
-          clearAllTokens();
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
-            window.location.href = '/login';
-          }
-        } else if (e.newValue !== sessionStorage.getItem('accessToken')) {
-          try {
-            const refreshedUser = await getMe();
-            setUser(refreshedUser);
-          } catch {
-            setUser(null);
-            window.location.href = '/login';
-          }
+      if (e.key === 'accessToken' && !e.newValue) {
+        setUser(null);
+        clearAllTokens();
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+          window.location.href = '/login';
         }
       }
     };
@@ -255,9 +257,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => window.removeEventListener('storage', handleStorageEvent);
   }, [user]);
 
-  // Soporta MFA: si vienen otp_email/otp_code llama al endpoint OTP
+  // Login institucional
   const login = async (credentials: any) => {
-    // Purga total del estado previo ANTES de autenticar y almacenar el nuevo token
     clearAllTokens();
     setUser(null);
 
@@ -266,14 +267,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ? await verifyLoginOTP(credentials.otp_email, credentials.otp_code)
         : await apiLogin(credentials);
 
-      // Limpieza preventiva adicional post-respuesta
       clearAllTokens();
 
       sessionStorage.setItem('accessToken', response.access);
       sessionStorage.setItem('refreshToken', response.refresh);
-      touchActivity(); // inicia el conteo de inactividad de 15 minutos
+      touchActivity();
 
-      // Sobre-escritura total y limpia del usuario sin arrastrar propiedades residuales
       const cleanUser: ApiUser = {
         ...response.user,
         avatar: response.user.avatar || '',
@@ -295,7 +294,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         sessionStorage.setItem('userEnrolledPrograms', JSON.stringify(cleanUser.enrolledPrograms));
       }
 
-      // Notificar a otras pestañas del nuevo usuario
       try {
         sessionStorage.setItem(
           'auth_sync_event',
@@ -306,31 +304,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
           })
         );
       } catch {
-        // ignorar
+        // ignore
       }
 
       return cleanUser;
     } catch (err) {
-      console.log("AUTH CONTEXT ERROR:", err);
+      console.error('[AuthContext] Error durante login:', err);
       throw err;
     }
   };
 
+  // Registro institucional
   const register = async (data: RegisterData) => {
     clearAllTokens();
     setUser(null);
 
     const response = await apiRegister(data);
-    
-    // Guardar tokens
+
     sessionStorage.setItem('accessToken', response.access);
     sessionStorage.setItem('refreshToken', response.refresh);
-    touchActivity(); // inicia el conteo de inactividad de 15 minutos
-    
-    // Guardar datos del usuario
+    touchActivity();
+
     setUser(response.user);
-    
-    // Compatibilidad con el sistema existente
+
     sessionStorage.setItem('userName', response.user.name);
     sessionStorage.setItem('userRole', response.user.role);
     sessionStorage.setItem('userId', response.user.id);
@@ -347,11 +343,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
       );
     } catch {
-      // ignorar
+      // ignore
     }
   };
 
-  const logout = useCallback((reason?: string) => {
+  // Logout con protocolo estricto de purga de sesión
+  const logout = useCallback(async (reason?: string) => {
     setUser(null);
     clearAllTokens();
     try {
@@ -363,17 +360,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
       );
     } catch {
-      // ignorar
+      // ignore
     }
+
+    const targetUrl = reason === 'idle_timeout' ? '/login?reason=idle_timeout' : '/login?logout=success';
+    await executeFullLogout(targetUrl);
   }, []);
 
   // 1. Destrucción de sesión en beforeunload (cierre de pestaña / ventana / navegador)
   useEffect(() => {
     const handleBeforeUnload = () => {
-      sessionStorage.clear();
-      localStorage.removeItem('token');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
+      try {
+        sessionStorage.clear();
+        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+      } catch {
+        // ignore
+      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -389,19 +393,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const performAutoLogout = () => {
-      sessionStorage.clear();
-      localStorage.removeItem('token');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      purgeLegacyLocalStorageSession();
       logout('idle_timeout');
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        try {
-          window.location.href = '/login?reason=idle_timeout';
-        } catch {
-          // ignore
-        }
-      }
     };
 
     const resetTimer = () => {
@@ -458,6 +450,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         register,
         logout,
         updateUser,
+        executeFullLogout,
       }}
     >
       {children}
@@ -469,11 +462,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
+
   return context;
 }
 

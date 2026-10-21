@@ -1,2 +1,2 @@
-// Re-export useAuth from context for convenience
-export { useAuth } from '../context/AuthContext';
+// Re-export useAuth y executeFullLogout desde el contexto de autenticación
+export { useAuth, executeFullLogout } from '../context/AuthContext';

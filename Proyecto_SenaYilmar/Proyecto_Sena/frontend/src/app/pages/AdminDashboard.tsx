@@ -403,7 +403,7 @@ function VocabCard({
       {/* Metadatos de Pie */}
       <div className="px-4 pb-3 pt-2 flex items-center justify-between text-[11px] text-muted-foreground border-t border-slate-100">
         <span className="font-semibold text-slate-600">
-          Programa: <strong className="text-slate-700">{doc.program || selectedProgram || 'Formación Titulada'}</strong>
+          Programa: <strong className="text-slate-700">{doc.program || selectedProgram || 'Formación Técnica'}</strong>
         </span>
         <span className="text-[10px] text-slate-500 font-mono">
           {doc.uploadedAt ? `Reg: ${doc.uploadedAt}` : "v1.0 (2026)"}

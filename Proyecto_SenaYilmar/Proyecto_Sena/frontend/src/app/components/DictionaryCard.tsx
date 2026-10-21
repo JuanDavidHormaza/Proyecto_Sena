@@ -129,7 +129,7 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
       };
 
   const initialLetter = (wordText || 'T').charAt(0).toUpperCase();
-  const currentProgram = term.program || activeProgram || 'Formación Titulada';
+  const currentProgram = term.program || activeProgram || 'Formación Técnica';
 
   return (
     <div className={`bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${className}`}>
@@ -201,7 +201,7 @@ export const DictionaryCard = ({ term, activeProgram, className = '' }: Dictiona
 
       {/* Pie dinámico: NUNCA texto quemado */}
       <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Programa: <strong className="text-slate-700">{term.program || activeProgram || 'Formación Titulada'}</strong></span>
+        <span>Programa: <strong className="text-slate-700">{term.program || activeProgram || 'Formación Técnica'}</strong></span>
         <span className="font-mono text-[10px] text-slate-400">SENA CEFR</span>
       </div>
     </div>

@@ -451,19 +451,19 @@ class UserController:
                 queryset = queryset.filter(role_id=backend_role)
         if program_filter:
             p_clean = program_filter.strip()
-            p_q = models.Q(program__iexact=p_clean) | models.Q(program__icontains=p_clean)
+            p_q = Q(program__iexact=p_clean) | Q(program__icontains=p_clean)
             tokens = [t for t in p_clean.replace('-', ' ').split() if len(t) >= 4 or t.isdigit()]
             for t in tokens:
-                p_q |= models.Q(program__icontains=t)
+                p_q |= Q(program__icontains=t)
             queryset = queryset.filter(p_q)
         if search:
             s = search.strip()
             queryset = queryset.filter(
-                models.Q(person__first_name__icontains=s) |
-                models.Q(person__last_name__icontains=s) |
-                models.Q(person__email__icontains=s) |
-                models.Q(person__doc_num__icontains=s) |
-                models.Q(program__icontains=s)
+                Q(person__first_name__icontains=s) |
+                Q(person__last_name__icontains=s) |
+                Q(person__email__icontains=s) |
+                Q(person__doc_num__icontains=s) |
+                Q(program__icontains=s)
             )
 
         # Agrupar por persona para evitar duplicación de filas en administración
@@ -612,7 +612,7 @@ class UserController:
                     break
 
         if not matched_name:
-            existing_prog = User.objects.filter(models.Q(program__icontains=clean_input)).values_list('program', flat=True).first()
+            existing_prog = User.objects.filter(Q(program__icontains=clean_input)).values_list('program', flat=True).first()
             if existing_prog:
                 matched_name = existing_prog
             else:
@@ -1350,31 +1350,31 @@ class FichaRequestController:
         elif role in ('INSTRUCTOR', 'MONITOR'):
             # El docente debe ver las solicitudes asignadas a su ID o que correspondan a su ficha/programa,
             # así como solicitudes pendientes generales sin instructor asignado
-            q_filter = models.Q(assigned_instructor_id=user_id) if isinstance(user_id, int) else models.Q()
+            q_filter = Q(assigned_instructor_id=user_id) if isinstance(user_id, int) else Q()
             inst_prog = (getattr(user, 'program', '') or getattr(real_user, 'program', '') or '').strip()
             if inst_prog:
-                q_filter |= models.Q(program_name__icontains=inst_prog)
-                q_filter |= models.Q(ficha_code__icontains=inst_prog)
+                q_filter |= Q(program_name__icontains=inst_prog)
+                q_filter |= Q(ficha_code__icontains=inst_prog)
                 tokens = [t for t in inst_prog.replace('-', ' ').split() if t.strip()]
                 for t in tokens:
                     if t.isdigit():
-                        q_filter |= models.Q(ficha_code__icontains=t)
+                        q_filter |= Q(ficha_code__icontains=t)
                     elif len(t) >= 4:
-                        q_filter |= models.Q(program_name__icontains=t)
+                        q_filter |= Q(program_name__icontains=t)
 
             # Incluir solicitudes pendientes sin instructor asignado para que el docente responsable las pueda revisar
-            q_filter |= models.Q(assigned_instructor__isnull=True)
+            q_filter |= Q(assigned_instructor__isnull=True)
             return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(q_filter).order_by('-created_at')
 
         # Aprendiz: filtrar solo sus solicitudes con user_id=user_id
-        student_filter = models.Q()
+        student_filter = Q()
         if isinstance(user_id, int):
-            student_filter |= models.Q(user_id=user_id)
+            student_filter |= Q(user_id=user_id)
 
         person = getattr(user, 'person', None) or getattr(real_user, 'person', None)
         person_id = getattr(person, 'person_id', None) or getattr(person, 'id', None) or getattr(person, 'pk', None)
         if isinstance(person_id, int):
-            student_filter |= models.Q(person_id=person_id)
+            student_filter |= Q(person_id=person_id)
 
         if not student_filter:
             return FichaRequest.objects.none()
