@@ -1419,47 +1419,7 @@ class TestResultViewSet(viewsets.ViewSet):
         result.process = current_process
         result.save(update_fields=['process'])
 
-        # ── Notificar al instructor por correo ──────────────────────────────
-        # Busca instructores activos y les avisa del resultado reprobado.
-        if not passed:
-            try:
-                instructor_emails = list(
-                    User.objects.filter(role_id='INSTRUCTOR', status='EN_FORMACION')
-                    .select_related('person')
-                    .values_list('person__email', flat=True)
-                )
-                # También busca admins si no hay instructores
-                if not instructor_emails:
-                    instructor_emails = list(
-                        User.objects.filter(role_id__in=['ADMIN', 'SUPERADMIN'])
-                        .select_related('person')
-                        .values_list('person__email', flat=True)
-                    )
-
-                if instructor_emails:
-                    student_name = (
-                        f"{result.user.person.first_name} {result.user.person.last_name}"
-                        if hasattr(result.user, 'person') else 'Aprendiz'
-                    )
-                    student_email = result.user.person.email if hasattr(result.user, 'person') else ''
-
-                    msg_lines = [
-                        f"El aprendiz {student_name} ({student_email}) reprobó el nivel {level}.",
-                        f"Puntaje obtenido: {score}% (mínimo requerido: {threshold}%)",
-                        "",
-                        "Desglose de fallos:",
-                        auto_feedback,
-                        "",
-                        f"Puedes ingresar al panel de instructor y enviarle retroalimentación personalizada.",
-                        f"ID del resultado: {result.pk}",
-                    ]
-                    send_transactional_email(
-                        recipient_email=instructor_emails,
-                        subject=f'[WorkLex SENA] Aprendiz reprobó nivel {level} – {student_name}',
-                        message='\n'.join(msg_lines),
-                    )
-            except Exception as e:
-                print(f"[QUIZ] Error notificando instructor: {e}")
+        # Se elimina envío automático de correo de reprobación a instructores/admins por decisión del equipo - 2026-10-22
 
         data = TestResultSerializer(result).data
         data['passed'] = passed
