@@ -168,6 +168,8 @@ class StorageService:
                     client.create_bucket(Bucket=bucket_name)
                     cls._buckets_verified.add(bucket_name)
                     logger.info(f"Bucket creado exitosamente: {bucket_name}")
+                    if bucket_name in {'dictionary-images', 'dictionary-audios', 'dictionary-videos'}:
+                        cls.set_public_policy(bucket_name)
                     return True
                 except Exception as create_err:
                     logger.warning(f"No se pudo crear el bucket '{bucket_name}': {create_err}")
@@ -177,11 +179,37 @@ class StorageService:
                 return False
 
     @classmethod
+    def set_public_policy(cls, bucket_name: str):
+        """Aplica política pública de lectura y descarga (anónima) al bucket."""
+        try:
+            import json
+            client = cls.get_client()
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "PublicReadGetObject",
+                        "Effect": "Allow",
+                        "Principal": "*",
+                        "Action": ["s3:GetObject"],
+                        "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
+                    }
+                ]
+            }
+            client.put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(policy))
+            logger.info(f"Política pública de descarga configurada exitosamente para '{bucket_name}'.")
+        except Exception as e:
+            logger.warning(f"No se pudo aplicar política pública en MinIO para '{bucket_name}': {e}")
+
+    @classmethod
     def ensure_all_buckets(cls):
-        """Intenta asegurar todos los buckets estándar de forma silenciosa y no bloqueante."""
+        """Intenta asegurar todos los buckets estándar de forma silenciosa y no bloqueante con permisos públicos."""
+        public_buckets = {'dictionary-images', 'dictionary-audios', 'dictionary-videos'}
         for name in cls.BUCKETS.values():
             try:
                 cls.ensure_bucket_exists(name)
+                if name in public_buckets:
+                    cls.set_public_policy(name)
             except Exception as e:
                 logger.warning(f"Bucket '{name}' pendiente de inicialización: {e}")
 

@@ -38,12 +38,10 @@ services:
 
   # ── 2. Almacenamiento de Objetos S3 MinIO ───────────────────────────────────
   worklex_minio:
-    build:
-      context: ./minio-local
-      dockerfile: Dockerfile
-    image: worklex_s3:latest
+    image: quay.io/minio/minio:latest
     container_name: worklex_minio
     restart: unless-stopped
+    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Admin123*}
@@ -54,7 +52,7 @@ services:
       - minio_data:/data
       - ./minio-seed:/seed:ro
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/minio/health/live')"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -63,7 +61,7 @@ services:
       resources:
         limits:
           cpus: '0.30'
-          memory: 200M
+          memory: 256M
     networks:
       worklex_network:
         aliases:
@@ -72,7 +70,7 @@ services:
 
   # ── 3. Aprovisionamiento Inicial MinIO (Buckets y Permisos) ─────────────────
   worklex_minio_provision:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     container_name: worklex_minio_provision
     restart: "no"
     depends_on:
@@ -144,8 +142,8 @@ services:
       python manage.py migrate --fake-initial &&
       echo 'Recopilando archivos estáticos de Django...' &&
       python manage.py collectstatic --noinput &&
-      echo 'Inicializando vocabulario ADSO...' &&
-      (python manage.py import_adso_dictionary || python manage.py seed_adso_dictionary || true) &&
+      echo 'Inicializando diccionarios técnicos SENA (ADSO, Mecánica, Multimedia)...' &&
+      (python manage.py seed_all_dictionaries || python manage.py import_adso_dictionary || python manage.py seed_adso_dictionary || true) &&
       (python manage.py create_superadmin || true) &&
       (python manage.py upload_adso_assets || true) &&
       echo 'Iniciando servidor WSGI Gunicorn (2 workers)...' &&

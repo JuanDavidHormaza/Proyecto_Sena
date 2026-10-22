@@ -127,10 +127,10 @@ export function getProgramTitle(termProg?: string, selected?: string) {
 
 export function formatProgramName(programName?: string, selected?: string) {
   const p = (programName || selected || '').toLowerCase();
-  if (p.includes('mecanic') || p.includes('mecánica')) return 'Programa SENA: Mecánica Industrial';
-  if (p.includes('multi') || p.includes('multimedia')) return 'Programa SENA: Producción Multimedia';
-  if (p.includes('adso') || p.includes('software')) return 'Programa SENA: ADSO';
-  return `Programa SENA: ${programName || 'Formación Titulada'}`;
+  if (p.includes('mecanic') || p.includes('mecánica')) return 'Mecánica Industrial';
+  if (p.includes('multi') || p.includes('multimedia')) return 'Producción Multimedia';
+  if (p.includes('adso') || p.includes('software')) return 'ADSO';
+  return programName || selected || 'Formación Técnica';
 };
 
 export function getProgramDisplayName(programName?: string) {
@@ -1190,7 +1190,9 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const handleChangeUserRole = async (userId: string, newRole: string) => {
     const target = users.find(u => u.id === userId);
     if (!target) return;
-    if (target.role === newRole) return;
+    const lowerRole = newRole.toLowerCase();
+    const normFrontend = lowerRole.includes('aprendiz') || lowerRole === 'student' ? 'student' : lowerRole.includes('instructor') || lowerRole === 'teacher' ? 'teacher' : 'admin';
+    if (target.role === normFrontend) return;
     if (target.role === "superadmin" || userId === authUser?.id) {
       toast.error("No es posible modificar el rol del Super Administrador o tu propia cuenta");
       return;
@@ -1200,13 +1202,13 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
     // 1. Actualización optimista inmediata en 0 milisegundos
     setUsers(prev =>
-      prev.map(u => (u.id === userId ? { ...u, role: newRole as any } : u))
+      prev.map(u => (u.id === userId ? { ...u, role: normFrontend as any } : u))
     );
 
     try {
-      // 2. Petición en segundo plano: PATCH /api/users/<id>/ con { "role": nuevo_rol }
+      // 2. Dispara PATCH /api/admin/users/{id}/ con guardado en PostgreSQL de inmediato
       await api.updateUser(userId, { role: newRole } as any);
-      toast.success(`Rol actualizado a ${ROLE_LABELS[newRole as UserRole] || newRole}`, "Rol Actualizado");
+      toast.success(`Rol institucional actualizado a ${newRole} en PostgreSQL`, "Rol Actualizado");
     } catch (err: any) {
       // 3. Reversión si falló la API
       setUsers(prev =>
@@ -2343,14 +2345,14 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
                                 ) : (
                                   <div className="relative inline-block text-left">
                                     <select
-                                      value={user.role}
+                                      value={user.role === 'student' ? 'APRENDIZ' : user.role === 'teacher' ? 'INSTRUCTOR' : user.role === 'admin' ? 'ADMINISTRADOR' : (user.role || '').toUpperCase()}
                                       onChange={(e) => handleChangeUserRole(user.id, e.target.value)}
                                       className={`rounded-full pl-3 pr-7 py-1 text-xs font-semibold cursor-pointer transition-all border border-slate-200 hover:border-slate-300 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#39A900]/40 ${ROLE_COLORS[user.role] || 'bg-slate-100 text-slate-600'}`}
                                       title="Cambiar rol institucional"
                                     >
-                                      <option value="student">Aprendiz</option>
-                                      <option value="teacher">Instructor</option>
-                                      <option value="admin">Administrador</option>
+                                      <option value="APRENDIZ">Aprendiz</option>
+                                      <option value="INSTRUCTOR">Instructor</option>
+                                      <option value="ADMINISTRADOR">Administrador</option>
                                     </select>
                                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none opacity-60" />
                                   </div>

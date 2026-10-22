@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { IconSettings, IconCode, IconMovie, IconVolume, IconPlayerPause } from '@tabler/icons-react';
 import { resolveMediaUrl } from '../services/api';
 
@@ -48,6 +48,18 @@ export function DictionaryCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   // Determinar especialidad técnica según el programa real del término o del filtro activo
   const progLower = (term.program || activeProgram || '').toLowerCase();
   const isMecanica = progLower.includes('mecánica') || progLower.includes('mecanic') || progLower.includes('3520681');
@@ -58,7 +70,7 @@ export function DictionaryCard({
   const imageSrc = rawImage ? resolveMediaUrl(rawImage, 'dictionary-images') : '';
   const rawAudio = term.audio_url || term.audioUrl || term.audio;
 
-  // Fallback de pronunciación nativa inmediata con SpeechSynthesis (en-US, rate = 0.88)
+  // Fallback de pronunciación nativa inmediata con SpeechSynthesis (en-US, rate = 0.85)
   const triggerNativeTTS = (text: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       setIsPlaying(false);
@@ -68,7 +80,7 @@ export function DictionaryCard({
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-US';
-      utterance.rate = 0.88;
+      utterance.rate = 0.85;
       utterance.onstart = () => setIsPlaying(true);
       utterance.onend = () => setIsPlaying(false);
       utterance.onerror = () => setIsPlaying(false);

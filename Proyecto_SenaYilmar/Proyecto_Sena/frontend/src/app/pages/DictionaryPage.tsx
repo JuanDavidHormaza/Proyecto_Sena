@@ -99,11 +99,6 @@ export function DictionaryPage() {
     return () => { isMounted = false; };
   }, [selectedProgram, isAdmin, userProgramRaw, userFichaCode]);
 
-  // Contadores dinámicos calculados directamente con terms.length y recursos multimedia reales
-  const totalTermsCount = terms.length;
-  const totalAudiosCount = terms.filter((t) => Boolean(t.audio_url || t.audioUrl || t.audio)).length;
-  const totalImagesCount = terms.filter((t) => Boolean(t.image_url || t.imageUrl || t.image)).length;
-
   // Filtrado de términos en el cliente
   const filteredTerms = useMemo(() => {
     return terms.filter((term) => {
@@ -119,6 +114,15 @@ export function DictionaryPage() {
       return matchesSearch && matchesLevel && matchesComp;
     });
   }, [terms, searchQuery, selectedLevel, selectedCompetence]);
+
+  // Contadores reactivos en vivo con useMemo según el filtrado activo
+  const { totalTermsCount, totalAudiosCount, totalImagesCount } = useMemo(() => {
+    return {
+      totalTermsCount: filteredTerms.length,
+      totalAudiosCount: filteredTerms.filter((t) => Boolean(t.audio_url || t.audioUrl || t.audio)).length,
+      totalImagesCount: filteredTerms.filter((t) => Boolean(t.image_url || t.imageUrl || t.image)).length,
+    };
+  }, [filteredTerms]);
 
   const activeDisplayProgram = isAdmin ? selectedProgram : (userProgramRaw || selectedProgram);
 

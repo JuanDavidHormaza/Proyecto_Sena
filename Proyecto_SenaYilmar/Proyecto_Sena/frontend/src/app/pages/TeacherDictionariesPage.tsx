@@ -102,7 +102,7 @@ export function getTermSemanticIcon(termName?: string) {
     name.includes("script") ||
     name.includes("command")
   ) {
-    return Terminal;
+    return Code2;
   }
   if (
     name.includes("layer") ||
@@ -334,32 +334,6 @@ export function TeacherDictionariesPage() {
     });
   }, [documents, selectedProgram]);
 
-  // Contadores dinámicos calculados directamente con baseTeacherDocuments
-  const totalWordsCount = baseTeacherDocuments.length;
-  const totalAudiosCount = baseTeacherDocuments.filter((d) => Boolean(d.audioUrl || (d as any).audio || (d as any).audio_url)).length;
-  const totalImagesCount = baseTeacherDocuments.filter((d) => Boolean(d.imageUrl || (d as any).image || (d as any).image_url)).length;
-  const totalVideosCount = 3;
-
-  // Contadores dinámicos sincronizados por Habilidad (Category / Skill) y Nivel CEFR
-  const skillCounts = useMemo(() => {
-    const counts: Record<string, number> = { Speaking: 0, Grammar: 0, Writing: 0, Reading: 0, Listening: 0 };
-    baseTeacherDocuments.forEach((doc) => {
-      const s = doc.skill || doc.category || doc.competence || "Grammar";
-      if (counts[s] !== undefined) counts[s]++;
-      else if (s.toLowerCase().includes("listen")) counts.Listening++;
-    });
-    return counts;
-  }, [baseTeacherDocuments]);
-
-  const levelCounts = useMemo(() => {
-    const counts: Record<string, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
-    baseTeacherDocuments.forEach((doc) => {
-      const lvl = (doc.level || "A1").toUpperCase();
-      if (counts[lvl] !== undefined) counts[lvl]++;
-    });
-    return counts;
-  }, [baseTeacherDocuments]);
-
   // Filtrado estricto acumulativo (AND) para las tarjetas
   const filteredTerms = useMemo(() => {
     return baseTeacherDocuments.filter((term) => {
@@ -396,6 +370,36 @@ export function TeacherDictionariesPage() {
       return matchesSearch && matchesSkill && matchesLevel && matchesSubject;
     });
   }, [baseTeacherDocuments, searchTerm, selectedCompetence, selectedLevel, selectedSubject]);
+
+  // Contadores reactivos en vivo con useMemo según filteredTerms
+  const { totalWordsCount, totalAudiosCount, totalImagesCount } = useMemo(() => {
+    return {
+      totalWordsCount: filteredTerms.length,
+      totalAudiosCount: filteredTerms.filter((d) => Boolean(d.audioUrl || (d as any).audio || (d as any).audio_url)).length,
+      totalImagesCount: filteredTerms.filter((d) => Boolean(d.imageUrl || (d as any).image || (d as any).image_url)).length,
+    };
+  }, [filteredTerms]);
+  const totalVideosCount = 3;
+
+  // Contadores dinámicos sincronizados por Habilidad (Category / Skill) y Nivel CEFR
+  const skillCounts = useMemo(() => {
+    const counts: Record<string, number> = { Speaking: 0, Grammar: 0, Writing: 0, Reading: 0, Listening: 0 };
+    filteredTerms.forEach((doc) => {
+      const s = doc.skill || doc.category || doc.competence || "Grammar";
+      if (counts[s] !== undefined) counts[s]++;
+      else if (s.toLowerCase().includes("listen")) counts.Listening++;
+    });
+    return counts;
+  }, [filteredTerms]);
+
+  const levelCounts = useMemo(() => {
+    const counts: Record<string, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
+    filteredTerms.forEach((doc) => {
+      const lvl = (doc.level || "A1").toUpperCase();
+      if (counts[lvl] !== undefined) counts[lvl]++;
+    });
+    return counts;
+  }, [filteredTerms]);
 
   const handleResetFilters = () => {
     setSearchTerm("");

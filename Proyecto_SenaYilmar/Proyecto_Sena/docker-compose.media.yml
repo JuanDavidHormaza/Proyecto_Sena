@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   worklex_minio:
-    image: elestio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: worklex_minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
@@ -10,7 +10,7 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
-    command: minio server /data --console-address ":9001"
+    command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -27,10 +27,10 @@ services:
       resources:
         limits:
           cpus: '0.30'
-          memory: 200M
+          memory: 256M
 
   worklex_minio_provision:
-    image: worklex_provision:latest
+    image: quay.io/minio/mc:latest
     container_name: worklex_minio_provision
     restart: "no"
     depends_on:

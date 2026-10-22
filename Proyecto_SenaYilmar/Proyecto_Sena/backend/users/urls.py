@@ -31,6 +31,7 @@ from .Views.exam_views import (
 router = DefaultRouter()
 
 router.register(r'users',          UserViewSet,              basename='user')
+router.register(r'admin/users',    UserViewSet,              basename='admin-user')
 router.register(r'subjects',       SubjectViewSet,           basename='subject')
 router.register(r'dictionary',     DigitalDictionaryViewSet, basename='dictionary')
 router.register(r'results',        TestResultViewSet,        basename='result')

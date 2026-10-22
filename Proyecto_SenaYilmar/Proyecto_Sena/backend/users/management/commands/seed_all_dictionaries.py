@@ -14,6 +14,7 @@ import os
 import logging
 from django.core.management.base import BaseCommand
 from users.Models.modelsSENA import Subject, DigitalDictionary
+from users.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
@@ -1206,6 +1207,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         selected_program = options.get('program', 'all').strip().upper()
         self.stdout.write(self.style.MIGRATE_HEADING("=== INICIANDO INGESTA DE LOS 3 DICCIONARIOS TÉCNICOS SENA ==="))
+
+        # Asegurar buckets y permisos de lectura pública en MinIO
+        try:
+            self.stdout.write("Verificando buckets de MinIO y políticas públicas de descarga...")
+            StorageService.ensure_all_buckets()
+            self.stdout.write(self.style.SUCCESS("Buckets de MinIO listos (dictionary-images, dictionary-audios, dictionary-videos)."))
+        except Exception as bucket_err:
+            self.stdout.write(self.style.WARNING(f"Aviso MinIO: {bucket_err}"))
 
         grand_total_created = 0
         grand_total_updated = 0

@@ -610,12 +610,21 @@ export async function createUser(userData: Partial<ApiUser> & { password: string
 }
 
 export async function updateUser(userId: string, userData: Partial<ApiUser>): Promise<ApiUser> {
-  const response = await fetch(`${API_BASE}/users/${userId}/`, {
+  const response = await fetch(`${API_BASE}/admin/users/${userId}/`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(userData),
   });
   
+  if (!response.ok && response.status === 404) {
+    const fallbackResponse = await fetch(`${API_BASE}/users/${userId}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(userData),
+    });
+    return handleResponse<ApiUser>(fallbackResponse);
+  }
+
   return handleResponse<ApiUser>(response);
 }
 

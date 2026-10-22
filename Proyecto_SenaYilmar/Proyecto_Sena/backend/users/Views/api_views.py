@@ -30,6 +30,7 @@ from ..Controllers.ControllerSENA import (
     AuthController, PersonController, UserController,
     SubjectController, DictionaryController, TestResultController,
     RankingController, FichaRequestController, SupportTicketController, _build_user_response,
+    ROLE_MAP, ROLE_MAP_REVERSE,
 )
 from ..Models.modelsSENA import EmailOTP, RegisterPendingOTP, Person, User, TestResult, FichaRequest, SupportTicket, Subject, DigitalDictionary, UserLog
 from ..serializers import resolve_audited_question, TestResultDetailSerializer
@@ -1038,6 +1039,8 @@ class UserViewSet(viewsets.ViewSet):
 
             user.role_id = backend_role
             user.save(update_fields=['role_id'])
+            if getattr(user, 'person', None):
+                User.objects.filter(person=user.person).update(role_id=backend_role)
 
         # 2. Estado Activo / Inactivo (is_active o status)
         if 'is_active' in request.data or 'status' in request.data:
@@ -1178,37 +1181,51 @@ class DigitalDictionaryViewSet(viewsets.ModelViewSet):
         user = self.request.user
         role = str(getattr(user, 'role_id', '') or getattr(user, 'role', '') or '').upper()
 
-        # Administrador: Acceso total o filtro explícito
-        if role in ['ADMINISTRADOR', 'SUPERADMIN', 'ADMIN', 'COORDINADOR']:
-            prog = self.request.query_params.get('program')
-            fch = self.request.query_params.get('ficha') or self.request.query_params.get('fichaId')
-            qs = DictionaryWord.objects.all()
-            if prog:
-                qs = qs.filter(program__icontains=prog.split('(')[0].strip())
-            if fch:
-                qs = qs.filter(ficha__icontains=fch)
-            order_field = 'word' if 'word' in [f.name for f in DictionaryWord._meta.get_fields()] else 'word_id'
-            return qs.order_by(order_field)
+        prog = self.request.query_params.get('program')
+        fch = self.request.query_params.get('ficha') or self.request.query_params.get('fichaId')
 
-        # Aprendiz o Instructor: Filtrado estricto por su asignación activa
-        active_prog = getattr(user, 'program', None) or getattr(user, 'active_program', None)
-        active_fch = getattr(user, 'ficha', None) or getattr(user, 'active_ficha', None) or getattr(user, 'ficha_code', None)
-        if hasattr(active_fch, 'code'):
-            active_fch = active_fch.code
+        # Si no se pasó parámetro explícito y es aprendiz/instructor, usar su programa asignado
+        if not prog and role not in ['ADMINISTRADOR', 'SUPERADMIN', 'ADMIN', 'COORDINADOR']:
+            prog = getattr(user, 'program', None) or getattr(user, 'active_program', None)
 
-        if not active_prog:
-            return DictionaryWord.objects.none()
+        qs = DigitalDictionary.objects.select_related('subject').all()
 
-        clean_prog = str(active_prog).split('(')[0].strip()
-        qs = DictionaryWord.objects.filter(program__icontains=clean_prog)
+        if prog and str(prog).lower() not in ('all', 'todos', 'todos los programas'):
+            clean_prog = str(prog).split('(')[0].strip()
+            p_upper = clean_prog.upper()
+            if 'ADSO' in p_upper or 'SOFTWARE' in p_upper:
+                qs = qs.filter(
+                    Q(program__icontains=clean_prog) |
+                    Q(program__icontains='ADSO') |
+                    Q(program__icontains='Software') |
+                    Q(subject__subject_id='ADSO') |
+                    Q(program__isnull=True) |
+                    Q(program='')
+                )
+            elif 'MECANIC' in p_upper or 'MECANICA' in p_upper or 'MECÁNICA' in p_upper:
+                qs = qs.filter(
+                    Q(program__icontains=clean_prog) |
+                    Q(program__icontains='Mecanic') |
+                    Q(program__icontains='Mecánica') |
+                    Q(subject__subject_id='MECANICA')
+                )
+            elif 'MULTI' in p_upper:
+                qs = qs.filter(
+                    Q(program__icontains=clean_prog) |
+                    Q(program__icontains='Multi') |
+                    Q(program__icontains='Multimedia') |
+                    Q(subject__subject_id='MULTIMEDIA')
+                )
+            else:
+                qs = qs.filter(
+                    Q(program__icontains=clean_prog) |
+                    Q(subject__description__icontains=clean_prog)
+                )
 
-        if active_fch:
-            qs = qs.filter(Q(ficha__iexact=str(active_fch)) | Q(ficha__in=['', None]))
-        else:
-            qs = qs.filter(ficha__in=['', None])
+        if fch and str(fch).lower() != 'all':
+            qs = qs.filter(Q(ficha__icontains=fch) | Q(ficha__in=['', None]))
 
-        order_field = 'word' if 'word' in [f.name for f in DictionaryWord._meta.get_fields()] else 'word_id'
-        return qs.order_by(order_field)
+        return qs.order_by('word_id')
 
     def list(self, request, *args, **kwargs):
         qs = self.get_queryset()

@@ -2,7 +2,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { LayoutDashboard, LogIn } from "lucide-react";
 import { UserAccountMenu } from "./UserAccountMenu";
 import { HeaderActionTools } from "./HeaderActionTools";
-import { RoleSwitcher } from "./RoleSwitcher";
 import { useAuth } from "../context/AuthContext";
 import { BrandLogo } from "./BrandLogo";
 
@@ -105,7 +104,6 @@ export const Navbar: React.FC<NavbarProps> = ({ links, activePath, onLinkClick }
         <div className="flex items-center gap-2.5">
           {hasValidSession ? (
             <>
-              <RoleSwitcher />
               <button
                 type="button"
                 onClick={() => navigate(getDashboardPath())}

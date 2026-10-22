@@ -11,22 +11,44 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     build: {
-      chunkSizeWarningLimit: 800,
+      chunkSizeWarningLimit: 1500,
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('@tabler/icons-react')) {
-                return 'tabler-icons';
+              if (
+                id.includes('react') ||
+                id.includes('react-dom') ||
+                id.includes('react-router') ||
+                id.includes('react-router-dom') ||
+                id.includes('scheduler')
+              ) {
+                return 'vendor-react';
               }
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('react-router')) {
-                return 'vendor';
+              if (id.includes('@tabler/icons-react') || id.includes('lucide-react')) {
+                return 'vendor-icons';
               }
-              return 'libs';
+              if (id.includes('recharts') || id.includes('d3')) {
+                return 'vendor-charts';
+              }
+              if (id.includes('motion')) {
+                return 'vendor-motion';
+              }
+              return 'vendor-common';
             }
           },
         },
       },
+    },
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        '@tabler/icons-react',
+        'lucide-react',
+        'motion/react',
+      ],
     },
     server: {
       host: true,

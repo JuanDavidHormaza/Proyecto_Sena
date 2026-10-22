@@ -1304,6 +1304,22 @@ class RankingController:
         return leaderboard
 
 
+def _resolve_db_user(actor):
+    """Obtiene de forma segura la instancia del modelo User en PostgreSQL evitando TypeErrors con AuthenticatedUser o IDs numéricos."""
+    if actor is None:
+        return None
+    if isinstance(actor, User):
+        return actor
+    if hasattr(actor, '_user') and isinstance(actor._user, User):
+        return actor._user
+    raw_id = getattr(actor, 'user_id', None) or getattr(actor, 'id', None) or getattr(actor, 'pk', None) or actor
+    try:
+        numeric_id = int(str(raw_id).strip())
+        return User.objects.select_related('person').filter(pk=numeric_id).first()
+    except (ValueError, TypeError):
+        return None
+
+
 class FichaRequestController:
 
     @staticmethod
@@ -1312,7 +1328,9 @@ class FichaRequestController:
             return None, 'El código de ficha es obligatorio.'
 
         clean_input = str(ficha_code).strip()
-        real_user = getattr(user, '_user', user)
+        real_user = _resolve_db_user(user)
+        if not real_user:
+            return None, 'Usuario solicitante no válido en PostgreSQL.'
         person = real_user.person
 
         # Catálogo oficial SENA para resolver nombre
@@ -1384,26 +1402,21 @@ class FichaRequestController:
         if user is None and cls is not None and not isinstance(cls, type):
             user = cls
 
-        # Extraer ID primario entero de forma segura desde AuthenticatedUser o User
-        user_id = user.id if hasattr(user, 'id') else getattr(user, 'pk', None)
-        if not isinstance(user_id, int) and hasattr(user, 'user'):
-            user_id = getattr(user.user, 'id', None) or getattr(user.user, 'pk', None)
-        if not isinstance(user_id, int) and hasattr(user, '_user'):
-            user_id = getattr(user._user, 'user_id', None) or getattr(user._user, 'id', None) or getattr(user._user, 'pk', None)
-        if not isinstance(user_id, int) and hasattr(user, 'user_id'):
-            user_id = user.user_id
+        db_user = _resolve_db_user(user)
+        if not db_user:
+            return FichaRequest.objects.none()
 
-        real_user = getattr(user, '_user', user)
-        role = getattr(user, 'role_id', None) or getattr(real_user, 'role_id', None)
+        user_id = db_user.user_id
+        role = db_user.role_id
 
         if role in ('ADMIN', 'SUPERADMIN'):
             # Vista de auditoría general para el administrador
             return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').all().order_by('-created_at')
         elif role in ('INSTRUCTOR', 'MONITOR'):
-            # El docente debe ver las solicitudes asignadas a su ID o que correspondan a su ficha/programa,
+            # El docente debe ver las solicitudes asignadas a su ID numérico o que correspondan a su ficha/programa,
             # así como solicitudes pendientes generales sin instructor asignado
-            q_filter = Q(assigned_instructor_id=user_id) if isinstance(user_id, int) else Q()
-            inst_prog = (getattr(user, 'program', '') or getattr(real_user, 'program', '') or '').strip()
+            q_filter = Q(assigned_instructor_id=user_id)
+            inst_prog = (db_user.program or '').strip()
             if inst_prog:
                 q_filter |= Q(program_name__icontains=inst_prog)
                 q_filter |= Q(ficha_code__icontains=inst_prog)
@@ -1418,25 +1431,17 @@ class FichaRequestController:
             q_filter |= Q(assigned_instructor__isnull=True)
             return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(q_filter).order_by('-created_at')
 
-        # Aprendiz: filtrar solo sus solicitudes con user_id=user_id
-        student_filter = Q()
-        if isinstance(user_id, int):
-            student_filter |= Q(user_id=user_id)
-
-        person = getattr(user, 'person', None) or getattr(real_user, 'person', None)
-        person_id = getattr(person, 'person_id', None) or getattr(person, 'id', None) or getattr(person, 'pk', None)
-        if isinstance(person_id, int):
-            student_filter |= Q(person_id=person_id)
-
-        if not student_filter:
-            return FichaRequest.objects.none()
-
-        return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(student_filter).order_by('-created_at')
+        # Aprendiz: filtrar solo sus solicitudes
+        return FichaRequest.objects.select_related('person', 'user', 'reviewed_by__person', 'assigned_instructor__person').filter(
+            Q(user_id=user_id) | Q(person=db_user.person)
+        ).order_by('-created_at')
 
     @staticmethod
     def approve(request_id, actor_user, instructor_id=None, notes=None):
-        real_actor = getattr(actor_user, '_user', actor_user) if actor_user else None
-        role = getattr(real_actor, 'role_id', None)
+        db_actor = _resolve_db_user(actor_user) or _resolve_db_user(instructor_id)
+        if not db_actor:
+            return None, 'Usuario instructor no válido para aprobar la solicitud.'
+        role = getattr(db_actor, 'role_id', None)
 
         if role in ('ADMIN', 'SUPERADMIN'):
             return None, 'Las solicitudes de asignación de ficha deben ser aprobadas única y exclusivamente por el Instructor asignado a esa ficha específica, nunca por el Administrador.'
@@ -1454,10 +1459,10 @@ class FichaRequestController:
 
         req.status = 'APROBADA'
         req.reviewed_at = timezone.now()
-        req.reviewed_by = real_actor
-        req.assigned_instructor = real_actor
+        req.reviewed_by = db_actor
+        req.assigned_instructor = db_actor
 
-        inst_name = f"{real_actor.person.first_name} {real_actor.person.last_name}".strip()
+        inst_name = f"{db_actor.person.first_name} {db_actor.person.last_name}".strip()
         default_notes = f"Aprobada por el docente responsable: {inst_name}."
         req.admin_notes = f"{default_notes} {notes or ''}".strip()
 
@@ -1503,8 +1508,10 @@ class FichaRequestController:
 
     @staticmethod
     def reject(request_id, actor_user, notes=None):
-        real_actor = getattr(actor_user, '_user', actor_user) if actor_user else None
-        role = getattr(real_actor, 'role_id', None)
+        db_actor = _resolve_db_user(actor_user)
+        if not db_actor:
+            return None, 'Usuario instructor no válido para rechazar la solicitud.'
+        role = getattr(db_actor, 'role_id', None)
 
         if role in ('ADMIN', 'SUPERADMIN'):
             return None, 'Las solicitudes de asignación de ficha deben ser gestionadas única y exclusivamente por el Instructor asignado a esa ficha específica, nunca por el Administrador.'
@@ -1522,9 +1529,12 @@ class FichaRequestController:
 
         req.status = 'RECHAZADA'
         req.reviewed_at = timezone.now()
-        req.reviewed_by = real_actor
-        req.assigned_instructor = real_actor
-        inst_name = f"{real_actor.person.first_name} {real_actor.person.last_name}".strip()
+        req.reviewed_by = db_actor
+        req.assigned_instructor = db_actor
+        inst_name = f"{db_actor.person.first_name} {db_actor.person.last_name}".strip()
+        req.admin_notes = notes or f"Rechazada por el docente responsable: {inst_name}."
+        req.save(update_fields=['status', 'admin_notes', 'reviewed_at', 'reviewed_by', 'assigned_instructor'])
+        return req, None
         req.admin_notes = notes or f"Rechazada por el docente responsable: {inst_name}."
         req.save(update_fields=['status', 'admin_notes', 'reviewed_at', 'reviewed_by', 'assigned_instructor'])
         return req, None
