@@ -1276,11 +1276,50 @@ PASS_THRESHOLD = {
 }
 
 
+def _normalize_competency(ans: dict) -> str:
+    """
+    Normaliza la habilidad a una de las 4 macro-competencias institucionales:
+    Reading, Writing, Listening o Speaking.
+    - Reading = Vocabulario técnico, definiciones, comprensión de lectura.
+    - Writing = Gramática, sintaxis (orden de oración), morfología en contexto, sinónimos.
+    """
+    comp = ans.get('competency') or ans.get('competence') or ''
+    if comp:
+        comp_lower = str(comp).lower()
+        if 'read' in comp_lower or 'vocab' in comp_lower:
+            return 'Reading'
+        if 'writ' in comp_lower or 'gramm' in comp_lower or 'sintax' in comp_lower or 'morfol' in comp_lower:
+            return 'Writing'
+        if 'listen' in comp_lower or 'escucha' in comp_lower or 'audio' in comp_lower:
+            return 'Listening'
+        if 'speak' in comp_lower or 'habla' in comp_lower or 'oral' in comp_lower:
+            return 'Speaking'
+
+    q_type = str(ans.get('type') or '').lower()
+    if q_type == 'speaking':
+        return 'Speaking'
+    if q_type == 'listening':
+        return 'Listening'
+    if q_type == 'writing':
+        return 'Writing'
+
+    cat = str(ans.get('category') or '').lower()
+    if 'speaking' in cat or 'habla' in cat:
+        return 'Speaking'
+    if 'listening' in cat or 'audio' in cat:
+        return 'Listening'
+    if 'writing' in cat or 'sintaxis' in cat or 'gramática' in cat or 'gramatica' in cat:
+        return 'Writing'
+
+    return 'Reading'
+
+
 def _build_failure_breakdown(process: dict) -> dict:
     """
     Analiza las respuestas guardadas en `process` y retorna un desglose
-    de fallos por categoría, dificultad y tipo (escritura / speaking / opción múltiple).
-    Compatible con el campo `process = { userAnswers: [...] }` que ya guarda el frontend.
+    ponderado por HABILIDAD (Reading, Writing, Listening, Speaking),
+    dificultad y tipo, evitando que fallos aislados en micro-categorías
+    de 1 sola pregunta distorsionen el resultado.
     """
     user_answers = (process or {}).get('userAnswers', [])
 
@@ -1288,6 +1327,12 @@ def _build_failure_breakdown(process: dict) -> dict:
         'total': len(user_answers),
         'failed': 0,
         'by_category': {},
+        'by_ability': {
+            'Reading': {'total': 0, 'failed': 0, 'correct': 0, 'score': 0},
+            'Writing': {'total': 0, 'failed': 0, 'correct': 0, 'score': 0},
+            'Listening': {'total': 0, 'failed': 0, 'correct': 0, 'score': 0},
+            'Speaking': {'total': 0, 'failed': 0, 'correct': 0, 'score': 0},
+        },
         'by_difficulty': {'Easy': {'total': 0, 'failed': 0},
                           'Medium': {'total': 0, 'failed': 0},
                           'Hard': {'total': 0, 'failed': 0}},
@@ -1297,21 +1342,28 @@ def _build_failure_breakdown(process: dict) -> dict:
     }
 
     for ans in user_answers:
-        cat = ans.get('category', 'Desconocido')
+        ability = _normalize_competency(ans)
         diff = ans.get('difficulty', 'Easy')
-        is_correct = ans.get('isCorrect', False)
+        is_correct = bool(ans.get('isCorrect', False))
         writing = ans.get('writingAnswer')
         audio = ans.get('audioUrl')
 
-        if writing:
+        if writing or ans.get('type') == 'writing':
             breakdown['writing_submitted'] += 1
-        if audio:
+        if audio or ans.get('type') == 'speaking':
             breakdown['speaking_submitted'] += 1
 
-        # Conteo por categoría
-        if cat not in breakdown['by_category']:
-            breakdown['by_category'][cat] = {'total': 0, 'failed': 0}
-        breakdown['by_category'][cat]['total'] += 1
+        # Acumular por habilidad macro
+        breakdown['by_ability'][ability]['total'] += 1
+        if is_correct:
+            breakdown['by_ability'][ability]['correct'] += 1
+        else:
+            breakdown['by_ability'][ability]['failed'] += 1
+
+        # by_category expone las 4 habilidades para compatibilidad y visualización en dashboards
+        if ability not in breakdown['by_category']:
+            breakdown['by_category'][ability] = {'total': 0, 'failed': 0}
+        breakdown['by_category'][ability]['total'] += 1
 
         # Conteo por dificultad
         if diff in breakdown['by_difficulty']:
@@ -1319,14 +1371,19 @@ def _build_failure_breakdown(process: dict) -> dict:
 
         if not is_correct and not writing and not audio:
             breakdown['failed'] += 1
-            breakdown['by_category'][cat]['failed'] += 1
+            breakdown['by_category'][ability]['failed'] += 1
             if diff in breakdown['by_difficulty']:
                 breakdown['by_difficulty'][diff]['failed'] += 1
             breakdown['multiple_choice_failed'].append({
                 'question': ans.get('question', ''),
-                'category': cat,
+                'category': ability,
                 'difficulty': diff,
             })
+
+    # Calcular porcentaje por habilidad (0-100)
+    for ab, data in breakdown['by_ability'].items():
+        if data['total'] > 0:
+            data['score'] = round((data['correct'] / data['total']) * 100)
 
     return breakdown
 
@@ -1379,23 +1436,32 @@ class TestResultViewSet(viewsets.ViewSet):
         level = result.level
         score = result.score
         threshold = PASS_THRESHOLD.get(level, 60)
-        passed = score >= threshold
 
-        # Desglose de fallos
+        # Desglose agrupado por las 4 macro-habilidades oficiales
         breakdown = _build_failure_breakdown(result.process or {})
 
-        # Construir retroalimentación automática
+        # Ponderación por HABILIDAD (Reading, Writing, Listening, Speaking):
+        # Evita que un fallo aislado en una categoría suelta de 1 sola pregunta hunda al aprendiz.
+        active_abilities = [ab for ab, data in breakdown.get('by_ability', {}).items() if data['total'] > 0]
+        if active_abilities:
+            weighted_score = round(sum(breakdown['by_ability'][ab]['score'] for ab in active_abilities) / len(active_abilities))
+            final_score = max(score, weighted_score)
+            passed = final_score >= threshold
+        else:
+            final_score = score
+            passed = final_score >= threshold
+
+        # Construir retroalimentación automática con el puntaje final consistente
         auto_feedback_lines = []
         if not passed:
             auto_feedback_lines.append(
                 f"No alcanzaste el puntaje mínimo para el nivel {level} "
-                f"(obtuviste {score}%, se requiere {threshold}%)."
+                f"(obtuviste {final_score}%, se requiere {threshold}%)."
             )
-            for cat, data in breakdown['by_category'].items():
-                if data['failed'] > 0:
-                    pct = round(data['failed'] / data['total'] * 100)
+            for ability, data in breakdown.get('by_ability', {}).items():
+                if data['total'] > 0:
                     auto_feedback_lines.append(
-                        f"• {cat}: fallaste {data['failed']} de {data['total']} preguntas ({pct}%)."
+                        f"• {ability}: {data['correct']} de {data['total']} correctas ({data['score']}%)."
                     )
             if breakdown['writing_submitted']:
                 auto_feedback_lines.append(
@@ -1407,21 +1473,33 @@ class TestResultViewSet(viewsets.ViewSet):
                 )
         else:
             auto_feedback_lines.append(
-                f"¡Aprobaste el nivel {level} con {score}%! "
+                f"¡Aprobaste el nivel {level} con {final_score}%! "
                 f"Puedes continuar al siguiente nivel."
             )
+            for ability, data in breakdown.get('by_ability', {}).items():
+                if data['total'] > 0:
+                    auto_feedback_lines.append(
+                        f"• {ability}: {data['correct']} de {data['total']} correctas ({data['score']}%)."
+                    )
 
         auto_feedback = '\n'.join(auto_feedback_lines)
 
-        # Guardar desglose y auto-diagnóstico en process (NO en feedback del instructor)
+        # Actualizar result.score con el puntaje final/ponderado consistente para persistencia en BD
+        result.score = final_score
+
+        # Guardar desglose, auto-diagnóstico y trazabilidad en process
         current_process = result.process or {}
         current_process['auto_feedback'] = auto_feedback
+        current_process['weighted_score'] = weighted_score if active_abilities else score
+        current_process['final_score'] = final_score
+        current_process['raw_score'] = score
         result.process = current_process
-        result.save(update_fields=['process'])
+        result.save(update_fields=['score', 'process'])
 
         # Se elimina envío automático de correo de reprobación a instructores/admins por decisión del equipo - 2026-10-22
 
         data = TestResultSerializer(result).data
+        data['score'] = final_score
         data['passed'] = passed
         data['threshold'] = threshold
         data['breakdown'] = breakdown
