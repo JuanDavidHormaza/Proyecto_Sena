@@ -35,13 +35,51 @@ import {
   Calendar,
   Languages,
 } from "lucide-react";
-import { getLevelFromScore } from "../data/questionsA1";
 import { questions } from "../data";
 import * as api from "../services/api";
 import { resolveMediaUrl } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
 import { playEnglishSpeech } from "../utils/speech";
+
+interface LevelFeedback {
+  description: string;
+  message: string;
+}
+
+const getCEFRLevelFeedback = (level: string, score: number, passed: boolean): LevelFeedback => {
+  const normLevel = (level || "A1").toUpperCase();
+  if (!passed) {
+    return {
+      description: `Evaluación de Nivel ${normLevel} en progreso`,
+      message: `Has obtenido ${score}%. Te recomendamos reforzar las habilidades señaladas para consolidar el nivel ${normLevel}.`,
+    };
+  }
+
+  switch (normLevel) {
+    case "B2":
+      return {
+        description: "Nivel B2 — Intermedio Alto (Profesional / Laboral)",
+        message: `¡Excelente desempeño (${score}%)! Demuestras fluidez y comprensión técnica avanzada en contextos operacionales y de ingeniería.`,
+      };
+    case "B1":
+      return {
+        description: "Nivel B1 — Intermedio (Autonomía Técnica)",
+        message: `¡Felicitaciones (${score}%)! Tienes la capacidad de comunicarte y comprender requerimientos técnicos de tu formación profesional.`,
+      };
+    case "A2":
+      return {
+        description: "Nivel A2 — Básico / Plataforma (Elemental)",
+        message: `¡Buen trabajo (${score}%)! Comprendes conceptos clave y estructuras fundamentales de tu programa de formación.`,
+      };
+    case "A1":
+    default:
+      return {
+        description: "Nivel A1 — Acceso / Inicial",
+        message: `¡Has completado el diagnóstico inicial (${score}%)! Continúa practicando vocabulario y gramática para desbloquear A2.`,
+      };
+  }
+};
 
 const normalizeCompetency = (raw?: string): "Reading" | "Listening" | "Writing" | "Speaking" => {
   if (!raw) return "Reading";
@@ -152,8 +190,8 @@ export function ResultsPage() {
     (resultsState as any)?.status === "cancelled" ||
     (resultsState as any)?.status === "no_presentado";
 
-  const levelInfo = getLevelFromScore(finalScore);
   const passed = !isCancelled && !isIncomplete && (resultsState?.passed ?? lastTestSummary?.passed ?? (finalScore >= 60));
+  const levelInfo = getCEFRLevelFeedback(levelReached, finalScore, passed);
   const threshold = resultsState?.threshold ?? 60;
   const breakdown = resultsState?.breakdown ?? lastTestResult?.breakdown;
   const autoFeedback = resultsState?.auto_feedback ?? lastTestSummary?.autoFeedback;
