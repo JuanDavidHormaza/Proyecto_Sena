@@ -13,7 +13,9 @@ import re
 import os
 import logging
 from django.core.management.base import BaseCommand
-from users.Models.modelsSENA import Subject, DigitalDictionary
+from django.contrib.auth.hashers import make_password
+from django.utils import timezone
+from users.Models.modelsSENA import Subject, DigitalDictionary, Person, User, FichaRequest, TestResult
 from users.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
@@ -1274,5 +1276,194 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"\n[RESUMEN] Total términos procesados: {grand_total_created} creados, {grand_total_updated} actualizados.\n"
             f"[RESUMEN] Total global de términos en DigitalDictionary: {total_db}\n"
-            f"=== INGESTA COMPLETA FINALIZADA EXITOSAMENTE ==="
         ))
+
+        # ── Ingesta del Perfil de Instructor y Aprendices de Demostración ──
+        self._seed_instructor_and_test_data()
+
+        self.stdout.write(self.style.SUCCESS("=== INGESTA COMPLETA FINALIZADA EXITOSAMENTE ==="))
+
+    def _seed_instructor_and_test_data(self):
+        """
+        Garantiza la existencia del usuario Instructor con credenciales institucionales conocidas:
+        - Email: instructor@sena.edu.co / Clave: sena2026*
+        - Fichas vinculadas: ADSO 2670142, Mecánica 3520681, Multimedia 2554901
+        - Aprendices, solicitudes de ficha y resultados de prueba (TestResult) listos para seguimiento en vivo.
+        """
+        self.stdout.write(self.style.MIGRATE_HEADING("\n=== CONFIGURANDO PERFIL INSTRUCTOR Y DATOS DE PRUEBA EN VIVO ==="))
+
+        # 1. Crear / Actualizar Persona e Instructor Principal
+        inst_person, _ = Person.objects.update_or_create(
+            email='instructor@sena.edu.co',
+            defaults={
+                'password': make_password('sena2026*'),
+                'doc_type': 'CC',
+                'doc_num': '1098765432',
+                'first_name': 'Carlos',
+                'last_name': 'Mendoza',
+                'phone_num': '3109876543',
+            }
+        )
+
+        inst_user, _ = User.objects.update_or_create(
+            person=inst_person,
+            defaults={
+                'role_id': 'INSTRUCTOR',
+                'status': 'ACTIVO',
+                'program': 'ADSO - Ficha 2670142 / Mecánica - Ficha 3520681 / Multimedia - Ficha 2554901',
+            }
+        )
+        self.stdout.write(self.style.SUCCESS(f"Instructor activo: {inst_person.email} (rol: {inst_user.role_id})"))
+
+        # 2. Aprendices de Demostración por Ficha
+        students_data = [
+            {
+                'email': 'aprendiz.adso@sena.edu.co',
+                'doc_num': '1011223344',
+                'first_name': 'Juan David',
+                'last_name': 'Pérez',
+                'program': 'Análisis y Desarrollo de Software - Ficha 2670142',
+                'ficha_code': '2670142',
+                'score': 85,
+                'level': 'B1',
+                'speaking': 80,
+                'writing': 90,
+                'correct': 13,
+                'total': 15,
+            },
+            {
+                'email': 'aprendiz.mecanica@sena.edu.co',
+                'doc_num': '1022334455',
+                'first_name': 'Laura',
+                'last_name': 'Gómez',
+                'program': 'Mecánica Industrial - Ficha 3520681',
+                'ficha_code': '3520681',
+                'score': 73,
+                'level': 'A2',
+                'speaking': 70,
+                'writing': 75,
+                'correct': 11,
+                'total': 15,
+            },
+            {
+                'email': 'aprendiz.multimedia@sena.edu.co',
+                'doc_num': '1033445566',
+                'first_name': 'Santiago',
+                'last_name': 'Silva',
+                'program': 'Producción Multimedia - Ficha 2554901',
+                'ficha_code': '2554901',
+                'score': 92,
+                'level': 'B2',
+                'speaking': 90,
+                'writing': 95,
+                'correct': 14,
+                'total': 15,
+            },
+        ]
+
+        for s_info in students_data:
+            s_person, _ = Person.objects.update_or_create(
+                email=s_info['email'],
+                defaults={
+                    'password': make_password('sena2026*'),
+                    'doc_type': 'CC',
+                    'doc_num': s_info['doc_num'],
+                    'first_name': s_info['first_name'],
+                    'last_name': s_info['last_name'],
+                    'phone_num': '3001234567',
+                }
+            )
+
+            s_user, _ = User.objects.update_or_create(
+                person=s_person,
+                defaults={
+                    'role_id': 'APRENDIZ',
+                    'status': 'EN_FORMACION',
+                    'program': s_info['program'],
+                }
+            )
+
+            # Solicitudes de Ficha
+            FichaRequest.objects.update_or_create(
+                user=s_user,
+                person=s_person,
+                ficha_code=s_info['ficha_code'],
+                defaults={
+                    'program_name': s_info['program'],
+                    'status': 'APROBADA',
+                    'assigned_instructor': inst_user,
+                    'admin_notes': 'Aprobado formalmente por instructor titular.',
+                }
+            )
+
+            # TestResult con auditoría pedagógica detallada y respuestas textuales reales
+            mock_answers = [
+                {
+                    'question_id': 1,
+                    'question_text': 'What technical term does this definition refer to?',
+                    'type': 'multiple',
+                    'competence': 'Reading - Vocabulario',
+                    'user_answer_text': 'Middleware',
+                    'correct_answer_text': 'Middleware',
+                    'is_correct': True,
+                    'is_unanswered': False,
+                    'technical_term': 'Middleware',
+                    'feedback': "Excelente dominio del concepto técnico 'Middleware'.",
+                },
+                {
+                    'question_id': 2,
+                    'question_text': 'Order the sentence components into a grammatically correct structure:',
+                    'type': 'multiple',
+                    'competence': 'Writing - Gramática y Sintaxis',
+                    'user_answer_text': 'The middleware validates the authentication token before the request.',
+                    'correct_answer_text': 'The middleware validates the authentication token before the request.',
+                    'is_correct': True,
+                    'is_unanswered': False,
+                    'technical_term': 'Token Validation',
+                    'feedback': 'Estructura sintáctica y ordenamiento gramatical correcto.',
+                },
+                {
+                    'question_id': 3,
+                    'question_text': 'Pronounce the technical term with clear phonetics:',
+                    'type': 'speaking',
+                    'competence': 'Speaking',
+                    'user_answer_text': 'Audio grabado por el aprendiz (Authentication)',
+                    'correct_answer_text': 'Authentication',
+                    'is_correct': True,
+                    'is_unanswered': False,
+                    'technical_term': 'Authentication',
+                    'feedback': 'Pronunciación clara con 88% de similitud fonética.',
+                },
+                {
+                    'question_id': 4,
+                    'question_text': 'Complete the sentence with the correct grammatical form or collocation:',
+                    'type': 'multiple',
+                    'competence': 'Writing - Gramática y Sintaxis',
+                    'user_answer_text': 'INCORRECTO / SIN RESPONDER',
+                    'correct_answer_text': 'run',
+                    'is_correct': False,
+                    'is_unanswered': True,
+                    'technical_term': 'Unit Testing',
+                    'feedback': 'Reactivo omitido o tiempo agotado antes de responder.',
+                },
+            ]
+
+            TestResult.objects.update_or_create(
+                user=s_user,
+                defaults={
+                    'score': s_info['score'],
+                    'level': s_info['level'],
+                    'character': 'Analítico',
+                    'correct_answers': s_info['correct'],
+                    'total_questions': s_info['total'],
+                    'speaking_score': s_info['speaking'],
+                    'writing_score': s_info['writing'],
+                    'level_scores': {'A1': 100, 'A2': 85, 'B1': s_info['score']},
+                    'feedback': f'Excelente desempeño en {s_info["program"]}. Progreso consistente en las 4 competencias.',
+                    'duration': '14m 20s',
+                    'process': {'answers': mock_answers},
+                }
+            )
+            self.stdout.write(f"  -> Aprendiz registrado con prueba técnica: {s_person.email} ({s_info['level']} - {s_info['score']}%)")
+
+        self.stdout.write(self.style.SUCCESS("✓ Datos de demostración listos para el panel docente."))

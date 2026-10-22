@@ -255,7 +255,12 @@ def resolve_audited_question(ans: dict) -> dict:
     is_unanswered = False
     user_answer_str = ''
 
-    if writing_answer:
+    explicit_user_text = ans.get('user_answer_text') or ans.get('userAnswerText')
+    explicit_correct_text = ans.get('correct_answer_text') or ans.get('correctAnswerText')
+
+    if explicit_user_text:
+        user_answer_str = str(explicit_user_text).strip()
+    elif writing_answer:
         user_answer_str = str(writing_answer).strip()
     elif audio_url:
         transcription = ans.get('transcription') or ans.get('speakingTranscription')
@@ -267,30 +272,32 @@ def resolve_audited_question(ans: dict) -> dict:
                 user_answer_str = str(options[idx]).strip()
             elif idx == -1:
                 is_unanswered = True
-                user_answer_str = 'Sin responder'
+                user_answer_str = 'INCORRECTO / SIN RESPONDER'
             else:
-                user_answer_str = f"Opción {idx + 1}"
+                user_answer_str = 'INCORRECTO / SIN RESPONDER'
         else:
             user_answer_str = str(user_answer).strip()
     else:
         is_unanswered = True
-        user_answer_str = 'Sin responder'
+        user_answer_str = 'INCORRECTO / SIN RESPONDER'
 
-    if not user_answer_str or user_answer_str.lower() in ('sin responder', 'n/a', 'none', 'null', '', 'opción 0', 'opción sin responder', '-1'):
+    if not user_answer_str or user_answer_str.lower() in ('sin responder', 'n/a', 'none', 'null', '', 'opción 0', 'opción sin responder', '-1', 'incorrecto / sin responder'):
         is_unanswered = True
-        user_answer_str = 'Sin responder'
+        user_answer_str = 'INCORRECTO / SIN RESPONDER'
 
     correct_answer_str = ''
-    if isinstance(correct_answer, int) or (isinstance(correct_answer, str) and str(correct_answer).isdigit()):
+    if explicit_correct_text:
+        correct_answer_str = str(explicit_correct_text).strip()
+    elif isinstance(correct_answer, int) or (isinstance(correct_answer, str) and str(correct_answer).isdigit()):
         c_idx = int(correct_answer)
         if 0 <= c_idx < len(options):
             correct_answer_str = str(options[c_idx]).strip()
         else:
-            correct_answer_str = ans.get('correct_answer_text') or ans.get('targetWord') or ans.get('wordId') or f"Opción {c_idx + 1}"
+            correct_answer_str = ans.get('targetWord') or ans.get('wordId') or 'Respuesta técnica correcta'
     elif correct_answer:
         correct_answer_str = str(correct_answer).strip()
     else:
-        correct_answer_str = ans.get('correct_answer_text') or ans.get('targetWord') or ans.get('wordId') or 'Respuesta indicada en rúbrica'
+        correct_answer_str = ans.get('targetWord') or ans.get('wordId') or 'Respuesta indicada en rúbrica'
 
     # Regla estricta de calificación y estado:
     # Si is_unanswered == True o está sin responder, is_correct DEBE ser False

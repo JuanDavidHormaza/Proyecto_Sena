@@ -131,7 +131,7 @@ export function QuizPage() {
       score: 0,
       isCorrect: false,
       feedback: "Ejercicio omitido por el usuario sin micrófono disponible (0%).",
-      transcription: "Omitido sin micrófono",
+      transcription: "INCORRECTO / SIN RESPONDER",
     });
     refreshEngine();
     toast.info("Pregunta de speaking omitida (0%). Avanzando al siguiente ejercicio...");
@@ -327,7 +327,7 @@ export function QuizPage() {
           score: 0,
           isCorrect: false,
           feedback: "Tiempo agotado sin respuesta oral registrada (0%).",
-          transcription: "Tiempo agotado",
+          transcription: "INCORRECTO / SIN RESPONDER",
         });
         refreshEngine();
         if (advanceTimerRef.current) {
@@ -994,6 +994,17 @@ export function QuizPage() {
               </div>
             </div>
 
+            {/* Banner de Advertencia Técnica de Micrófono y Ambiente Silencioso */}
+            <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-4 flex items-start gap-3 text-xs sm:text-sm leading-relaxed mb-4 shadow-xs">
+              <span className="text-xl flex-shrink-0 mt-0.5">⚠️</span>
+              <div>
+                <strong className="font-bold block text-amber-950 mb-0.5">
+                  Nota Importante de Audio y Micrófono:
+                </strong>
+                Para los ejercicios de pronunciación (Speaking), asegúrese de utilizar un dispositivo de audio y micrófono de alta calidad (preferiblemente diadema con supresión de ruido) y ubicarse en un entorno silencioso. La distancia al micrófono o el ruido ambiente del salón afectarán directamente el porcentaje de similitud fonética.
+              </div>
+            </div>
+
             {/* Caja de Advertencia Institucional Reforzada */}
             <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-amber-900 text-xs sm:text-sm leading-relaxed mb-6">
               <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.8} />
@@ -1350,6 +1361,14 @@ export function QuizPage() {
                 {!speakingEvaluation && (
                   <>
                     <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-slate-50/70 px-5 py-8 mb-5 text-center">
+                      {/* Píldora sutil de recomendación de diadema */}
+                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium max-w-lg mx-auto shadow-2xs">
+                        <span>🎧</span>
+                        <span>
+                          Recomendación: Usa diadema cerca a tu boca en un espacio sin ruido de fondo. Puedes escuchar tu grabación antes de validarla y repetirla si hubo interferencia.
+                        </span>
+                      </div>
+
                       <motion.button
                         type="button"
                         onClick={isRecording ? handleStopRecording : handleStartRecording}

@@ -58,3 +58,5 @@ worklex_data/
 Thumbs.db
 .vscode/
 .idea/
+minio-local/
+frontend/dist/

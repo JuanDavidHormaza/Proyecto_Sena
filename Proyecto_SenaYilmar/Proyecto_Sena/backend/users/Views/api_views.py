@@ -994,6 +994,12 @@ class UserViewSet(viewsets.ViewSet):
         available_users = User.objects.filter(person=person)
         target_user = available_users.filter(role_id=target_role).first()
         if not target_user:
+            # Solo administradores pueden crear nuevos roles sobre la marcha
+            if getattr(request.user, 'role_id', None) not in ('SUPERADMIN', 'ADMIN'):
+                return Response(
+                    {'error': 'No tienes autorización institucional para asumir este rol.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             if target_role in ['INSTRUCTOR', 'APRENDIZ', 'ADMIN', 'SUPERADMIN', 'MONITOR']:
                 request.user.role_id = target_role
                 request.user.save(update_fields=['role_id'])
@@ -1004,6 +1010,9 @@ class UserViewSet(viewsets.ViewSet):
         return Response(_build_user_response(target_user, person), status=status.HTTP_200_OK)
 
     def partial_update(self, request, pk=None):
+        if getattr(request.user, 'role_id', None) not in ('ADMIN', 'SUPERADMIN'):
+            return Response({'error': 'Solo los administradores pueden modificar usuarios institucionalmente.'}, status=status.HTTP_403_FORBIDDEN)
+
         user = self.get_object()
         current_user_id = getattr(request.user, 'user_id', None) or getattr(request.user, 'pk', None)
         is_self = user == request.user or user.user_id == current_user_id

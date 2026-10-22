@@ -9,17 +9,20 @@ interface QuestionAuditCardProps {
 
 export const QuestionAuditCard: React.FC<QuestionAuditCardProps> = ({ item, index }) => {
   const isCorrect = Boolean(item.is_correct ?? item.isCorrect);
+  const rawUserAns = item.user_answer_text || (item as any).userAnswerText || (item as any).writingAnswer;
   const isUnanswered = Boolean(
     item.is_unanswered ||
-    !item.user_answer_text ||
-    item.user_answer_text.trim().toLowerCase() === "sin responder" ||
-    item.user_answer_text.trim().toLowerCase() === "n/a" ||
-    item.user_answer_text.trim() === "-1"
+    (item as any).isUnanswered ||
+    !rawUserAns ||
+    String(rawUserAns).trim().toLowerCase() === "sin responder" ||
+    String(rawUserAns).trim().toLowerCase() === "n/a" ||
+    String(rawUserAns).trim() === "-1" ||
+    String(rawUserAns).trim().toLowerCase().includes("sin responder")
   );
 
   const questionText = item.question_text || item.question || `Reactivo #${index + 1}`;
-  const userAnswerText = isUnanswered ? "Sin responder" : (item.user_answer_text || "Sin responder");
-  const correctAnswerText = item.correct_answer_text || "Indicada en rúbrica";
+  const userAnswerText = isUnanswered ? "INCORRECTO / SIN RESPONDER" : rawUserAns;
+  const correctAnswerText = item.correct_answer_text || (item as any).correctAnswerText || item.technical_term || "Indicada en rúbrica";
   const technicalTerm = item.technical_term;
   const competence = item.competence || item.category;
 
@@ -77,7 +80,7 @@ export const QuestionAuditCard: React.FC<QuestionAuditCardProps> = ({ item, inde
           ) : isUnanswered ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
               <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-              NO RESPONDIDO
+              INCORRECTO / SIN RESPONDER
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
@@ -96,7 +99,7 @@ export const QuestionAuditCard: React.FC<QuestionAuditCardProps> = ({ item, inde
             <strong
               className={
                 isUnanswered
-                  ? "text-rose-600 italic font-semibold"
+                  ? "text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200 inline-block"
                   : isCorrect
                   ? "text-slate-800 font-semibold"
                   : "text-rose-700 font-semibold"

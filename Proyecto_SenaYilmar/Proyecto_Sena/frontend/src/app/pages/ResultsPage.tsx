@@ -547,6 +547,12 @@ export function ResultsPage() {
                 Listening: Headphones,
               };
               const CompIcon = icons[comp.name] || Target;
+              const compLabels: Record<string, string> = {
+                Reading: "Reading - Vocabulario",
+                Writing: "Writing - Gramática y Sintaxis",
+                Listening: "Listening",
+                Speaking: "Speaking",
+              };
               const colorClass =
                 comp.score >= 70 ? "text-sena-green" : comp.score >= 50 ? "text-warning" : "text-destructive";
               const barColor =
@@ -556,7 +562,9 @@ export function ResultsPage() {
                 <div key={comp.name} className="p-4 rounded-xl border border-border bg-muted/20">
                   <div className="flex items-center gap-2 mb-2">
                     <CompIcon className="w-4 h-4 text-muted-foreground" strokeWidth={1.8} />
-                    <span className="font-medium text-sm text-foreground">{comp.name}</span>
+                    <span className="font-semibold text-xs sm:text-sm text-foreground">
+                      {compLabels[comp.name] || comp.name}
+                    </span>
                   </div>
                   <p className={`text-2xl font-bold ${colorClass} mb-2`}>{comp.score}%</p>
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -1113,8 +1121,27 @@ export function ResultsPage() {
 
                     {(() => {
                       const itemOpts = resolveItemOptions(item);
-                      const userAnsText = item.writingAnswer || (itemOpts[item.userAnswer ?? -1] ?? (item.userAnswer !== undefined && item.userAnswer !== null ? `Opción ${item.userAnswer + 1}` : "Sin responder"));
-                      const correctAnsText = itemOpts[item.correctAnswer ?? -1] ?? (item.correctAnswer !== undefined && item.correctAnswer !== null ? `Opción ${item.correctAnswer + 1}` : "N/A");
+                      const isUnanswered = Boolean(
+                        (item as any).isUnanswered ||
+                        (item as any).is_unanswered ||
+                        (item.userAnswer === -1 || item.userAnswer === undefined || item.userAnswer === null) && !item.writingAnswer && !item.audioUrl && !(item as any).userAnswerText
+                      );
+
+                      let userAnsText = (item as any).userAnswerText || (item as any).user_answer_text || item.writingAnswer;
+                      if (!userAnsText && item.userAnswer !== undefined && item.userAnswer !== null && item.userAnswer >= 0 && itemOpts[item.userAnswer]) {
+                        userAnsText = itemOpts[item.userAnswer];
+                      }
+                      if (!userAnsText || isUnanswered || String(userAnsText).toLowerCase().includes("sin responder") || userAnsText === "-1") {
+                        userAnsText = "INCORRECTO / SIN RESPONDER";
+                      }
+
+                      let correctAnsText = (item as any).correctAnswerText || (item as any).correct_answer_text;
+                      if (!correctAnsText && item.correctAnswer !== undefined && item.correctAnswer !== null && item.correctAnswer >= 0 && itemOpts[item.correctAnswer]) {
+                        correctAnsText = itemOpts[item.correctAnswer];
+                      }
+                      if (!correctAnsText || correctAnsText === "N/A" || correctAnsText.startsWith("Opción")) {
+                        correctAnsText = (item as any).wordId || (item as any).technical_term || "Respuesta indicada en rúbrica";
+                      }
 
                       return (
                         <>
@@ -1122,7 +1149,15 @@ export function ResultsPage() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-white/90 p-3 rounded-xl border border-slate-200 mt-2 mb-2">
                             <div>
                               <span className="font-bold text-slate-700">Tu respuesta:</span>{" "}
-                              <span className={item.isCorrect ? "text-emerald-700 font-semibold" : "text-rose-700 font-semibold"}>
+                              <span
+                                className={
+                                  userAnsText === "INCORRECTO / SIN RESPONDER"
+                                    ? "text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200 inline-block"
+                                    : item.isCorrect
+                                    ? "text-emerald-700 font-semibold"
+                                    : "text-rose-700 font-semibold"
+                                }
+                              >
                                 {userAnsText}
                               </span>
                             </div>

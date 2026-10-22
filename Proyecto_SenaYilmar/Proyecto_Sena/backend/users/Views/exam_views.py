@@ -386,6 +386,13 @@ class ExamEvaluateSpeakingAPIView(APIView):
                 }, status=status.HTTP_200_OK)
 
             # 4. Normalización estricta y algoritmo de calificación fonética/léxica
+            SPANISH_FILLER_WORDS = {
+                'hola', 'este', 'bueno', 'eh', 'em', 'ah', 'como', 'o', 'sea', 'profe',
+                'no', 'se', 'creo', 'que', 'es', 'el', 'la', 'los', 'las', 'un', 'una',
+                'de', 'en', 'por', 'para', 'con', 'y', 'si', 'pero', 'mas', 'muy', 'ya',
+                'bien', 'tambien', 'entonces', 'pues', 'dice', 'pronuncia'
+            }
+
             def _clean_str(text):
                 if not text:
                     return ""
@@ -397,18 +404,38 @@ class ExamEvaluateSpeakingAPIView(APIView):
             target_clean = _clean_str(target_word)
             spoken_clean = _clean_str(client_transcript)
             target_tokens = target_clean.split()
-            spoken_tokens = spoken_clean.split()
+            spoken_raw_tokens = spoken_clean.split()
 
-            if spoken_clean == target_clean:
+            # Filtrar ruido de fondo y muletillas en español para aislar los tokens en inglés
+            spoken_tokens = [tok for tok in spoken_raw_tokens if tok not in SPANISH_FILLER_WORDS]
+            if not spoken_tokens and spoken_raw_tokens:
+                # El usuario solo emitió ruido o frases en español
+                return Response({
+                    "success": True,
+                    "score": 0,
+                    "is_correct": False,
+                    "spoken_text": client_transcript,
+                    "expected_text": target_word,
+                    "transcription": client_transcript,
+                    "target": target_word,
+                    "ipa": ipa,
+                    "feedback": f"Se detectaron frases en español o interferencia de audio ('{client_transcript}'). Pronuncia exclusivamente el término en inglés '{target_word}'.",
+                    "phonetic_tips": tips,
+                    "audio_url": proxy_url
+                }, status=status.HTTP_200_OK)
+
+            clean_spoken_filtered = " ".join(spoken_tokens) if spoken_tokens else spoken_clean
+
+            if clean_spoken_filtered == target_clean or spoken_clean == target_clean:
                 score = 100
                 is_correct = True
                 feedback = f"¡Excelente pronunciación! Coincidencia exacta (100%) con el término '{target_word}'."
             else:
-                base_ratio = difflib.SequenceMatcher(None, spoken_clean, target_clean).ratio()
+                base_ratio = difflib.SequenceMatcher(None, clean_spoken_filtered, target_clean).ratio()
 
-                if target_clean in spoken_clean:
+                if target_clean in clean_spoken_filtered or target_clean in spoken_clean:
                     in_tokens = target_clean in spoken_tokens or all(t in spoken_tokens for t in target_tokens)
-                    token_ratio = 0.92 if in_tokens else 0.86
+                    token_ratio = 0.95 if in_tokens else 0.88
                     ratio = max(base_ratio, token_ratio)
                 elif len(target_tokens) == 1 and spoken_tokens:
                     best_token_ratio = max(

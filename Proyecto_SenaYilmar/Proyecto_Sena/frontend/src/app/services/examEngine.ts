@@ -57,6 +57,9 @@ export interface UserAnswerRecord {
   type: QuestionType;
   userAnswer?: number;
   correctAnswer?: number;
+  userAnswerText?: string;
+  correctAnswerText?: string;
+  isUnanswered?: boolean;
   isCorrect: boolean;
   scoreAwarded: number; // 0 - 100
   writingAnswer?: string;
@@ -137,7 +140,7 @@ export function shuffleArray<T>(items: T[]): T[] {
 export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQuestion[] {
   const bank: UnifiedQuestion[] = [];
 
-  // 0. Preguntas generadas dinámicamente desde DigitalDictionary (ADSO) con orden aleatorio (restringido a A1-B2)
+  // 0. Preguntas generadas dinámicamente desde DigitalDictionary con orden aleatorio (restringido a A1-B2)
   if (dictionaryQuestions && Array.isArray(dictionaryQuestions)) {
     const validDict = dictionaryQuestions.filter((dq) => {
       const lvl = String(dq?.level || "").toUpperCase();
@@ -146,11 +149,27 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
     const shuffledDict = shuffleArray(validDict);
     shuffledDict.forEach((dq, idx) => {
       const diff = dq.difficulty || (dq.level === 'A1' ? 2 : dq.level === 'A2' ? 4 : dq.level === 'B1' ? 6 : 8);
+
+      let comp: Competency = "Reading";
+      const cat = (dq.category || "").toLowerCase();
+      const rawComp = (dq.competency || dq.competence || "").toLowerCase();
+      const qText = (dq.question || "").toLowerCase();
+
+      if (dq.type === "writing" || rawComp.includes("writ") || cat.includes("writing") || cat.includes("sintaxis") || qText.includes("order") || qText.includes("sentence") || qText.includes("synonym")) {
+        comp = "Writing";
+      } else if (dq.type === "speaking" || rawComp.includes("speak") || cat.includes("speaking")) {
+        comp = "Speaking";
+      } else if (dq.type === "listening" || rawComp.includes("listen") || cat.includes("listening")) {
+        comp = "Listening";
+      } else {
+        comp = "Reading";
+      }
+
       bank.push({
         id: dq.id || 9000 + idx,
         uniqueKey: dq.uniqueKey || `DICT-${dq.level || 'A1'}-${dq.id || idx}`,
         level: (dq.level || 'A1') as CEFRLevel,
-        competency: (dq.competency && dq.competency !== 'Grammar' ? dq.competency : 'Reading') as Competency,
+        competency: comp,
         type: (dq.type || 'multiple') as QuestionType,
         question: dq.question,
         prompt: dq.prompt,
@@ -159,9 +178,9 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
         correctAnswer: dq.correctAnswer,
         difficulty: diff,
         difficultyTier: dq.difficultyTier || getDifficultyTier(diff),
-        category: dq.category || `ADSO Vocabulario - ${dq.wordId || 'Técnico'}`,
+        category: dq.category || `${comp} - Vocabulario Técnico`,
         rubric: dq.rubric,
-        wordId: dq.wordId,
+        wordId: dq.wordId || dq.word,
         definition: dq.definition,
         image: dq.image,
         isDictionaryTerm: true,
@@ -169,7 +188,7 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
     });
   }
 
-  // 1. Preguntas A1 (Fundamentos y ADSO) con orden aleatorio
+  // 1. Preguntas A1 (Fundamentos y Vocabulario Técnico -> Reading) con orden aleatorio
   shuffleArray(questionsA1).forEach((q, idx) => {
     const diff = q.difficulty || 2;
     bank.push({
@@ -183,16 +202,20 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
       correctAnswer: q.correctAnswer ?? 0,
       difficulty: diff,
       difficultyTier: getDifficultyTier(diff),
-      category: q.category,
+      category: `${q.category || "ADSO"} Reading - Vocabulario`,
     });
   });
 
-  // 2. Preguntas A2 (Gramática, Vocabulario y ADSO Workflow) con orden aleatorio
+  // 2. Preguntas A2 (Gramática/Sintaxis -> Writing, Vocabulario -> Reading) con orden aleatorio
   shuffleArray(questionsA2).forEach((q, idx) => {
     const diff = (q as any).points ? 4 : 3;
     const cat = q.category || "General";
     let comp: Competency = "Reading";
-    if (q.skill === "reading" || cat.includes("Reading")) comp = "Reading";
+    if ((q as any).skill === "grammar" || cat.toLowerCase().includes("grammar") || cat.toLowerCase().includes("workflow")) {
+      comp = "Writing";
+    } else {
+      comp = "Reading";
+    }
 
     bank.push({
       id: q.id,
@@ -205,7 +228,7 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
       correctAnswer: q.correctAnswer ?? 0,
       difficulty: diff,
       difficultyTier: getDifficultyTier(diff),
-      category: cat,
+      category: `${cat} ${comp === "Writing" ? "Writing - Gramática" : "Reading - Vocabulario"}`,
     });
   });
 
@@ -213,10 +236,15 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
   shuffleArray(questionsB1).forEach((q, idx) => {
     const diff = q.difficulty || 5;
     let comp: Competency = "Reading";
-    if (q.skill === "reading" || q.category.includes("Reading")) comp = "Reading";
-    if (q.type === "writing") comp = "Writing";
-    if (q.type === "speaking") comp = "Speaking";
-    if (q.type === "listening") comp = "Listening";
+    if (q.skill === "grammar" || q.type === "writing" || q.category.toLowerCase().includes("grammar")) {
+      comp = "Writing";
+    } else if (q.type === "speaking" || q.skill === "speaking") {
+      comp = "Speaking";
+    } else if (q.type === "listening" || q.skill === "listening") {
+      comp = "Listening";
+    } else {
+      comp = "Reading";
+    }
 
     const rubric: WritingRubric | undefined = q.type === "writing" ? {
       minWords: 25,
@@ -261,12 +289,15 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
   questionsB2.forEach((q, idx) => {
     const diff = q.difficulty || 8;
     let comp: Competency = "Reading";
-    if (q.skill === "reading" || q.category.includes("Cybersecurity") || q.category.includes("Architecture")) {
+    if (q.type === "writing" || q.skill === "grammar" || q.category.toLowerCase().includes("grammar")) {
+      comp = "Writing";
+    } else if (q.type === "speaking") {
+      comp = "Speaking";
+    } else if (q.type === "listening") {
+      comp = "Listening";
+    } else {
       comp = "Reading";
     }
-    if (q.type === "writing") comp = "Writing";
-    if (q.type === "speaking") comp = "Speaking";
-    if (q.type === "listening") comp = "Listening";
 
     bank.push({
       id: q.id,
@@ -505,12 +536,19 @@ export class ExamEngine {
     const q = this.getCurrentQuestion();
     if (!q) throw new Error("No hay pregunta activa.");
 
-    const isCorrect = optionIndex === q.correctAnswer;
+    const opts = q.options || [];
+    const isAnswered = optionIndex >= 0 && optionIndex < opts.length;
+    const isCorrect = isAnswered && optionIndex === q.correctAnswer;
     if (isCorrect) {
       this.streak += 1;
     } else {
       this.streak = 0;
     }
+
+    const userAnsText = isAnswered ? opts[optionIndex] : "INCORRECTO / SIN RESPONDER";
+    const correctAnsText = (q.correctAnswer !== undefined && q.correctAnswer >= 0 && q.correctAnswer < opts.length)
+      ? opts[q.correctAnswer]
+      : (q.wordId || "Respuesta correcta");
 
     const record: UserAnswerRecord = {
       questionId: q.id,
@@ -523,6 +561,9 @@ export class ExamEngine {
       type: q.type,
       userAnswer: optionIndex,
       correctAnswer: q.correctAnswer,
+      userAnswerText: userAnsText,
+      correctAnswerText: correctAnsText,
+      isUnanswered: !isAnswered,
       isCorrect,
       scoreAwarded: isCorrect ? 100 : 0,
       category: q.category,
@@ -552,6 +593,7 @@ export class ExamEngine {
       this.streak = 0;
     }
 
+    const userText = text && text.trim() ? text.trim() : "INCORRECTO / SIN RESPONDER";
     const record: UserAnswerRecord = {
       questionId: q.id,
       uniqueKey: q.uniqueKey,
@@ -564,6 +606,9 @@ export class ExamEngine {
       isCorrect: evalResult.isCorrect,
       scoreAwarded: evalResult.score,
       writingAnswer: text,
+      userAnswerText: userText,
+      correctAnswerText: q.prompt || q.wordId || "Rúbrica de redacción técnica",
+      isUnanswered: !text || !text.trim(),
       rubricFeedback: evalResult.feedback,
       category: q.category,
       timestamp: Date.now(),
@@ -597,6 +642,7 @@ export class ExamEngine {
       this.streak = 0;
     }
 
+    const userText = evaluation?.transcription || (audioUrl ? "Audio grabado por el aprendiz" : "INCORRECTO / SIN RESPONDER");
     const record: UserAnswerRecord = {
       questionId: q.id,
       uniqueKey: q.uniqueKey,
@@ -610,6 +656,9 @@ export class ExamEngine {
       scoreAwarded: score,
       audioUrl,
       audioBlob,
+      userAnswerText: userText,
+      correctAnswerText: q.wordId || q.question || "Término en inglés",
+      isUnanswered: !audioUrl && !evaluation?.transcription,
       rubricFeedback: evaluation?.feedback || (isCorrect ? "Pronunciación correcta superó el umbral requerido." : "Pronunciación requiere mayor claridad."),
       category: q.category,
       timestamp: Date.now(),

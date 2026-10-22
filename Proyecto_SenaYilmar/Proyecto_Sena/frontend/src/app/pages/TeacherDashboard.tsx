@@ -7,7 +7,8 @@ import {
   Filter,
   Languages,
   LifeBuoy,
-  Inbox, Check, CheckCircle2, RefreshCw, UserCheck
+  Inbox, Check, CheckCircle2, RefreshCw, UserCheck,
+  BookOpen, PenTool, Headphones, Mic
 } from "lucide-react";
 import { TestResult, User } from "../data/users";
 import * as api from "../services/api";
@@ -1044,6 +1045,68 @@ export function TeacherDashboard() {
                     </p>
                   </div>
                 </div>
+
+                {/* 4 Competencias Pedagógicas Institucionales */}
+                {(() => {
+                  const compKeys = [
+                    { id: "Reading", label: "Reading - Vocabulario", icon: BookOpen, color: "text-indigo-600", bg: "bg-indigo-50/80 border-indigo-200" },
+                    { id: "Writing", label: "Writing - Gramática y Sintaxis", icon: PenTool, color: "text-emerald-600", bg: "bg-emerald-50/80 border-emerald-200" },
+                    { id: "Listening", label: "Listening", icon: Headphones, color: "text-sky-600", bg: "bg-sky-50/80 border-sky-200" },
+                    { id: "Speaking", label: "Speaking", icon: Mic, color: "text-rose-600", bg: "bg-rose-50/80 border-rose-200" },
+                  ];
+
+                  const ansList = selectedResult.answers || [];
+                  const compBreakdown = compKeys.map((c) => {
+                    const matched = ansList.filter((a: any) => {
+                      const comp = (a.competence || a.competency || a.category || "").toLowerCase();
+                      if (c.id === "Reading") return comp.includes("read") || comp.includes("vocab");
+                      if (c.id === "Writing") return comp.includes("writ") || comp.includes("gramm") || comp.includes("sintax");
+                      if (c.id === "Listening") return comp.includes("listen") || comp.includes("audio");
+                      if (c.id === "Speaking") return comp.includes("speak") || comp.includes("oral");
+                      return false;
+                    });
+                    const count = matched.length;
+                    let pct = 0;
+                    if (count > 0) {
+                      const correct = matched.filter((m: any) => m.is_correct || m.isCorrect).length;
+                      pct = Math.round((correct / count) * 100);
+                    } else {
+                      if (c.id === "Speaking") pct = (selectedResult as any).speaking_score ?? selectedResult.score;
+                      else if (c.id === "Writing") pct = (selectedResult as any).writing_score ?? selectedResult.score;
+                      else pct = selectedResult.score;
+                    }
+                    return { ...c, pct, count };
+                  });
+
+                  return (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase text-slate-500 tracking-wider mb-2.5">
+                        Desglose de Competencias (4 Macro-habilidades)
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {compBreakdown.map((item) => {
+                          const IconComp = item.icon;
+                          return (
+                            <div key={item.id} className={`p-3 rounded-xl border ${item.bg}`}>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <IconComp className={`w-3.5 h-3.5 ${item.color}`} />
+                                <span className="text-[11px] font-bold text-slate-800 truncate" title={item.label}>
+                                  {item.label}
+                                </span>
+                              </div>
+                              <p className={`text-lg font-black ${item.pct >= 70 ? "text-emerald-700" : item.pct >= 50 ? "text-amber-700" : "text-rose-700"}`}>
+                                {item.pct}%
+                              </p>
+                              <p className="text-[10px] text-slate-500">
+                                {item.count > 0 ? `${item.count} evaluados` : "Estimado"}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Question-by-Question Pedagogical Audit */}
                 <div>
