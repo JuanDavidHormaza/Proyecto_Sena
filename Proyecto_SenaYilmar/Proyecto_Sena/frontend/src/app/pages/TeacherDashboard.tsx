@@ -100,6 +100,9 @@ export function TeacherDashboard() {
         feedback: r.feedback,
         completedAt: r.completedAt,
         duration: r.duration,
+        process: r.process,
+        speaking_score: (r as any).speaking_score,
+        writing_score: (r as any).writing_score,
         answers: r.answers || (r.process as any)?.answers || (r.process as any)?.userAnswers || [],
       }));
 
@@ -559,7 +562,7 @@ export function TeacherDashboard() {
                           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Promedio</p>
                           {student.has_records ? (
                             <p className={`text-xl font-bold ${
-                              student.average_score >= 70 ? 'text-emerald-600' : 'text-amber-600'
+                              student.average_score >= 60 ? 'text-emerald-600' : 'text-amber-600'
                             }`}>
                               {student.average_score}%
                             </p>
@@ -618,7 +621,7 @@ export function TeacherDashboard() {
                               </td>
                               <td className="py-3.5 px-5">
                                 <span className={`text-base font-bold ${
-                                  result.score >= 70 ? 'text-emerald-600' : 'text-amber-600'
+                                  result.score >= ((result.level || "").startsWith("B") ? 65 : 60) ? 'text-emerald-600' : 'text-amber-600'
                                 }`}>
                                   {result.score}%
                                 </span>
@@ -1043,8 +1046,9 @@ export function TeacherDashboard() {
                   <div className="bg-muted/50 rounded-xl p-4 text-center">
                     <p className="text-sm text-muted-foreground mb-1">Puntuacion</p>
                     <p className={`text-3xl font-bold ${
-                      selectedResult.score >= 80 ? 'text-sena-green' :
-                      selectedResult.score >= 60 ? 'text-warning' : 'text-destructive'
+                      selectedResult.score >= ((selectedResult.level || "").startsWith("B") ? 65 : 60)
+                        ? 'text-sena-green'
+                        : 'text-destructive'
                     }`}>{selectedResult.score}%</p>
                   </div>
                   <div className="bg-muted/50 rounded-xl p-4 text-center">
@@ -1069,6 +1073,10 @@ export function TeacherDashboard() {
                   ];
 
                   const ansList = selectedResult.answers || [];
+                  const processObj = ((selectedResult as any).process || {}) as any;
+                  const procCompScores = processObj.competencyScores || processObj.competency_scores || {};
+                  const procAbility = processObj.breakdown?.by_ability || {};
+
                   const compBreakdown = compKeys.map((c) => {
                     const matched = ansList.filter((a: any) => {
                       const comp = (a.competence || a.competency || a.category || "").toLowerCase();
@@ -1084,9 +1092,17 @@ export function TeacherDashboard() {
                       const correct = matched.filter((m: any) => m.is_correct || m.isCorrect).length;
                       pct = Math.round((correct / count) * 100);
                     } else {
-                      if (c.id === "Speaking") pct = (selectedResult as any).speaking_score ?? selectedResult.score;
-                      else if (c.id === "Writing") pct = (selectedResult as any).writing_score ?? selectedResult.score;
-                      else pct = selectedResult.score;
+                      // Si no hay reactivos detallados, usar competencyScores o desglose por habilidad de process
+                      const fromProc = procCompScores[c.id] ?? procCompScores[c.id.toLowerCase()] ?? procAbility[c.id]?.score;
+                      if (fromProc !== undefined && typeof fromProc === "number") {
+                        pct = fromProc;
+                      } else if (c.id === "Speaking" && (selectedResult as any).speaking_score !== undefined) {
+                        pct = (selectedResult as any).speaking_score;
+                      } else if (c.id === "Writing" && (selectedResult as any).writing_score !== undefined) {
+                        pct = (selectedResult as any).writing_score;
+                      } else {
+                        pct = selectedResult.score;
+                      }
                     }
                     return { ...c, pct, count };
                   });
