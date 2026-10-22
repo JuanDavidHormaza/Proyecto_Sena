@@ -155,7 +155,22 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
       const rawComp = (dq.competency || dq.competence || "").toLowerCase();
       const qText = (dq.question || "").toLowerCase();
 
-      if (dq.type === "writing" || rawComp.includes("writ") || cat.includes("writing") || cat.includes("sintaxis") || qText.includes("order") || qText.includes("sentence") || qText.includes("synonym")) {
+      // FASE 1: Reclasificación pedagógica oficial SENA
+      // READING = Vocabulario técnico, definiciones conceptuales ("What technical term..."), comprensión lectora
+      // WRITING = Gramática, sintaxis (Sentence Ordering), morfología en contexto, sinónimos técnicos
+      if (
+        dq.type === "writing" ||
+        rawComp === "writing" ||
+        cat.includes("writing") ||
+        cat.includes("sintaxis") ||
+        cat.includes("morfología") ||
+        cat.includes("morfol") ||
+        cat.includes("sinónimo") ||
+        cat.includes("synonym") ||
+        qText.includes("order the sentence") ||
+        qText.includes("correct grammatical form") ||
+        qText.includes("which technical synonym")
+      ) {
         comp = "Writing";
       } else if (dq.type === "speaking" || rawComp.includes("speak") || cat.includes("speaking")) {
         comp = "Speaking";
@@ -429,6 +444,72 @@ export function evaluateWritingSubmission(
 }
 
 /**
+ * Evalúa con precisión y tolerancia a formato si la opción seleccionada es la correcta:
+ * - Soporta índices numéricos o representados como string ("0", "1").
+ * - Soporta comparación de texto de la opción con normalización de mayúsculas,
+ *   espacios en blanco múltiples y signos de puntuación terminales.
+ * - Soporta ordenamiento de oraciones (Sentence Ordering).
+ * - Soporta cotejo contra correctAnswer, correctAnswerText y wordId.
+ */
+export function isOptionAnswerCorrect(
+  optionIndex: number,
+  question: UnifiedQuestion
+): boolean {
+  const opts = question.options || [];
+  if (optionIndex < 0 || optionIndex >= opts.length) {
+    return false;
+  }
+
+  // 1. Comparación por índice numérico o string numérico ("0", "1")
+  if (typeof question.correctAnswer === "number" && optionIndex === question.correctAnswer) {
+    return true;
+  }
+  if (
+    typeof question.correctAnswer === "string" &&
+    !isNaN(Number(question.correctAnswer)) &&
+    optionIndex === Number(question.correctAnswer)
+  ) {
+    return true;
+  }
+
+  // 2. Normalización de cadenas para comparación flexible (espacios, mayúsculas, puntuación)
+  const norm = (s: any): string =>
+    String(s ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")
+      .replace(/\s+/g, " ");
+
+  const selectedText = norm(opts[optionIndex]);
+
+  // Si correctAnswer es el texto de la opción (ej. en Sentence Ordering)
+  if (typeof question.correctAnswer === "string") {
+    const expected = norm(question.correctAnswer);
+    if (selectedText === expected && selectedText.length > 0) {
+      return true;
+    }
+  }
+
+  // Si existe correctAnswerText
+  if (question.correctAnswerText) {
+    const expected = norm(question.correctAnswerText);
+    if (selectedText === expected && selectedText.length > 0) {
+      return true;
+    }
+  }
+
+  // Si coincide con wordId
+  if (question.wordId) {
+    const expected = norm(question.wordId);
+    if (selectedText === expected && selectedText.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Motor de Examen Adaptativo Unificado WorkLex
  */
 export class ExamEngine {
@@ -551,7 +632,7 @@ export class ExamEngine {
 
     const opts = q.options || [];
     const isAnswered = optionIndex >= 0 && optionIndex < opts.length;
-    const isCorrect = isAnswered && optionIndex === q.correctAnswer;
+    const isCorrect = isAnswered && isOptionAnswerCorrect(optionIndex, q);
     if (isCorrect) {
       this.streak += 1;
     } else {
@@ -559,9 +640,9 @@ export class ExamEngine {
     }
 
     const userAnsText = isAnswered ? opts[optionIndex] : "INCORRECTO / SIN RESPONDER";
-    const correctAnsText = (q.correctAnswer !== undefined && q.correctAnswer >= 0 && q.correctAnswer < opts.length)
+    const correctAnsText = (q.correctAnswer !== undefined && typeof q.correctAnswer === "number" && q.correctAnswer >= 0 && q.correctAnswer < opts.length)
       ? opts[q.correctAnswer]
-      : (q.wordId || "Respuesta correcta");
+      : (q.correctAnswerText || q.wordId || (typeof q.correctAnswer === "string" ? q.correctAnswer : "Respuesta correcta"));
 
     const record: UserAnswerRecord = {
       questionId: q.id,
@@ -692,7 +773,24 @@ export class ExamEngine {
     const levelAnswers = this.answers.filter((a) => a.level === this.currentLevel);
     const answered = levelAnswers.length;
     const correct = levelAnswers.filter((a) => a.isCorrect).length;
-    const percentage = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+
+    // Ponderación por macro-habilidades activas en este nivel
+    const levelComps = (["Reading", "Writing", "Speaking", "Listening"] as Competency[]).filter(
+      (c) => levelAnswers.some((a) => a.competency === c)
+    );
+
+    let percentage = 0;
+    if (levelComps.length > 0) {
+      const compPercentages = levelComps.map((c) => {
+        const answersInComp = levelAnswers.filter((a) => a.competency === c);
+        const sumScores = answersInComp.reduce((acc, curr) => acc + curr.scoreAwarded, 0);
+        return sumScores / answersInComp.length;
+      });
+      percentage = Math.round(compPercentages.reduce((a, b) => a + b, 0) / levelComps.length);
+    } else {
+      percentage = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+    }
+
     const threshold = LEVEL_PASS_THRESHOLDS[this.currentLevel] || 60;
     const passed = percentage >= threshold;
 
@@ -741,17 +839,6 @@ export class ExamEngine {
     const plannedLevelQuestions = Math.max(this.currentLevelQuestionList.length, this.QUESTIONS_PER_LEVEL);
     const effectiveTotalQuestions = isAbandoned ? Math.max(plannedLevelQuestions, totalAnswered) : Math.max(totalAnswered, 1);
 
-    // Calcular puntajes por nivel CEFR
-    const levelScores: Record<CEFRLevel, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
-    (["A1", "A2", "B1", "B2"] as CEFRLevel[]).forEach((lvl) => {
-      const lvlAnswers = this.answers.filter((a) => a.level === lvl);
-      if (lvlAnswers.length > 0) {
-        const correct = lvlAnswers.filter((a) => a.isCorrect).length;
-        const denominator = isAbandoned && lvl === this.currentLevel ? Math.max(lvlAnswers.length, plannedLevelQuestions) : lvlAnswers.length;
-        levelScores[lvl] = Math.round((correct / denominator) * 100);
-      }
-    });
-
     // Calcular puntajes por competencia (4 macro-habilidades oficiales)
     const compScores: Record<Competency, number> = {
       Reading: 0,
@@ -767,10 +854,50 @@ export class ExamEngine {
       }
     });
 
-    // Ponderación global (0-100): si abandona, las no contestadas valen 0 y cuentan en el denominador
-    const overallScore = effectiveTotalQuestions > 0 ? Math.round((correctCount / effectiveTotalQuestions) * 100) : 0;
+    // Ponderación global por HABILIDAD (Listening, Speaking, Reading, Writing):
+    // Evita que un solo fallo en una categoría suelta de 1 pregunta hunda el resultado (ej. 58%),
+    // el puntaje global es la media ponderada de las macro-habilidades evaluadas.
+    const activeCompetencies = (["Reading", "Writing", "Speaking", "Listening"] as Competency[]).filter(
+      (c) => this.answers.some((a) => a.competency === c)
+    );
 
-    // Nivel final alcanzado (si abandona o no termina todos los reactivos, marcar Incompleto sin aprobación automática)
+    let overallScore = 0;
+    if (activeCompetencies.length > 0) {
+      const sumComp = activeCompetencies.reduce((acc, c) => acc + compScores[c], 0);
+      overallScore = Math.round(sumComp / activeCompetencies.length);
+    } else {
+      overallScore = effectiveTotalQuestions > 0 ? Math.round((correctCount / effectiveTotalQuestions) * 100) : 0;
+    }
+
+    if (isAbandoned) {
+      const completionRatio = Math.min(totalAnswered / Math.max(effectiveTotalQuestions, 1), 1);
+      overallScore = Math.round(overallScore * completionRatio);
+    }
+
+    // Calcular puntajes por nivel CEFR ponderando también por macro-habilidades
+    const levelScores: Record<CEFRLevel, number> = { A1: 0, A2: 0, B1: 0, B2: 0 };
+    (["A1", "A2", "B1", "B2"] as CEFRLevel[]).forEach((lvl) => {
+      const lvlAnswers = this.answers.filter((a) => a.level === lvl);
+      if (lvlAnswers.length > 0) {
+        const lvlComps = (["Reading", "Writing", "Speaking", "Listening"] as Competency[]).filter(
+          (c) => lvlAnswers.some((a) => a.competency === c)
+        );
+        if (lvlComps.length > 0) {
+          const compScoresLvl = lvlComps.map((c) => {
+            const ansInComp = lvlAnswers.filter((a) => a.competency === c);
+            const sumScores = ansInComp.reduce((acc, curr) => acc + curr.scoreAwarded, 0);
+            return sumScores / ansInComp.length;
+          });
+          levelScores[lvl] = Math.round(compScoresLvl.reduce((a, b) => a + b, 0) / lvlComps.length);
+        } else {
+          const correct = lvlAnswers.filter((a) => a.isCorrect).length;
+          const denominator = isAbandoned && lvl === this.currentLevel ? Math.max(lvlAnswers.length, plannedLevelQuestions) : lvlAnswers.length;
+          levelScores[lvl] = Math.round((correct / denominator) * 100);
+        }
+      }
+    });
+
+    // Nivel final alcanzado (si aprueba el umbral del nivel, un fallo aislado no lo reprueba)
     let finalLevel: string = "Sin Nivel";
     let passed = false;
     let character = "No Presentado";
@@ -786,15 +913,15 @@ export class ExamEngine {
     } else if (levelScores.B2 >= LEVEL_PASS_THRESHOLDS.B2) {
       finalLevel = "B2";
       character = "Experto";
-      passed = overallScore >= LEVEL_PASS_THRESHOLDS.B2;
+      passed = true;
     } else if (levelScores.B1 >= LEVEL_PASS_THRESHOLDS.B1) {
       finalLevel = "B1";
       character = "Avanzado";
-      passed = overallScore >= LEVEL_PASS_THRESHOLDS.B1;
+      passed = true;
     } else if (levelScores.A2 >= LEVEL_PASS_THRESHOLDS.A2) {
       finalLevel = "A2";
       character = "Intermedio";
-      passed = overallScore >= LEVEL_PASS_THRESHOLDS.A2;
+      passed = true;
     } else if (overallScore >= (LEVEL_PASS_THRESHOLDS.A1 || 60)) {
       finalLevel = "A1";
       character = "Principiante";
