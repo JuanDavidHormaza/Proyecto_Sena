@@ -67,6 +67,8 @@ export interface TestResult {
   userId: string;
   userName: string;
   studentProgram?: string;
+  program?: string;
+  ficha?: string;
   score: number;
   level: string;
   correctAnswers: number;

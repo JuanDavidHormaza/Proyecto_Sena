@@ -186,6 +186,10 @@ export function buildUnifiedQuestionBank(dictionaryQuestions?: any[]): UnifiedQu
         isDictionaryTerm: true,
       });
     });
+
+    if (bank.length > 0) {
+      return bank;
+    }
   }
 
   // 1. Preguntas A1 (Fundamentos y Vocabulario Técnico -> Reading) con orden aleatorio
@@ -498,6 +502,15 @@ export class ExamEngine {
       if (selected.length >= this.QUESTIONS_PER_LEVEL) break;
       if (!selected.some((s) => s.uniqueKey === q.uniqueKey)) {
         selected.push(q);
+      }
+    }
+
+    if (selected.length < this.QUESTIONS_PER_LEVEL && dictPool.length > 0) {
+      let cycleIdx = 0;
+      while (selected.length < this.QUESTIONS_PER_LEVEL && cycleIdx < dictPool.length * 3) {
+        const item = dictPool[cycleIdx % dictPool.length];
+        selected.push({ ...item, uniqueKey: `${item.uniqueKey}-rep-${selected.length}` });
+        cycleIdx++;
       }
     }
 

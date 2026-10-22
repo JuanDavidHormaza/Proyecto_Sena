@@ -159,6 +159,23 @@ export function ResultsPage() {
   const autoFeedback = resultsState?.auto_feedback ?? lastTestSummary?.autoFeedback;
 
   const { user } = useAuth();
+  const evaluatedProgram =
+    (resultsState as any)?.program ||
+    lastTestResult?.program ||
+    lastTestResult?.process?.program ||
+    lastTestResult?.studentProgram ||
+    lastTestResult?.student_program ||
+    sessionStorage.getItem("evaluatedProgram") ||
+    user?.program ||
+    "ADSO";
+
+  const evaluatedFicha =
+    (resultsState as any)?.ficha ||
+    lastTestResult?.ficha ||
+    lastTestResult?.process?.ficha ||
+    sessionStorage.getItem("evaluatedFicha") ||
+    user?.ficha?.codigo ||
+    "";
   const isInstructor = Boolean(
     user?.role === "teacher" ||
     user?.role === "admin" ||
@@ -372,18 +389,25 @@ export function ResultsPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-lg rounded-full text-sm font-medium mb-6 ${
-                isCancelled ? "bg-amber-500/20 text-amber-100" : isIncomplete ? "bg-rose-500/30 text-rose-100 border border-rose-300/40" : "bg-white/20 text-white"
-              }`}
+              className="flex flex-col items-center gap-2 mb-6"
             >
-              <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white">
-                {isCancelled || isIncomplete ? (
-                  <AlertCircle className="w-4 h-4 text-amber-200" strokeWidth={2} />
-                ) : (
-                  <CheckCircle className="w-4 h-4 text-emerald-200" strokeWidth={2} />
-                )}
+              <div className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-lg rounded-full text-sm font-medium ${
+                isCancelled ? "bg-amber-500/20 text-amber-100" : isIncomplete ? "bg-rose-500/30 text-rose-100 border border-rose-300/40" : "bg-white/20 text-white"
+              }`}>
+                <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white">
+                  {isCancelled || isIncomplete ? (
+                    <AlertCircle className="w-4 h-4 text-amber-200" strokeWidth={2} />
+                  ) : (
+                    <CheckCircle className="w-4 h-4 text-emerald-200" strokeWidth={2} />
+                  )}
+                </div>
+                {isCancelled ? "Prueba no presentada / Cancelada" : isIncomplete ? "Evaluación Incompleta (Abandonada)" : "Evaluación enviada con éxito"}
               </div>
-              {isCancelled ? "Prueba no presentada / Cancelada" : isIncomplete ? "Evaluación Incompleta (Abandonada)" : "Evaluación enviada con éxito"}
+
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white text-xs sm:text-sm font-semibold border border-white/25 shadow-sm">
+                <GraduationCap className="w-4 h-4 text-emerald-300 shrink-0" />
+                <span>Programa evaluado: <strong className="text-white underline decoration-emerald-400 decoration-2">{evaluatedProgram}</strong>{evaluatedFicha ? ` · Ficha ${evaluatedFicha}` : ""}</span>
+              </div>
             </motion.div>
 
             <motion.div
@@ -428,9 +452,10 @@ export function ResultsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8"
         >
           {[
+            { label: "Programa Evaluado", value: evaluatedProgram, icon: GraduationCap, color: "text-amber-600", bg: "bg-amber-100" },
             { label: "Puntuación Global", value: `${finalScore}%`, icon: Target, color: "text-warning", bg: "bg-warning/10" },
             { label: "Nivel Asignado", value: levelReached, icon: Award, color: "text-sena-green", bg: "bg-sena-green/10" },
             { label: "Tiempo Total", value: duration, icon: Clock, color: "text-sena-blue", bg: "bg-sena-blue/10" },

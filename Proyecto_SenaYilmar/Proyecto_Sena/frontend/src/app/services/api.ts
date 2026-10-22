@@ -136,6 +136,8 @@ export interface ApiTestResult {
   userName: string;
   studentProgram?: string | null;
   student_program?: string | null;
+  program?: string | null;
+  ficha?: string | null;
   score: number;
   level: string;
   correctAnswers: number;
@@ -1475,7 +1477,7 @@ export interface AdaptiveExamStartResponse {
   message: string;
 }
 
-export async function startAdaptiveExam(userId?: string | number): Promise<AdaptiveExamStartResponse> {
+export async function startAdaptiveExam(userId?: string | number, program?: string): Promise<AdaptiveExamStartResponse> {
   const token = getAccessTokenOrExpire();
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -1483,13 +1485,13 @@ export async function startAdaptiveExam(userId?: string | number): Promise<Adapt
   const response = await fetch(`${API_BASE}/exam/start/`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ user_id: userId, program }),
   });
 
   return handleResponse<AdaptiveExamStartResponse>(response);
 }
 
-export async function getAdaptiveBank(params?: { level?: string; competence?: string }): Promise<{
+export async function getAdaptiveBank(params?: { level?: string; competence?: string; program?: string }): Promise<{
   total: number;
   level: string;
   competence: string;
@@ -1498,6 +1500,7 @@ export async function getAdaptiveBank(params?: { level?: string; competence?: st
   const query = new URLSearchParams();
   if (params?.level && params.level !== 'all') query.append('level', params.level);
   if (params?.competence && params.competence !== 'all') query.append('competence', params.competence);
+  if (params?.program && params.program !== 'all') query.append('program', params.program);
 
   const qs = query.toString();
   const url = `${API_BASE}/exam/adaptive-bank/${qs ? `?${qs}` : ''}`;

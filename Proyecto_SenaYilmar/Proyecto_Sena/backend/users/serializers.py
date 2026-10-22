@@ -169,6 +169,8 @@ class TestResultSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
     student_program = serializers.SerializerMethodField()
+    program = serializers.SerializerMethodField()
+    ficha = serializers.SerializerMethodField()
 
     class Meta:
         model = TestResult
@@ -178,6 +180,8 @@ class TestResultSerializer(serializers.ModelSerializer):
             'user_name',
             'user_email',
             'student_program',
+            'program',
+            'ficha',
             'score',
             'level',
             'character',
@@ -204,7 +208,19 @@ class TestResultSerializer(serializers.ModelSerializer):
         return obj.user.person.email
 
     def get_student_program(self, obj):
+        if obj.process and isinstance(obj.process, dict) and obj.process.get('program'):
+            return obj.process.get('program')
         return obj.user.program
+
+    def get_program(self, obj):
+        if obj.process and isinstance(obj.process, dict) and obj.process.get('program'):
+            return obj.process.get('program')
+        return obj.user.program or 'ADSO'
+
+    def get_ficha(self, obj):
+        if obj.process and isinstance(obj.process, dict) and obj.process.get('ficha'):
+            return obj.process.get('ficha')
+        return ''
 
 def resolve_audited_question(ans: dict) -> dict:
     """

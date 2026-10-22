@@ -27,6 +27,7 @@ import {
   Languages,
 } from "lucide-react";
 import * as api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import {
   ExamEngine,
   UnifiedQuestion,
@@ -167,8 +168,20 @@ export function QuizPage() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const advanceTimerRef = useRef<any>(null);
 
-  const userId = sessionStorage.getItem("userId") || "";
-  const userProgram = sessionStorage.getItem("userProgram") || "SENA";
+  const { user } = useAuth();
+  const userId = user?.id || sessionStorage.getItem("userId") || "";
+  const activeProgram =
+    user?.program ||
+    sessionStorage.getItem("userProgram") ||
+    sessionStorage.getItem("selectedProgram") ||
+    "ADSO";
+  const activeFicha =
+    user?.ficha?.codigo ||
+    user?.active_context?.ficha_code ||
+    sessionStorage.getItem("userFicha") ||
+    sessionStorage.getItem("userFichaCode") ||
+    "";
+  const userProgram = activeProgram;
 
   // Sincronizar estado del motor
   const refreshEngine = () => {
@@ -234,7 +247,7 @@ export function QuizPage() {
 
       try {
         setIsLoadingBank(true);
-        const startData = await api.startAdaptiveExam(userId || undefined).catch((err) => {
+        const startData = await api.startAdaptiveExam(userId || undefined, activeProgram).catch((err) => {
           console.warn("Iniciando evaluación con banco local de respaldo:", err);
           return null;
         });
@@ -269,7 +282,7 @@ export function QuizPage() {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, [userId, activeProgram]);
 
   useEffect(() => {
     cleanupRecording();
@@ -758,6 +771,8 @@ export function QuizPage() {
     const serializableAnswers = summary.answers.map(({ audioBlob, ...item }) => item);
 
     const payload: Record<string, unknown> = {
+      program: activeProgram,
+      ficha: activeFicha,
       score: summary.finalScore,
       level: summary.finalLevel,
       character: summary.character,
@@ -771,6 +786,8 @@ export function QuizPage() {
       is_abandoned: isAbandoned,
       is_incomplete: isAbandoned,
       process: {
+        program: activeProgram,
+        ficha: activeFicha,
         userAnswers: serializableAnswers,
         masteredTerms: summary.masteredTerms,
         reinforceTerms: summary.reinforceTerms,
@@ -792,6 +809,8 @@ export function QuizPage() {
     try {
       const savedResult = await api.createTestResult(payload);
       sessionStorage.setItem("lastTestResult", JSON.stringify(savedResult));
+      sessionStorage.setItem("evaluatedProgram", activeProgram);
+      sessionStorage.setItem("evaluatedFicha", activeFicha);
       await api.recordStreakActivity("EVALUACION_QUIZ_CEFR").catch(() => null);
 
       sessionStorage.setItem("lastTestSummary", JSON.stringify(summary));
@@ -799,6 +818,8 @@ export function QuizPage() {
 
       navigate("/results", {
         state: {
+          program: activeProgram,
+          ficha: activeFicha,
           score: summary.finalScore,
           correctAnswers: summary.correctAnswers,
           totalQuestions: summary.totalQuestions,
@@ -819,9 +840,13 @@ export function QuizPage() {
       console.error("Error guardando el resultado en base de datos:", saveError);
       sessionStorage.setItem("lastTestSummary", JSON.stringify(summary));
       sessionStorage.setItem("quizAnswers", JSON.stringify(serializableAnswers));
+      sessionStorage.setItem("evaluatedProgram", activeProgram);
+      sessionStorage.setItem("evaluatedFicha", activeFicha);
 
       navigate("/results", {
         state: {
+          program: activeProgram,
+          ficha: activeFicha,
           score: summary.finalScore,
           correctAnswers: summary.correctAnswers,
           totalQuestions: summary.totalQuestions,

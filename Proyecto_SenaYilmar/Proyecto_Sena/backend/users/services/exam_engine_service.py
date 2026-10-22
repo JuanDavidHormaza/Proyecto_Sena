@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict, Optional, Any
 from django.db.models import Q
 from users.Models.modelsSENA import DigitalDictionary, Subject
+from users.dictionary_programs import program_q, canonical_program_key, PROGRAM_NAMES, PROGRAM_ADSO, PROGRAM_MECANICA, PROGRAM_MULTIMEDIA
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ def get_difficulty_tier(difficulty: int) -> str:
 
 # ============================================================================
 # BANCOS PEDAGÓGICOS OFICIALES DE WRITING / GRAMMAR POR PROGRAMA FORMATIVO
-# Cumpliendo los 3 tipos de evaluación exigidos por instructores de inglés:
+# 100% AISLADOS POR NÚCLEO TÉCNICO:
 #   Tipo A: Sintaxis (Sentence Ordering)
 #   Tipo B: Morfología y Uso en Contexto (Collocations & Fill-in-the-blank)
 #   Tipo C: Reemplazo por Sinónimo en Contexto
@@ -167,6 +168,21 @@ PROGRAM_WRITING_EXERCISES: Dict[str, List[Dict[str, Any]]] = {
             'difficulty': 6,
             'word': 'Lathe',
         },
+        {
+            'type_category': 'Tipo A - Sintaxis',
+            'level': 'B2',
+            'question': "Order the sentence components into a grammatically correct structure:",
+            'prompt': "hydraulic / pump / pressure / delivers / steady / actuator / cylinder / to / the",
+            'options': [
+                "The hydraulic pump delivers steady pressure to the actuator cylinder.",
+                "Pressure delivers the hydraulic pump cylinder to steady actuator the.",
+                "To actuator the cylinder hydraulic steady pressure pump delivers the.",
+                "Delivers steady hydraulic pressure pump to cylinder actuator the the."
+            ],
+            'correct_answer': "The hydraulic pump delivers steady pressure to the actuator cylinder.",
+            'difficulty': 7,
+            'word': 'Hydraulic Pump',
+        },
         # Tipo B - Morfología y Uso en Contexto
         {
             'type_category': 'Tipo B - Morfología y Contexto',
@@ -187,6 +203,16 @@ PROGRAM_WRITING_EXERCISES: Dict[str, List[Dict[str, Any]]] = {
             'correct_answer': "overheating",
             'difficulty': 5,
             'word': 'Lubrication',
+        },
+        {
+            'type_category': 'Tipo B - Morfología y Contexto',
+            'level': 'B2',
+            'question': "Complete the sentence with the correct grammatical form or collocation:",
+            'prompt': "The spindle speed was _____ adjusted to match the tensile strength of the alloy steel.",
+            'options': ["carefully", "careful", "caring", "carefulness"],
+            'correct_answer': "carefully",
+            'difficulty': 7,
+            'word': 'Spindle Speed',
         },
         # Tipo C - Reemplazo por Sinónimo en Contexto
         {
@@ -242,6 +268,21 @@ PROGRAM_WRITING_EXERCISES: Dict[str, List[Dict[str, Any]]] = {
             'difficulty': 6,
             'word': 'Keyframes',
         },
+        {
+            'type_category': 'Tipo A - Sintaxis',
+            'level': 'B2',
+            'question': "Order the sentence components into a grammatically correct structure:",
+            'prompt': "sound / designer / mixed / stereo / audio / channels / final / master / into / the",
+            'options': [
+                "The sound designer mixed audio channels into the final stereo master.",
+                "Mixed audio channels into final stereo master the sound designer the.",
+                "The stereo master sound designer mixed into final audio channels the.",
+                "Into final audio channels the stereo master sound designer mixed the."
+            ],
+            'correct_answer': "The sound designer mixed audio channels into the final stereo master.",
+            'difficulty': 7,
+            'word': 'Sound Mixing',
+        },
         # Tipo B - Morfología y Uso en Contexto
         {
             'type_category': 'Tipo B - Morfología y Contexto',
@@ -262,6 +303,16 @@ PROGRAM_WRITING_EXERCISES: Dict[str, List[Dict[str, Any]]] = {
             'correct_answer': "lose",
             'difficulty': 5,
             'word': 'Resolution',
+        },
+        {
+            'type_category': 'Tipo B - Morfología y Contexto',
+            'level': 'B2',
+            'question': "Complete the sentence with the correct grammatical form or collocation:",
+            'prompt': "The 3D artists _____ rigging character meshes for the animated short film all semester.",
+            'options': ["have been", "is", "has", "was being"],
+            'correct_answer': "have been",
+            'difficulty': 7,
+            'word': '3D Rigging',
         },
         # Tipo C - Reemplazo por Sinónimo en Contexto
         {
@@ -291,9 +342,10 @@ PROGRAM_WRITING_EXERCISES: Dict[str, List[Dict[str, Any]]] = {
 class ExamEngineService:
     """
     Motor de Evaluación Lingüística CEFR Adaptativo (A1-B2).
-    Genera bancos de preguntas balanceados según la asignación pedagógica SENA:
-      - Reading = Vocabulario Técnico & Comprensión Lectora (Identificación conceptual, sin oraciones en desorden)
-      - Writing = Sintaxis (Sentence Ordering), Morfología & Collocations, y Sinónimos en Contexto
+    Garantiza aislamiento estricto por programa formativo:
+      - ADSO: Solo términos y distractores de Análisis y Desarrollo de Software.
+      - MECANICA: Solo términos y distractores de Mecánica Industrial.
+      - MULTIMEDIA: Solo términos y distractores de Producción Multimedia.
     """
 
     @staticmethod
@@ -302,17 +354,30 @@ class ExamEngineService:
         return val.strip() if isinstance(val, str) else (str(val) if val is not None else "")
 
     @classmethod
+    def normalize_program_key(cls, program: Optional[str]) -> str:
+        """
+        Normaliza de manera canónica e inequívoca el código del programa formativo:
+        'ADSO' | 'MECANICA' | 'MULTIMEDIA'
+        """
+        if not program:
+            return PROGRAM_ADSO
+        canon = canonical_program_key(program)
+        if canon:
+            return canon
+        p_upper = str(program).upper()
+        if 'MECAN' in p_upper:
+            return PROGRAM_MECANICA
+        if 'MULTI' in p_upper:
+            return PROGRAM_MULTIMEDIA
+        return PROGRAM_ADSO
+
+    @classmethod
     def get_terms_by_level(cls, level: str, program: Optional[str] = None) -> List[Any]:
         """
-        Obtiene los términos activos filtrados por nivel CEFR y programa de formación.
+        Obtiene los términos activos filtrados por nivel CEFR y programa de formación aislado.
         """
-        qs = DigitalDictionary.objects.filter(level__iexact=level).select_related('subject')
-        if program and program != 'all':
-            qs = qs.filter(
-                Q(program__icontains=program) |
-                Q(subject__description__icontains=program) |
-                Q(subject__subject_id__icontains=program)
-            )
+        norm_prog = cls.normalize_program_key(program)
+        qs = DigitalDictionary.objects.filter(program_q(norm_prog), level__iexact=level).select_related('subject')
         return list(qs.order_by('?'))
 
     @classmethod
@@ -325,29 +390,24 @@ class ExamEngineService:
         total_questions: int = 15
     ) -> List[Dict[str, Any]]:
         """
-        Construye un banco balanceado de preguntas pedagógicas:
-        1. Reading: Comprensión y Vocabulario Técnico (¿A qué término técnico corresponde esta definición?).
-        2. Writing: Sintaxis (orden de oraciones), Collocations/Morfología en contexto y Sinónimos técnicos.
+        Construye un banco de preguntas 100% AISLADO por programa formativo:
+        - Términos de Reading extraídos ÚNICAMENTE del programa indicado.
+        - Distractores extraídos ÚNICAMENTE del mismo programa (PROHIBIDO mezclar núcleos).
+        - Banco de Writing/Grammar extraído ÚNICAMENTE del núcleo correspondiente.
         """
         if program in CEFR_LEVELS and level is None:
             level = program
             program = None
 
-        norm_program = 'ADSO'
-        if program:
-            p_upper = program.upper()
-            if 'MECAN' in p_upper:
-                norm_program = 'MECANICA'
-            elif 'MULTI' in p_upper:
-                norm_program = 'MULTIMEDIA'
+        norm_program = cls.normalize_program_key(program)
+        official_prog_name = PROGRAM_NAMES.get(norm_program, 'Análisis y Desarrollo de Software')
+        p_filter = program_q(norm_program)
 
-        qs = DigitalDictionary.objects.select_related('subject')
-        if program and program != 'all':
-            qs = qs.filter(
-                Q(program__icontains=program) |
-                Q(subject__description__icontains=program) |
-                Q(subject__subject_id__icontains=program)
-            )
+        # ── 1. Queryset Base Estrictamente Filtrado por Programa ──
+        qs = DigitalDictionary.objects.filter(p_filter).select_related('subject')
+
+        if competence and competence != 'all':
+            qs = qs.filter(competence__iexact=competence)
 
         if level and level != 'all':
             terms = list(qs.filter(level__iexact=level).order_by('?')[:total_questions])
@@ -359,36 +419,40 @@ class ExamEngineService:
             random.shuffle(terms)
             terms = terms[:total_questions]
 
+        # Respaldo de seguridad si el nivel específico tiene pocos términos dentro del MISMO programa
         if not terms:
-            fallback_qs = DigitalDictionary.objects.select_related('subject')
-            if level and level != 'all':
-                terms = list(fallback_qs.filter(level__iexact=level).order_by('?')[:total_questions])
-            else:
-                for lvl in CEFR_LEVELS:
-                    lvl_pool = list(fallback_qs.filter(level__iexact=lvl).order_by('?')[:limit_per_level])
-                    terms.extend(lvl_pool)
-                random.shuffle(terms)
-                terms = terms[:total_questions]
+            logger.warning(
+                "Filtro restrictivo para programa '%s', nivel '%s'. Usando catálogo general del MISMO programa.",
+                norm_program,
+                level
+            )
+            fallback_qs = DigitalDictionary.objects.filter(p_filter).select_related('subject')
+            for lvl in CEFR_LEVELS:
+                lvl_pool = list(fallback_qs.filter(level__iexact=lvl).order_by('?')[:limit_per_level])
+                terms.extend(lvl_pool)
+            random.shuffle(terms)
+            terms = terms[:total_questions]
 
         questions: List[Dict[str, Any]] = []
 
-        # ── 1. MÓDULO READING: Vocabulario Técnico & Comprensión Lectora ──
-        # Muestra definición o contexto operativo y pregunta:
+        # ── 2. MÓDULO READING: Vocabulario Técnico & Comprensión Lectora ──
+        # Muestra definición o contexto operativo del programa y pregunta:
         # "What technical term does this definition refer to?"
         for term in terms:
             term_word = getattr(term, 'word_id', None) or getattr(term, 'word', '')
             term_def = getattr(term, 'definition', '') or ''
             term_lvl = getattr(term, 'level', 'A1') or 'A1'
 
+            # DISTRACTORES ESTRICTOS: Extraídos ÚNICAMENTE del MISMO programa formativo
             distractor_qs = (
-                DigitalDictionary.objects.exclude(id=term.id)
-                .filter(Q(program=term.program) | Q(level=term.level))
+                DigitalDictionary.objects.filter(p_filter)
+                .exclude(id=term.id)
             )
             distractor_words = list(
                 distractor_qs.exclude(word_id__isnull=True)
                 .exclude(word_id='')
                 .order_by('?')
-                .values_list('word_id', flat=True)[:8]
+                .values_list('word_id', flat=True)[:12]
             )
 
             clean_term = str(term_word).strip().lower()
@@ -397,17 +461,18 @@ class ExamEngineService:
                 if w and w.strip().lower() != clean_term
             ][:3]
 
-            if len(distractors) < 3:
-                alt_words = list(
-                    DigitalDictionary.objects.exclude(id=term.id)
-                    .order_by('?')
-                    .values_list('word_id', flat=True)[:8]
-                )
-                for w in alt_words:
-                    if w and w.strip().lower() != clean_term and w not in distractors:
-                        distractors.append(w.strip())
-                    if len(distractors) >= 3:
-                        break
+            # Si faltan distractores dentro del mismo programa, complementar con opciones técnicas del programa
+            prog_fallback_words = {
+                'ADSO': ['Framework', 'Algorithm', 'Database', 'Middleware', 'Repository', 'Endpoint'],
+                'MECANICA': ['Caliper', 'Lathe', 'Bearing', 'Spindle', 'Micrometer', 'Gearbox'],
+                'MULTIMEDIA': ['Keyframe', 'Rendering', 'Vector', 'Storyboard', 'Timeline', 'Typography'],
+            }
+            fb_list = prog_fallback_words.get(norm_program, prog_fallback_words['ADSO'])
+            for fb_w in fb_list:
+                if len(distractors) >= 3:
+                    break
+                if fb_w.lower() != clean_term and fb_w not in distractors:
+                    distractors.append(fb_w)
 
             while len(distractors) < 3:
                 distractors.append(f"Option {len(distractors) + 1}")
@@ -437,14 +502,17 @@ class ExamEngineService:
                 'correctAnswerText': term_word,
                 'difficulty': diff_val,
                 'difficultyTier': get_difficulty_tier(diff_val),
-                'category': f"{getattr(term, 'program', 'Técnico') or 'Técnico'} Reading - Vocabulario",
+                'program': official_prog_name,
+                'program_key': norm_program,
+                'category': f"{official_prog_name} - Reading (Vocabulario)",
                 'audio': audio_url,
                 'image': image_url,
-                'uniqueKey': f"READ-{term_lvl}-{term.id}",
+                'uniqueKey': f"READ-{norm_program}-{term_lvl}-{term.id}",
                 'isDictionaryTerm': True,
             })
 
-        # ── 2. MÓDULO WRITING / GRAMMAR: Sintaxis, Morfología en Contexto y Sinónimos ──
+        # ── 3. MÓDULO WRITING / GRAMMAR: Sintaxis, Morfología en Contexto y Sinónimos ──
+        # Extraído 100% del diccionario de ejercicios correspondiente a este programa
         prog_exercises = PROGRAM_WRITING_EXERCISES.get(norm_program, PROGRAM_WRITING_EXERCISES['ADSO'])
         random.shuffle(prog_exercises)
         writing_picks = prog_exercises[:6]
@@ -480,7 +548,9 @@ class ExamEngineService:
                 'correctAnswerText': correct_text,
                 'difficulty': w_diff,
                 'difficultyTier': get_difficulty_tier(w_diff),
-                'category': f"{norm_program} Writing - Gramática y Sintaxis ({ex.get('type_category', 'Sintaxis')})",
+                'program': official_prog_name,
+                'program_key': norm_program,
+                'category': f"{official_prog_name} - Writing ({ex.get('type_category', 'Sintaxis')})",
                 'audio': None,
                 'image': None,
                 'uniqueKey': f"WRIT-{norm_program}-{w_idx}",

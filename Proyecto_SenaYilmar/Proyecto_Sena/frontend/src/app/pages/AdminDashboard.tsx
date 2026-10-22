@@ -846,13 +846,13 @@ interface AdminDashboardProps {
   initialTab?: TabType;
 }
 
-export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
+export default function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser, logout } = useAuth();
   const isSuperAdmin = authUser?.role === "superadmin";
 
-  const getInitialTab = (): TabType => {
+  function getInitialTab(): TabType  {
     if (initialTab && initialTab !== "requests") return initialTab;
     const params = new URLSearchParams(location.search);
     const tabParam = params.get("tab") as TabType;
@@ -872,7 +872,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }
   }, [location.pathname, initialTab, navigate]);
 
-  const handleTabChange = (tabId: TabType) => {
+  function handleTabChange(tabId: TabType) {
     setActiveTab(tabId);
     if (location.pathname.includes("solicitudes")) {
       navigate("/admin", { replace: true });
@@ -885,7 +885,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const mobileNotificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
       if (
         notificationRef.current && !notificationRef.current.contains(target) &&
@@ -934,7 +934,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
 
 
-  const handleUpdateTicketStatus = async (ticketId: number) => {
+  async function handleUpdateTicketStatus(ticketId: number) {
     setIsUpdatingTicket(true);
     try {
       await api.updateSupportTicket(ticketId, {
@@ -1012,7 +1012,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
   const [selectedAdminProgram, setSelectedAdminProgram] = useState<string>("ADSO");
 
-  const resetUploadForm = () => {
+  function resetUploadForm() {
     setUploadForm({
       file: null,
       imageFile: null,
@@ -1036,13 +1036,13 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   // Estado para gestión y apertura de diccionarios por programa
   const [openedSubjectId, setOpenedSubjectId] = useState<string | null>("ADSO");
 
-  const handleLogout = () => {
+  function handleLogout() {
     logout();
     navigate("/");
   };
 
   // ── Cargar datos ──────────────────────────────────────────────────────────
-  const loadDataFromApi = async () => {
+  async function loadDataFromApi() {
     setIsLoading(true);
     setApiError(null);
     try {
@@ -1133,7 +1133,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
-  const handleConfirmDeleteUser = async () => {
+  async function handleConfirmDeleteUser() {
     if (!userToDelete) return;
     setIsDeletingUser(true);
     try {
@@ -1150,14 +1150,14 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
+  function handleDeleteUser(userId: string) {
     const target = users.find(u => u.id === userId);
     if (target) {
       setUserToDelete(target);
     }
   };
 
-  const handleToggleUserStatus = async (userId: string) => {
+  async function handleToggleUserStatus(userId: string) {
     const target = users.find(u => u.id === userId);
     if (!target) return;
     if (target.role === "superadmin" || userId === authUser?.id) {
@@ -1187,7 +1187,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }
   };
 
-  const handleChangeUserRole = async (userId: string, newRole: string) => {
+  async function handleChangeUserRole(userId: string, newRole: string) {
     const target = users.find(u => u.id === userId);
     if (!target) return;
     const lowerRole = newRole.toLowerCase();
@@ -1218,16 +1218,19 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }
   };
 
-  const canAdminManageUser = (targetUser: User) =>
-    isSuperAdmin || targetUser.role === "teacher" || targetUser.role === "student";
+  function canAdminManageUser(targetUser: User): boolean {
+    return isSuperAdmin || targetUser.role === "teacher" || targetUser.role === "student";
+  }
 
-  const canModifyUserActions = (targetUser: User) =>
-    canAdminManageUser(targetUser) && targetUser.id !== authUser?.id;
+  function canModifyUserActions(targetUser: User): boolean {
+    return canAdminManageUser(targetUser) && targetUser.id !== authUser?.id;
+  }
 
-  const canEditUserPermissions = (targetUser: User) =>
-    canAdminManageUser(targetUser);
+  function canEditUserPermissions(targetUser: User): boolean {
+    return canAdminManageUser(targetUser);
+  }
 
-  const handleEditUserPermissions = (user: User) => {
+  function handleEditUserPermissions(user: User) {
     if (!canEditUserPermissions(user)) return;
     setSelectedUser(user);
     setShowEditUserModal(true);
@@ -1235,7 +1238,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
 
   // Abre el modal con los datos del usuario
-  const handleEditUserData = (user: User) => {
+  function handleEditUserData(user: User) {
     setEditUserData({
       id: user.id,
       name: user.name,
@@ -1248,7 +1251,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   };
 
   // Guarda los cambios con actualización optimista inmediata
-  const handleSaveUserData = async (e: React.FormEvent) => {
+  async function handleSaveUserData(e: React.FormEvent) {
     e.preventDefault();
     const targetId = editUserData.id;
     const previousUsers = users;
@@ -1287,7 +1290,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
 
 
   
-  const handleSaveUserPermissions = (permissions: UserPermissions) => {
+  function handleSaveUserPermissions(permissions: UserPermissions) {
     if (selectedUser) {
       setUsers(users.map(u => u.id === selectedUser.id ? { ...u, permissions } : u));
       setShowEditUserModal(false);
@@ -1295,7 +1298,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }
   };
 
-  const handleGeneratePassword = () => {
+  function handleGeneratePassword() {
     const charsUpper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
     const charsLower = "abcdefghijkmnpqrstuvwxyz";
     const charsNum = "23456789";
@@ -1312,7 +1315,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     toast.success("Contraseña temporal generada exitosamente", "Seguridad");
   };
 
-  const handleAddUser = async (e: React.FormEvent) => {
+  async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
     setUserModalError("");
 
@@ -1405,7 +1408,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }
   };
 
-  const handleAddSubject = (e: React.FormEvent) => {
+  function handleAddSubject(e: React.FormEvent) {
     e.preventDefault();
     const subject: Subject = { id: Date.now().toString(), ...newSubject, createdAt: new Date().toISOString().split("T")[0] };
     setSubjects([...subjects, subject]);
@@ -1413,15 +1416,15 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     setNewSubject({ name: "", description: "", color: "#39A900" });
   };
 
-  const handleDeleteSubject = (subjectId: string) => {
+  function handleDeleteSubject(subjectId: string) {
     if (confirm("¿Eliminar esta competencia evaluada?")) setSubjects(subjects.filter(s => s.id !== subjectId));
   };
 
-  const handleFileSelect = (file: File) => {
+  function handleFileSelect(file: File) {
     setUploadForm({ ...uploadForm, file, previewUrl: URL.createObjectURL(file) });
   };
 
-  const handleFileUpload = async (e: React.FormEvent) => {
+  async function handleFileUpload(e: React.FormEvent) {
     e.preventDefault();
     const wordText = uploadForm.word.trim();
     if (!wordText) {
@@ -1481,7 +1484,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }
   };
 
-  const handleDeleteDocument = async (docId: string) => {
+  async function handleDeleteDocument(docId: string) {
     if (!confirm("¿Eliminar este documento del diccionario?")) return;
     try {
       await api.deleteDocument(docId);
@@ -1491,7 +1494,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }
   };
 
-  const handleEditDocument = (doc: any) => {
+  function handleEditDocument(doc: any) {
     setUploadForm({
       file: null,
       imageFile: null,
@@ -1513,7 +1516,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     setShowUploadModal(true);
   };
 
-  const handleAssignSubject = (docId: string, subjectId: string) => {
+  function handleAssignSubject(docId: string, subjectId: string) {
     const subject = subjects.find(s => s.id === subjectId);
     setDocuments(documents.map(d => d.id === docId ? { ...d, subjectId: subjectId || null, subjectName: subject?.name || "Sin asignar" } : d));
   };
@@ -1524,7 +1527,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   const [filterDocCompetence, setFilterDocCompetence] = useState("all");
   const [searchDocTerm, setSearchDocTerm] = useState("");
 
-  const handleOpenAsignatura = (asigId: string) => {
+  function handleOpenAsignatura(asigId: string) {
     setFilterDocCompetence(asigId);
     setTimeout(() => {
       const element = document.getElementById("multimedia-explorer");
@@ -1534,7 +1537,7 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     }, 50);
   };
 
-  const handleAddTermToAsignatura = (asigId: string) => {
+  function handleAddTermToAsignatura(asigId: string) {
     setUploadForm(prev => ({
       ...prev,
       subjectId: asigId,
@@ -1543,11 +1546,11 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
     setShowUploadModal(true);
   };
 
-  const handleEditAsignatura = (asigName: string) => {
+  function handleEditAsignatura(asigName: string) {
     alert(`Edición de la competencia '${asigName}'. En este modo puedes actualizar los descriptores pedagógicos asociados.`);
   };
 
-  const handleDeleteAsignatura = async (asigId: string) => {
+  async function handleDeleteAsignatura(asigId: string) {
     const asigConfig = SYSTEM_ASIGNATURAS.find(a => a.id === asigId);
     const asigDocs = asigConfig ? documents.filter(asigConfig.matches) : [];
     if (asigDocs.length === 0) {
@@ -4510,4 +4513,4 @@ export function AdminDashboard({ initialTab }: AdminDashboardProps = {}) {
   );
 }
 
-export default AdminDashboard;
+export { AdminDashboard };

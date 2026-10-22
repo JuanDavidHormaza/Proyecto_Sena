@@ -1116,11 +1116,17 @@ class TestResultController:
             raw_answers = (result.process or {}).get('userAnswers', [])
             resolved_answers = [resolve_audited_question(ans) for ans in raw_answers]
 
+            proc = result.process or {}
+            eval_prog = proc.get('program') or result.user.program or 'ADSO'
+            eval_ficha = proc.get('ficha') or ''
+
             results.append({
                 'id': str(result.id),
                 'userId': str(result.user.user_id),
                 'userName': u_name,
-                'studentProgram': result.user.program,
+                'studentProgram': eval_prog,
+                'program': eval_prog,
+                'ficha': eval_ficha,
                 'score': result.score,
                 'level': result.level,
                 'character': result.character,
@@ -1184,6 +1190,13 @@ class TestResultController:
             level = _derive_level_from_score(score, total_questions=total_questions, answered=correct_answers)
             character = data.get('character') or _derive_character_from_score(score, level)
 
+        process_data = data.get('process') or {}
+        if isinstance(process_data, dict):
+            if not process_data.get('program'):
+                process_data['program'] = data.get('program') or getattr(user, 'program', 'ADSO')
+            if not process_data.get('ficha'):
+                process_data['ficha'] = data.get('ficha') or ''
+
         result = TestResult.objects.create(
             user=user,
             score=score,
@@ -1194,7 +1207,7 @@ class TestResultController:
             speaking_score=int(data.get('speaking_score', 0) or 0),
             writing_score=int(data.get('writing_score', 0) or 0),
             level_scores=data.get('level_scores'),
-            process=data.get('process'),
+            process=process_data,
             feedback=data.get('feedback'),
             duration=data.get('duration'),
         )

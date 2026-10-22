@@ -90,7 +90,9 @@ export function TeacherDashboard() {
         id: r.id,
         userId: r.userId,
         userName: r.userName,
-        studentProgram: r.studentProgram || r.student_program || "",
+        studentProgram: r.program || r.studentProgram || r.student_program || (r.process as any)?.program || "",
+        program: r.program || r.studentProgram || r.student_program || (r.process as any)?.program || "",
+        ficha: r.ficha || (r.process as any)?.ficha || "",
         score: r.score,
         level: r.level,
         correctAnswers: r.correctAnswers,
@@ -592,6 +594,7 @@ export function TeacherDashboard() {
                         <thead>
                           <tr className="border-b border-border bg-slate-50/50">
                             <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fecha</th>
+                            <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Programa</th>
                             <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Puntuación</th>
                             <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nivel</th>
                             <th className="text-left py-3 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Correctas</th>
@@ -607,6 +610,11 @@ export function TeacherDashboard() {
                                 {result.completedAt ? new Date(result.completedAt).toLocaleDateString('es-ES', {
                                   day: 'numeric', month: 'short', year: 'numeric'
                                 }) : '-'}
+                              </td>
+                              <td className="py-3.5 px-5 text-xs font-medium text-slate-700">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+                                  {result.program || result.studentProgram || student.program || "ADSO"}
+                                </span>
                               </td>
                               <td className="py-3.5 px-5">
                                 <span className={`text-base font-bold ${
@@ -1014,7 +1022,12 @@ export function TeacherDashboard() {
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <div>
                   <h3 className="text-xl font-bold text-foreground">Detalle de Prueba</h3>
-                  <p className="text-sm text-muted-foreground">{selectedResult.userName}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-sm font-medium text-muted-foreground">{selectedResult.userName}</p>
+                    <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
+                      {selectedResult.program || selectedResult.studentProgram || "ADSO"} {selectedResult.ficha ? `· Ficha ${selectedResult.ficha}` : ""}
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => { setSelectedResult(null); setFeedback(""); }}
