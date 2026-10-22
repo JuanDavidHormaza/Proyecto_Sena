@@ -1252,7 +1252,8 @@ class Command(BaseCommand):
                         'image': image_name[:255],
                         'video': item.get('video', '')[:255],
                         'level': item.get('level', 'A1'),
-                        'competence': item.get('competence', 'Reading'),
+                        # Directriz pedagógica SENA: Todo el vocabulario técnico corresponde a Reading (Comprensión y Vocabulario)
+                        'competence': 'Speaking' if str(item.get('competence', '')).lower() == 'speaking' else 'Reading',
                         'program': spec['program_name'],
                         'spanish_translation': item.get('spanish_translation', '')[:255],
                         'ficha': spec['ficha_code'],

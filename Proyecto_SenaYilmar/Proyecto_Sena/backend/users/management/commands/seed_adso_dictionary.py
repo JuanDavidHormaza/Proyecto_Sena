@@ -322,7 +322,8 @@ class Command(BaseCommand):
                 subject=subject,
                 defaults={
                     'level': item['level'],
-                    'competence': item['competence'],
+                    # Directriz pedagógica SENA: Todo el vocabulario técnico corresponde a Reading (Comprensión y Vocabulario)
+                    'competence': 'Speaking' if str(item.get('competence', '')).lower() == 'speaking' else 'Reading',
                     'definition': item['definition'],
                     'synonyms': item['synonyms'],
                     'audio': item['audio'],
