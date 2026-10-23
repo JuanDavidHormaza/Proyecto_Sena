@@ -960,6 +960,7 @@ export default function AdminDashboard({ initialTab }: AdminDashboardProps = {})
   const [dictModalTab, setDictModalTab] = useState<"vocab" | "videos">("vocab");
   const [programVideos, setProgramVideos] = useState<api.ProgramVideo[]>([]);
   const [selectedLightboxDoc, setSelectedLightboxDoc] = useState<LightboxDocItem | null>(null);
+  const [selectedAdminProgram, setSelectedAdminProgram] = useState<string>("ADSO");
 
   useEffect(() => {
     if (showDictionaryExplorerModal) {
@@ -1009,8 +1010,6 @@ export default function AdminDashboard({ initialTab }: AdminDashboardProps = {})
     level: "A1",
     isUploading: false,
   });
-
-  const [selectedAdminProgram, setSelectedAdminProgram] = useState<string>("ADSO");
 
   function resetUploadForm() {
     setUploadForm({
