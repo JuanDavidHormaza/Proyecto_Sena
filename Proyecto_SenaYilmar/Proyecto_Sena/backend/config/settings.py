@@ -13,9 +13,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 
-
-
-print(f"Conectando a: {os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}")
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -26,27 +23,33 @@ try:
 except ImportError:
     pass
 
-# Email (SMTP real)
-# Usa variables de entorno para no dejar credenciales en el repo.
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes')
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+# Valores por defecto seguros para Base de Datos PostgreSQL
+DB_HOST = os.environ.get('DB_HOST') or os.environ.get('POSTGRES_HOST') or 'worklex_persistencia'
+DB_PORT = os.environ.get('DB_PORT') or os.environ.get('POSTGRES_PORT') or '5432'
+DB_NAME = os.environ.get('DB_NAME') or os.environ.get('POSTGRES_DB') or 'worklex_db'
+DB_USER = os.environ.get('DB_USER') or os.environ.get('POSTGRES_USER') or 'postgres'
+DB_PASSWORD = os.environ.get('DB_PASSWORD') or os.environ.get('POSTGRES_PASSWORD') or 'postgres'
 
-# Timeout estricto para no colgar workers de Gunicorn si el VPS bloquea puertos SMTP
-EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '3'))
+print(f"Conectando a base de datos PostgreSQL: {DB_HOST}:{DB_PORT} (DB: {DB_NAME}, Usuario: {DB_USER})")
 
-# Proveedores de correo por API HTTPS (Puerto 443 - Bypasea bloqueo de puertos SMTP en DigitalOcean/VPS)
-RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
-RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', '')
-BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')
-BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL', '')
-SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '')
-SENDGRID_FROM_EMAIL = os.getenv('SENDGRID_FROM_EMAIL', '')
-DEV_RETURN_OTP = os.getenv('DEV_RETURN_OTP', 'true').lower() in ('1', 'true', 'yes')
+# Motor SMTP de Gmail y Despacho de Correo
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'yilmarmogollon@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f'WorkLex SENA <{EMAIL_HOST_USER}>')
+EMAIL_TIMEOUT = 10
+
+# Proveedores de correo por API HTTPS alternativos
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'WorkLex SENA <onboarding@resend.dev>')
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
+BREVO_SENDER_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', '')
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
+SENDGRID_FROM_EMAIL = os.environ.get('SENDGRID_FROM_EMAIL', '')
+DEV_RETURN_OTP = os.environ.get('DEV_RETURN_OTP', 'false').lower() in ('1', 'true', 'yes')
 
 
 
@@ -203,12 +206,12 @@ import os
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'postgres'),
-        'USER': os.getenv('POSTGRES_USER', 'postgres'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'WorklexSecurePass2026!'),
-        'HOST': os.getenv('POSTGRES_HOST', 'worklex_persistencia'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
-        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
+        'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '60')),
         'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'options': '-c search_path=worklex,public',
@@ -304,13 +307,3 @@ MINIO_BUCKETS = {
 # ─── ElevenLabs (Backend Only - Zero Leak) ───────────────────────────────────
 ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY', '')
 ELEVENLABS_VOICE_ID = os.getenv('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
-
-# ─── Resend API / Email Settings (HTTPS Puerto 443 - Inmune a bloqueos SMTP) ──
-RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
-RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', 'WorkLex SENA <registro@worklexsena.shop>')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', RESEND_FROM_EMAIL)
-DEV_RETURN_OTP = os.getenv('DEV_RETURN_OTP', 'false').lower() in ('1', 'true', 'yes')
-
-# Fallback seguro para llamadas residuales a send_mail de Django (evita colgar en puertos 25/465/587)
-EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
-

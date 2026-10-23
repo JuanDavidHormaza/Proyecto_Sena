@@ -36,6 +36,16 @@ function formatAuthErrorMessage(err: any): { message: string; canRetry: boolean 
   const status = err?.status ?? err?.response?.status;
   const rawMsg = String(err?.message || "").toLowerCase();
 
+  // Si el servidor devolvió un mensaje de error específico y estructurado, respetarlo
+  if (err?.message && !rawMsg.includes("status code") && !rawMsg.includes("network error") && !rawMsg.includes("failed to fetch") && !rawMsg.includes("object object")) {
+    if (status === 401) {
+      return { message: err.message, canRetry: false };
+    }
+    if (status === 502 && (rawMsg.includes("correo") || rawMsg.includes("email"))) {
+      return { message: err.message, canRetry: true };
+    }
+  }
+
   if (
     status === 500 ||
     status === 502 ||
@@ -47,7 +57,9 @@ function formatAuthErrorMessage(err: any): { message: string; canRetry: boolean 
     status === 0
   ) {
     return {
-      message: "El servicio no está disponible temporalmente (en sincronización o reiniciando el backend). Por favor haz clic en Reintentar en unos segundos.",
+      message: err?.message && !rawMsg.includes("status code")
+        ? err.message
+        : "El servicio no está disponible temporalmente (en sincronización o reiniciando el backend). Por favor haz clic en Reintentar en unos segundos.",
       canRetry: true,
     };
   }
@@ -245,7 +257,14 @@ export function LoginPage() {
       setStep("otp");
       setOtpDigits(["", "", "", "", "", ""]);
       setCanRetryLastAction(false);
-      toast.success("Código de verificación enviado a tu correo.", "Verificación de Seguridad");
+      if (res?.email_sent === false) {
+        toast.warning(
+          res?.message || "Código generado. No se pudo entregar por correo electrónico.",
+          "Verificación de Seguridad"
+        );
+      } else {
+        toast.success("Código de verificación enviado a tu correo.", "Verificación de Seguridad");
+      }
     } catch (err: any) {
       console.error("Error en validación de credenciales:", err);
       const parsed = formatAuthErrorMessage(err);

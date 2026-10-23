@@ -122,6 +122,25 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-worklex_persistencia}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-worklex_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_HOST: ${DB_HOST:-worklex_persistencia}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-worklex_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-yilmarmogollon@gmail.com}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-WorkLex SENA <yilmarmogollon@gmail.com>}
+      EMAIL_TIMEOUT: 10
     ports:
       - "8000:8000"
     volumes:

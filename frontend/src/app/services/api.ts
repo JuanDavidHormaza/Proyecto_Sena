@@ -915,16 +915,26 @@ export async function getRanking(): Promise<any[]> {
 
   return handleResponse<any[]>(response);
 }
+export interface RequestLoginResponse {
+  mfa_required: boolean;
+  email: string;
+  email_sent?: boolean;
+  message?: string;
+  otp_code?: string;
+  code?: string;
+  status?: string;
+}
+
 export async function requestLogin(
   email: string,
   password: string
-): Promise<{ mfa_required: boolean; email: string }> {
+): Promise<RequestLoginResponse> {
   const response = await safeFetch(`${API_BASE}/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  return handleResponse<{ mfa_required: boolean; email: string }>(response);
+  return handleResponse<RequestLoginResponse>(response);
 }
  
 /**

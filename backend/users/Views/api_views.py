@@ -20,6 +20,7 @@ from rest_framework.decorators import action
 
 from ..services.email_service import (
     send_otp_email,
+    send_otp_email_detailed,
     send_otp_email_async,
     send_transactional_email,
     build_institutional_email_html,
@@ -60,13 +61,13 @@ def _generate_otp(length=6):
 _build_institutional_email_html = build_institutional_email_html
 
 
-def _send_otp_email(email: str, code: str, reason: str = "verificación de acceso", first_name: str = "Usuario"):
-    """Envía el OTP mediante la API REST HTTPS de Resend (puerto 443)."""
+def _send_otp_email(email: str, code: str, reason: str = "verificación de acceso", first_name: str = "Usuario") -> tuple[bool, str]:
+    """Envía el OTP mediante el servicio de correo configurado (Resend, Brevo, SendGrid o SMTP)."""
     try:
-        send_otp_email(recipient_email=email, otp_code=code)
+        return send_otp_email_detailed(recipient_email=email, otp_code=code)
     except Exception as exc:
         logger.exception("Error al despachar OTP para %s: %s", email, exc)
-
+        return False, str(exc)
 
 def _is_valid_email_domain(email: str) -> tuple[bool, str]:
     """Valida el dominio del correo con tolerancia a dominios SENA, educativos y fallback ante fallas DNS."""
@@ -107,7 +108,7 @@ class LoginAPIView(APIView):
     """
     POST /auth/login/
     Inicia sesión con credenciales.
-    Genera y envía el código de verificación de 6 dígitos al correo registrado.
+    Genera y envía el código de verificación de 6 dígitos al correo registrado tras validar credenciales.
     Si ya se proporciona 'otp_code', valida el código y emite tokens JWT directamente.
     """
     permission_classes = [permissions.AllowAny]
@@ -120,30 +121,47 @@ class LoginAPIView(APIView):
         password = serializer.validated_data['password']
 
         def _do_login():
-            try:
-                person = Person.objects.get(email=email)
-            except Person.DoesNotExist:
+            # 1. Búsqueda de Person insensible a mayúsculas/minúsculas
+            person = Person.objects.filter(email__iexact=email).first()
+            if not person:
                 return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_401_UNAUTHORIZED)
 
+            # 2. Validación de contraseña con auto-actualización transparente de claves legadas
             from django.contrib.auth.hashers import check_password
-            if not check_password(password, person.password):
+            is_valid_password = False
+            if person.password:
+                try:
+                    is_valid_password = check_password(password, person.password)
+                except Exception as hash_exc:
+                    logger.warning("[LoginAPIView] Error comprobando hash de contraseña para %s: %s", email, hash_exc)
+                    is_valid_password = False
+
+                if not is_valid_password and person.password == password:
+                    is_valid_password = True
+                    person.set_password(password)
+                    person.save(update_fields=['password'])
+                    logger.info("[LoginAPIView] Contraseña de %s actualizada transparentemente a PBKDF2.", email)
+
+            if not is_valid_password:
                 return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_401_UNAUTHORIZED)
 
-            if person.status != 'ACTIVO':
+            # 3. Estado de la cuenta
+            if (person.status or '').strip().upper() not in ('ACTIVO', 'ACTIVE'):
                 return Response({'error': 'Cuenta inactiva. Contacte al administrador.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-            user = User.objects.filter(person=person).first()
+            # 4. Cuenta de usuario asociada
+            user = User.objects.filter(person=person).order_by('-user_id').first()
             if not user:
                 return Response({'error': 'Usuario no tiene cuenta asociada'}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # Si se envía código de verificación directamente en la petición
+            # 5. Si se envía código de verificación directamente en la petición (autenticación directa)
             otp_code = request.data.get('otp_code') or request.data.get('code')
             if otp_code:
                 code_str = str(otp_code).strip()
-                is_dev_code = (code_str == '123456')
+                is_dev_code = (code_str == '123456' and (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', False)))
                 otp = (
                     EmailOTP.objects
-                    .filter(email=email, code=code_str, used=False, expires_at__gt=timezone.now())
+                    .filter(email__iexact=email, code=code_str, used=False, expires_at__gt=timezone.now())
                     .order_by('-created_at')
                     .first()
                 )
@@ -162,8 +180,8 @@ class LoginAPIView(APIView):
                     'user': user_data,
                 }, status=status.HTTP_200_OK)
 
-            # Flujo estándar: Generar código de 6 dígitos y enviar por correo
-            EmailOTP.objects.filter(email=email, used=False).update(used=True)
+            # 6. Flujo estándar MFA: Generar código de 6 dígitos, persistir e invalidar anteriores
+            EmailOTP.objects.filter(email__iexact=email, used=False).update(used=True)
             code = _generate_otp()
             EmailOTP.objects.create(
                 email=email,
@@ -171,15 +189,38 @@ class LoginAPIView(APIView):
                 expires_at=timezone.now() + timedelta(minutes=10),
             )
 
+            # 7. Envío mediante el proveedor configurado
             first_name = person.first_name if person else "Usuario"
-            _send_otp_email(email, code, reason="inicio de sesión (MFA)", first_name=first_name)
-            logger.info(f"[MFA LOGIN] Código de verificación generado para {email}: {code}")
+            email_sent, err_reason = _send_otp_email(email, code, reason="inicio de sesión (MFA)", first_name=first_name)
 
-            dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
+            dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', False)) else None
+
+            if not email_sent:
+                logger.error("[LoginAPIView] Fallo de despacho de correo para %s: %s", email, err_reason)
+                if dev_otp:
+                    return Response({
+                        'status': 'warning',
+                        'mfa_required': True,
+                        'email': email,
+                        'email_sent': False,
+                        'message': 'Código de verificación generado (el proveedor de correo no pudo entregarlo).',
+                        'otp_code': dev_otp,
+                        'code': dev_otp,
+                    }, status=status.HTTP_200_OK)
+
+                return Response({
+                    'error': 'No fue posible enviar el código de verificación al correo registrado. Por favor contacte al administrador.',
+                    'code': 'EMAIL_PROVIDER_ERROR',
+                    'email_sent': False,
+                    'mfa_required': False,
+                }, status=status.HTTP_502_BAD_GATEWAY)
+
+            logger.info("[MFA LOGIN] Código de verificación despachado a %s vía proveedor de correo", email)
             return Response({
                 'status': 'success',
                 'mfa_required': True,
                 'email': email,
+                'email_sent': True,
                 'message': 'Código de verificación generado y enviado al correo electrónico.',
                 'otp_code': dev_otp,
                 'code': dev_otp,
@@ -198,8 +239,6 @@ class LoginAPIView(APIView):
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        }, status=status.HTTP_200_OK)
-
 
 class VerifyOTPAPIView(APIView):
     """
@@ -220,12 +259,12 @@ class VerifyOTPAPIView(APIView):
             # Buscar OTP válido (no usado y no expirado) o código dev
             otp = (
                 EmailOTP.objects
-                .filter(email=email, code=code, used=False, expires_at__gt=timezone.now())
+                .filter(email__iexact=email, code=code, used=False, expires_at__gt=timezone.now())
                 .order_by('-created_at')
                 .first()
             )
 
-            is_dev_code = (code == '123456')
+            is_dev_code = (code == '123456' and (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', False)))
             if not otp and not is_dev_code:
                 return Response({'error': 'Código de verificación inválido o expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -235,12 +274,11 @@ class VerifyOTPAPIView(APIView):
                 otp.save(update_fields=['used'])
 
             # Emitir tokens
-            try:
-                person = Person.objects.get(email=email)
-            except Person.DoesNotExist:
+            person = Person.objects.filter(email__iexact=email).first()
+            if not person:
                 return Response({'error': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-            user = User.objects.filter(person=person).first()
+            user = User.objects.filter(person=person).order_by('-user_id').first()
             if not user:
                 return Response({'error': 'Usuario no tiene cuenta asociada.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -266,7 +304,6 @@ class VerifyOTPAPIView(APIView):
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-
 
 class CustomTokenRefreshView(APIView):
     """
@@ -309,9 +346,9 @@ class ResendOTPAPIView(APIView):
             return Response({'error': 'Email es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Verificar si es reenvío para registro pendiente
-        pending = RegisterPendingOTP.objects.filter(email=email, used=False).order_by('-created_at').first()
+        pending = RegisterPendingOTP.objects.filter(email__iexact=email, used=False).order_by('-created_at').first()
         is_register_flow = pending is not None
-        person_exists = Person.objects.filter(email=email, status='ACTIVO').exists()
+        person_exists = Person.objects.filter(email__iexact=email, status__iexact='ACTIVO').exists()
 
         if not person_exists and not is_register_flow:
             return Response({'message': 'Si el correo existe, se enviará el código.', 'requires_otp': True})
@@ -329,27 +366,46 @@ class ResendOTPAPIView(APIView):
             print(f"[MFA LOGIN] Código de 6 dígitos reenviado para {email}: {code}")
 
         # Invalidar OTPs anteriores
-        EmailOTP.objects.filter(email=email, used=False).update(used=True)
+        EmailOTP.objects.filter(email__iexact=email, used=False).update(used=True)
         EmailOTP.objects.create(
             email=email,
             code=code,
             expires_at=timezone.now() + timedelta(minutes=10),
         )
 
-        person = Person.objects.filter(email=email).first()
+        person = Person.objects.filter(email__iexact=email).first()
         first_name = person.first_name if person else "Usuario"
-        _send_otp_email(email, code, reason="reenvío de verificación", first_name=first_name)
+        email_sent, err_reason = _send_otp_email(email, code, reason="reenvío de verificación", first_name=first_name)
 
-        dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
+        dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', False)) else None
+
+        if not email_sent:
+            logger.error("[ResendOTPAPIView] Fallo al reenviar OTP para %s: %s", email, err_reason)
+            if dev_otp:
+                return Response({
+                    'status': 'warning',
+                    'message': 'Código reenviado (el proveedor de correo no pudo entregarlo).',
+                    'email': email,
+                    'email_sent': False,
+                    'requires_otp': True,
+                    'otp_code': dev_otp,
+                    'code': dev_otp,
+                }, status=status.HTTP_200_OK)
+            return Response({
+                'error': 'No fue posible reenviar el código de verificación al correo registrado. Contacte al administrador.',
+                'code': 'EMAIL_PROVIDER_ERROR',
+                'email_sent': False,
+            }, status=status.HTTP_502_BAD_GATEWAY)
+
         return Response({
             'status': 'success',
             'message': 'Código reenviado exitosamente. Revisa tu correo.',
             'email': email,
+            'email_sent': True,
             'requires_otp': True,
             'otp_code': dev_otp,
             'code': dev_otp,
         }, status=status.HTTP_200_OK)
-
 
 class ResetPasswordAPIView(APIView):
     """
