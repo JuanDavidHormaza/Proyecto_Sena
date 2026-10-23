@@ -1,0 +1,347 @@
+import React from "react";
+import { AlertCircle } from "lucide-react";
+
+/**
+ * Utilidades centralizadas y estrictas de validación para campos de formulario en Worklex SENA.
+ * Alineadas con RFC 5322, directrices SENA y serializadores Django REST Framework.
+ */
+
+export interface ValidationResult {
+  isValid: boolean;
+  error: string | null;
+}
+
+// ─── 1. VALIDACIÓN DE NOMBRES Y APELLIDOS ──────────────────────────────────
+// Solo letras (con tildes, diéresis y eñes) y espacios simples.
+const NAME_ALLOWED_CHARS_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/;
+
+export function validateName(
+  value: string,
+  fieldLabel = "Nombres",
+  isRequired = true
+): ValidationResult {
+  const trimmed = (value || "").trim();
+
+  if (!trimmed) {
+    if (isRequired) {
+      return { isValid: false, error: `${fieldLabel} es obligatorio.` };
+    }
+    return { isValid: true, error: null };
+  }
+
+  // Verificar caracteres prohibidos (números, arrobas, símbolos)
+  if (!NAME_ALLOWED_CHARS_REGEX.test(value)) {
+    return {
+      isValid: false,
+      error: "Solo se permiten letras y espacios. No se aceptan números ni caracteres especiales.",
+    };
+  }
+
+  // Verificar espacios dobles consecutivos
+  if (/\s{2,}/.test(value)) {
+    return {
+      isValid: false,
+      error: "No se permiten múltiples espacios consecutivos.",
+    };
+  }
+
+  // Longitud mínima y máxima (2 - 45 caracteres)
+  if (isRequired && trimmed.length < 2) {
+    return {
+      isValid: false,
+      error: `${fieldLabel} debe tener al menos 2 caracteres.`,
+    };
+  }
+
+  if (trimmed.length > 45) {
+    return {
+      isValid: false,
+      error: `${fieldLabel} no puede exceder los 45 caracteres.`,
+    };
+  }
+
+  // Verificar patrones repetitivos de spam (ej. "juan leonardo juan leonardo...")
+  const words = trimmed.toLowerCase().split(/\s+/);
+  if (words.length >= 3) {
+    const counts: Record<string, number> = {};
+    for (const w of words) {
+      counts[w] = (counts[w] || 0) + 1;
+      if (counts[w] >= 3) {
+        return {
+          isValid: false,
+          error: `${fieldLabel} contiene palabras repetidas de forma excesiva.`,
+        };
+      }
+    }
+    if (words.length >= 4) {
+      for (let i = 0; i <= words.length - 4; i += 2) {
+        if (words[i] === words[i + 2] && words[i + 1] === words[i + 3]) {
+          return {
+            isValid: false,
+            error: `${fieldLabel} contiene secuencias repetitivas no válidas.`,
+          };
+        }
+      }
+    }
+  }
+
+  return { isValid: true, error: null };
+}
+
+/**
+ * Sanitiza en tiempo real la entrada de nombres impidiendo caracteres inválidos y limitando a 45 caracteres.
+ */
+export function sanitizeName(value: string): string {
+  return value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, "").slice(0, 45);
+}
+
+// ─── 2. VALIDACIÓN DE CORREO ELECTRÓNICO ───────────────────────────────────
+// Formato estándar RFC 5322 sin espacios ni caracteres ilegales.
+const EMAIL_RFC5322_REGEX =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+export function validateEmail(
+  value: string,
+  isRequired = true
+): ValidationResult {
+  const raw = value || "";
+  const trimmed = raw.trim();
+
+  if (!trimmed) {
+    if (isRequired) {
+      return { isValid: false, error: "El correo electrónico es obligatorio." };
+    }
+    return { isValid: true, error: null };
+  }
+
+  // Restricción estricta de espacios en blanco
+  if (/\s/.test(raw)) {
+    return {
+      isValid: false,
+      error:
+        "Ingresa un correo electrónico válido (ej. usuario@ejemplo.com). No se permiten espacios ni caracteres inválidos.",
+    };
+  }
+
+  // Restricción de caracteres especiales no estándar
+  if (!EMAIL_RFC5322_REGEX.test(trimmed) || trimmed.includes("..")) {
+    return {
+      isValid: false,
+      error:
+        "Ingresa un correo electrónico válido (ej. usuario@ejemplo.com). No se permiten espacios ni caracteres inválidos.",
+    };
+  }
+
+  if (trimmed.length > 100) {
+    return {
+      isValid: false,
+      error: "El correo electrónico no puede exceder los 100 caracteres.",
+    };
+  }
+
+  return { isValid: true, error: null };
+}
+
+/**
+ * Sanitiza en tiempo real la entrada de correo electrónico eliminando espacios.
+ */
+export function sanitizeEmail(value: string): string {
+  return value.replace(/\s+/g, "").slice(0, 100);
+}
+
+// ─── 3. VALIDACIÓN DE NÚMERO DE DOCUMENTO ──────────────────────────────────
+export const NUMERIC_DOC_TYPES = ["CC", "TI", "CE", "TE", "NIT"];
+
+export function isNumericDocType(docType: string): boolean {
+  return NUMERIC_DOC_TYPES.includes((docType || "").toUpperCase());
+}
+
+export function validateDocumentNumber(
+  value: string,
+  docType = "CC",
+  isRequired = true
+): ValidationResult {
+  const trimmed = (value || "").trim();
+
+  if (!trimmed) {
+    if (isRequired) {
+      return {
+        isValid: false,
+        error: "El número de documento es obligatorio.",
+      };
+    }
+    return { isValid: true, error: null };
+  }
+
+  const numeric = isNumericDocType(docType);
+
+  if (numeric) {
+    // Si contiene letras o símbolos
+    if (!/^\d+$/.test(trimmed)) {
+      return {
+        isValid: false,
+        error:
+          "El número de documento debe contener únicamente dígitos numéricos (entre 6 y 10 dígitos) sin puntos, comas ni espacios.",
+      };
+    }
+
+    // Validación de longitud colombiana (Cédula 6 a 10 dígitos, TI / CE hasta 12)
+    const maxLen = docType.toUpperCase() === "CC" ? 10 : 12;
+    if (trimmed.length < 6 || trimmed.length > maxLen) {
+      return {
+        isValid: false,
+        error: `El número de documento debe contener únicamente dígitos numéricos (entre 6 y ${maxLen} dígitos) sin puntos, comas ni espacios.`,
+      };
+    }
+  } else {
+    // Alfanumérico (Pasaporte, PEP, etc.)
+    if (!/^[a-zA-Z0-9]+$/.test(trimmed)) {
+      return {
+        isValid: false,
+        error:
+          "El número de documento debe contener únicamente caracteres alfanuméricos (entre 6 y 15 caracteres) sin símbolos ni espacios.",
+      };
+    }
+
+    if (trimmed.length < 6 || trimmed.length > 15) {
+      return {
+        isValid: false,
+        error:
+          "El número de documento debe contener entre 6 y 15 caracteres alfanuméricos.",
+      };
+    }
+  }
+
+  return { isValid: true, error: null };
+}
+
+/**
+ * Sanitiza la entrada de documento según el tipo seleccionado.
+ */
+export function sanitizeDocumentNumber(
+  value: string,
+  docType = "CC"
+): string {
+  if (isNumericDocType(docType)) {
+    const maxLen = docType.toUpperCase() === "CC" ? 10 : 12;
+    return value.replace(/\D/g, "").slice(0, maxLen);
+  }
+  return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 15);
+}
+
+// ─── 4. VALIDACIÓN DE TELÉFONO CELULAR ──────────────────────────────────────
+export function validatePhoneNumber(
+  value: string,
+  country = "Colombia",
+  isRequired = true
+): ValidationResult {
+  const raw = value || "";
+  const trimmed = raw.replace(/\s+/g, "");
+
+  if (!trimmed) {
+    if (isRequired) {
+      return {
+        isValid: false,
+        error: "El teléfono celular es obligatorio.",
+      };
+    }
+    return { isValid: true, error: null };
+  }
+
+  // Verificar que contenga únicamente dígitos numéricos
+  if (!/^\d+$/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "Ingresa un número de teléfono celular válido (solo dígitos numéricos, 10 dígitos).",
+    };
+  }
+
+  const isColombia = (country || "").toLowerCase() === "colombia";
+
+  if (isColombia) {
+    // Celular en Colombia: exactamente 10 dígitos comenzando por 3 (ej. 3001234567)
+    if (!/^3\d{9}$/.test(trimmed)) {
+      return {
+        isValid: false,
+        error: "Ingresa un número de teléfono celular válido (solo dígitos numéricos, 10 dígitos).",
+      };
+    }
+  } else {
+    // Internacional: entre 7 y 15 dígitos numéricos
+    if (trimmed.length < 7 || trimmed.length > 15) {
+      return {
+        isValid: false,
+        error: "Ingresa un número de teléfono celular válido (entre 7 y 15 dígitos).",
+      };
+    }
+  }
+
+  return { isValid: true, error: null };
+}
+
+export function sanitizePhoneNumber(value: string, country = "Colombia"): string {
+  const digits = (value || "").replace(/\D/g, "");
+  const isColombia = (country || "").toLowerCase() === "colombia";
+  return isColombia ? digits.slice(0, 10) : digits.slice(0, 15);
+}
+
+// ─── 5. VALIDACIÓN DE CONTRASEÑA ───────────────────────────────────────────
+export function validatePassword(
+  value: string,
+  fieldLabel = "Nueva contraseña",
+  isRequired = true
+): ValidationResult {
+  const trimmed = value || "";
+
+  if (!trimmed) {
+    if (isRequired) {
+      return { isValid: false, error: `${fieldLabel} es obligatoria.` };
+    }
+    return { isValid: true, error: null };
+  }
+
+  if (trimmed.length < 8) {
+    return {
+      isValid: false,
+      error: "La contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+
+  const hasLetter = /[a-zA-Z]/.test(trimmed);
+  const hasNumber = /\d/.test(trimmed);
+
+  if (!hasLetter || !hasNumber) {
+    return {
+      isValid: false,
+      error: "La contraseña debe incluir al menos una letra y un número.",
+    };
+  }
+
+  return { isValid: true, error: null };
+}
+
+export function validatePasswordMatch(
+  newPass: string,
+  confirmPass: string
+): ValidationResult {
+  if (!confirmPass) {
+    return { isValid: false, error: "Debes confirmar la nueva contraseña." };
+  }
+  if (newPass !== confirmPass) {
+    return { isValid: false, error: "Las contraseñas no coinciden." };
+  }
+  return { isValid: true, error: null };
+}
+
+// ─── 6. ESTILOS VISUALES DINÁMICOS PARA INPUTS ──────────────────────────────
+export function getFieldValidationClass(
+  isTouched: boolean,
+  error?: string | null,
+  _value?: string,
+  _isValid?: boolean
+): string {
+  if (isTouched && error) {
+    return "border border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all shadow-sm";
+  }
+  return "border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#39A900] focus:border-transparent transition-all shadow-sm";
+}

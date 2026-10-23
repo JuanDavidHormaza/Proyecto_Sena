@@ -32,6 +32,43 @@ import { IDLE_LOGOUT_MESSAGE, TOKEN_EXPIRED_MESSAGE } from "../utils/sessionMana
 
 type LoginStep = "credentials" | "otp";
 
+function formatAuthErrorMessage(err: any): { message: string; canRetry: boolean } {
+  const status = err?.status ?? err?.response?.status;
+  const rawMsg = String(err?.message || "").toLowerCase();
+
+  if (
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    rawMsg.includes("network error") ||
+    rawMsg.includes("no se pudo conectar") ||
+    rawMsg.includes("temporarily unavailable") ||
+    status === 0
+  ) {
+    return {
+      message: "El servicio no está disponible temporalmente (en sincronización o reiniciando el backend). Por favor haz clic en Reintentar en unos segundos.",
+      canRetry: true,
+    };
+  }
+  if (status === 404) {
+    return {
+      message: "El endpoint de autenticación no fue encontrado en el servidor (404). Por favor reintenta.",
+      canRetry: true,
+    };
+  }
+  if (status === 401) {
+    return {
+      message: err?.message || "Credenciales incorrectas o cuenta inactiva. Verifica tus datos de acceso.",
+      canRetry: false,
+    };
+  }
+  return {
+    message: err?.message || "Ocurrió un inconveniente al procesar tu inicio de sesión. Intenta nuevamente.",
+    canRetry: true,
+  };
+}
+
 function getProgramIcon(program: string) {
   const norm = (program || "").toLowerCase();
   if (norm.includes("mecánica") || norm.includes("mecanica")) {
@@ -59,6 +96,14 @@ export function LoginPage() {
     if (sessionNotice) {
       toast.warning(sessionNotice, "Sesión Finalizada");
     }
+    // Descartar persistencia fantasma o credenciales nulas/dañadas al cargar /login
+    const currentToken = typeof window !== "undefined" ? sessionStorage.getItem("accessToken") : null;
+    if (!currentToken) {
+      api.clearAllTokens();
+      ["userProgram", "userName", "userRole", "userId", "userEmail", "roles", "userAvatar"].forEach((k) =>
+        sessionStorage.removeItem(k)
+      );
+    }
   }, [sessionNotice]);
 
   const [step, setStep] = useState<LoginStep>("credentials");
@@ -66,6 +111,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [canRetryLastAction, setCanRetryLastAction] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
 
@@ -198,12 +244,14 @@ export function LoginPage() {
       setOtpEmail(res?.email || emailTrimmed);
       setStep("otp");
       setOtpDigits(["", "", "", "", "", ""]);
+      setCanRetryLastAction(false);
       toast.success("Código de verificación enviado a tu correo.", "Verificación de Seguridad");
     } catch (err: any) {
       console.error("Error en validación de credenciales:", err);
-      const msg = err?.message || "Credenciales incorrectas o cuenta inactiva. Verifica tus datos.";
-      setError(msg);
-      toast.error(msg, "Error de Acceso");
+      const parsed = formatAuthErrorMessage(err);
+      setError(parsed.message);
+      setCanRetryLastAction(parsed.canRetry);
+      toast.error(parsed.message, "Error de Acceso");
     } finally {
       setIsLoading(false);
     }
@@ -268,12 +316,14 @@ export function LoginPage() {
         email: otpEmail,
       });
 
+      setCanRetryLastAction(false);
       processUserPostLogin(loggedUser);
     } catch (err: any) {
       console.error("Error al validar código de verificación:", err);
-      const msg = err?.message || "Código de verificación incorrecto o expirado.";
-      setError(msg);
-      toast.error(msg, "Código Inválido");
+      const parsed = formatAuthErrorMessage(err);
+      setError(parsed.message);
+      setCanRetryLastAction(parsed.canRetry);
+      toast.error(parsed.message, "Código Inválido");
     } finally {
       setIsLoading(false);
     }
@@ -402,10 +452,23 @@ export function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-sm sm:text-base"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-sm sm:text-base"
                   >
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                    <p className="leading-snug">{error}</p>
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      <p className="leading-snug">{error}</p>
+                    </div>
+                    {canRetryLastAction && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleCredentialsSubmit(e as any)}
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold shrink-0 cursor-pointer transition-colors shadow-xs"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                        <span>Reintentar</span>
+                      </button>
+                    )}
                   </motion.div>
                 )}
 
@@ -542,10 +605,23 @@ export function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-sm sm:text-base"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-sm sm:text-base"
                   >
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                    <p className="leading-snug">{error}</p>
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      <p className="leading-snug">{error}</p>
+                    </div>
+                    {canRetryLastAction && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleVerifyOtp(e as any)}
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold shrink-0 cursor-pointer transition-colors shadow-xs"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                        <span>Reintentar</span>
+                      </button>
+                    )}
                   </motion.div>
                 )}
 

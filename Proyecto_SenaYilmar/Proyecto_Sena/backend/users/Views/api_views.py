@@ -6,9 +6,10 @@
 import logging
 import random
 import string
+import time
 from datetime import timedelta
 
-from django.db import models
+from django.db import models, OperationalError, InterfaceError, DatabaseError
 from django.db.models import Q, Count, Avg
 from django.conf import settings
 from django.utils import timezone
@@ -23,6 +24,8 @@ from ..services.email_service import (
     send_transactional_email,
     build_institutional_email_html,
 )
+from ..authentication import resolve_db_user
+from ..middleware import execute_with_db_retry, close_broken_db_connections
 
 logger = logging.getLogger(__name__)
 
@@ -116,70 +119,85 @@ class LoginAPIView(APIView):
         email = serializer.validated_data['email'].strip().lower()
         password = serializer.validated_data['password']
 
-        try:
-            person = Person.objects.get(email=email)
-        except Person.DoesNotExist:
-            return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_401_UNAUTHORIZED)
+        def _do_login():
+            try:
+                person = Person.objects.get(email=email)
+            except Person.DoesNotExist:
+                return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        from django.contrib.auth.hashers import check_password
-        if not check_password(password, person.password):
-            return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_401_UNAUTHORIZED)
+            from django.contrib.auth.hashers import check_password
+            if not check_password(password, person.password):
+                return Response({'error': 'Credenciales incorrectas'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if person.status != 'ACTIVO':
-            return Response({'error': 'Cuenta inactiva. Contacte al administrador.'}, status=status.HTTP_401_UNAUTHORIZED)
+            if person.status != 'ACTIVO':
+                return Response({'error': 'Cuenta inactiva. Contacte al administrador.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user = User.objects.filter(person=person).first()
-        if not user:
-            return Response({'error': 'Usuario no tiene cuenta asociada'}, status=status.HTTP_401_UNAUTHORIZED)
+            user = User.objects.filter(person=person).first()
+            if not user:
+                return Response({'error': 'Usuario no tiene cuenta asociada'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Si se envía código de verificación directamente en la petición
-        otp_code = request.data.get('otp_code') or request.data.get('code')
-        if otp_code:
-            code_str = str(otp_code).strip()
-            is_dev_code = (code_str == '123456')
-            otp = (
-                EmailOTP.objects
-                .filter(email=email, code=code_str, used=False, expires_at__gt=timezone.now())
-                .order_by('-created_at')
-                .first()
+            # Si se envía código de verificación directamente en la petición
+            otp_code = request.data.get('otp_code') or request.data.get('code')
+            if otp_code:
+                code_str = str(otp_code).strip()
+                is_dev_code = (code_str == '123456')
+                otp = (
+                    EmailOTP.objects
+                    .filter(email=email, code=code_str, used=False, expires_at__gt=timezone.now())
+                    .order_by('-created_at')
+                    .first()
+                )
+                if not otp and not is_dev_code:
+                    return Response({'error': 'Código de verificación incorrecto o expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
+                if otp:
+                    otp.used = True
+                    otp.save(update_fields=['used'])
+
+                from ..Controllers.ControllerSENA import _generate_tokens
+                access, refresh = _generate_tokens(user)
+                user_data = _build_user_response(user, person)
+                return Response({
+                    'access': access,
+                    'refresh': refresh,
+                    'user': user_data,
+                }, status=status.HTTP_200_OK)
+
+            # Flujo estándar: Generar código de 6 dígitos y enviar por correo
+            EmailOTP.objects.filter(email=email, used=False).update(used=True)
+            code = _generate_otp()
+            EmailOTP.objects.create(
+                email=email,
+                code=code,
+                expires_at=timezone.now() + timedelta(minutes=10),
             )
-            if not otp and not is_dev_code:
-                return Response({'error': 'Código de verificación incorrecto o expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
-            if otp:
-                otp.used = True
-                otp.save(update_fields=['used'])
 
-            from ..Controllers.ControllerSENA import _generate_tokens
-            access, refresh = _generate_tokens(user)
-            user_data = _build_user_response(user, person)
+            first_name = person.first_name if person else "Usuario"
+            _send_otp_email(email, code, reason="inicio de sesión (MFA)", first_name=first_name)
+            logger.info(f"[MFA LOGIN] Código de verificación generado para {email}: {code}")
+
+            dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
             return Response({
-                'access': access,
-                'refresh': refresh,
-                'user': user_data,
+                'status': 'success',
+                'mfa_required': True,
+                'email': email,
+                'message': 'Código de verificación generado y enviado al correo electrónico.',
+                'otp_code': dev_otp,
+                'code': dev_otp,
             }, status=status.HTTP_200_OK)
 
-        # Flujo estándar: Generar código de 6 dígitos y enviar por correo
-        EmailOTP.objects.filter(email=email, used=False).update(used=True)
-        code = _generate_otp()
-        EmailOTP.objects.create(
-            email=email,
-            code=code,
-            expires_at=timezone.now() + timedelta(minutes=10),
-        )
-
-        person = Person.objects.filter(email=email).first()
-        first_name = person.first_name if person else "Usuario"
-        _send_otp_email(email, code, reason="inicio de sesión (MFA)", first_name=first_name)
-        print(f"[MFA LOGIN] Código de verificación generado para {email}: {code}")
-
-        dev_otp = code if (settings.DEBUG or getattr(settings, 'DEV_RETURN_OTP', True)) else None
-        return Response({
-            'status': 'success',
-            'mfa_required': True,
-            'email': email,
-            'message': 'Código de verificación generado y enviado al correo electrónico.',
-            'otp_code': dev_otp,
-            'code': dev_otp,
+        try:
+            return execute_with_db_retry(_do_login, max_retries=3, initial_delay=0.2)
+        except (OperationalError, InterfaceError, DatabaseError) as exc:
+            logger.error(f"[LoginAPIView] Falla de base de datos persistente durante login: {exc}")
+            close_broken_db_connections()
+            return Response(
+                {
+                    'error': 'El servicio de base de datos no está disponible temporalmente. Intente nuevamente en unos segundos.',
+                    'code': 'DB_UNAVAILABLE',
+                    'status': 503,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         }, status=status.HTTP_200_OK)
 
 
@@ -198,41 +216,56 @@ class VerifyOTPAPIView(APIView):
         if not email or not code:
             return Response({'error': 'Email y código son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Buscar OTP válido (no usado y no expirado) o código dev
-        otp = (
-            EmailOTP.objects
-            .filter(email=email, code=code, used=False, expires_at__gt=timezone.now())
-            .order_by('-created_at')
-            .first()
-        )
+        def _do_verify():
+            # Buscar OTP válido (no usado y no expirado) o código dev
+            otp = (
+                EmailOTP.objects
+                .filter(email=email, code=code, used=False, expires_at__gt=timezone.now())
+                .order_by('-created_at')
+                .first()
+            )
 
-        is_dev_code = (code == '123456')
-        if not otp and not is_dev_code:
-            return Response({'error': 'Código de verificación inválido o expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
+            is_dev_code = (code == '123456')
+            if not otp and not is_dev_code:
+                return Response({'error': 'Código de verificación inválido o expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Marcar como usado si existe
-        if otp:
-            otp.used = True
-            otp.save(update_fields=['used'])
+            # Marcar como usado si existe
+            if otp:
+                otp.used = True
+                otp.save(update_fields=['used'])
 
-        # Emitir tokens
+            # Emitir tokens
+            try:
+                person = Person.objects.get(email=email)
+            except Person.DoesNotExist:
+                return Response({'error': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+            user = User.objects.filter(person=person).first()
+            if not user:
+                return Response({'error': 'Usuario no tiene cuenta asociada.'}, status=status.HTTP_404_NOT_FOUND)
+
+            from ..Controllers.ControllerSENA import _generate_tokens
+            access, refresh = _generate_tokens(user)
+
+            return Response({
+                'access': access,
+                'refresh': refresh,
+                'user': _build_user_response(user, person),
+            })
+
         try:
-            person = Person.objects.get(email=email)
-        except Person.DoesNotExist:
-            return Response({'error': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-        user = User.objects.filter(person=person).first()
-        if not user:
-            return Response({'error': 'Usuario no tiene cuenta asociada.'}, status=status.HTTP_404_NOT_FOUND)
-
-        from ..Controllers.ControllerSENA import _generate_tokens
-        access, refresh = _generate_tokens(user)
-
-        return Response({
-            'access': access,
-            'refresh': refresh,
-            'user': _build_user_response(user, person),
-        })
+            return execute_with_db_retry(_do_verify, max_retries=3, initial_delay=0.2)
+        except (OperationalError, InterfaceError, DatabaseError) as exc:
+            logger.error(f"[VerifyOTPAPIView] Error de base de datos durante verificación OTP: {exc}")
+            close_broken_db_connections()
+            return Response(
+                {
+                    'error': 'El servicio de base de datos no está disponible temporalmente. Intente nuevamente en unos segundos.',
+                    'code': 'DB_UNAVAILABLE',
+                    'status': 503,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
 
 class CustomTokenRefreshView(APIView):
@@ -1953,11 +1986,24 @@ class StudyStreakAPIView(APIView):
         today = timezone.localdate()
         yesterday = today - timedelta(days=1)
 
-        person = getattr(user, 'person', None)
+        db_user = resolve_db_user(user)
+        if not db_user:
+            return {
+                'current_streak': 0,
+                'longest_streak': 0,
+                'is_at_risk': False,
+                'practiced_today': False,
+                'has_activity_today': False,
+                'last_activity_date': None,
+                'weekly_activity': [],
+                'status': 'inactive',
+            }
+
+        person = getattr(db_user, 'person', None)
         if person:
             user_ids = list(User.objects.filter(person=person).values_list('user_id', flat=True))
         else:
-            user_ids = [getattr(user, 'user_id', user.pk)]
+            user_ids = [getattr(db_user, 'user_id', db_user.pk)]
 
         # 1. Fechas de TestResults completados
         test_dates = set(
@@ -2042,15 +2088,33 @@ class StudyStreakAPIView(APIView):
         }
 
     def get(self, request):
-        data = self._calculate_streak_payload(request.user)
-        return Response(data)
+        real_user = resolve_db_user(request.user)
+        if not real_user:
+            return Response({'error': 'Usuario no autenticado o no encontrado en BD.'}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            data = execute_with_db_retry(self._calculate_streak_payload, 3, 0.2, real_user)
+            return Response(data)
+        except Exception as e:
+            logger.error(f"[StudyStreakAPIView] Error al calcular racha: {e}")
+            return Response({'current_streak': 0, 'longest_streak': 0, 'is_at_risk': False, 'practiced_today': False})
 
     def post(self, request):
         """Registra una actividad de práctica diaria y refresca la racha."""
+        real_user = resolve_db_user(request.user)
+        if not real_user:
+            return Response({'error': 'Usuario no autenticado o no encontrado en BD.'}, status=status.HTTP_401_UNAUTHORIZED)
         tx = request.data.get('transaction') or 'PRACTICA_VOCABULARIO'
-        UserLog.objects.create(user=request.user, transaction=tx)
-        data = self._calculate_streak_payload(request.user)
-        return Response(data, status=status.HTTP_201_CREATED)
+
+        def _do_record():
+            UserLog.objects.create(user=real_user, transaction=tx)
+            return self._calculate_streak_payload(real_user)
+
+        try:
+            data = execute_with_db_retry(_do_record, max_retries=3, initial_delay=0.2)
+            return Response(data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"[StudyStreakAPIView] Error al registrar actividad de racha: {e}")
+            return Response({'error': 'No se pudo registrar la actividad en la base de datos.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 

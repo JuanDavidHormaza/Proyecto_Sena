@@ -3,8 +3,29 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 from .Models.modelsSENA import User
 
 
+def resolve_db_user(user_candidate):
+    """
+    Garantiza que siempre obtengamos una instancia válida del modelo User de Django ORM,
+    evitando el error 'ValueError: Cannot assign AuthenticatedUser: must be a User instance'.
+    """
+    if user_candidate is None:
+        return None
+    if isinstance(user_candidate, User):
+        return user_candidate
+    underlying = getattr(user_candidate, '_user', None)
+    if isinstance(underlying, User):
+        return underlying
+    user_id = getattr(user_candidate, 'user_id', None) or getattr(user_candidate, 'pk', None) or getattr(user_candidate, 'id', None)
+    if user_id:
+        try:
+            return User.objects.select_related('person').get(pk=user_id)
+        except (User.DoesNotExist, Exception):
+            return None
+    return None
+
+
 class AuthenticatedUser:
-    """Wrapper que añade los atributos que DRF espera"""
+    """Wrapper de compatibilidad que delega directamente en el modelo User real de Django"""
 
     def __init__(self, user):
         self._user = user
@@ -42,7 +63,8 @@ class CustomJWTAuthentication(JWTAuthentication):
         except User.DoesNotExist:
             raise InvalidToken('Usuario no encontrado')
 
-        return AuthenticatedUser(user)
+        # Retornar directamente la instancia User de Django ORM para evitar errores de asignación ForeignKey
+        return user
 
 
 class OptionalJWTAuthentication(CustomJWTAuthentication):

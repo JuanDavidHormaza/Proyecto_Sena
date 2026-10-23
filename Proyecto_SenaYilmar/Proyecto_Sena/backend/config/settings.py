@@ -62,7 +62,41 @@ SECRET_KEY = 'django-insecure-#6p%5bei32aon4r8fp4i0()sqb83xen)w!ppos@&*&m0)=zo$_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'worklexsena.shop',
+    'www.worklexsena.shop',
+    'localhost',
+    '127.0.0.1',
+    'worklex_backend',
+    'worklex_proxy',
+    '*',
+]
+
+# Cabeceras de seguridad y proxy reverso (Nginx HTTPS + Docker)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# Orígenes confiables para CSRF (previene 'Origin checking failed')
+CSRF_TRUSTED_ORIGINS = [
+    'https://worklexsena.shop',
+    'https://www.worklexsena.shop',
+    'http://worklexsena.shop',
+    'http://localhost',
+    'http://localhost:5173',
+    'http://localhost:8000',
+    'http://127.0.0.1',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:8000',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    'https://worklexsena.shop',
+    'https://www.worklexsena.shop',
+    'http://worklexsena.shop',
+    'http://localhost:5173',
+    'http://localhost:3000',
+]
 
 # Permitir nombres de contenedor Docker con guiones bajos (ej. worklex_proxy, worklex_backend)
 import django.http.request
@@ -113,6 +147,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'users.middleware.DatabaseReconnectMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -163,6 +198,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 import os
 
+# Database - Conexión exclusiva a PostgreSQL (worklex_persistencia)
+# Eliminación absoluta de SQLite / Cero configuración fallback
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -171,11 +208,22 @@ DATABASES = {
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'WorklexSecurePass2026!'),
         'HOST': os.getenv('POSTGRES_HOST', 'worklex_persistencia'),
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
-            'options': '-c search_path=worklex,public'
+            'options': '-c search_path=worklex,public',
+            'connect_timeout': 10,
+            'keepalives': 1,
+            'keepalives_idle': 30,
+            'keepalives_interval': 10,
+            'keepalives_count': 5,
         },
     }
 }
+
+# Verificación estricta de base de datos relacional (PostgreSQL)
+if 'sqlite' in str(DATABASES['default']['ENGINE']).lower():
+    raise RuntimeError("[SECURITY ERROR] SQLite está estrictamente prohibido en WorkLex SENA. Debe usarse PostgreSQL.")
 
 
 

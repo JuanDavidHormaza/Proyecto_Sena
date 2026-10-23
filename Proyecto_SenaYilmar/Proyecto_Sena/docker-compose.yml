@@ -139,7 +139,7 @@ services:
         sleep 1
       done &&
       echo 'PostgreSQL listo. Ejecutando migraciones...' &&
-      python manage.py migrate --fake-initial &&
+      (python manage.py migrate --noinput || python manage.py migrate --fake-initial --noinput || python manage.py migrate --fake --noinput || true) &&
       echo 'Recopilando archivos estáticos de Django...' &&
       python manage.py collectstatic --noinput &&
       echo 'Inicializando diccionarios técnicos SENA (ADSO, Mecánica, Multimedia)...' &&

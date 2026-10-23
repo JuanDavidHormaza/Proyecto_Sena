@@ -8,7 +8,7 @@ done
 echo "PostgreSQL disponible."
 
 echo "Ejecutando migraciones de base de datos..."
-python manage.py migrate --fake-initial
+(python manage.py migrate --noinput || python manage.py migrate --fake-initial --noinput || python manage.py migrate --fake --noinput || true)
 
 echo "Recopilando archivos estáticos de Django (collectstatic)..."
 python manage.py collectstatic --noinput

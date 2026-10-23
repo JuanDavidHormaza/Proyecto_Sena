@@ -56,7 +56,9 @@ echo -e "${GREEN}✓ Contenedores en ejecución.${NC}"
 # 6. Esperar a que PostgreSQL esté disponible y ejecutar migraciones
 echo -e "\n${YELLOW}[5/6] Esperando disponibilidad de PostgreSQL para migraciones...${NC}"
 RETRIES=30
-until docker compose exec -T worklex_persistencia pg_isready -U admin -d SENA > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+DB_USER=${POSTGRES_USER:-postgres}
+DB_NAME=${POSTGRES_DB:-postgres}
+until docker compose exec -T worklex_persistencia pg_isready -U "$DB_USER" -d "$DB_NAME" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
     echo "Esperando que PostgreSQL esté listo... (${RETRIES} intentos restantes)"
     sleep 2
     RETRIES=$((RETRIES-1))

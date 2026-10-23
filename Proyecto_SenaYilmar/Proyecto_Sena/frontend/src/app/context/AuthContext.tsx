@@ -167,13 +167,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const clientToken = typeof window !== 'undefined' ? getValidAccessToken() : null;
 
-      // Si no hay token en el cliente, finalizar carga como no autenticado (null, false)
+      // Si no hay token en el cliente, descartar toda persistencia fantasma y finalizar como no autenticado
       if (!clientToken) {
+        clearAllTokens();
+        [SESSION_NAMESPACES.ADMIN, SESSION_NAMESPACES.INSTRUCTOR, SESSION_NAMESPACES.STUDENT].forEach((ns) => {
+          sessionStorage.removeItem(ns);
+        });
+        ['userName', 'userRole', 'userId', 'userEmail', 'userProgram', 'roles', 'userAvatar'].forEach((k) => {
+          sessionStorage.removeItem(k);
+        });
         if (isMounted) {
           setUser(null);
           setToken(null);
           setIsAuthenticated(false);
           setIsLoading(false);
+        }
+        const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+        const isPublicRoute = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/recover' || pathname.startsWith('/reset-password');
+        if (!isPublicRoute && typeof window !== 'undefined') {
+          window.location.href = '/login?reason=session_expired';
         }
         return;
       }
@@ -229,19 +241,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (userData.enrolledPrograms) {
           sessionStorage.setItem('userEnrolledPrograms', JSON.stringify(userData.enrolledPrograms));
         }
-      } catch (error) {
-        // AUDITORÍA DE RE-HIDRATACIÓN:
-        // Si /api/auth/me/ devuelve 401 o falla por cualquier motivo, el estado de usuario DEBE ser null.
-        // PROHIBIDO asignar usuarios por defecto o estados simulados en bloques catch.
-        console.warn('[AuthContext] Validación de sesión con /api/auth/me/ falló. Purgando sesión cliente:', error);
+      } catch (error: any) {
+        // AUDITORÍA DE RE-HIDRATACIÓN Y RESILIENCIA:
+        // Si /api/auth/me/ devuelve 500, 502, 401 o falla de red, purgar persistencia fantasma y redirigir
+        console.warn('[AuthContext] Validación de sesión falló o backend no disponible (500/502/Network Error):', error);
         clearAllTokens();
         [SESSION_NAMESPACES.ADMIN, SESSION_NAMESPACES.INSTRUCTOR, SESSION_NAMESPACES.STUDENT].forEach((ns) => {
           sessionStorage.removeItem(ns);
+        });
+        ['userName', 'userRole', 'userId', 'userEmail', 'userProgram', 'roles', 'userAvatar'].forEach((k) => {
+          sessionStorage.removeItem(k);
         });
         if (isMounted) {
           setUser(null);
           setToken(null);
           setIsAuthenticated(false);
+        }
+        const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+        const isPublicRoute = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/recover' || pathname.startsWith('/reset-password');
+        if (!isPublicRoute && typeof window !== 'undefined') {
+          window.location.href = '/login?reason=session_expired';
         }
       } finally {
         if (isMounted) {

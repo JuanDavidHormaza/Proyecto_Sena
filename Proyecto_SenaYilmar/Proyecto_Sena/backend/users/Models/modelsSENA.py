@@ -83,6 +83,18 @@ class User(models.Model):
 
     created_at = models.DateTimeField(default=timezone.now)
 
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    @property
+    def is_active(self):
+        return self.status not in ('CANCELADO', 'RETIRO')
+
     def check_password(self, raw_password):
         if self.person:
             return self.person.check_password(raw_password)

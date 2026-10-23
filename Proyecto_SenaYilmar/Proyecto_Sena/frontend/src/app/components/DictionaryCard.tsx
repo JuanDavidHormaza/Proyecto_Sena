@@ -6,7 +6,8 @@ export const getProgramTitle = (termProg?: string, selected?: string) => {
   const p = (termProg || selected || '').toLowerCase();
   if (p.includes('mecanic') || p.includes('mecánica')) return 'Mecánica Industrial';
   if (p.includes('multi') || p.includes('multimedia')) return 'Producción Multimedia';
-  return 'ADSO';
+  if (p.includes('software') || p.includes('adso')) return 'Análisis y Desarrollo de Software';
+  return termProg || selected || 'Formación Técnica';
 };
 
 export interface DictionaryCardProps {
@@ -47,6 +48,7 @@ export function DictionaryCard({
   const [imgFailed, setImgFailed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isTtsActiveRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -57,37 +59,65 @@ export function DictionaryCard({
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
+      isTtsActiveRef.current = false;
     };
   }, []);
 
-  // Determinar especialidad técnica según el programa real del término o del filtro activo
-  const progLower = (term.program || activeProgram || '').toLowerCase();
-  const isMecanica = progLower.includes('mecánica') || progLower.includes('mecanic') || progLower.includes('3520681');
-  const isMultimedia = progLower.includes('multimedia') || progLower.includes('2554901') || progLower.includes('diseño') || progLower.includes('medios');
-
   const wordText = term.word || term.wordId || term.name || '';
-  const rawImage = term.image_url || term.imageUrl || term.image;
+  const rawImage = term.image_url || term.imageUrl || term.image || '';
   const imageSrc = rawImage ? resolveMediaUrl(rawImage, 'dictionary-images') : '';
-  const rawAudio = term.audio_url || term.audioUrl || term.audio;
+  const rawAudio = term.audio_url || term.audioUrl || term.audio || '';
 
-  // Fallback de pronunciación nativa inmediata con SpeechSynthesis (en-US, rate = 0.85)
+  // Determinar especialidad técnica según programa, ruta del asset o filtro activo
+  const progLower = (term.program || activeProgram || '').toLowerCase();
+  const rawImgLower = rawImage.toLowerCase();
+  const rawAudioLower = rawAudio.toLowerCase();
+
+  const isMecanica =
+    progLower.includes('mecánica') ||
+    progLower.includes('mecanic') ||
+    progLower.includes('3520681') ||
+    rawImgLower.includes('mecanic') ||
+    rawAudioLower.includes('mecanic');
+
+  const isMultimedia =
+    progLower.includes('multimedia') ||
+    progLower.includes('2554901') ||
+    progLower.includes('diseño') ||
+    progLower.includes('medios') ||
+    rawImgLower.includes('multi') ||
+    rawAudioLower.includes('multi');
+
+  // Fallback de pronunciación nativa inmediata con SpeechSynthesis (en-US, rate = 0.85) sin bucles
   const triggerNativeTTS = (text: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) {
       setIsPlaying(false);
       return;
     }
     try {
       window.speechSynthesis.cancel();
+      isTtsActiveRef.current = true;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-US';
       utterance.rate = 0.85;
-      utterance.onstart = () => setIsPlaying(true);
-      utterance.onend = () => setIsPlaying(false);
-      utterance.onerror = () => setIsPlaying(false);
+
+      utterance.onstart = () => {
+        setIsPlaying(true);
+      };
+      utterance.onend = () => {
+        setIsPlaying(false);
+        isTtsActiveRef.current = false;
+      };
+      utterance.onerror = () => {
+        setIsPlaying(false);
+        isTtsActiveRef.current = false;
+      };
+
       window.speechSynthesis.speak(utterance);
       setIsPlaying(true);
     } catch {
       setIsPlaying(false);
+      isTtsActiveRef.current = false;
     }
   };
 
@@ -97,10 +127,12 @@ export function DictionaryCard({
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
+        audioRef.current = null;
       }
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
+      isTtsActiveRef.current = false;
       setIsPlaying(false);
       return;
     }
@@ -111,13 +143,22 @@ export function DictionaryCard({
         const audio = new Audio(resolvedAudio);
         audioRef.current = audio;
         setIsPlaying(true);
-        audio.onended = () => setIsPlaying(false);
+
+        audio.onended = () => {
+          setIsPlaying(false);
+          audioRef.current = null;
+        };
+
         audio.onerror = () => {
           setIsPlaying(false);
+          audioRef.current = null;
+          // Conmutación inmediata a síntesis de voz nativa del navegador sin bucles
           triggerNativeTTS(wordText);
         };
+
         audio.play().catch(() => {
           setIsPlaying(false);
+          audioRef.current = null;
           triggerNativeTTS(wordText);
         });
         return;
